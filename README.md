@@ -8,8 +8,8 @@ Make sure that you have added `~/.seismic-foundry/bin` to your path:
 export PATH="$PATH:$HOME/.seismic-foundry/bin"
 ```
 
-### Forge
-To build Seismic Forge (`sforge`) from source, run this from the root of this repository:
+### Seismic Forge
+To build `sforge` from source, run this from the root of this repository:
 
 ```sh
 cargo install --path ./crates/forge --profile local --force --locked --root=$HOME/.seismic-foundry
