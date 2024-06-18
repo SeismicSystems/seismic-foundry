@@ -1,5 +1,20 @@
 <img src=".github/logo.png" alt="Foundry logo" align="right" width="120" />
 
+## Seismic
+
+Make sure that you have added `~/.seismic-foundry/bin` to your path:
+
+```sh
+export PATH="$PATH:$HOME/.seismic-foundry/bin"
+```
+
+### Forge
+To build Seismic Forge (`sforge`) from source, run this from the root of this repository:
+
+```sh
+cargo install --path ./crates/forge --profile local --force --locked --root=$HOME/.seismic-foundry
+```
+
 ## Foundry
 
 ![Github Actions][gha-badge] [![Telegram Chat][tg-badge]][tg-url] [![Telegram Support][tg-support-badge]][tg-support-url]
