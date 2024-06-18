@@ -54,6 +54,7 @@ pub struct InspectorStackBuilder {
     /// In isolation mode all top-level calls are executed as a separate transaction in a separate
     /// EVM context, enabling more precise gas accounting and transaction state changes.
     pub enable_isolation: bool,
+    pub seismic: bool,
 }
 
 impl InspectorStackBuilder {
@@ -155,6 +156,7 @@ impl InspectorStackBuilder {
             print,
             chisel_state,
             enable_isolation,
+            seismic,
         } = self;
         let mut stack = InspectorStack::new();
 
@@ -182,6 +184,10 @@ impl InspectorStackBuilder {
         }
         if let Some(gas_price) = gas_price {
             stack.set_gas_price(gas_price);
+        }
+        if seismic {
+            let seismic_inspector = seismic_inspector::SeismicInspectorBuilder::new().build();
+            stack.seismic = Some(seismic_inspector);
         }
 
         stack
@@ -284,6 +290,7 @@ pub struct InspectorStack {
     /// Flag marking if we are in the inner EVM context.
     pub in_inner_context: bool,
     pub inner_context_data: Option<InnerContextData>,
+    pub seismic: Option<seismic_inspector::SeismicInspector>,
 }
 
 impl InspectorStack {
@@ -442,9 +449,9 @@ impl InspectorStack {
 
                 // If the inspector returns a different status or a revert with a non-empty message,
                 // we assume it wants to tell us something
-                let different = new_outcome.result.result != result ||
-                    (new_outcome.result.result == InstructionResult::Revert &&
-                        new_outcome.output() != outcome.output());
+                let different = new_outcome.result.result != result
+                    || (new_outcome.result.result == InstructionResult::Revert
+                        && new_outcome.output() != outcome.output());
                 different.then_some(new_outcome)
             },
             self,
@@ -523,7 +530,7 @@ impl InspectorStack {
             // Should we match, encode and propagate error as a revert reason?
             let result =
                 InterpreterResult { result: InstructionResult::Revert, output: Bytes::new(), gas };
-            return (result, None)
+            return (result, None);
         };
 
         // Commit changes after transaction
@@ -536,7 +543,7 @@ impl InspectorStack {
                 output: Bytes::from(e.to_string()),
                 gas,
             };
-            return (res, None)
+            return (res, None);
         }
         if let Err(e) = update_state(&mut res.state, &mut ecx.db, None) {
             let res = InterpreterResult {
@@ -544,7 +551,7 @@ impl InspectorStack {
                 output: Bytes::from(e.to_string()),
                 gas,
             };
-            return (res, None)
+            return (res, None);
         }
 
         // Merge transaction journal into the active journal.
@@ -674,6 +681,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
                 &mut self.log_collector,
                 &mut self.cheatcodes,
                 &mut self.printer,
+                &mut self.seismic,
             ],
             |inspector| {
                 let mut out = None;
@@ -688,10 +696,10 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
             ecx
         );
 
-        if self.enable_isolation &&
-            call.scheme == CallScheme::Call &&
-            !self.in_inner_context &&
-            ecx.journaled_state.depth == 1
+        if self.enable_isolation
+            && call.scheme == CallScheme::Call
+            && !self.in_inner_context
+            && ecx.journaled_state.depth == 1
         {
             let (result, _) = self.transact_inner(
                 ecx,
@@ -701,7 +709,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
                 call.gas_limit,
                 call.value.get(),
             );
-            return Some(CallOutcome { result, memory_offset: call.return_memory_offset.clone() })
+            return Some(CallOutcome { result, memory_offset: call.return_memory_offset.clone() });
         }
 
         None
@@ -716,7 +724,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
         // Inner context calls with depth 0 are being dispatched as top-level calls with depth 1.
         // Avoid processing twice.
         if self.in_inner_context && ecx.journaled_state.depth == 0 {
-            return outcome
+            return outcome;
         }
 
         let outcome = self.do_call_end(ecx, inputs, outcome);
@@ -758,7 +766,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
                 create.gas_limit,
                 create.value,
             );
-            return Some(CreateOutcome { result, address })
+            return Some(CreateOutcome { result, address });
         }
 
         None
@@ -773,7 +781,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
         // Inner context calls with depth 0 are being dispatched as top-level calls with depth 1.
         // Avoid processing twice.
         if self.in_inner_context && ecx.journaled_state.depth == 0 {
-            return outcome
+            return outcome;
         }
 
         let result = outcome.result.result;
@@ -785,9 +793,9 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
 
                 // If the inspector returns a different status or a revert with a non-empty message,
                 // we assume it wants to tell us something
-                let different = new_outcome.result.result != result ||
-                    (new_outcome.result.result == InstructionResult::Revert &&
-                        new_outcome.output() != outcome.output());
+                let different = new_outcome.result.result != result
+                    || (new_outcome.result.result == InstructionResult::Revert
+                        && new_outcome.output() != outcome.output());
                 different.then_some(new_outcome)
             },
             self,
