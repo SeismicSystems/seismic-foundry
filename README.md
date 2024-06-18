@@ -14,6 +14,7 @@ export PATH="$PATH:$HOME/.seismic-foundry/bin"
 To build `sforge` from source, run this from the root of this repository:
 
 ```sh
+git checkout seismic
 cargo install --path ./crates/forge --profile local --force --locked --root=$HOME/.seismic-foundry
 ```
 
