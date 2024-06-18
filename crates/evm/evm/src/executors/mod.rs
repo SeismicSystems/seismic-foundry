@@ -105,6 +105,17 @@ impl Executor {
             },
         );
 
+        for address in seismic_chips::Chipset::addresses() {
+            backend.insert_account_info(
+                Address(*address),
+                revm::primitives::AccountInfo {
+                    code: Some(Bytecode::new_raw(Bytes::from_static(&[0]))),
+                    code_hash: CHEATCODE_CONTRACT_HASH,
+                    ..Default::default()
+                },
+            );
+        }
+
         Self { backend, env, inspector, gas_limit }
     }
 

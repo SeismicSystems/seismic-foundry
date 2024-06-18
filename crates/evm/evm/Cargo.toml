@@ -51,3 +51,7 @@ proptest = "1"
 thiserror = "1"
 tracing = "0.1"
 indicatif = "0.17"
+
+# Seismic
+seismic-chips.workspace = true
+seismic-inspector.workspace = true

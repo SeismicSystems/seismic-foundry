@@ -250,6 +250,11 @@ tower-http = "0.5"
 # soldeer
 soldeer = "0.2.15"
 
+# Seismic
+lazy_static = "1.4"
+seismic-chips = { path = "../mantle/crates/chips" }
+seismic-inspector = { path = "../mantle/crates/inspector" }
+
 [patch.crates-io]
 revm = { git = "https://github.com/bluealloy/revm.git", rev = "dd98b3b" }
 revm-interpreter = { git = "https://github.com/bluealloy/revm.git", rev = "dd98b3b" }

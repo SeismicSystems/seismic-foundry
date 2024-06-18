@@ -1,5 +1,23 @@
 <img src=".github/logo.png" alt="Foundry logo" align="right" width="120" />
 
+## Seismic
+
+All Seismic modifications live on the `seismic` branch; the [original](https://github.com/foundry-rs/foundry) repository is on the `master` branch. We do this to always maintain a clear diff the changes it takes to make Foundry work with Seismic
+
+Make sure that you have added `~/.seismic-foundry/bin` to your path:
+
+```sh
+export PATH="$PATH:$HOME/.seismic-foundry/bin"
+```
+
+### Seismic Forge
+To build `sforge` from source, run this from the root of this repository:
+
+```sh
+git checkout seismic
+cargo install --path ./crates/forge --profile local --force --locked --root=$HOME/.seismic-foundry
+```
+
 ## Foundry
 
 ![Github Actions][gha-badge] [![Telegram Chat][tg-badge]][tg-url] [![Telegram Support][tg-support-badge]][tg-support-url]

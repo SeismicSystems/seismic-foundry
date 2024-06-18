@@ -34,6 +34,10 @@ pub use revm_inspectors::tracing::{
 
 pub type Traces = Vec<(TraceKind, CallTraceArena)>;
 
+lazy_static::lazy_static! {
+    static ref SEISMIC_CHIPS: std::collections::HashSet<alloy_primitives::Address> = seismic_chips::Chipset::addresses();
+}
+
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct DecodedCallData {
     pub signature: String,
@@ -287,6 +291,8 @@ impl TraceKind {
 fn trace_color(trace: &CallTrace) -> Color {
     if trace.address == CHEATCODE_ADDRESS {
         Color::Blue
+    } else if SEISMIC_CHIPS.contains(&trace.address) {
+        Color::Magenta
     } else if trace.success {
         Color::Green
     } else {
