@@ -54,14 +54,13 @@ pub struct InspectorStackBuilder {
     /// In isolation mode all top-level calls are executed as a separate transaction in a separate
     /// EVM context, enabling more precise gas accounting and transaction state changes.
     pub enable_isolation: bool,
-    pub seismic: bool,
 }
 
 impl InspectorStackBuilder {
     /// Create a new inspector stack builder.
     #[inline]
     pub fn new() -> Self {
-        Self { seismic: true, ..Self::default() }
+        Self::default()
     }
 
     /// Set the block environment.
@@ -156,7 +155,6 @@ impl InspectorStackBuilder {
             print,
             chisel_state,
             enable_isolation,
-            seismic,
         } = self;
         let mut stack = InspectorStack::new();
 
@@ -185,10 +183,9 @@ impl InspectorStackBuilder {
         if let Some(gas_price) = gas_price {
             stack.set_gas_price(gas_price);
         }
-        if seismic {
-            let seismic_inspector = seismic_inspector::SeismicInspectorBuilder::new().build();
-            stack.seismic = Some(seismic_inspector);
-        }
+
+        let seismic_inspector = seismic_inspector::SeismicInspectorBuilder::new().build();
+        stack.seismic = Some(seismic_inspector);
 
         stack
     }
