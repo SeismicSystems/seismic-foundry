@@ -184,9 +184,7 @@ impl InspectorStackBuilder {
             stack.set_gas_price(gas_price);
         }
 
-        let seismic_inspector = seismic_inspector::SeismicInspectorBuilder::new().build();
-        stack.seismic = Some(seismic_inspector);
-
+        stack.seismic = Some(seismic_inspector::SeismicInspectorBuilder::new().build());
         stack
     }
 }
