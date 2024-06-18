@@ -61,7 +61,7 @@ impl InspectorStackBuilder {
     /// Create a new inspector stack builder.
     #[inline]
     pub fn new() -> Self {
-        Self::default()
+        Self { seismic: true, ..Self::default() }
     }
 
     /// Set the block environment.

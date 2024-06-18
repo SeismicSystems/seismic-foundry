@@ -251,6 +251,7 @@ tower-http = "0.5"
 soldeer = "0.2.15"
 
 # Seismic
+lazy_static = "1.4"
 seismic-chips = { path = "../mantle/crates/chips" }
 seismic-dispatcher = { path = "../mantle/crates/dispatcher" }
 seismic-inspector = { path = "../mantle/crates/inspector" }
