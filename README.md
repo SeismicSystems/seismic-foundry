@@ -2,6 +2,8 @@
 
 ## Seismic
 
+All Seismic modifications live on the `seismic` branch; the original repository is on the `master` branch. We do this to always maintain a clear diff the changes it takes to make Foundry work with Seismic
+
 Make sure that you have added `~/.seismic-foundry/bin` to your path:
 
 ```sh
