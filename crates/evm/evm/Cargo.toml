@@ -54,6 +54,4 @@ indicatif = "0.17"
 
 # Seismic
 seismic-chips.workspace = true
-# seismic-dispatcher.workspace = true
 seismic-inspector.workspace = true
-# seismic-prover.workspace = true
