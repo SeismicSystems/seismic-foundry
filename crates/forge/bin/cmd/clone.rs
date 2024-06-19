@@ -528,7 +528,7 @@ fn dump_sources(meta: &Metadata, root: &PathBuf, no_reorg: bool) -> Result<Vec<R
                 PathBuf::from("src").join(PathBuf::from(&r.path).strip_prefix("contracts")?)
             } else if r.path.starts_with('@') ||
                 r.path.starts_with("hardhat/") ||
-                r.path.starts_with("seismic-forge-std/")
+                r.path.starts_with("forge-std/")
             {
                 PathBuf::from("lib").join(PathBuf::from(&r.path))
             } else {

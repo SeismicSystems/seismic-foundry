@@ -315,8 +315,8 @@ impl SessionSource {
         let remappings = self.config.foundry_config.get_all_remappings().collect::<Vec<_>>();
 
         // Include Vm.sol if forge-std remapping is not available
-        if !self.config.no_vm && !remappings.iter().any(|r| r.name.starts_with("seismic-forge-std")) {
-            sources.insert(PathBuf::from("seismic-forge-std/Vm.sol"), Source::new(VM_SOURCE));
+        if !self.config.no_vm && !remappings.iter().any(|r| r.name.starts_with("forge-std")) {
+            sources.insert(PathBuf::from("forge-std/Vm.sol"), Source::new(VM_SOURCE));
         }
 
         let settings = Settings {
@@ -442,7 +442,7 @@ impl SessionSource {
         let Self { contract_name, global_code, top_level_code, run_code, config, .. } = self;
 
         let script_import =
-            if !config.no_vm { "import {Script} from \"seismic-forge-std/Script.sol\";\n" } else { "" };
+            if !config.no_vm { "import {Script} from \"forge-std/Script.sol\";\n" } else { "" };
 
         format!(
             r#"
@@ -474,7 +474,7 @@ contract {contract_name} is Script {{
 
         let (vm_import, vm_constant) = if !config.no_vm {
             (
-                "import {Vm} from \"seismic-forge-std/Vm.sol\";\n",
+                "import {Vm} from \"forge-std/Vm.sol\";\n",
                 "Vm internal constant vm = Vm(address(uint160(uint256(keccak256(\"hevm cheat code\")))));\n"
             )
         } else {
