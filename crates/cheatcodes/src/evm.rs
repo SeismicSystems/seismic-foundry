@@ -639,16 +639,16 @@ macro_rules! impl_commit_reveal {
         paste::paste! {
             impl Cheatcode for [<$commit_type $digit Call>] {
                 fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
-                    let Self { contract, value } = self;
-                    let (commitment, _) = seismic_preimages::commit(contract, *value)?;
+                    let Self { contractAddress, value } = self;
+                    let (commitment, _) = seismic_preimages::commit(contractAddress, *value)?;
                     Ok(commitment.abi_encode())
                 }
             }
 
             impl Cheatcode for [<$unwrap_type $digit Call>] {
                 fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
-                    let Self { contract, commitment } = self;
-                    let preimage = seismic_preimages::reveal::<alloy_primitives::$primitive_type>(contract, commitment)?;
+                    let Self { contractAddress, commitment } = self;
+                    let preimage = seismic_preimages::reveal::<alloy_primitives::$primitive_type>(contractAddress, commitment)?;
                     Ok(preimage.abi_encode())
                 }
             }
@@ -686,16 +686,16 @@ impl_commit_reveal_int!(256, I256);
 /// manually implement the `commitBool` and `unwrapSbool` cheatcodes
 impl Cheatcode for commitBoolCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
-        let Self { contract, value } = self;
-        let (commitment, _) = seismic_preimages::commit(contract, *value)?;
+        let Self { contractAddress, value } = self;
+        let (commitment, _) = seismic_preimages::commit(contractAddress, *value)?;
         Ok(commitment.abi_encode())
     }
 }
 
 impl Cheatcode for unwrapSboolCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
-        let Self { contract, commitment } = self;
-        let preimage = seismic_preimages::reveal::<alloy_primitives::ruint::aliases::U1>(contract, commitment)?;
+        let Self { contractAddress, commitment } = self;
+        let preimage = seismic_preimages::reveal::<alloy_primitives::ruint::aliases::U1>(contractAddress, commitment)?;
         Ok(preimage.abi_encode())
     }
 }

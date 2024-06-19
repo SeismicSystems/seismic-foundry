@@ -3195,7 +3195,7 @@
       "func": {
         "id": "commitBool",
         "description": "Store a Seismic secret boolean value",
-        "declaration": "function commitBool(address contract, bool value) external returns (uint256);",
+        "declaration": "function commitBool(address contractAddress, bool value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitBool(address,bool)",
@@ -3215,7 +3215,7 @@
       "func": {
         "id": "commitInt128",
         "description": "Store a Seismic secret int128 value",
-        "declaration": "function commitInt128(address contract, int128 value) external returns (uint256);",
+        "declaration": "function commitInt128(address contractAddress, int128 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitInt128(address,int128)",
@@ -3235,7 +3235,7 @@
       "func": {
         "id": "commitInt16",
         "description": "Store a Seismic secret int16 value",
-        "declaration": "function commitInt16(address contract, int16 value) external returns (uint256);",
+        "declaration": "function commitInt16(address contractAddress, int16 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitInt16(address,int16)",
@@ -3255,7 +3255,7 @@
       "func": {
         "id": "commitInt256",
         "description": "Store a Seismic secret int256 value",
-        "declaration": "function commitInt256(address contract, int256 value) external returns (uint256);",
+        "declaration": "function commitInt256(address contractAddress, int256 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitInt256(address,int256)",
@@ -3275,7 +3275,7 @@
       "func": {
         "id": "commitInt32",
         "description": "Store a Seismic secret int32 value",
-        "declaration": "function commitInt32(address contract, int32 value) external returns (uint256);",
+        "declaration": "function commitInt32(address contractAddress, int32 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitInt32(address,int32)",
@@ -3295,7 +3295,7 @@
       "func": {
         "id": "commitInt64",
         "description": "Store a Seismic secret int64 value",
-        "declaration": "function commitInt64(address contract, int64 value) external returns (uint256);",
+        "declaration": "function commitInt64(address contractAddress, int64 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitInt64(address,int64)",
@@ -3315,7 +3315,7 @@
       "func": {
         "id": "commitInt8",
         "description": "Store a Seismic secret int8 value",
-        "declaration": "function commitInt8(address contract, int8 value) external returns (uint256);",
+        "declaration": "function commitInt8(address contractAddress, int8 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitInt8(address,int8)",
@@ -3335,7 +3335,7 @@
       "func": {
         "id": "commitUint128",
         "description": "Store a Seismic secret uint128 value",
-        "declaration": "function commitUint128(address contract, uint128 value) external returns (uint256);",
+        "declaration": "function commitUint128(address contractAddress, uint128 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitUint128(address,uint128)",
@@ -3355,7 +3355,7 @@
       "func": {
         "id": "commitUint16",
         "description": "Store a Seismic secret uint16 value",
-        "declaration": "function commitUint16(address contract, uint16 value) external returns (uint256);",
+        "declaration": "function commitUint16(address contractAddress, uint16 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitUint16(address,uint16)",
@@ -3375,7 +3375,7 @@
       "func": {
         "id": "commitUint256",
         "description": "Store a Seismic secret uint256 value",
-        "declaration": "function commitUint256(address contract, uint256 value) external returns (uint256);",
+        "declaration": "function commitUint256(address contractAddress, uint256 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitUint256(address,uint256)",
@@ -3395,7 +3395,7 @@
       "func": {
         "id": "commitUint32",
         "description": "Store a Seismic secret uint32 value",
-        "declaration": "function commitUint32(address contract, uint32 value) external returns (uint256);",
+        "declaration": "function commitUint32(address contractAddress, uint32 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitUint32(address,uint32)",
@@ -3415,7 +3415,7 @@
       "func": {
         "id": "commitUint64",
         "description": "Store a Seismic secret uint64 value",
-        "declaration": "function commitUint64(address contract, uint64 value) external returns (uint256);",
+        "declaration": "function commitUint64(address contractAddress, uint64 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitUint64(address,uint64)",
@@ -3435,7 +3435,7 @@
       "func": {
         "id": "commitUint8",
         "description": "Store a Seismic secret uint8 value",
-        "declaration": "function commitUint8(address contract, uint8 value) external returns (uint256);",
+        "declaration": "function commitUint8(address contractAddress, uint8 value) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "commitUint8(address,uint8)",
@@ -8515,7 +8515,7 @@
       "func": {
         "id": "unwrapSbool",
         "description": "Retrieve the preimage of a commitment to a boolean",
-        "declaration": "function unwrapSbool(address contract, uint256 commitment) external returns (bool);",
+        "declaration": "function unwrapSbool(address contractAddress, uint256 commitment) external returns (bool);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSbool(address,uint256)",
@@ -8535,7 +8535,7 @@
       "func": {
         "id": "unwrapSint128",
         "description": "Retrieve the preimage of a commitment to an int128",
-        "declaration": "function unwrapSint128(address contract, uint256 commitment) external returns (int128);",
+        "declaration": "function unwrapSint128(address contractAddress, uint256 commitment) external returns (int128);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSint128(address,uint256)",
@@ -8555,7 +8555,7 @@
       "func": {
         "id": "unwrapSint16",
         "description": "Retrieve the preimage of a commitment to an int16",
-        "declaration": "function unwrapSint16(address contract, uint256 commitment) external returns (int16);",
+        "declaration": "function unwrapSint16(address contractAddress, uint256 commitment) external returns (int16);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSint16(address,uint256)",
@@ -8575,7 +8575,7 @@
       "func": {
         "id": "unwrapSint256",
         "description": "Retrieve the preimage of a commitment to an int256",
-        "declaration": "function unwrapSint256(address contract, uint256 commitment) external returns (int256);",
+        "declaration": "function unwrapSint256(address contractAddress, uint256 commitment) external returns (int256);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSint256(address,uint256)",
@@ -8595,7 +8595,7 @@
       "func": {
         "id": "unwrapSint32",
         "description": "Retrieve the preimage of a commitment to an int32",
-        "declaration": "function unwrapSint32(address contract, uint256 commitment) external returns (int32);",
+        "declaration": "function unwrapSint32(address contractAddress, uint256 commitment) external returns (int32);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSint32(address,uint256)",
@@ -8615,7 +8615,7 @@
       "func": {
         "id": "unwrapSint64",
         "description": "Retrieve the preimage of a commitment to an int64",
-        "declaration": "function unwrapSint64(address contract, uint256 commitment) external returns (int64);",
+        "declaration": "function unwrapSint64(address contractAddress, uint256 commitment) external returns (int64);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSint64(address,uint256)",
@@ -8635,7 +8635,7 @@
       "func": {
         "id": "unwrapSint8",
         "description": "Retrieve the preimage of a commitment to an int8",
-        "declaration": "function unwrapSint8(address contract, uint256 commitment) external returns (int8);",
+        "declaration": "function unwrapSint8(address contractAddress, uint256 commitment) external returns (int8);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSint8(address,uint256)",
@@ -8655,7 +8655,7 @@
       "func": {
         "id": "unwrapSuint128",
         "description": "Retrieve the preimage of a commitment to a uint128",
-        "declaration": "function unwrapSuint128(address contract, uint256 commitment) external returns (uint256);",
+        "declaration": "function unwrapSuint128(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSuint128(address,uint256)",
@@ -8675,7 +8675,7 @@
       "func": {
         "id": "unwrapSuint16",
         "description": "Retrieve the preimage of a commitment to a uint16",
-        "declaration": "function unwrapSuint16(address contract, uint256 commitment) external returns (uint256);",
+        "declaration": "function unwrapSuint16(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSuint16(address,uint256)",
@@ -8695,7 +8695,7 @@
       "func": {
         "id": "unwrapSuint256",
         "description": "Retrieve the preimage of a commitment to a uint256",
-        "declaration": "function unwrapSuint256(address contract, uint256 commitment) external returns (uint256);",
+        "declaration": "function unwrapSuint256(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSuint256(address,uint256)",
@@ -8715,7 +8715,7 @@
       "func": {
         "id": "unwrapSuint32",
         "description": "Retrieve the preimage of a commitment to a uint32",
-        "declaration": "function unwrapSuint32(address contract, uint256 commitment) external returns (uint256);",
+        "declaration": "function unwrapSuint32(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSuint32(address,uint256)",
@@ -8735,7 +8735,7 @@
       "func": {
         "id": "unwrapSuint64",
         "description": "Retrieve the preimage of a commitment to a uint64",
-        "declaration": "function unwrapSuint64(address contract, uint256 commitment) external returns (uint256);",
+        "declaration": "function unwrapSuint64(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSuint64(address,uint256)",
@@ -8755,7 +8755,7 @@
       "func": {
         "id": "unwrapSuint8",
         "description": "Retrieve the preimage of a commitment to a uint8",
-        "declaration": "function unwrapSuint8(address contract, uint256 commitment) external returns (uint256);",
+        "declaration": "function unwrapSuint8(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
         "signature": "unwrapSuint8(address,uint256)",

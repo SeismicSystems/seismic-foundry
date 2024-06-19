@@ -99,6 +99,7 @@ impl Cheatcodes<'static> {
     }
 }
 
+/// Run these tests twice (first time will fail) to update the cheat codes JSON schema
 #[cfg(test)]
 mod tests {
     use super::*;
