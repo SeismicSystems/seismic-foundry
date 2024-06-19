@@ -144,8 +144,8 @@ impl InitArgs {
 
             // install forge-std
             if !offline {
-                if root.join("lib/forge-std").exists() {
-                    p_println!(!quiet => "\"lib/forge-std\" already exists, skipping install....");
+                if root.join("lib/seismic-forge-std").exists() {
+                    p_println!(!quiet => "\"lib/seismic-forge-std\" already exists, skipping install....");
                     self.opts.install(&mut config, vec![])?;
                 } else {
                     let dep = "https://github.com/SeismicSystems/seismic-forge-std".parse()?;
