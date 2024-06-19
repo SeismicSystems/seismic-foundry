@@ -2155,6 +2155,54 @@ interface Vm {
     /// Returns a random `address`.
     #[cheatcode(group = Utilities)]
     function randomAddress() external returns (address);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function commitUint8(address contract, uint8 value) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function commitUint16(address contract, uint16 value) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function commitUint32(address contract, uint32 value) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function commitUint64(address contract, uint64 value) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function commitUint128(address contract, uint128 value) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function commitUint256(address contract, uint256 value) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Safe)]
+    function unwrapSuint8(address contract, uint256 commitment) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Safe)]
+    function unwrapSuint16(address contract, uint256 commitment) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Safe)]
+    function unwrapSuint32(address contract, uint256 commitment) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Safe)]
+    function unwrapSuint64(address contract, uint256 commitment) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Safe)]
+    function unwrapSuint128(address contract, uint256 commitment) external returns (uint256);
+
+    /// Allows user to store a Seismic secret u256 value
+    #[cheatcode(group = Evm, safety = Safe)]
+    function unwrapSuint256(address contract, uint256 commitment) external returns (uint256);
 }
 }
 

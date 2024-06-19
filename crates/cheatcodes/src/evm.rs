@@ -632,3 +632,19 @@ fn get_state_diff(state: &mut Cheatcodes) -> Result {
         .collect::<Vec<_>>();
     Ok(res.abi_encode())
 }
+
+impl Cheatcode for commitUint8Call {
+    fn apply_full<DB: DatabaseExt>(&self, ccx: &mut CheatsCtxt<DB>) -> Result {
+        let Self { contract, value } = self;
+        let result = ccx.ecx.db.delete_snapshot(*snapshotId);
+        Ok(result.abi_encode())
+    }
+}
+
+impl Cheatcode for unwrapSuint8Call {
+    fn apply_full<DB: DatabaseExt>(&self, ccx: &mut CheatsCtxt<DB>) -> Result {
+        let Self { contract, commitment } = self;
+        let result = ccx.ecx.db.delete_snapshot(*snapshotId);
+        Ok(result.abi_encode())
+    }
+}
