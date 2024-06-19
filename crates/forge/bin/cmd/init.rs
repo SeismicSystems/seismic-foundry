@@ -148,7 +148,7 @@ impl InitArgs {
                     p_println!(!quiet => "\"lib/forge-std\" already exists, skipping install....");
                     self.opts.install(&mut config, vec![])?;
                 } else {
-                    let dep = "https://github.com/foundry-rs/forge-std".parse()?;
+                    let dep = "https://github.com/SeismicSystems/seismic-forge-std".parse()?;
                     self.opts.install(&mut config, vec![dep])?;
                 }
             }
