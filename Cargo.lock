@@ -4094,9 +4094,12 @@ dependencies = [
  "k256",
  "p256",
  "parking_lot",
+ "paste",
  "rand 0.8.5",
  "revm",
  "rustc-hash",
+ "seismic-preimages",
+ "seismic-prover",
  "semver 1.0.23",
  "serde_json",
  "thiserror",
@@ -8514,6 +8517,17 @@ dependencies = [
  "seismic-prover",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "seismic-preimages"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "redis",
+ "revm",
+ "seismic-chips",
+ "seismic-prover",
 ]
 
 [[package]]
