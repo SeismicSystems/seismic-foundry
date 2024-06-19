@@ -676,6 +676,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
                 &mut self.log_collector,
                 &mut self.cheatcodes,
                 &mut self.printer,
+                &mut self.seismic,
             ],
             |inspector| {
                 let mut out = None;
