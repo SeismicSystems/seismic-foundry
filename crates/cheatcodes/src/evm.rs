@@ -633,18 +633,69 @@ fn get_state_diff(state: &mut Cheatcodes) -> Result {
     Ok(res.abi_encode())
 }
 
-impl Cheatcode for commitUint8Call {
-    fn apply_full<DB: DatabaseExt>(&self, ccx: &mut CheatsCtxt<DB>) -> Result {
+/// implement the `commit` and `unwrap` cheatcodes for unsigned and signed integers
+macro_rules! impl_commit_reveal {
+    ($commit_type:ident, $unwrap_type:ident, $digit:literal, $primitive_type:ident) => {
+        paste::paste! {
+            impl Cheatcode for [<$commit_type $digit Call>] {
+                fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
+                    let Self { contract, value } = self;
+                    let (commitment, _) = seismic_preimages::commit(contract, *value)?;
+                    Ok(commitment.abi_encode())
+                }
+            }
+
+            impl Cheatcode for [<$unwrap_type $digit Call>] {
+                fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
+                    let Self { contract, commitment } = self;
+                    let preimage = seismic_preimages::reveal::<alloy_primitives::$primitive_type>(contract, commitment)?;
+                    Ok(preimage.abi_encode())
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_commit_reveal_uint {
+    ($digit:literal, $primitive_type:ident) => {
+        impl_commit_reveal!(commitUint, unwrapSuint, $digit, $primitive_type);
+    };
+}
+
+macro_rules! impl_commit_reveal_int {
+    ($digit:literal, $primitive_type:ident) => {
+        impl_commit_reveal!(commitInt, unwrapSint, $digit, $primitive_type);
+    };
+}
+
+impl_commit_reveal_uint!(8, U8);
+impl_commit_reveal_uint!(16, U16);
+impl_commit_reveal_uint!(32, U32);
+impl_commit_reveal_uint!(64, U64);
+impl_commit_reveal_uint!(128, U128);
+impl_commit_reveal_uint!(256, U256);
+
+impl_commit_reveal_int!(8, I8);
+impl_commit_reveal_int!(16, I16);
+impl_commit_reveal_int!(32, I32);
+impl_commit_reveal_int!(64, I64);
+impl_commit_reveal_int!(128, I128);
+impl_commit_reveal_int!(256, I256);
+
+
+/// manually implement the `commitBool` and `unwrapSbool` cheatcodes
+impl Cheatcode for commitBoolCall {
+    fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contract, value } = self;
-        let result = ccx.ecx.db.delete_snapshot(*snapshotId);
-        Ok(result.abi_encode())
+        let (commitment, _) = seismic_preimages::commit(contract, *value)?;
+        Ok(commitment.abi_encode())
     }
 }
 
-impl Cheatcode for unwrapSuint8Call {
-    fn apply_full<DB: DatabaseExt>(&self, ccx: &mut CheatsCtxt<DB>) -> Result {
+impl Cheatcode for unwrapSboolCall {
+    fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contract, commitment } = self;
-        let result = ccx.ecx.db.delete_snapshot(*snapshotId);
-        Ok(result.abi_encode())
+        let preimage = seismic_preimages::reveal::<alloy_primitives::ruint::aliases::U1>(contract, commitment)?;
+        Ok(preimage.abi_encode())
     }
 }

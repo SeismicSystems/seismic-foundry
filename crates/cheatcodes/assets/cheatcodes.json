@@ -3193,6 +3193,266 @@
     },
     {
       "func": {
+        "id": "commitBool",
+        "description": "Store a Seismic secret boolean value",
+        "declaration": "function commitBool(address contract, bool value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitBool(address,bool)",
+        "selector": "0xa5077597",
+        "selectorBytes": [
+          165,
+          7,
+          117,
+          151
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitInt128",
+        "description": "Store a Seismic secret int128 value",
+        "declaration": "function commitInt128(address contract, int128 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitInt128(address,int128)",
+        "selector": "0xa451967c",
+        "selectorBytes": [
+          164,
+          81,
+          150,
+          124
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitInt16",
+        "description": "Store a Seismic secret int16 value",
+        "declaration": "function commitInt16(address contract, int16 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitInt16(address,int16)",
+        "selector": "0xc3f3c2f6",
+        "selectorBytes": [
+          195,
+          243,
+          194,
+          246
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitInt256",
+        "description": "Store a Seismic secret int256 value",
+        "declaration": "function commitInt256(address contract, int256 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitInt256(address,int256)",
+        "selector": "0x25062bc6",
+        "selectorBytes": [
+          37,
+          6,
+          43,
+          198
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitInt32",
+        "description": "Store a Seismic secret int32 value",
+        "declaration": "function commitInt32(address contract, int32 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitInt32(address,int32)",
+        "selector": "0x8966d111",
+        "selectorBytes": [
+          137,
+          102,
+          209,
+          17
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitInt64",
+        "description": "Store a Seismic secret int64 value",
+        "declaration": "function commitInt64(address contract, int64 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitInt64(address,int64)",
+        "selector": "0x6c20e543",
+        "selectorBytes": [
+          108,
+          32,
+          229,
+          67
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitInt8",
+        "description": "Store a Seismic secret int8 value",
+        "declaration": "function commitInt8(address contract, int8 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitInt8(address,int8)",
+        "selector": "0xae6dbb3d",
+        "selectorBytes": [
+          174,
+          109,
+          187,
+          61
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitUint128",
+        "description": "Store a Seismic secret uint128 value",
+        "declaration": "function commitUint128(address contract, uint128 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitUint128(address,uint128)",
+        "selector": "0x1265108c",
+        "selectorBytes": [
+          18,
+          101,
+          16,
+          140
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitUint16",
+        "description": "Store a Seismic secret uint16 value",
+        "declaration": "function commitUint16(address contract, uint16 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitUint16(address,uint16)",
+        "selector": "0xb7eee615",
+        "selectorBytes": [
+          183,
+          238,
+          230,
+          21
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitUint256",
+        "description": "Store a Seismic secret uint256 value",
+        "declaration": "function commitUint256(address contract, uint256 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitUint256(address,uint256)",
+        "selector": "0xbea3abf4",
+        "selectorBytes": [
+          190,
+          163,
+          171,
+          244
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitUint32",
+        "description": "Store a Seismic secret uint32 value",
+        "declaration": "function commitUint32(address contract, uint32 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitUint32(address,uint32)",
+        "selector": "0x255246e9",
+        "selectorBytes": [
+          37,
+          82,
+          70,
+          233
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitUint64",
+        "description": "Store a Seismic secret uint64 value",
+        "declaration": "function commitUint64(address contract, uint64 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitUint64(address,uint64)",
+        "selector": "0xbfe21707",
+        "selectorBytes": [
+          191,
+          226,
+          23,
+          7
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
+        "id": "commitUint8",
+        "description": "Store a Seismic secret uint8 value",
+        "declaration": "function commitUint8(address contract, uint8 value) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "commitUint8(address,uint8)",
+        "selector": "0xce6a4441",
+        "selectorBytes": [
+          206,
+          106,
+          68,
+          65
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
         "id": "computeCreate2Address_0",
         "description": "Compute the address of a contract created with CREATE2 using the given CREATE2 deployer.",
         "declaration": "function computeCreate2Address(bytes32 salt, bytes32 initCodeHash, address deployer) external pure returns (address);",
@@ -8248,6 +8508,266 @@
         ]
       },
       "group": "filesystem",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSbool",
+        "description": "Retrieve the preimage of a commitment to a boolean",
+        "declaration": "function unwrapSbool(address contract, uint256 commitment) external returns (bool);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSbool(address,uint256)",
+        "selector": "0x37c02269",
+        "selectorBytes": [
+          55,
+          192,
+          34,
+          105
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSint128",
+        "description": "Retrieve the preimage of a commitment to an int128",
+        "declaration": "function unwrapSint128(address contract, uint256 commitment) external returns (int128);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSint128(address,uint256)",
+        "selector": "0x2762841f",
+        "selectorBytes": [
+          39,
+          98,
+          132,
+          31
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSint16",
+        "description": "Retrieve the preimage of a commitment to an int16",
+        "declaration": "function unwrapSint16(address contract, uint256 commitment) external returns (int16);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSint16(address,uint256)",
+        "selector": "0xe29276d1",
+        "selectorBytes": [
+          226,
+          146,
+          118,
+          209
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSint256",
+        "description": "Retrieve the preimage of a commitment to an int256",
+        "declaration": "function unwrapSint256(address contract, uint256 commitment) external returns (int256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSint256(address,uint256)",
+        "selector": "0xda5412b8",
+        "selectorBytes": [
+          218,
+          84,
+          18,
+          184
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSint32",
+        "description": "Retrieve the preimage of a commitment to an int32",
+        "declaration": "function unwrapSint32(address contract, uint256 commitment) external returns (int32);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSint32(address,uint256)",
+        "selector": "0x1e691d39",
+        "selectorBytes": [
+          30,
+          105,
+          29,
+          57
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSint64",
+        "description": "Retrieve the preimage of a commitment to an int64",
+        "declaration": "function unwrapSint64(address contract, uint256 commitment) external returns (int64);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSint64(address,uint256)",
+        "selector": "0xcb6cedeb",
+        "selectorBytes": [
+          203,
+          108,
+          237,
+          235
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSint8",
+        "description": "Retrieve the preimage of a commitment to an int8",
+        "declaration": "function unwrapSint8(address contract, uint256 commitment) external returns (int8);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSint8(address,uint256)",
+        "selector": "0x899793b8",
+        "selectorBytes": [
+          137,
+          151,
+          147,
+          184
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSuint128",
+        "description": "Retrieve the preimage of a commitment to a uint128",
+        "declaration": "function unwrapSuint128(address contract, uint256 commitment) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSuint128(address,uint256)",
+        "selector": "0x489d746d",
+        "selectorBytes": [
+          72,
+          157,
+          116,
+          109
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSuint16",
+        "description": "Retrieve the preimage of a commitment to a uint16",
+        "declaration": "function unwrapSuint16(address contract, uint256 commitment) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSuint16(address,uint256)",
+        "selector": "0x4c124811",
+        "selectorBytes": [
+          76,
+          18,
+          72,
+          17
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSuint256",
+        "description": "Retrieve the preimage of a commitment to a uint256",
+        "declaration": "function unwrapSuint256(address contract, uint256 commitment) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSuint256(address,uint256)",
+        "selector": "0x8679c32f",
+        "selectorBytes": [
+          134,
+          121,
+          195,
+          47
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSuint32",
+        "description": "Retrieve the preimage of a commitment to a uint32",
+        "declaration": "function unwrapSuint32(address contract, uint256 commitment) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSuint32(address,uint256)",
+        "selector": "0x8ac16dc6",
+        "selectorBytes": [
+          138,
+          193,
+          109,
+          198
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSuint64",
+        "description": "Retrieve the preimage of a commitment to a uint64",
+        "declaration": "function unwrapSuint64(address contract, uint256 commitment) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSuint64(address,uint256)",
+        "selector": "0x9684dd7d",
+        "selectorBytes": [
+          150,
+          132,
+          221,
+          125
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "unwrapSuint8",
+        "description": "Retrieve the preimage of a commitment to a uint8",
+        "declaration": "function unwrapSuint8(address contract, uint256 commitment) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "unwrapSuint8(address,uint256)",
+        "selector": "0x5472e687",
+        "selectorBytes": [
+          84,
+          114,
+          230,
+          135
+        ]
+      },
+      "group": "evm",
       "status": "stable",
       "safety": "safe"
     },

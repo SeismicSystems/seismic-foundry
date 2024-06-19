@@ -254,6 +254,7 @@ soldeer = "0.2.15"
 lazy_static = "1.4"
 seismic-chips = { path = "../mantle/crates/chips" }
 seismic-inspector = { path = "../mantle/crates/inspector" }
+seismic-preimages = { path = "../mantle/crates/preimages" }
 
 [patch.crates-io]
 revm = { git = "https://github.com/bluealloy/revm.git", rev = "dd98b3b" }
