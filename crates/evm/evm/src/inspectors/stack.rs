@@ -16,7 +16,7 @@ use revm::{
         CallInputs, CallOutcome, CallScheme, CreateInputs, CreateOutcome, Gas, InstructionResult,
         Interpreter, InterpreterResult,
     },
-    primitives::{BlockEnv, Env, EnvWithHandlerCfg, ExecutionResult, Output, TransactTo},
+    primitives::{BlockEnv, CreateScheme, Env, EnvWithHandlerCfg, ExecutionResult, Output, TxKind},
     DatabaseCommit, EvmContext, Inspector,
 };
 use std::{collections::HashMap, sync::Arc};
@@ -196,44 +196,39 @@ macro_rules! call_inspectors {
     ([$($inspector:expr),+ $(,)?], |$id:ident $(,)?| $call:expr $(,)?) => {
         $(
             if let Some($id) = $inspector {
-                $call
+                ({ #[inline(always)] #[cold] || $call })();
             }
         )+
-    }
+    };
+    (#[ret] [$($inspector:expr),+ $(,)?], |$id:ident $(,)?| $call:expr $(,)?) => {
+        $(
+            if let Some($id) = $inspector {
+                if let Some(result) = ({ #[inline(always)] #[cold] || $call })() {
+                    return result;
+                }
+            }
+        )+
+    };
 }
 
-/// Same as [call_inspectors] macro, but with depth adjustment for isolated execution.
+/// Same as [`call_inspectors!`], but with depth adjustment for isolated execution.
 macro_rules! call_inspectors_adjust_depth {
-    (#[no_ret] [$($inspector:expr),+ $(,)?], |$id:ident $(,)?| $call:expr, $self:ident, $data:ident $(,)?) => {
+    ([$($inspector:expr),+ $(,)?], |$id:ident $(,)?| $call:expr, $self:ident, $data:ident $(,)?) => {
+        $data.journaled_state.depth += $self.in_inner_context as usize;
+        call_inspectors!([$($inspector),+], |$id| $call);
+        $data.journaled_state.depth -= $self.in_inner_context as usize;
+    };
+    (#[ret] [$($inspector:expr),+ $(,)?], |$id:ident $(,)?| $call:expr, $self:ident, $data:ident $(,)?) => {
         $data.journaled_state.depth += $self.in_inner_context as usize;
         $(
             if let Some($id) = $inspector {
-                $call
+                if let Some(result) = ({ #[inline(always)] #[cold] || $call })() {
+                    $data.journaled_state.depth -= $self.in_inner_context as usize;
+                    return result;
+                }
             }
         )+
         $data.journaled_state.depth -= $self.in_inner_context as usize;
-    };
-    ([$($inspector:expr),+ $(,)?], |$id:ident $(,)?| $call:expr, $self:ident, $data:ident $(,)?) => {
-        if $self.in_inner_context {
-            $data.journaled_state.depth += 1;
-            $(
-                if let Some($id) = $inspector {
-                    if let Some(result) = $call {
-                        $data.journaled_state.depth -= 1;
-                        return result;
-                    }
-                }
-            )+
-            $data.journaled_state.depth -= 1;
-        } else {
-            $(
-                if let Some($id) = $inspector {
-                    if let Some(result) = $call {
-                        return result;
-                    }
-                }
-            )+
-        }
     };
 }
 
@@ -432,6 +427,7 @@ impl InspectorStack {
     ) -> CallOutcome {
         let result = outcome.result.result;
         call_inspectors_adjust_depth!(
+            #[ret]
             [
                 &mut self.fuzzer,
                 &mut self.debugger,
@@ -459,7 +455,7 @@ impl InspectorStack {
     fn transact_inner<DB: DatabaseExt + DatabaseCommit>(
         &mut self,
         ecx: &mut EvmContext<&mut DB>,
-        transact_to: TransactTo,
+        transact_to: TxKind,
         caller: Address,
         input: Bytes,
         gas_limit: u64,
@@ -481,7 +477,7 @@ impl InspectorStack {
 
         ecx.env.block.basefee = U256::ZERO;
         ecx.env.tx.caller = caller;
-        ecx.env.tx.transact_to = transact_to.clone();
+        ecx.env.tx.transact_to = transact_to;
         ecx.env.tx.data = input;
         ecx.env.tx.value = value;
         ecx.env.tx.nonce = Some(nonce);
@@ -499,7 +495,7 @@ impl InspectorStack {
             sender: ecx.env.tx.caller,
             original_origin: cached_env.tx.caller,
             original_sender_nonce: nonce,
-            is_create: matches!(transact_to, TransactTo::Create),
+            is_create: matches!(transact_to, TxKind::Create),
         });
         self.in_inner_context = true;
 
@@ -613,7 +609,6 @@ impl InspectorStack {
 impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
     fn initialize_interp(&mut self, interpreter: &mut Interpreter, ecx: &mut EvmContext<&mut DB>) {
         call_inspectors_adjust_depth!(
-            #[no_ret]
             [&mut self.coverage, &mut self.tracer, &mut self.cheatcodes, &mut self.printer],
             |inspector| inspector.initialize_interp(interpreter, ecx),
             self,
@@ -623,7 +618,6 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
 
     fn step(&mut self, interpreter: &mut Interpreter, ecx: &mut EvmContext<&mut DB>) {
         call_inspectors_adjust_depth!(
-            #[no_ret]
             [
                 &mut self.fuzzer,
                 &mut self.debugger,
@@ -640,7 +634,6 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
 
     fn step_end(&mut self, interpreter: &mut Interpreter, ecx: &mut EvmContext<&mut DB>) {
         call_inspectors_adjust_depth!(
-            #[no_ret]
             [&mut self.tracer, &mut self.chisel_state, &mut self.printer],
             |inspector| inspector.step_end(interpreter, ecx),
             self,
@@ -650,7 +643,6 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
 
     fn log(&mut self, ecx: &mut EvmContext<&mut DB>, log: &Log) {
         call_inspectors_adjust_depth!(
-            #[no_ret]
             [&mut self.tracer, &mut self.log_collector, &mut self.cheatcodes, &mut self.printer],
             |inspector| inspector.log(ecx, log),
             self,
@@ -669,6 +661,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
         }
 
         call_inspectors_adjust_depth!(
+            #[ret]
             [
                 &mut self.fuzzer,
                 &mut self.debugger,
@@ -698,7 +691,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
         {
             let (result, _) = self.transact_inner(
                 ecx,
-                TransactTo::Call(call.target_address),
+                TxKind::Call(call.target_address),
                 call.caller,
                 call.input.clone(),
                 call.gas_limit,
@@ -746,16 +739,21 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
         }
 
         call_inspectors_adjust_depth!(
+            #[ret]
             [&mut self.debugger, &mut self.tracer, &mut self.coverage, &mut self.cheatcodes],
             |inspector| inspector.create(ecx, create).map(Some),
             self,
             ecx
         );
 
-        if self.enable_isolation && !self.in_inner_context && ecx.journaled_state.depth == 1 {
+        if !matches!(create.scheme, CreateScheme::Create2 { .. }) &&
+            self.enable_isolation &&
+            !self.in_inner_context &&
+            ecx.journaled_state.depth == 1
+        {
             let (result, address) = self.transact_inner(
                 ecx,
-                TransactTo::Create,
+                TxKind::Create,
                 create.caller,
                 create.init_code.clone(),
                 create.gas_limit,
@@ -782,6 +780,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
         let result = outcome.result.result;
 
         call_inspectors_adjust_depth!(
+            #[ret]
             [&mut self.debugger, &mut self.tracer, &mut self.cheatcodes, &mut self.printer],
             |inspector| {
                 let new_outcome = inspector.create_end(ecx, call, outcome.clone());
@@ -814,6 +813,7 @@ impl<DB: DatabaseExt + DatabaseCommit> InspectorExt<&mut DB> for InspectorStack 
         inputs: &mut CreateInputs,
     ) -> bool {
         call_inspectors_adjust_depth!(
+            #[ret]
             [&mut self.cheatcodes],
             |inspector| { inspector.should_use_create2_factory(ecx, inputs).then_some(true) },
             self,

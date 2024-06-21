@@ -3,10 +3,12 @@ use crate::eth::{
     error::{BlockchainError, Result},
 };
 use alloy_primitives::{Address, Bytes, FixedBytes, B256, U256};
-use alloy_rpc_types::{Block, BlockTransactions, Transaction};
-use alloy_rpc_types_trace::parity::{
-    Action, CallAction, CallType, CreateAction, CreateOutput, LocalizedTransactionTrace,
-    RewardAction, TraceOutput,
+use alloy_rpc_types::{
+    trace::parity::{
+        Action, CallAction, CallType, CreateAction, CreateOutput, LocalizedTransactionTrace,
+        RewardAction, TraceOutput,
+    },
+    Block, BlockTransactions, Transaction,
 };
 use alloy_serde::WithOtherFields;
 use anvil_core::eth::transaction::ReceiptResponse;
@@ -77,7 +79,7 @@ pub struct OtsSearchTransactions {
 /// Otterscan format for listing relevant internal operations.
 ///
 /// Ref: <https://github.com/otterscan/otterscan/blob/5adf4e3eead05eddb7746ee45b689161aaea7a7a/src/types.ts#L98>
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OtsInternalOperation {
     pub r#type: OtsInternalOperationType,
@@ -89,7 +91,7 @@ pub struct OtsInternalOperation {
 /// Types of internal operations recognized by Otterscan.
 ///
 /// Ref: <https://github.com/otterscan/otterscan/blob/5adf4e3eead05eddb7746ee45b689161aaea7a7a/src/types.ts#L91>
-#[derive(Debug, PartialEq, Serialize_repr)]
+#[derive(Debug, PartialEq, Eq, Serialize_repr)]
 #[repr(u8)]
 pub enum OtsInternalOperationType {
     Transfer = 0,
@@ -99,7 +101,7 @@ pub enum OtsInternalOperationType {
 }
 
 /// Otterscan's representation of a trace
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct OtsTrace {
     pub r#type: OtsTraceType,
     pub depth: usize,
@@ -113,7 +115,7 @@ pub struct OtsTrace {
 
 /// The type of call being described by an Otterscan trace. Only CALL, STATICCALL and DELEGATECALL
 /// are represented
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum OtsTraceType {
     Call,
