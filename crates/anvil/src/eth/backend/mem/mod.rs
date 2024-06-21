@@ -36,27 +36,27 @@ use alloy_consensus::{Header, Receipt, ReceiptWithBloom};
 use alloy_eips::eip4844::MAX_BLOBS_PER_BLOCK;
 use alloy_primitives::{keccak256, Address, Bytes, TxHash, TxKind, B256, U256, U64};
 use alloy_rpc_types::{
-    request::TransactionRequest, serde_helpers::JsonStorageKey, state::StateOverride, AccessList,
-    Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber,
+    anvil::Forking,
+    request::TransactionRequest,
+    serde_helpers::JsonStorageKey,
+    state::StateOverride,
+    trace::{
+        geth::{DefaultFrame, GethDebugTracingOptions, GethDefaultTracingOptions, GethTrace},
+        parity::LocalizedTransactionTrace,
+    },
+    AccessList, Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber,
     EIP1186AccountProofResponse as AccountProof, EIP1186StorageProof as StorageProof, Filter,
-    FilteredParams, Header as AlloyHeader, Log, Transaction, TransactionReceipt,
-};
-use alloy_rpc_types_trace::{
-    geth::{DefaultFrame, GethDebugTracingOptions, GethDefaultTracingOptions, GethTrace},
-    parity::LocalizedTransactionTrace,
+    FilteredParams, Header as AlloyHeader, Index, Log, Transaction, TransactionReceipt,
 };
 use alloy_serde::WithOtherFields;
 use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
-use anvil_core::{
-    eth::{
-        block::{Block, BlockInfo},
-        transaction::{
-            DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
-            TransactionInfo, TypedReceipt, TypedTransaction,
-        },
-        utils::meets_eip155,
+use anvil_core::eth::{
+    block::{Block, BlockInfo},
+    transaction::{
+        DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
+        TransactionInfo, TypedReceipt, TypedTransaction,
     },
-    types::{Forking, Index},
+    utils::meets_eip155,
 };
 use anvil_rpc::error::RpcError;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
@@ -70,7 +70,7 @@ use foundry_evm::{
         interpreter::InstructionResult,
         primitives::{
             BlockEnv, CfgEnvWithHandlerCfg, EnvWithHandlerCfg, ExecutionResult, Output, SpecId,
-            TransactTo, TxEnv, KECCAK_EMPTY,
+            TxEnv, KECCAK_EMPTY,
         },
     },
     utils::new_evm_with_inspector_ref,
@@ -1159,8 +1159,8 @@ impl Backend {
             gas_priority_fee: max_priority_fee_per_gas.map(U256::from),
             max_fee_per_blob_gas: max_fee_per_blob_gas.map(U256::from),
             transact_to: match to {
-                Some(addr) => TransactTo::Call(*addr),
-                None => TransactTo::Create,
+                Some(addr) => TxKind::Call(*addr),
+                None => TxKind::Create,
             },
             value: value.unwrap_or_default(),
             data: input.into_input().unwrap_or_default(),

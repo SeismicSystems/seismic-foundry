@@ -5,16 +5,16 @@ use crate::{
     utils::{http_provider, http_provider_with_signer},
 };
 use alloy_network::{EthereumWallet, TransactionBuilder};
-use alloy_primitives::{address, Address, Bytes, TxKind, U256};
+use alloy_primitives::{address, bytes, Address, Bytes, TxKind, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::{
+    anvil::Forking,
     request::{TransactionInput, TransactionRequest},
     BlockId, BlockNumberOrTag,
 };
 use alloy_serde::WithOtherFields;
 use alloy_signer_local::PrivateKeySigner;
 use anvil::{eth::EthApi, spawn, NodeConfig, NodeHandle};
-use anvil_core::types::Forking;
 use foundry_common::provider::get_http_provider;
 use foundry_config::Config;
 use foundry_test_utils::rpc::{self, next_http_rpc_endpoint};
@@ -1191,7 +1191,7 @@ async fn test_fork_execution_reverted() {
         .call(
             WithOtherFields::new(TransactionRequest {
                 to: Some(TxKind::from(address!("Fd6CC4F251eaE6d02f9F7B41D1e80464D3d2F377"))),
-                input: TransactionInput::new("0x8f283b3c".as_bytes().into()),
+                input: TransactionInput::new(bytes!("8f283b3c")),
                 ..Default::default()
             }),
             Some(target.into()),
