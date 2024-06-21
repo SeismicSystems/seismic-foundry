@@ -848,7 +848,7 @@ dependencies = [
  "k256",
  "parking_lot",
  "rand 0.8.5",
- "revm 10.0.0",
+ "revm",
  "serde",
  "serde_json",
  "serde_repr",
@@ -880,7 +880,7 @@ dependencies = [
  "foundry-common",
  "foundry-evm",
  "rand 0.8.5",
- "revm 10.0.0",
+ "revm",
  "serde",
  "serde_json",
 ]
@@ -2220,7 +2220,7 @@ dependencies = [
  "once_cell",
  "regex",
  "reqwest 0.12.5",
- "revm 10.0.0",
+ "revm",
  "rustyline",
  "semver 1.0.23",
  "serde",
@@ -4040,7 +4040,7 @@ dependencies = [
  "once_cell",
  "regex",
  "reqwest 0.12.5",
- "revm-primitives 5.0.0",
+ "revm-primitives",
  "semver 1.0.23",
  "serde",
  "serde_json",
@@ -4107,7 +4107,7 @@ dependencies = [
  "parking_lot",
  "paste",
  "rand 0.8.5",
- "revm 10.0.0",
+ "revm",
  "rustc-hash",
  "seismic-preimages",
  "seismic-prover",
@@ -4343,7 +4343,7 @@ dependencies = [
  "path-slash",
  "regex",
  "reqwest 0.12.5",
- "revm-primitives 5.0.0",
+ "revm-primitives",
  "semver 1.0.23",
  "serde",
  "serde_json",
@@ -4370,7 +4370,7 @@ dependencies = [
  "foundry-evm-core",
  "foundry-evm-traces",
  "ratatui",
- "revm 10.0.0",
+ "revm",
  "revm-inspectors",
  "tracing",
 ]
@@ -4396,7 +4396,7 @@ dependencies = [
  "indicatif",
  "parking_lot",
  "proptest",
- "revm 10.0.0",
+ "revm",
  "revm-inspectors",
  "seismic-chips",
  "seismic-inspector",
@@ -4431,7 +4431,7 @@ dependencies = [
  "itertools 0.13.0",
  "once_cell",
  "parking_lot",
- "revm 10.0.0",
+ "revm",
  "revm-inspectors",
  "rustc-hash",
  "serde",
@@ -4452,7 +4452,7 @@ dependencies = [
  "foundry-compilers",
  "foundry-evm-core",
  "rayon",
- "revm 10.0.0",
+ "revm",
  "rustc-hash",
  "semver 1.0.23",
  "tracing",
@@ -4478,7 +4478,7 @@ dependencies = [
  "parking_lot",
  "proptest",
  "rand 0.8.5",
- "revm 10.0.0",
+ "revm",
  "serde",
  "thiserror",
  "tracing",
@@ -7738,20 +7738,6 @@ dependencies = [
 
 [[package]]
 name = "revm"
-version = "9.0.0"
-source = "git+https://github.com/bluealloy/revm.git?rev=41e2f7f#41e2f7f9740c0fb70c5ba888a36453712b6de39c"
-dependencies = [
- "auto_impl",
- "cfg-if",
- "dyn-clone",
- "revm-interpreter 5.0.0",
- "revm-precompile 7.0.0",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "revm"
 version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "355bde4e21578c241f9379fbb344a73d254969b5007239115e094dda1511cd34"
@@ -7759,8 +7745,8 @@ dependencies = [
  "auto_impl",
  "cfg-if",
  "dyn-clone",
- "revm-interpreter 6.0.0",
- "revm-precompile 8.0.0",
+ "revm-interpreter",
+ "revm-precompile",
  "serde",
  "serde_json",
 ]
@@ -7776,19 +7762,10 @@ dependencies = [
  "alloy-sol-types",
  "anstyle",
  "colorchoice",
- "revm 10.0.0",
+ "revm",
  "serde",
  "serde_json",
  "thiserror",
-]
-
-[[package]]
-name = "revm-interpreter"
-version = "5.0.0"
-source = "git+https://github.com/bluealloy/revm.git?rev=41e2f7f#41e2f7f9740c0fb70c5ba888a36453712b6de39c"
-dependencies = [
- "revm-primitives 4.0.0",
- "serde",
 ]
 
 [[package]]
@@ -7797,24 +7774,8 @@ version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23dfd24faa3cbbd96e0976103d1e174d6559b8036730f70415488ee21870d578"
 dependencies = [
- "revm-primitives 5.0.0",
+ "revm-primitives",
  "serde",
-]
-
-[[package]]
-name = "revm-precompile"
-version = "7.0.0"
-source = "git+https://github.com/bluealloy/revm.git?rev=41e2f7f#41e2f7f9740c0fb70c5ba888a36453712b6de39c"
-dependencies = [
- "aurora-engine-modexp",
- "c-kzg",
- "k256",
- "once_cell",
- "revm-primitives 4.0.0",
- "ripemd",
- "secp256k1",
- "sha2",
- "substrate-bn",
 ]
 
 [[package]]
@@ -7828,28 +7789,11 @@ dependencies = [
  "k256",
  "once_cell",
  "p256",
- "revm-primitives 5.0.0",
+ "revm-primitives",
  "ripemd",
  "secp256k1",
  "sha2",
  "substrate-bn",
-]
-
-[[package]]
-name = "revm-primitives"
-version = "4.0.0"
-source = "git+https://github.com/bluealloy/revm.git?rev=41e2f7f#41e2f7f9740c0fb70c5ba888a36453712b6de39c"
-dependencies = [
- "alloy-primitives",
- "auto_impl",
- "bitflags 2.5.0",
- "bitvec",
- "cfg-if",
- "dyn-clone",
- "enumn",
- "hashbrown 0.14.5",
- "hex",
- "serde",
 ]
 
 [[package]]
@@ -8432,7 +8376,7 @@ dependencies = [
  "paste",
  "quote",
  "redis",
- "revm 9.0.0",
+ "revm",
  "seismic-prover",
  "serde",
  "serde_json",
@@ -8446,7 +8390,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
  "redis",
- "revm 9.0.0",
+ "revm",
  "seismic-chips",
  "seismic-prover",
 ]
@@ -8459,7 +8403,7 @@ dependencies = [
  "alloy-sol-types",
  "dyn-clone",
  "redis",
- "revm 9.0.0",
+ "revm",
  "seismic-chips",
  "seismic-dispatcher",
  "seismic-prover",
@@ -8473,7 +8417,7 @@ version = "0.1.0"
 dependencies = [
  "alloy-primitives",
  "redis",
- "revm 9.0.0",
+ "revm",
  "seismic-chips",
  "seismic-prover",
 ]
@@ -11024,23 +10968,3 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
-
-[[patch.unused]]
-name = "revm"
-version = "9.0.0"
-source = "git+https://github.com/bluealloy/revm.git?rev=dd98b3b#dd98b3bb977396d23966e0a2f40d97678d931573"
-
-[[patch.unused]]
-name = "revm-interpreter"
-version = "5.0.0"
-source = "git+https://github.com/bluealloy/revm.git?rev=dd98b3b#dd98b3bb977396d23966e0a2f40d97678d931573"
-
-[[patch.unused]]
-name = "revm-precompile"
-version = "7.0.0"
-source = "git+https://github.com/bluealloy/revm.git?rev=dd98b3b#dd98b3bb977396d23966e0a2f40d97678d931573"
-
-[[patch.unused]]
-name = "revm-primitives"
-version = "4.0.0"
-source = "git+https://github.com/bluealloy/revm.git?rev=dd98b3b#dd98b3bb977396d23966e0a2f40d97678d931573"

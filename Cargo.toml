@@ -266,9 +266,3 @@ seismic-chips = { path = "../mantle/crates/chips" }
 seismic-inspector = { path = "../mantle/crates/inspector" }
 seismic-preimages = { path = "../mantle/crates/preimages" }
 seismic-prover = { path = "../mantle/crates/prover" }
-
-[patch.crates-io]
-revm = { git = "https://github.com/bluealloy/revm.git", rev = "dd98b3b" }
-revm-interpreter = { git = "https://github.com/bluealloy/revm.git", rev = "dd98b3b" }
-revm-precompile = { git = "https://github.com/bluealloy/revm.git", rev = "dd98b3b" }
-revm-primitives = { git = "https://github.com/bluealloy/revm.git", rev = "dd98b3b" }
