@@ -38,6 +38,9 @@ bytes = "1.4"
 # misc
 rand = "0.8"
 
+# Seismic
+seismic-preimages.workspace = true
+
 [features]
 default = ["serde"]
 impersonated-tx = []
