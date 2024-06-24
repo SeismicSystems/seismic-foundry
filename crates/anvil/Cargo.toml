@@ -110,6 +110,7 @@ clap_complete_fig = "4"
 
 # Seismic
 seismic-inspector.workspace = true
+seismic-preimages.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 tikv-jemallocator = { workspace = true, optional = true }

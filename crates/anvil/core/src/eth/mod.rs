@@ -753,6 +753,15 @@ pub enum EthRequest {
         serde(rename = "anvil_removePoolTransactions", with = "sequence")
     )]
     RemovePoolTransactions(Address),
+
+    #[cfg_attr(
+        feature = "serde",
+        serde(rename = "seismic_commit")
+    )]
+    SeismicCommit(
+        Address,
+        Vec<seismic_preimages::InputPreImage>
+    )
 }
 
 /// Represents ethereum JSON-RPC API
