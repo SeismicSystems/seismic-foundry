@@ -8447,7 +8447,6 @@ dependencies = [
  "revm",
  "seismic-chips",
  "seismic-prover",
- "serde",
 ]
 
 [[package]]
