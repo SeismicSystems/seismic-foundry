@@ -18,12 +18,14 @@ use foundry_evm::{
 /// The [`revm::Inspector`] used when transacting in the evm
 #[derive(Clone, Debug, Default)]
 pub struct Inspector {
+    pub seismic: Option<seismic_inspector::SeismicInspector>,
     pub tracer: Option<TracingInspector>,
     /// collects all `console.sol` logs
     pub log_collector: LogCollector,
 }
 
 impl Inspector {
+
     /// Called after the inspecting the evm
     ///
     /// This will log all `console.sol` logs
@@ -42,29 +44,34 @@ impl Inspector {
         self.tracer = Some(TracingInspector::new(TracingInspectorConfig::all()));
         self
     }
+
+    pub fn with_seismic(mut self) -> Self {
+        self.seismic = Some(seismic_inspector::SeismicInspectorBuilder::new().build());
+        self
+    }
 }
 
 impl<DB: Database> revm::Inspector<DB> for Inspector {
     fn initialize_interp(&mut self, interp: &mut Interpreter, ecx: &mut EvmContext<DB>) {
-        call_inspectors!([&mut self.tracer], |inspector| {
+        call_inspectors!([&mut self.seismic, &mut self.tracer], |inspector| {
             inspector.initialize_interp(interp, ecx);
         });
     }
 
     fn step(&mut self, interp: &mut Interpreter, ecx: &mut EvmContext<DB>) {
-        call_inspectors!([&mut self.tracer], |inspector| {
+        call_inspectors!([&mut self.seismic, &mut self.tracer], |inspector| {
             inspector.step(interp, ecx);
         });
     }
 
     fn step_end(&mut self, interp: &mut Interpreter, ecx: &mut EvmContext<DB>) {
-        call_inspectors!([&mut self.tracer], |inspector| {
+        call_inspectors!([&mut self.seismic, &mut self.tracer], |inspector| {
             inspector.step_end(interp, ecx);
         });
     }
 
     fn log(&mut self, ecx: &mut EvmContext<DB>, log: &Log) {
-        call_inspectors!([&mut self.tracer, Some(&mut self.log_collector)], |inspector| {
+        call_inspectors!([&mut self.seismic, &mut self.tracer, Some(&mut self.log_collector)], |inspector| {
             inspector.log(ecx, log);
         });
     }
@@ -72,7 +79,7 @@ impl<DB: Database> revm::Inspector<DB> for Inspector {
     fn call(&mut self, ecx: &mut EvmContext<DB>, inputs: &mut CallInputs) -> Option<CallOutcome> {
         call_inspectors!(
             #[ret]
-            [&mut self.tracer, Some(&mut self.log_collector)],
+            [&mut self.seismic, &mut self.tracer, Some(&mut self.log_collector)],
             |inspector| inspector.call(ecx, inputs).map(Some),
         );
         None
@@ -84,6 +91,10 @@ impl<DB: Database> revm::Inspector<DB> for Inspector {
         inputs: &CallInputs,
         outcome: CallOutcome,
     ) -> CallOutcome {
+        let outcome = match &mut self.seismic {
+            Some(seismic) => seismic.call_end(ecx, inputs, outcome),
+            None => outcome,
+        };
         if let Some(tracer) = &mut self.tracer {
             return tracer.call_end(ecx, inputs, outcome);
         }

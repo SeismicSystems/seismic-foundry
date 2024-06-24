@@ -843,7 +843,7 @@ impl Backend {
         }
 
         let db = self.db.read().await;
-        let mut inspector = Inspector::default();
+        let mut inspector = Inspector::default().with_seismic();
         let mut evm = self.new_evm_with_inspector_ref(&**db, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;
         let (exit_reason, gas_used, out, logs) = match result {
@@ -1190,7 +1190,7 @@ impl Backend {
     where
         D: DatabaseRef<Error = DatabaseError>,
     {
-        let mut inspector = Inspector::default();
+        let mut inspector = Inspector::default().with_seismic();
 
         let env = self.build_call_env(request, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
@@ -1217,7 +1217,7 @@ impl Backend {
         opts: GethDefaultTracingOptions,
     ) -> Result<DefaultFrame, BlockchainError> {
         self.with_database_at(block_request, |state, block| {
-            let mut inspector = Inspector::default().with_steps_tracing();
+            let mut inspector = Inspector::default().with_steps_tracing().with_seismic();
             let block_number = block.number;
 
             let env = self.build_call_env(request, fee_details, block);

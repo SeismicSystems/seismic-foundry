@@ -300,7 +300,7 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
         let nonce = account.nonce;
 
         // records all call and step traces
-        let mut inspector = Inspector::default().with_tracing();
+        let mut inspector = Inspector::default().with_tracing().with_seismic();
         if self.enable_steps_tracing {
             inspector = inspector.with_steps_tracing();
         }

@@ -849,6 +849,7 @@ dependencies = [
  "parking_lot",
  "rand 0.8.5",
  "revm",
+ "seismic-inspector",
  "serde",
  "serde_json",
  "serde_repr",
