@@ -434,6 +434,7 @@ impl InspectorStack {
                 &mut self.tracer,
                 &mut self.cheatcodes,
                 &mut self.printer,
+                &mut self.seismic,
             ],
             |inspector| {
                 let new_outcome = inspector.call_end(ecx, inputs, outcome.clone());
@@ -625,6 +626,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
                 &mut self.coverage,
                 &mut self.cheatcodes,
                 &mut self.printer,
+                &mut self.seismic,
             ],
             |inspector| inspector.step(interpreter, ecx),
             self,
