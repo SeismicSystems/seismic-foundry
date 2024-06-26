@@ -151,6 +151,7 @@ pub fn transaction_request_to_typed(
                 TxEip4844WithSidecar::from_tx_and_sidecar(tx, sidecar),
             )))
         }
+        // Lol this is so annoying
         _ => None,
     }
 }
@@ -168,6 +169,7 @@ pub enum TypedTransactionRequest {
     EIP1559(TxEip1559),
     EIP4844(TxEip4844Variant),
     Deposit(DepositTransactionRequest),
+    // want to add seismic here too
 }
 
 /// A wrapper for [TypedTransaction] that allows impersonating accounts.
@@ -606,6 +608,7 @@ pub enum TypedTransaction {
     EIP4844(Signed<TxEip4844Variant>),
     /// op-stack deposit transaction
     Deposit(DepositTransaction),
+    // TODO: add a seismic transaction type here
 }
 
 impl TypedTransaction {
@@ -908,6 +911,9 @@ impl Encodable for TypedTransaction {
                 out.put_u8(0x7E);
                 tx.encode(out);
             }
+            // Can (probably) get around forking alloy-consensus
+            // by manually encoding it here like they do in Deposit.
+            // However it is probably useful to look at alloy-consensus
         }
     }
 }
