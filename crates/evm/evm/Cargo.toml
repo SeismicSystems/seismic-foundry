@@ -53,5 +53,6 @@ tracing.workspace = true
 indicatif = "0.17"
 
 # Seismic
+seismic-db.workspace = true
 seismic-chips.workspace = true
 seismic-inspector.workspace = true

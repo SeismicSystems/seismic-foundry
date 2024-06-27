@@ -650,7 +650,7 @@ fn get_state_diff(state: &mut Cheatcodes) -> Result {
 
 use alloy_primitives::I256;
 #[allow(unused_imports)] // used in our macro
-use seismic_prover::primitive_value::PrimitiveValue;
+use seismic_types::primitive_value::PrimitiveValue;
 
 /// implement the `commit` and `unwrap` cheatcodes for unsigned and signed integers
 macro_rules! impl_commit_reveal {

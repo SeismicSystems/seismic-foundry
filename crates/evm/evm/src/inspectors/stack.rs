@@ -184,7 +184,7 @@ impl InspectorStackBuilder {
             stack.set_gas_price(gas_price);
         }
 
-        stack.seismic = Some(seismic_inspector::SeismicInspectorBuilder::new().build());
+        stack.seismic = Some(seismic_inspector::new_in_memory_seismic_inspector());
         stack
     }
 }
@@ -280,7 +280,7 @@ pub struct InspectorStack {
     /// Flag marking if we are in the inner EVM context.
     pub in_inner_context: bool,
     pub inner_context_data: Option<InnerContextData>,
-    pub seismic: Option<seismic_inspector::SeismicInspector>,
+    pub seismic: Option<seismic_inspector::SeismicInspector<seismic_db::CommitmentInMemoryDb>>,
 }
 
 impl InspectorStack {
