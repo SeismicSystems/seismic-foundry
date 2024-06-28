@@ -659,7 +659,8 @@ macro_rules! impl_commit_reveal {
             impl Cheatcode for [<$commit_type $digit Call>] {
                 fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
                     let Self { contractAddress, value } = self;
-                    let (commitment, _) = seismic_preimages::commit(contractAddress, *value)?;
+                    let mut db = foundry_evm_core::SEISMIC_DB.write().unwrap();
+                    let (commitment, _) = seismic_preimages::commit(&mut *db, contractAddress, *value)?;
                     Ok(commitment.abi_encode())
                 }
             }
@@ -667,7 +668,8 @@ macro_rules! impl_commit_reveal {
             impl Cheatcode for [<$unwrap_type $digit Call>] {
                 fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
                     let Self { contractAddress, commitment } = self;
-                    let preimage = seismic_preimages::reveal::<alloy_primitives::$alloy_type, $primitive_type>(contractAddress, commitment)?;
+                    let mut db = foundry_evm_core::SEISMIC_DB.write().unwrap();
+                    let preimage = seismic_preimages::reveal::<alloy_primitives::$alloy_type, $primitive_type, _>(&mut *db, contractAddress, commitment)?;
                     Ok(preimage.abi_encode())
                 }
             }
@@ -707,7 +709,8 @@ impl_commit_reveal_int!("", I256, I256);
 impl Cheatcode for commitBoolCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contractAddress, value } = self;
-        let (commitment, _) = seismic_preimages::commit(contractAddress, *value)?;
+        let mut db = foundry_evm_core::SEISMIC_DB.write().unwrap();
+        let (commitment, _) = seismic_preimages::commit(&mut *db, contractAddress, *value)?;
         Ok(commitment.abi_encode())
     }
 }
@@ -715,7 +718,8 @@ impl Cheatcode for commitBoolCall {
 impl Cheatcode for unwrapSboolCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contractAddress, commitment } = self;
-        let preimage = seismic_preimages::reveal::<alloy_primitives::ruint::aliases::U1, bool>(contractAddress, commitment)?;
+        let mut db = foundry_evm_core::SEISMIC_DB.write().unwrap();
+        let preimage = seismic_preimages::reveal::<alloy_primitives::ruint::aliases::U1, bool, _>(&mut *db, contractAddress, commitment)?;
         Ok(preimage.abi_encode())
     }
 }

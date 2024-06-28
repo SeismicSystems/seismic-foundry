@@ -109,6 +109,7 @@ fdlimit = { version = "0.3", optional = true }
 clap_complete_fig = "4"
 
 # Seismic
+lazy_static.workspace = true
 seismic-db.workspace = true
 seismic-inspector.workspace = true
 seismic-preimages.workspace = true

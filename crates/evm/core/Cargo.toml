@@ -61,5 +61,9 @@ tokio = { workspace = true, features = ["time", "macros"] }
 tracing.workspace = true
 url.workspace = true
 
+# Seismic
+lazy_static.workspace = true
+seismic-db.workspace = true
+
 [dev-dependencies]
 foundry-test-utils.workspace = true

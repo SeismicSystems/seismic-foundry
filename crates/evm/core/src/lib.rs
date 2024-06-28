@@ -48,3 +48,8 @@ pub trait InspectorExt<DB: Database>: Inspector<DB> {
 
 impl<DB: Database> InspectorExt<DB> for NoOpInspector {}
 impl<DB: Database> InspectorExt<DB> for AccessListInspector {}
+
+
+lazy_static::lazy_static! {
+    pub static ref SEISMIC_DB: std::sync::RwLock<seismic_db::CommitmentInMemoryDb> = std::sync::RwLock::new(seismic_db::CommitmentInMemoryDb::new(seismic_db::CommitmentEmptyDb::default()));
+}

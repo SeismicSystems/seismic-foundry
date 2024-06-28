@@ -184,7 +184,8 @@ impl InspectorStackBuilder {
             stack.set_gas_price(gas_price);
         }
 
-        stack.seismic = Some(seismic_inspector::new_in_memory_seismic_inspector());
+        let db = foundry_evm_core::SEISMIC_DB.write().unwrap();
+        stack.seismic = Some(seismic_inspector::get_new_seismic_inspector(db.clone()));
         stack
     }
 }

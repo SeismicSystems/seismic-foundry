@@ -105,6 +105,8 @@ opener = "0.6"
 # soldeer
 soldeer.workspace = true
 
+foundry-evm-core.workspace = true
+
 [target.'cfg(unix)'.dependencies]
 tikv-jemallocator = { workspace = true, optional = true }
 
