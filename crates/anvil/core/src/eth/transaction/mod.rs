@@ -1,6 +1,6 @@
 //! Transaction related types
 
-use crate::eth::transaction::optimism::{DepositTransaction, DepositTransactionRequest};
+use crate::eth::transaction::{optimism::{DepositTransaction, DepositTransactionRequest}, seismic::{SeismicTransactionRequest, SeismicTransaction, SecretData}};
 use alloy_consensus::{
     transaction::eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
     AnyReceiptEnvelope, Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, TxEip1559, TxEip2930,
@@ -24,6 +24,8 @@ use serde::{Deserialize, Serialize};
 use std::ops::{Deref, Mul};
 
 pub mod optimism;
+
+pub mod seismic;
 
 /// The signature used to bypass signing via the `eth_sendUnsignedTransaction` cheat RPC
 #[cfg(feature = "impersonated-tx")]
@@ -72,6 +74,23 @@ pub fn transaction_request_to_typed(
             input: input.into_input().unwrap_or_default(),
         }))
     }
+    
+    // Special case: Seismic tx
+    else if transaction_type == Some(0x64) || has_seismic_fields(&other) {
+        return Some(TypedTransactionRequest::Seismic(SeismicTransactionRequest {
+                nonce: nonce.unwrap_or_default(),
+                max_fee_per_gas: max_fee_per_gas.unwrap_or_default(),
+                max_priority_fee_per_gas: max_priority_fee_per_gas.unwrap_or_default(),
+                gas_limit: gas.unwrap_or_default(),
+                value: value.unwrap_or(U256::ZERO),
+                input: input.into_input().unwrap_or_default(),
+                to: to.unwrap_or_default(),
+                chain_id: 0,
+                access_list: access_list.unwrap_or_default(),
+             secret_data: other.get_deserialized::<Vec<SecretData>>("secretData")?.ok()?,
+        }));
+        }
+    
 
     match (
         transaction_type,
@@ -151,7 +170,8 @@ pub fn transaction_request_to_typed(
                 TxEip4844WithSidecar::from_tx_and_sidecar(tx, sidecar),
             )))
         }
-        // Lol this is so annoying
+
+        // Lol this is so annoying -- did this how Optimism did it 
         _ => None,
     }
 }
@@ -162,6 +182,10 @@ fn has_optimism_fields(other: &OtherFields) -> bool {
         other.contains_key("isSystemTx")
 }
 
+fn has_seismic_fields(other: &OtherFields) -> bool {
+    other.contains_key("secretData")
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TypedTransactionRequest {
     Legacy(TxLegacy),
@@ -169,7 +193,7 @@ pub enum TypedTransactionRequest {
     EIP1559(TxEip1559),
     EIP4844(TxEip4844Variant),
     Deposit(DepositTransactionRequest),
-    // want to add seismic here too
+    Seismic(SeismicTransactionRequest),
 }
 
 /// A wrapper for [TypedTransaction] that allows impersonating accounts.
@@ -608,7 +632,8 @@ pub enum TypedTransaction {
     EIP4844(Signed<TxEip4844Variant>),
     /// op-stack deposit transaction
     Deposit(DepositTransaction),
-    // TODO: add a seismic transaction type here
+    /// Seismic transaction
+    Seismic(Signed<SeismicTransaction>),
 }
 
 impl TypedTransaction {
@@ -624,6 +649,7 @@ impl TypedTransaction {
             Self::EIP1559(tx) => tx.tx().max_fee_per_gas,
             Self::EIP4844(tx) => tx.tx().tx().max_fee_per_gas,
             Self::Deposit(_) => 0,
+            Self::Seismic(tx) => tx.tx().max_fee_per_gas,
         }
     }
 
@@ -634,6 +660,7 @@ impl TypedTransaction {
             Self::EIP1559(tx) => tx.tx().gas_limit,
             Self::EIP4844(tx) => tx.tx().tx().gas_limit,
             Self::Deposit(tx) => tx.gas_limit,
+            Self::Seismic(tx) => tx.tx().gas_limit,
         }
     }
 
@@ -644,6 +671,7 @@ impl TypedTransaction {
             Self::EIP1559(tx) => tx.tx().value,
             Self::EIP4844(tx) => tx.tx().tx().value,
             Self::Deposit(tx) => tx.value,
+            Self::Seismic(tx) => tx.tx().value,
         })
     }
 
@@ -654,6 +682,7 @@ impl TypedTransaction {
             Self::EIP1559(tx) => &tx.tx().input,
             Self::EIP4844(tx) => &tx.tx().tx().input,
             Self::Deposit(tx) => &tx.input,
+            Self::Seismic(tx) => &tx.tx().input,
         }
     }
 
@@ -665,6 +694,7 @@ impl TypedTransaction {
             Self::EIP1559(_) => Some(2),
             Self::EIP4844(_) => Some(3),
             Self::Deposit(_) => Some(0x7E),
+            Self::Seismic(_) => Some(0x64),
         }
     }
 
@@ -771,6 +801,20 @@ impl TypedTransaction {
                 chain_id: t.chain_id(),
                 access_list: Default::default(),
             },
+            Self::Seismic(t) => TransactionEssentials {
+                kind: t.tx().to,
+                input: t.tx().input.clone(),
+                nonce: t.tx().nonce,
+                gas_limit: t.tx().gas_limit,
+                gas_price: Some(U256::from(t.tx().max_fee_per_gas)),
+                max_fee_per_gas: None,
+                max_priority_fee_per_gas: None,
+                max_fee_per_blob_gas: None,
+                blob_versioned_hashes: None,
+                value: t.tx().value,
+                chain_id: Some(t.tx().chain_id),
+                access_list: t.tx().access_list.clone(),
+            },
         }
     }
 
@@ -781,6 +825,7 @@ impl TypedTransaction {
             Self::EIP1559(t) => t.tx().nonce,
             Self::EIP4844(t) => t.tx().tx().nonce,
             Self::Deposit(t) => t.nonce,
+            Self::Seismic(t) => t.tx().nonce,
         }
     }
 
@@ -791,6 +836,7 @@ impl TypedTransaction {
             Self::EIP1559(t) => Some(t.tx().chain_id),
             Self::EIP4844(t) => Some(t.tx().tx().chain_id),
             Self::Deposit(t) => t.chain_id(),
+            Self::Seismic(t) => Some(t.tx().chain_id),
         }
     }
 
@@ -832,6 +878,7 @@ impl TypedTransaction {
             Self::EIP1559(t) => *t.hash(),
             Self::EIP4844(t) => *t.hash(),
             Self::Deposit(t) => t.hash(),
+            Self::Seismic(t) => *t.hash(),
         }
     }
 
@@ -860,6 +907,7 @@ impl TypedTransaction {
             Self::EIP1559(tx) => tx.recover_signer(),
             Self::EIP4844(tx) => tx.recover_signer(),
             Self::Deposit(tx) => tx.recover(),
+            Self::Seismic(tx) => tx.recover_signer(),
         }
     }
 
@@ -871,6 +919,7 @@ impl TypedTransaction {
             Self::EIP1559(tx) => tx.tx().to,
             Self::EIP4844(tx) => TxKind::Call(tx.tx().tx().to),
             Self::Deposit(tx) => tx.kind,
+            Self::Seismic(tx) => tx.tx().to,
         }
     }
 
@@ -892,6 +941,7 @@ impl TypedTransaction {
                 false,
             )
             .unwrap(),
+            Self::Seismic(tx) => *tx.signature(),
         }
     }
 }
@@ -973,6 +1023,7 @@ impl Decodable2718 for TypedTransaction {
         if ty == 0x7E {
             return Ok(Self::Deposit(DepositTransaction::decode(buf)?))
         }
+        // add in seismic transaction type decoding here
         match TxEnvelope::typed_decode(ty, buf)? {
             TxEnvelope::Eip2930(tx) => Ok(Self::EIP2930(tx)),
             TxEnvelope::Eip1559(tx) => Ok(Self::EIP1559(tx)),
