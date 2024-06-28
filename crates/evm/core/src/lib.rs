@@ -51,5 +51,5 @@ impl<DB: Database> InspectorExt<DB> for AccessListInspector {}
 
 
 lazy_static::lazy_static! {
-    pub static ref SEISMIC_DB: std::sync::RwLock<seismic_db::CommitmentInMemoryDb> = std::sync::RwLock::new(seismic_db::CommitmentInMemoryDb::new(seismic_db::CommitmentEmptyDb::default()));
+    pub static ref SEISMIC_DB: seismic_db::SyncInMemoryDB = seismic_db::SyncInMemoryDB::new();
 }

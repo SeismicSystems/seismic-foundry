@@ -151,8 +151,6 @@ impl TestArgs {
         trace!(target: "forge::test", "executing test command");
         shell::set_shell(shell::Shell::from_args(self.opts.silent, self.json))?;
         let outcome = self.execute_tests().await;
-        let db = foundry_evm_core::SEISMIC_DB.write().unwrap();
-        println!("DB: {:?}", db);
         outcome
     }
 
