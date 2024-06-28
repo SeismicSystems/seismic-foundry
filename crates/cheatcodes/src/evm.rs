@@ -715,7 +715,10 @@ impl Cheatcode for commitBoolCall {
 impl Cheatcode for unwrapSboolCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contractAddress, commitment } = self;
-        let preimage = seismic_preimages::reveal::<alloy_primitives::ruint::aliases::U1, bool>(contractAddress, commitment)?;
+        let preimage = seismic_preimages::reveal::<alloy_primitives::ruint::aliases::U1, bool>(
+            contractAddress,
+            commitment,
+        )?;
         Ok(preimage.abi_encode())
     }
 }

@@ -20,7 +20,11 @@ pub struct DepositTransactionRequest {
 
 impl DepositTransactionRequest {
     pub fn hash(&self) -> B256 {
-        B256::from_slice(alloy_primitives::keccak256(alloy_rlp::encode(self)).as_slice()) // is this necessary given we have signature_hash()?
+        B256::from_slice(alloy_primitives::keccak256(alloy_rlp::encode(self)).as_slice()) // is this
+                                                                                          // necessary
+                                                                                          // given we
+                                                                                          // have signature_hash()?
+                                                                                          //
     }
 
     /// Encodes only the transaction's fields into the desired buffer, without a RLP header.

@@ -239,7 +239,7 @@ impl<'a, DB: Db + ?Sized, Validator: TransactionValidator> TransactionExecutor<'
             tx_env.optimism.enveloped_tx =
                 Some(alloy_rlp::encode(&tx.transaction.transaction).into());
         }
-
+        // seismic will come in here as well since this is the executor
         EnvWithHandlerCfg::new_with_cfg_env(self.cfg_env.clone(), self.block_env.clone(), tx_env)
     }
 }

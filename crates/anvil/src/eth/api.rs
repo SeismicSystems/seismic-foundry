@@ -439,12 +439,12 @@ impl EthApi {
                         match e {
                             seismic_preimages::SeismicRpcError::ParseError(_) => {
                                 ResponseResult::Error(RpcError::invalid_params(msg))
-                            },
+                            }
                             seismic_preimages::SeismicRpcError::RedisError(_) => {
                                 ResponseResult::Error(RpcError::internal_error_with(msg))
-                            },
+                            }
                         }
-                    },
+                    }
                 }
             }
         }
@@ -464,12 +464,13 @@ impl EthApi {
                         false,
                     )
                     .unwrap();
-                return build_typed_transaction(request, nil_signature) // Deposit transactions do not include a signature
+                return build_typed_transaction(request, nil_signature) // Deposit transactions do
+                                                                       // not include a signature
             }
             /* TypedTransactionRequest::Seismic(_) => {
                 // Seismic transactions do not sign the secret_data fields
                 return build_typed_transaction(request, seismic_signature)
-            }  */ 
+            }  */
             _ => {
                 for signer in self.signers.iter() {
                     if signer.accounts().contains(from) {

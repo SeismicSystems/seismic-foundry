@@ -1,14 +1,14 @@
 use alloy_consensus::{SignableTransaction, Signed, Transaction, TxType};
+use alloy_eips::eip2930::AccessList;
 use alloy_primitives::{keccak256, Address, Bytes, ChainId, Signature, TxKind, B256, U256};
 use alloy_rlp::{
     length_of_length, Decodable, Encodable, Error as DecodeError, Header as RlpHeader,
 };
 use serde::{Deserialize, Serialize};
 use std::mem;
-use alloy_eips::eip2930::AccessList;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct SeismicTransactionRequest{
+pub struct SeismicTransactionRequest {
     pub chain_id: ChainId,
     pub nonce: u64,
     pub to: TxKind,
@@ -26,10 +26,8 @@ impl SeismicTransactionRequest {
         B256::from_slice(alloy_primitives::keccak256(alloy_rlp::encode(self)).as_slice())
     }
 
-
-
     /// Encodes only the transaction's fields into the desired buffer, without a RLP header.
-     pub(crate) fn encode_fields(&self, out: &mut dyn alloy_rlp::BufMut) {
+    pub(crate) fn encode_fields(&self, out: &mut dyn alloy_rlp::BufMut) {
         self.chain_id.encode(out);
         self.nonce.encode(out);
         self.max_priority_fee_per_gas.encode(out);
@@ -56,7 +54,6 @@ pub struct SeismicTransaction {
     pub input: Bytes,
     pub secret_data: Vec<SecretData>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SecretData {

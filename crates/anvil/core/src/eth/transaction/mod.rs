@@ -1,6 +1,9 @@
 //! Transaction related types
 
-use crate::eth::transaction::{optimism::{DepositTransaction, DepositTransactionRequest}, seismic::{SeismicTransactionRequest, SeismicTransaction, SecretData}};
+use crate::eth::transaction::{
+    optimism::{DepositTransaction, DepositTransactionRequest},
+    seismic::{SecretData, SeismicTransaction, SeismicTransactionRequest},
+};
 use alloy_consensus::{
     transaction::eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
     AnyReceiptEnvelope, Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, TxEip1559, TxEip2930,
@@ -74,23 +77,21 @@ pub fn transaction_request_to_typed(
             input: input.into_input().unwrap_or_default(),
         }))
     }
-    
     // Special case: Seismic tx
     else if transaction_type == Some(0x64) || has_seismic_fields(&other) {
         return Some(TypedTransactionRequest::Seismic(SeismicTransactionRequest {
-                nonce: nonce.unwrap_or_default(),
-                max_fee_per_gas: max_fee_per_gas.unwrap_or_default(),
-                max_priority_fee_per_gas: max_priority_fee_per_gas.unwrap_or_default(),
-                gas_limit: gas.unwrap_or_default(),
-                value: value.unwrap_or(U256::ZERO),
-                input: input.into_input().unwrap_or_default(),
-                to: to.unwrap_or_default(),
-                chain_id: 0,
-                access_list: access_list.unwrap_or_default(),
-             secret_data: other.get_deserialized::<Vec<SecretData>>("secretData")?.ok()?,
+            nonce: nonce.unwrap_or_default(),
+            max_fee_per_gas: max_fee_per_gas.unwrap_or_default(),
+            max_priority_fee_per_gas: max_priority_fee_per_gas.unwrap_or_default(),
+            gas_limit: gas.unwrap_or_default(),
+            value: value.unwrap_or(U256::ZERO),
+            input: input.into_input().unwrap_or_default(),
+            to: to.unwrap_or_default(),
+            chain_id: 0,
+            access_list: access_list.unwrap_or_default(),
+            secret_data: other.get_deserialized::<Vec<SecretData>>("secretData")?.ok()?,
         }));
-        }
-    
+    }
 
     match (
         transaction_type,
@@ -171,7 +172,7 @@ pub fn transaction_request_to_typed(
             )))
         }
 
-        // Lol this is so annoying -- did this how Optimism did it 
+        // Lol this is so annoying -- did this how Optimism did it
         _ => None,
     }
 }
@@ -615,6 +616,37 @@ impl PendingTransaction {
                     ..Default::default()
                 }
             }
+            TypedTransaction::Seismic(tx) => {
+                let SeismicTransaction {
+                    chain_id,
+                    nonce,
+                    max_fee_per_gas,
+                    max_priority_fee_per_gas,
+                    gas_limit,
+                    to,
+                    value,
+                    input,
+                    access_list,
+                    secret_data,
+                    ..
+                } = tx.tx();
+                TxEnv {
+                    caller,
+                    transact_to: transact_to(to),
+                    data: input.clone(),
+                    chain_id: Some(*chain_id),
+                    nonce: Some(*nonce),
+                    value: *value,
+                    gas_price: U256::from(*max_fee_per_gas),
+                    gas_priority_fee: Some(U256::from(*max_priority_fee_per_gas)),
+                    gas_limit: *gas_limit as u64,
+                    access_list: access_list.flattened(),
+                    // seismic: SeismicFields
+                    secret_data: secret_data.clone(), /* TODO: will have to modify revm fields to
+                                                       * enable this? */
+                    ..Default::default()
+                }
+            }
         }
     }
 }
@@ -960,10 +992,9 @@ impl Encodable for TypedTransaction {
                     .encode(out);
                 out.put_u8(0x7E);
                 tx.encode(out);
-            }
-            // Can (probably) get around forking alloy-consensus
-            // by manually encoding it here like they do in Deposit.
-            // However it is probably useful to look at alloy-consensus
+            } /* Can (probably) get around forking alloy-consensus
+               * by manually encoding it here like they do in Deposit.
+               * However it is probably useful to look at alloy-consensus */
         }
     }
 }
