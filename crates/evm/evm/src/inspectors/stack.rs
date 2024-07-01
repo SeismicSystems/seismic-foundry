@@ -184,7 +184,8 @@ impl InspectorStackBuilder {
             stack.set_gas_price(gas_price);
         }
 
-        stack.seismic = Some(seismic_inspector::SeismicInspectorBuilder::new().build());
+        let db = foundry_evm_core::SEISMIC_DB.clone();
+        stack.seismic = Some(seismic_inspector::get_new_seismic_inspector(db));
         stack
     }
 }
@@ -280,7 +281,7 @@ pub struct InspectorStack {
     /// Flag marking if we are in the inner EVM context.
     pub in_inner_context: bool,
     pub inner_context_data: Option<InnerContextData>,
-    pub seismic: Option<seismic_inspector::SeismicInspector>,
+    pub seismic: Option<seismic_inspector::SeismicInspector<seismic_db::SyncInMemoryDB>>,
 }
 
 impl InspectorStack {

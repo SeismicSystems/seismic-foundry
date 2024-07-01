@@ -150,7 +150,8 @@ impl TestArgs {
     pub async fn run(self) -> Result<TestOutcome> {
         trace!(target: "forge::test", "executing test command");
         shell::set_shell(shell::Shell::from_args(self.opts.silent, self.json))?;
-        self.execute_tests().await
+        let outcome = self.execute_tests().await;
+        outcome
     }
 
     /// Returns sources which include any tests to be executed.

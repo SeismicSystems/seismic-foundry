@@ -432,7 +432,8 @@ impl EthApi {
                 self.anvil_remove_pool_transactions(address).await.to_rpc_result()
             }
             EthRequest::SeismicCommit(address, pre_images) => {
-                match seismic_preimages::bulk_commit(&address, &pre_images) {
+                let mut db = crate::eth::SEISMIC_DB.clone();
+                match seismic_preimages::bulk_commit(&mut db, &address, &pre_images) {
                     Ok(commitments) => ResponseResult::Success(serde_json::json!(commitments)),
                     Err(e) => {
                         let msg = e.message();
@@ -440,7 +441,7 @@ impl EthApi {
                             seismic_preimages::SeismicRpcError::ParseError(_) => {
                                 ResponseResult::Error(RpcError::invalid_params(msg))
                             },
-                            seismic_preimages::SeismicRpcError::RedisError(_) => {
+                            seismic_preimages::SeismicRpcError::DbError(_) => {
                                 ResponseResult::Error(RpcError::internal_error_with(msg))
                             },
                         }

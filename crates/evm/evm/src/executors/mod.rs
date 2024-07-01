@@ -111,7 +111,7 @@ impl Executor {
             },
         );
 
-        for address in seismic_chips::Chipset::addresses() {
+        for address in seismic_chips::get_address_set() {
             backend.insert_account_info(
                 Address(*address),
                 revm::primitives::AccountInfo {
