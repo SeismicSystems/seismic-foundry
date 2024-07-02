@@ -6,8 +6,7 @@ use alloy_primitives::{Address, Signature, B256};
 use alloy_signer::Signer as AlloySigner;
 use alloy_signer_local::PrivateKeySigner;
 use anvil_core::eth::transaction::{
-    optimism::{DepositTransaction, DepositTransactionRequest},
-    TypedTransaction, TypedTransactionRequest,
+    optimism::{DepositTransaction, DepositTransactionRequest}, TypedTransaction, TypedTransactionRequest
 };
 use std::collections::HashMap;
 
@@ -106,6 +105,7 @@ impl Signer for DevSigner {
             TypedTransactionRequest::EIP2930(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
             TypedTransactionRequest::EIP1559(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
             TypedTransactionRequest::EIP4844(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
+            TypedTransactionRequest::Seismic(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
             TypedTransactionRequest::Deposit(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
         }
     }
@@ -154,6 +154,9 @@ pub fn build_typed_transaction(
                 is_system_tx,
                 nonce: 0,
             })
+        }
+        TypedTransactionRequest::Seismic(tx) => {
+            TypedTransaction::Seismic(tx.into_signed_without_secrets(signature))
         }
     };
 

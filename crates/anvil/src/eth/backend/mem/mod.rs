@@ -2034,6 +2034,11 @@ impl Backend {
                 .unwrap_or_else(|| self.base_fee())
                 .saturating_add(t.tx().tx().max_priority_fee_per_gas),
             TypedTransaction::Deposit(_) => 0_u128,
+            TypedTransaction::Seismic(t) => block
+                .header
+                .base_fee_per_gas
+                .unwrap_or_else(|| self.base_fee())
+                .saturating_add(t.tx().max_priority_fee_per_gas),
         };
 
         let receipts = self.get_receipts(block.transactions.iter().map(|tx| tx.hash()));

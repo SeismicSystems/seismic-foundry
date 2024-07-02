@@ -159,7 +159,7 @@ impl EthApi {
             EthRequest::EthGetTransactionByHash(hash) => {
                 self.transaction_by_hash(hash).await.to_rpc_result()
             }
-            EthRequest::EthSendTransaction(request) => {
+            EthRequest::EthSendTransaction(request) => { // check for the flag somewhere here?
                 self.send_transaction(*request).await.to_rpc_result()
             }
             EthRequest::EthChainId(_) => self.eth_chain_id().to_rpc_result(),
@@ -2587,6 +2587,15 @@ impl EthApi {
                 m.gas_limit = gas_limit;
                 TypedTransactionRequest::Deposit(m)
             }
+            Some(TypedTransactionRequest::Seismic(mut m)) => {
+                m.nonce = nonce;
+                m.chain_id = chain_id;
+                m.gas_limit = gas_limit;
+                if max_fee_per_gas.is_none() {
+                    m.max_fee_per_gas = self.gas_price();
+                }
+                TypedTransactionRequest::Seismic(m)
+            }
             None => return Err(BlockchainError::FailedToDecodeTransaction),
         };
         Ok(request)
@@ -2663,6 +2672,7 @@ impl EthApi {
             TypedTransaction::EIP1559(_) => self.backend.ensure_eip1559_active(),
             TypedTransaction::EIP4844(_) => self.backend.ensure_eip4844_active(),
             TypedTransaction::Deposit(_) => self.backend.ensure_op_deposits_active(),
+            TypedTransaction::Seismic(_) => Ok(()),
             TypedTransaction::Legacy(_) => Ok(()),
         }
     }
@@ -2716,6 +2726,10 @@ fn determine_base_gas_by_kind(request: &WithOtherFields<TransactionRequest>) -> 
             },
             TypedTransactionRequest::EIP4844(_) => MIN_TRANSACTION_GAS,
             TypedTransactionRequest::Deposit(req) => match req.kind {
+                TxKind::Call(_) => MIN_TRANSACTION_GAS,
+                TxKind::Create => MIN_CREATE_GAS,
+            },
+            TypedTransactionRequest::Seismic(req) => match req.to {
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,
                 TxKind::Create => MIN_CREATE_GAS,
             },

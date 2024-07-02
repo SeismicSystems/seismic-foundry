@@ -92,6 +92,7 @@ impl DepositTransactionRequest {
         self.encode_fields(out);
         signature.write_rlp_vrs(out);
     }
+    
 
     /// Output the length of the RLP signed transaction encoding, _without_ a RLP string header.
     pub fn payload_len_with_signature_without_header(&self, signature: &Signature) -> usize {

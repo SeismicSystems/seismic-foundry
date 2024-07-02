@@ -288,6 +288,10 @@ impl FeeHistoryService {
                             .max_priority_fee_per_gas
                             .min(t.tx().tx().max_fee_per_gas.saturating_sub(base_fee)),
                         Some(TypedTransaction::Deposit(_)) => 0,
+                        Some(TypedTransaction::Seismic(t)) => t
+                        .tx()
+                        .max_priority_fee_per_gas
+                        .min(t.tx().max_fee_per_gas.saturating_sub(base_fee)),
                         None => 0,
                     };
 

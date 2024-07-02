@@ -26,6 +26,8 @@ use revm::{
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, Mul};
 
+use self::seismic::{encode_2718_len, encode_2718_seismic_transaction};
+
 pub mod optimism;
 
 pub mod seismic;
@@ -427,7 +429,34 @@ pub fn to_alloy_transaction_with_hash_and_sender(
             blob_versioned_hashes: None,
             other: Default::default(),
         },
+        TypedTransaction::Seismic(t) => RpcTransaction {
+            hash,
+            nonce: t.tx().nonce,
+            block_hash: None,
+            block_number: None,
+            transaction_index: None,
+            from,
+            to: None,
+            value: t.tx().value,
+            gas_price: None,
+            max_fee_per_gas: Some(t.tx().max_fee_per_gas),
+            max_priority_fee_per_gas: Some(t.tx().max_priority_fee_per_gas),
+            gas: t.tx().gas_limit,
+            input: t.tx().input.clone(),
+            chain_id: Some(t.tx().chain_id),
+            signature: Some(RpcSignature {
+                r: t.signature().r(),
+                s: t.signature().s(),
+                v: U256::from(t.signature().v().y_parity_byte()),
+                y_parity: Some(alloy_rpc_types::Parity::from(t.signature().v().y_parity())),
+            }),
+            access_list: Some(t.tx().access_list.clone()),
+            transaction_type: Some(2),
+            max_fee_per_blob_gas: None,
+            blob_versioned_hashes: None,
+            other: Default::default(),
     }
+}
 }
 
 /// Queued transaction
@@ -627,7 +656,6 @@ impl PendingTransaction {
                     value,
                     input,
                     access_list,
-                    secret_data,
                     ..
                 } = tx.tx();
                 TxEnv {
@@ -641,9 +669,7 @@ impl PendingTransaction {
                     gas_priority_fee: Some(U256::from(*max_priority_fee_per_gas)),
                     gas_limit: *gas_limit as u64,
                     access_list: access_list.flattened(),
-                    // seismic: SeismicFields
-                    secret_data: secret_data.clone(), /* TODO: will have to modify revm fields to
-                                                       * enable this? */
+                 // no separate fields since we deal directly with the backend
                     ..Default::default()
                 }
             }
@@ -992,9 +1018,8 @@ impl Encodable for TypedTransaction {
                     .encode(out);
                 out.put_u8(0x7E);
                 tx.encode(out);
-            } /* Can (probably) get around forking alloy-consensus
-               * by manually encoding it here like they do in Deposit.
-               * However it is probably useful to look at alloy-consensus */
+            },
+            Self::Seismic(tx) => encode_2718_seismic_transaction(tx, out), // under the hood, EIP-1559 also resolves to a 2718 encoding, and hence so does Seismic
         }
     }
 }
@@ -1031,6 +1056,7 @@ impl Encodable2718 for TypedTransaction {
             Self::EIP2930(tx) => TxEnvelope::from(tx.clone()).encode_2718_len(),
             Self::EIP1559(tx) => TxEnvelope::from(tx.clone()).encode_2718_len(),
             Self::EIP4844(tx) => TxEnvelope::from(tx.clone()).encode_2718_len(),
+            Self::Seismic(tx) => encode_2718_len(tx),
             Self::Deposit(tx) => 1 + tx.length(),
         }
     }
@@ -1041,6 +1067,7 @@ impl Encodable2718 for TypedTransaction {
             Self::EIP2930(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
             Self::EIP1559(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
             Self::EIP4844(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
+            Self::Seismic(tx) => encode_2718_seismic_transaction(tx, out),
             Self::Deposit(tx) => {
                 out.put_u8(0x7E);
                 tx.encode(out);
@@ -1225,6 +1252,7 @@ pub enum TypedReceipt<T = alloy_primitives::Log> {
     EIP4844(ReceiptWithBloom<T>),
     #[serde(rename = "0x7E", alias = "0x7e")]
     Deposit(DepositReceipt<T>),
+    
 }
 
 impl<T> TypedReceipt<T> {
