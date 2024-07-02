@@ -1039,6 +1039,8 @@ impl Decodable for TypedTransaction {
 
         if ty != 0x7E {
             Ok(TxEnvelope::decode(buf)?.into())
+        } else if ty == 0x64 {
+            Ok(Self::Seismic(Signed<SeismicTransaction>::decode(buf)?))
         } else {
             Ok(Self::Deposit(DepositTransaction::decode(&mut h_decode_copy)?))
         }
@@ -1081,6 +1083,9 @@ impl Decodable2718 for TypedTransaction {
         if ty == 0x7E {
             return Ok(Self::Deposit(DepositTransaction::decode(buf)?))
         }
+        else if ty == 0x64 {
+            return Ok(decode_signed_seismic_tx(buf)?.into())
+        }   
         // add in seismic transaction type decoding here
         match TxEnvelope::typed_decode(ty, buf)? {
             TxEnvelope::Eip2930(tx) => Ok(Self::EIP2930(tx)),
@@ -1252,13 +1257,14 @@ pub enum TypedReceipt<T = alloy_primitives::Log> {
     EIP4844(ReceiptWithBloom<T>),
     #[serde(rename = "0x7E", alias = "0x7e")]
     Deposit(DepositReceipt<T>),
-    
+    #[serde(rename="0x64", alias  = "0x64")]
+    Seismic(ReceiptWithBloom<T>),
 }
 
 impl<T> TypedReceipt<T> {
     pub fn as_receipt_with_bloom(&self) -> &ReceiptWithBloom<T> {
         match self {
-            Self::Legacy(r) | Self::EIP1559(r) | Self::EIP2930(r) | Self::EIP4844(r) => r,
+            Self::Legacy(r) | Self::EIP1559(r) | Self::EIP2930(r) | Self::EIP4844(r) | Self::Seismic(r) => r,
             Self::Deposit(r) => &r.inner,
         }
     }
@@ -1300,6 +1306,7 @@ impl Encodable for TypedReceipt {
                     Self::EIP1559(r) => r.length() + 1,
                     Self::EIP4844(r) => r.length() + 1,
                     Self::Deposit(r) => r.length() + 1,
+                    Self::Seismic(r) => r.length() + 1,
                     _ => unreachable!("receipt already matched"),
                 };
 
@@ -1322,6 +1329,11 @@ impl Encodable for TypedReceipt {
                     Self::Deposit(r) => {
                         Header { list: true, payload_length: payload_len }.encode(out);
                         0x7Eu8.encode(out);
+                        r.encode(out);
+                    }
+                    Self::Seismic(r) => {
+                        Header { list: true, payload_length: payload_len }.encode(out);
+                        0x64u8.encode(out);
                         r.encode(out);
                     }
                     _ => unreachable!("receipt already matched"),
@@ -1362,7 +1374,11 @@ impl Decodable for TypedReceipt {
                 } else if receipt_type == 0x7E {
                     buf.advance(1);
                     <DepositReceipt as Decodable>::decode(buf).map(TypedReceipt::Deposit)
-                } else {
+                } else if receipt_type == 0x64 {
+                    buf.advance(1);
+                    <ReceiptWithBloom as Decodable>::decode(buf).map(TypedReceipt::Seismic)
+                }
+                else {
                     Err(alloy_rlp::Error::Custom("invalid receipt type"))
                 }
             }
@@ -1384,6 +1400,7 @@ impl Encodable2718 for TypedReceipt {
             Self::EIP1559(_) => Some(2),
             Self::EIP4844(_) => Some(3),
             Self::Deposit(_) => Some(0x7E),
+            Self::Seismic(_) => Some(0x64),
         }
     }
 
@@ -1393,6 +1410,7 @@ impl Encodable2718 for TypedReceipt {
             Self::EIP2930(r) => ReceiptEnvelope::Eip2930(r.clone()).encode_2718_len(),
             Self::EIP1559(r) => ReceiptEnvelope::Eip1559(r.clone()).encode_2718_len(),
             Self::EIP4844(r) => ReceiptEnvelope::Eip4844(r.clone()).encode_2718_len(),
+            Self::Seismic(r) => 1 + r.length(), // under the hood, encode_2718_len(), if not a legacy transaction, is r.length()+1
             Self::Deposit(r) => 1 + r.length(),
         }
     }
@@ -1403,6 +1421,10 @@ impl Encodable2718 for TypedReceipt {
             Self::EIP2930(r) => ReceiptEnvelope::Eip2930(r.clone()).encode_2718(out),
             Self::EIP1559(r) => ReceiptEnvelope::Eip1559(r.clone()).encode_2718(out),
             Self::EIP4844(r) => ReceiptEnvelope::Eip4844(r.clone()).encode_2718(out),
+            Self::Seismic(r) => {
+                out.put_u8(0x64);
+                r.encode(out);
+            }
             Self::Deposit(r) => {
                 out.put_u8(0x7E);
                 r.encode(out);
@@ -1415,6 +1437,9 @@ impl Decodable2718 for TypedReceipt {
     fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, Eip2718Error> {
         if ty == 0x7E {
             return Ok(Self::Deposit(DepositReceipt::decode(buf)?))
+        }
+        if ty == 0x64 {
+            return Ok(Self::Seismic(ReceiptWithBloom::decode(buf)?))
         }
         match ReceiptEnvelope::typed_decode(ty, buf)? {
             ReceiptEnvelope::Eip2930(tx) => Ok(Self::EIP2930(tx)),
@@ -1486,6 +1511,7 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
                     .ok()?
                     .map(|v| v.to()),
             }),
+            0x64 => TypedReceipt::Seismic(receipt_with_bloom),
             _ => return None,
         },
     })

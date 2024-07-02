@@ -980,7 +980,7 @@ impl EthApi {
     ///
     /// Handler for ETH RPC call: `eth_sendRawTransaction`
     pub async fn send_raw_transaction(&self, tx: Bytes) -> Result<TxHash> {
-        node_info!("eth_sendRawTransaction");
+        node_info!("Transaction");
         let mut data = tx.as_ref();
         if data.is_empty() {
             return Err(BlockchainError::EmptyRawTransactionData);

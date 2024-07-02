@@ -382,6 +382,14 @@ pub fn encode_2718_len(tx: &Signed<SeismicTransaction>) -> usize {
     Header { list: true, payload_length }.length() + payload_length + 1
 }
 
+pub fn decode_signed_seismic_tx(buf: &mut &[u8]) -> alloy_rlp::Result<Signed<SeismicTransaction>> {
+    let header = RlpHeader::decode(buf)?;
+    let tx = SeismicTransaction::decode(buf)?;
+    let signature = Signature::decode(buf)?;
+    let hash = keccak256(&buf[..header.payload_length]);
+    Ok(Signed::new_unchecked(tx, signature, hash))
+}
+
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
