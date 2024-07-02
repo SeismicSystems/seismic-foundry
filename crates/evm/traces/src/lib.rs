@@ -35,7 +35,7 @@ pub use decoder::{CallTraceDecoder, CallTraceDecoderBuilder};
 pub type Traces = Vec<(TraceKind, CallTraceArena)>;
 
 lazy_static::lazy_static! {
-    static ref SEISMIC_CHIPS: std::collections::HashSet<alloy_primitives::Address> = seismic_chips::Chipset::addresses();
+    static ref SEISMIC_CHIPS: std::collections::HashSet<alloy_primitives::Address> = seismic_chips::get_address_set();
 }
 
 #[derive(Default, Debug, Eq, PartialEq)]

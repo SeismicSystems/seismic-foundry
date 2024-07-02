@@ -4,18 +4,28 @@
 
 All Seismic modifications live on the `seismic` branch; the [original](https://github.com/foundry-rs/foundry) repository is on the `master` branch. We do this to always maintain a clear diff the changes it takes to make Foundry work with Seismic
 
-Make sure that you have added `~/.seismic-foundry/bin` to your path:
+Make sure that you have added `~/.seismic/bin` to your path:
 
 ```sh
-export PATH="$PATH:$HOME/.seismic-foundry/bin"
+export PATH="$PATH:$HOME/.seismic/bin"
 ```
+
+Finally, make sure you have locally cloned this repository in the same directory as `mantle`. This is a temporary requirement until we are able to specify the mantle dependency in a way that does not involve using local paths. If you are curious about how this is configured, see the Cargo.toml in the root of this repository
 
 ### Seismic Forge
 To build `sforge` from source, run this from the root of this repository:
 
 ```sh
 git checkout seismic
-cargo install --path ./crates/forge --profile local --force --locked --root=$HOME/.seismic-foundry
+cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge
+```
+
+### Seismic Anvil
+To build `sanvil` from source, run this from the root of this repository:
+
+```sh
+git checkout seismic
+cargo install --root=$HOME/.seismic --profile dev --path ./crates/anvil
 ```
 
 ## Foundry
