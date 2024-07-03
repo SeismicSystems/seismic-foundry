@@ -3,6 +3,7 @@ use alloy_eips::eip2930::AccessList;
 use alloy_primitives::{keccak256, Bytes, ChainId, Signature, TxKind, B256, U256};
 use alloy_rlp::{Decodable, Encodable, BufMut, Header, Buf, EMPTY_STRING_CODE,
 };
+use seismic_preimages::{InputPreImage, PreImageValue};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -455,16 +456,9 @@ pub fn decode_signed_seismic_fields(buf: &mut &[u8]) -> alloy_rlp::Result<Signed
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SecretData {
     pub index: usize,
-    pub preimage: Bytes,
+    pub preimage: PreImageValue,
+    pub preimage_type: String,
+    pub salt: Bytes,
 }
 
-impl Encodable for SecretData {
-    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        self.index.encode(out);
-        self.preimage.encode(out);
-    }
 
-    fn length(&self) -> usize {
-        self.index.length() + self.preimage.length()
-    }
-}

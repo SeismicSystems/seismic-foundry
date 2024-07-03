@@ -2,6 +2,7 @@ use super::{
     backend::mem::{state, BlockRequest, State},
     sign::build_typed_transaction,
 };
+use seismic_preimages::PreImageValue;
 use anvil_core::eth::transaction::seismic::SecretData;
 use seismic_preimages::InputPreImage;
 use crate::{
@@ -79,7 +80,7 @@ use foundry_evm::{
 };
 use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
-use std::{collections::HashSet, future::Future, sync::Arc, time::Duration};
+use std::{collections::HashSet, future::Future, io::Read, sync::Arc, time::Duration};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -957,13 +958,24 @@ impl EthApi {
         let request = self.build_typed_tx_request(request, nonce)?;
 
         //insert committing the secrets somewhere here -- include salts.
-        // if let TypedTransactionRequest::Seismic(seismic_data) = &request {
-        //     let mut db = crate::eth::SEISMIC_DB.clone();
-        //     let pre_images: Vec<SecretData> = seismic_data.secret_data.clone();
-            
-        // }
-        
+        if let TypedTransactionRequest::Seismic(seismic_data) = &request {
+            let mut db = crate::eth::SEISMIC_DB.clone();
+            let secrets: Vec<SecretData> = seismic_data.secret_data.clone();
+          let input_pre_images: Vec<InputPreImage> = secrets.iter().map(|secret| {
+            InputPreImage {
+                value: secret.preimage.clone(),
+                type_: secret.preimage_type.clone(),
+            }
+        }).collect();
 
+        if let TxKind::Call(addr) = seismic_data.to {
+            if seismic_preimages::bulk_commit_with_db(&mut db, &addr, &input_pre_images).is_err() {
+                return Err(BlockchainError::Message("Failed to commit preimages".to_string()))
+            }
+        }
+            
+        }
+        
         // if the sender is currently impersonated we need to "bypass" signing
         let pending_transaction = if self.is_impersonated(from) {
             let bypass_signature = self.backend.cheats().bypass_signature();

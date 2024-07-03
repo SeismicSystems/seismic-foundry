@@ -7630,6 +7630,8 @@ dependencies = [
  "revm",
  "seismic-db",
  "seismic-types",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -7653,6 +7655,8 @@ dependencies = [
  "seismic-chips",
  "seismic-db",
  "seismic-types",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -7665,6 +7669,8 @@ dependencies = [
  "seismic-db",
  "seismic-dispatcher",
  "seismic-types",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
