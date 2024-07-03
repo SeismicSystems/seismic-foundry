@@ -2077,6 +2077,7 @@ impl Backend {
                 deposit_nonce: r.deposit_nonce,
                 deposit_receipt_version: r.deposit_receipt_version,
             }),
+            TypedReceipt::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         };
 
         let inner = TransactionReceipt {

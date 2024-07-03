@@ -26,7 +26,7 @@ use revm::{
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, Mul};
 
-use self::seismic::{encode_2718_len, encode_2718_seismic_transaction};
+use self::seismic::{encode_2718_len, encode_2718_seismic_transaction, decode_signed_seismic_tx, decode_signed_seismic_fields};
 
 pub mod optimism;
 
@@ -1040,7 +1040,7 @@ impl Decodable for TypedTransaction {
         if ty != 0x7E {
             Ok(TxEnvelope::decode(buf)?.into())
         } else if ty == 0x64 {
-            Ok(Self::Seismic(Signed<SeismicTransaction>::decode(buf)?))
+            Ok(Self::Seismic(decode_signed_seismic_tx(buf)?))
         } else {
             Ok(Self::Deposit(DepositTransaction::decode(&mut h_decode_copy)?))
         }
@@ -1084,7 +1084,7 @@ impl Decodable2718 for TypedTransaction {
             return Ok(Self::Deposit(DepositTransaction::decode(buf)?))
         }
         else if ty == 0x64 {
-            return Ok(decode_signed_seismic_tx(buf)?.into())
+            return Ok(Self::Seismic(decode_signed_seismic_fields(buf)?))
         }   
         // add in seismic transaction type decoding here
         match TxEnvelope::typed_decode(ty, buf)? {

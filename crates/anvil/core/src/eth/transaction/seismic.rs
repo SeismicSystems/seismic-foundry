@@ -1,11 +1,9 @@
-use alloy_consensus::{SignableTransaction, Signed, Transaction, TxType};
+use alloy_consensus::{SignableTransaction, Signed, Transaction};
 use alloy_eips::eip2930::AccessList;
-use alloy_primitives::{keccak256, Address, Bytes, ChainId, Signature, TxKind, B256, U256};
-use alloy_rlp::{
-    length_of_length, Decodable, Encodable, Error as DecodeError, Header as RlpHeader, BufMut, Header
+use alloy_primitives::{keccak256, Bytes, ChainId, Signature, TxKind, B256, U256};
+use alloy_rlp::{Decodable, Encodable, BufMut, Header, Buf, EMPTY_STRING_CODE,
 };
 use serde::{Deserialize, Serialize};
-use std::mem;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SeismicTransactionRequest {
@@ -259,8 +257,8 @@ impl SeismicTransaction {
     }
 
     /// Get transaction type
-    pub(crate) const fn tx_type(&self) -> TxType {
-        TxType::Eip1559
+    pub(crate) const fn _tx_type(&self) -> u8 {
+        0x64
     }
 
     /// Encodes the transaction from RLP bytes, including the signature. This __does not__ encode a
@@ -321,6 +319,19 @@ impl SeismicTransaction {
         self.encode_with_signature_fields(signature, out);
     }
 
+    pub(crate) fn decode_fields(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        Ok(Self {
+            chain_id: Decodable::decode(buf)?,
+            nonce: Decodable::decode(buf)?,
+            max_priority_fee_per_gas: Decodable::decode(buf)?,
+            max_fee_per_gas: Decodable::decode(buf)?,
+            gas_limit: Decodable::decode(buf)?,
+            to: Decodable::decode(buf)?,
+            value: Decodable::decode(buf)?,
+            input: Decodable::decode(buf)?,
+            access_list: Decodable::decode(buf)?,
+        })
+    }
 
 }
 
@@ -359,7 +370,7 @@ impl SignableTransaction<Signature> for SeismicTransaction {
         self.chain_id = chain_id;
     }
 
-    fn encode_for_signing(&self, out: &mut dyn alloy_rlp::BufMut) {
+    fn encode_for_signing(&self, _out: &mut dyn alloy_rlp::BufMut) {
         unimplemented!()
     }
 
@@ -367,8 +378,15 @@ impl SignableTransaction<Signature> for SeismicTransaction {
         unimplemented!()
     }
 
-    fn into_signed(self, _signature: Signature) -> Signed<Self> { 
-    unimplemented!() 
+    fn into_signed(self, signature: Signature) -> Signed<Self> { 
+        let mut buf = Vec::with_capacity(self.encoded_len_with_signature(&signature, false));
+        self.encode_with_signature(&signature, &mut buf, false);
+        let hash = keccak256(&buf);
+
+        // Drop any v chain id value to ensure the signature format is correct at the time of
+        // combination for an EIP-1559 transaction. V should indicate the y-parity of the
+        // signature.
+        Signed::new_unchecked(self, signature.with_parity_bool(), hash)
     }
 
 }
@@ -382,14 +400,56 @@ pub fn encode_2718_len(tx: &Signed<SeismicTransaction>) -> usize {
     Header { list: true, payload_length }.length() + payload_length + 1
 }
 
-pub fn decode_signed_seismic_tx(buf: &mut &[u8]) -> alloy_rlp::Result<Signed<SeismicTransaction>> {
-    let header = RlpHeader::decode(buf)?;
-    let tx = SeismicTransaction::decode(buf)?;
-    let signature = Signature::decode(buf)?;
-    let hash = keccak256(&buf[..header.payload_length]);
-    Ok(Signed::new_unchecked(tx, signature, hash))
+pub fn decode_signed_seismic_tx(buf: &mut &[u8]) -> Result<Signed<SeismicTransaction>, alloy_rlp::Error> {
+    // Keep the original buffer around by copying it.
+    let mut h_decode = *buf;
+    let h = Header::decode(&mut h_decode)?;
+
+    *buf = h_decode;
+
+    let remaining_len = buf.len();
+
+    if remaining_len == 0 || remaining_len < h.payload_length {
+        return Err(alloy_rlp::Error::InputTooShort.into());
+    }
+
+    let _ty = buf[0];
+    buf.advance(1);
+    let tx = decode_signed_seismic_fields(buf)?;
+
+    let bytes_consumed = remaining_len - buf.len();
+    // because Header::decode works for single bytes (including the tx type), returning a
+    // string Header with payload_length of 1, we need to make sure this check is only
+    // performed for transactions with a string header
+    if bytes_consumed != h.payload_length && h_decode[0] > EMPTY_STRING_CODE {
+        return Err(alloy_rlp::Error::UnexpectedLength.into());
+    }
+
+    Ok(tx)
 }
 
+pub fn decode_signed_seismic_fields(buf: &mut &[u8]) -> alloy_rlp::Result<Signed<SeismicTransaction>> {
+        let header = Header::decode(buf)?;
+        if !header.list {
+            return Err(alloy_rlp::Error::UnexpectedString);
+        }
+
+        // record original length so we can check encoding
+        let original_len = buf.len();
+
+        let tx = SeismicTransaction::decode_fields(buf)?;
+        let signature = Signature::decode_rlp_vrs(buf)?;
+
+        let signed = tx.into_signed(signature);
+        if buf.len() + header.payload_length != original_len {
+            return Err(alloy_rlp::Error::ListLengthMismatch {
+                expected: header.payload_length,
+                got: original_len - buf.len(),
+            });
+        }
+
+        Ok(signed)
+    }
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
