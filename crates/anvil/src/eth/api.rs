@@ -2,6 +2,8 @@ use super::{
     backend::mem::{state, BlockRequest, State},
     sign::build_typed_transaction,
 };
+use anvil_core::eth::transaction::seismic::SecretData;
+use seismic_preimages::InputPreImage;
 use crate::{
     eth::{
         backend,
@@ -953,6 +955,14 @@ impl EthApi {
         }
 
         let request = self.build_typed_tx_request(request, nonce)?;
+
+        //insert committing the secrets somewhere here -- include salts.
+        // if let TypedTransactionRequest::Seismic(seismic_data) = &request {
+        //     let mut db = crate::eth::SEISMIC_DB.clone();
+        //     let pre_images: Vec<SecretData> = seismic_data.secret_data.clone();
+            
+        // }
+        
 
         // if the sender is currently impersonated we need to "bypass" signing
         let pending_transaction = if self.is_impersonated(from) {
