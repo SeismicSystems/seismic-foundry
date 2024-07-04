@@ -6,7 +6,8 @@ use alloy_primitives::{Address, Signature, B256};
 use alloy_signer::Signer as AlloySigner;
 use alloy_signer_local::PrivateKeySigner;
 use anvil_core::eth::transaction::{
-    optimism::{DepositTransaction, DepositTransactionRequest}, TypedTransaction, TypedTransactionRequest
+    optimism::{DepositTransaction, DepositTransactionRequest},
+    TypedTransaction, TypedTransactionRequest,
 };
 use std::collections::HashMap;
 

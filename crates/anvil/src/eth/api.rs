@@ -2,9 +2,6 @@ use super::{
     backend::mem::{state, BlockRequest, State},
     sign::build_typed_transaction,
 };
-use seismic_preimages::PreImageValue;
-use anvil_core::eth::transaction::seismic::SecretData;
-use seismic_preimages::InputPreImage;
 use crate::{
     eth::{
         backend,
@@ -60,8 +57,8 @@ use anvil_core::{
     eth::{
         block::BlockInfo,
         transaction::{
-            transaction_request_to_typed, PendingTransaction, ReceiptResponse, TypedTransaction,
-            TypedTransactionRequest,
+            seismic::SecretData, transaction_request_to_typed, PendingTransaction, ReceiptResponse,
+            TypedTransaction, TypedTransactionRequest,
         },
         EthRequest,
     },
@@ -80,6 +77,7 @@ use foundry_evm::{
 };
 use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
+use seismic_preimages::{InputPreImage, PreImageValue};
 use std::{collections::HashSet, future::Future, io::Read, sync::Arc, time::Duration};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -162,7 +160,8 @@ impl EthApi {
             EthRequest::EthGetTransactionByHash(hash) => {
                 self.transaction_by_hash(hash).await.to_rpc_result()
             }
-            EthRequest::EthSendTransaction(request) => { // check for the flag somewhere here?
+            EthRequest::EthSendTransaction(request) => {
+                // check for the flag somewhere here?
                 self.send_transaction(*request).await.to_rpc_result()
             }
             EthRequest::EthChainId(_) => self.eth_chain_id().to_rpc_result(),
@@ -443,7 +442,7 @@ impl EthApi {
                         match e {
                             seismic_preimages::SeismicRpcError::ParseError(_) => {
                                 ResponseResult::Error(RpcError::invalid_params(msg))
-                            },
+                            }
                             seismic_preimages::SeismicRpcError::DbError(_) => {
                                 ResponseResult::Error(RpcError::internal_error_with(msg))
                             }
@@ -961,21 +960,23 @@ impl EthApi {
         if let TypedTransactionRequest::Seismic(seismic_data) = &request {
             let mut db = crate::eth::SEISMIC_DB.clone();
             let secrets: Vec<SecretData> = seismic_data.secret_data.clone();
-          let input_pre_images: Vec<InputPreImage> = secrets.iter().map(|secret| {
-            InputPreImage {
-                value: secret.preimage.clone(),
-                type_: secret.preimage_type.clone(),
-            }
-        }).collect();
+            let input_pre_images: Vec<InputPreImage> = secrets
+                .iter()
+                .map(|secret| InputPreImage {
+                    value: secret.preimage.clone(),
+                    type_: secret.preimage_type.clone(),
+                })
+                .collect();
 
-        if let TxKind::Call(addr) = seismic_data.to {
-            if seismic_preimages::bulk_commit_with_db(&mut db, &addr, &input_pre_images).is_err() {
-                return Err(BlockchainError::Message("Failed to commit preimages".to_string()))
+            if let TxKind::Call(addr) = seismic_data.to {
+                if seismic_preimages::bulk_commit_with_db(&mut db, &addr, &input_pre_images)
+                    .is_err()
+                {
+                    return Err(BlockchainError::Message("Failed to commit preimages".to_string()))
+                }
             }
         }
-            
-        }
-        
+
         // if the sender is currently impersonated we need to "bypass" signing
         let pending_transaction = if self.is_impersonated(from) {
             let bypass_signature = self.backend.cheats().bypass_signature();

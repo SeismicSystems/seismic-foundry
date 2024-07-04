@@ -21,6 +21,8 @@ mod txpool;
 pub mod utils;
 mod wsapi;
 
+mod seismic;
+
 #[allow(unused)]
 pub(crate) fn init_tracing() {
     let _ = tracing_subscriber::FmtSubscriber::builder()

@@ -26,7 +26,10 @@ use revm::{
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, Mul};
 
-use self::seismic::{encode_2718_len, encode_2718_seismic_transaction, decode_signed_seismic_tx, decode_signed_seismic_fields};
+use self::seismic::{
+    decode_signed_seismic_fields, decode_signed_seismic_tx, encode_2718_len,
+    encode_2718_seismic_transaction,
+};
 
 pub mod optimism;
 
@@ -455,8 +458,8 @@ pub fn to_alloy_transaction_with_hash_and_sender(
             max_fee_per_blob_gas: None,
             blob_versioned_hashes: None,
             other: Default::default(),
+        },
     }
-}
 }
 
 /// Queued transaction
@@ -669,7 +672,7 @@ impl PendingTransaction {
                     gas_priority_fee: Some(U256::from(*max_priority_fee_per_gas)),
                     gas_limit: *gas_limit as u64,
                     access_list: access_list.flattened(),
-                 // no separate fields since we deal directly with the backend
+                    // no separate fields since we deal directly with the backend
                     ..Default::default()
                 }
             }
@@ -1018,8 +1021,12 @@ impl Encodable for TypedTransaction {
                     .encode(out);
                 out.put_u8(0x7E);
                 tx.encode(out);
-            },
-            Self::Seismic(tx) => encode_2718_seismic_transaction(tx, out), // under the hood, EIP-1559 also resolves to a 2718 encoding, and hence so does Seismic
+            }
+            Self::Seismic(tx) => encode_2718_seismic_transaction(tx, out), /* under the hood,
+                                                                            * EIP-1559 also
+                                                                            * resolves to a 2718
+                                                                            * encoding, and hence
+                                                                            * so does Seismic */
         }
     }
 }
@@ -1082,10 +1089,9 @@ impl Decodable2718 for TypedTransaction {
     fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, Eip2718Error> {
         if ty == 0x7E {
             return Ok(Self::Deposit(DepositTransaction::decode(buf)?))
-        }
-        else if ty == 0x64 {
+        } else if ty == 0x64 {
             return Ok(Self::Seismic(decode_signed_seismic_fields(buf)?))
-        }   
+        }
         // add in seismic transaction type decoding here
         match TxEnvelope::typed_decode(ty, buf)? {
             TxEnvelope::Eip2930(tx) => Ok(Self::EIP2930(tx)),
@@ -1257,14 +1263,18 @@ pub enum TypedReceipt<T = alloy_primitives::Log> {
     EIP4844(ReceiptWithBloom<T>),
     #[serde(rename = "0x7E", alias = "0x7e")]
     Deposit(DepositReceipt<T>),
-    #[serde(rename="0x64", alias  = "0x64")]
+    #[serde(rename = "0x64", alias = "0x64")]
     Seismic(ReceiptWithBloom<T>),
 }
 
 impl<T> TypedReceipt<T> {
     pub fn as_receipt_with_bloom(&self) -> &ReceiptWithBloom<T> {
         match self {
-            Self::Legacy(r) | Self::EIP1559(r) | Self::EIP2930(r) | Self::EIP4844(r) | Self::Seismic(r) => r,
+            Self::Legacy(r) |
+            Self::EIP1559(r) |
+            Self::EIP2930(r) |
+            Self::EIP4844(r) |
+            Self::Seismic(r) => r,
             Self::Deposit(r) => &r.inner,
         }
     }
@@ -1377,8 +1387,7 @@ impl Decodable for TypedReceipt {
                 } else if receipt_type == 0x64 {
                     buf.advance(1);
                     <ReceiptWithBloom as Decodable>::decode(buf).map(TypedReceipt::Seismic)
-                }
-                else {
+                } else {
                     Err(alloy_rlp::Error::Custom("invalid receipt type"))
                 }
             }
@@ -1410,7 +1419,8 @@ impl Encodable2718 for TypedReceipt {
             Self::EIP2930(r) => ReceiptEnvelope::Eip2930(r.clone()).encode_2718_len(),
             Self::EIP1559(r) => ReceiptEnvelope::Eip1559(r.clone()).encode_2718_len(),
             Self::EIP4844(r) => ReceiptEnvelope::Eip4844(r.clone()).encode_2718_len(),
-            Self::Seismic(r) => 1 + r.length(), // under the hood, encode_2718_len(), if not a legacy transaction, is r.length()+1
+            Self::Seismic(r) => 1 + r.length(), /* under the hood, encode_2718_len(), if not a
+                                                  * legacy transaction, is r.length()+1 */
             Self::Deposit(r) => 1 + r.length(),
         }
     }

@@ -1,9 +1,9 @@
 use alloy_consensus::{SignableTransaction, Signed, Transaction};
 use alloy_eips::eip2930::AccessList;
 use alloy_primitives::{keccak256, Bytes, ChainId, Signature, TxKind, B256, U256};
-use alloy_rlp::{Decodable, Encodable, BufMut, Header, Buf, EMPTY_STRING_CODE,
-};
-use seismic_preimages::{InputPreImage, PreImageValue};
+use alloy_rlp::{Buf, BufMut, Decodable, Encodable, Header, EMPTY_STRING_CODE};
+use alloy_serde::OtherFields;
+use seismic_preimages::PreImageValue;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -73,16 +73,12 @@ impl SeismicTransactionRequest {
         signature.write_rlp_vrs(out);
     }
 
-     /// Returns what the encoded length should be, if the transaction were RLP encoded with the
+    /// Returns what the encoded length should be, if the transaction were RLP encoded with the
     /// given signature, depending on the value of `with_header`.
     ///
     /// If `with_header` is `true`, the payload length will include the RLP header length.
     /// If `with_header` is `false`, the payload length will not include the RLP header length.
-    fn encoded_len_with_signature(
-        &self,
-        signature: &Signature,
-        with_header: bool,
-    ) -> usize {
+    fn encoded_len_with_signature(&self, signature: &Signature, with_header: bool) -> usize {
         // this counts the tx fields and signature fields
         let payload_length = self.fields_len() + signature.rlp_vrs_len();
 
@@ -95,8 +91,8 @@ impl SeismicTransactionRequest {
 
         if with_header {
             // header length plus length of the above, wrapped with a string header
-            Header { list: false, payload_length: inner_payload_length }.length()
-                + inner_payload_length
+            Header { list: false, payload_length: inner_payload_length }.length() +
+                inner_payload_length
         } else {
             inner_payload_length
         }
@@ -140,7 +136,6 @@ impl SeismicTransactionRequest {
         // signature.
         Signed::new_unchecked(seismic_tx_without_secrets, signature.with_parity_bool(), hash)
     }
-
 }
 
 impl Transaction for SeismicTransactionRequest {
@@ -199,13 +194,11 @@ impl SignableTransaction<Signature> for SeismicTransactionRequest {
         self.length() + 1
     }
 
-    fn into_signed(self, _signature: Signature) -> Signed<Self> { 
-    unimplemented!() // we keep this unimplemented because we don't need the secret data field and hence Signed<SeismicTransactionRequest> is of no use to us
+    fn into_signed(self, _signature: Signature) -> Signed<Self> {
+        unimplemented!() // we keep this unimplemented because we don't need the secret data field
+                         // and hence Signed<SeismicTransactionRequest> is of no use to us
     }
-
 }
-
-
 
 ///
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -274,16 +267,12 @@ impl SeismicTransaction {
         signature.write_rlp_vrs(out);
     }
 
-     /// Returns what the encoded length should be, if the transaction were RLP encoded with the
+    /// Returns what the encoded length should be, if the transaction were RLP encoded with the
     /// given signature, depending on the value of `with_header`.
     ///
     /// If `with_header` is `true`, the payload length will include the RLP header length.
     /// If `with_header` is `false`, the payload length will not include the RLP header length.
-    fn encoded_len_with_signature(
-        &self,
-        signature: &Signature,
-        with_header: bool,
-    ) -> usize {
+    fn encoded_len_with_signature(&self, signature: &Signature, with_header: bool) -> usize {
         // this counts the tx fields and signature fields
         let payload_length = self.fields_len() + signature.rlp_vrs_len();
 
@@ -296,8 +285,8 @@ impl SeismicTransaction {
 
         if with_header {
             // header length plus length of the above, wrapped with a string header
-            Header { list: false, payload_length: inner_payload_length }.length()
-                + inner_payload_length
+            Header { list: false, payload_length: inner_payload_length }.length() +
+                inner_payload_length
         } else {
             inner_payload_length
         }
@@ -333,7 +322,6 @@ impl SeismicTransaction {
             access_list: Decodable::decode(buf)?,
         })
     }
-
 }
 
 impl Transaction for SeismicTransaction {
@@ -379,7 +367,7 @@ impl SignableTransaction<Signature> for SeismicTransaction {
         unimplemented!()
     }
 
-    fn into_signed(self, signature: Signature) -> Signed<Self> { 
+    fn into_signed(self, signature: Signature) -> Signed<Self> {
         let mut buf = Vec::with_capacity(self.encoded_len_with_signature(&signature, false));
         self.encode_with_signature(&signature, &mut buf, false);
         let hash = keccak256(&buf);
@@ -389,11 +377,13 @@ impl SignableTransaction<Signature> for SeismicTransaction {
         // signature.
         Signed::new_unchecked(self, signature.with_parity_bool(), hash)
     }
-
 }
 
-pub fn encode_2718_seismic_transaction(tx: &Signed<SeismicTransaction>, out: &mut dyn alloy_rlp::BufMut){
-        tx.tx().encode_with_signature(tx.signature(), out, false);
+pub fn encode_2718_seismic_transaction(
+    tx: &Signed<SeismicTransaction>,
+    out: &mut dyn alloy_rlp::BufMut,
+) {
+    tx.tx().encode_with_signature(tx.signature(), out, false);
 }
 
 pub fn encode_2718_len(tx: &Signed<SeismicTransaction>) -> usize {
@@ -401,7 +391,9 @@ pub fn encode_2718_len(tx: &Signed<SeismicTransaction>) -> usize {
     Header { list: true, payload_length }.length() + payload_length + 1
 }
 
-pub fn decode_signed_seismic_tx(buf: &mut &[u8]) -> Result<Signed<SeismicTransaction>, alloy_rlp::Error> {
+pub fn decode_signed_seismic_tx(
+    buf: &mut &[u8],
+) -> Result<Signed<SeismicTransaction>, alloy_rlp::Error> {
     // Keep the original buffer around by copying it.
     let mut h_decode = *buf;
     let h = Header::decode(&mut h_decode)?;
@@ -429,29 +421,30 @@ pub fn decode_signed_seismic_tx(buf: &mut &[u8]) -> Result<Signed<SeismicTransac
     Ok(tx)
 }
 
-pub fn decode_signed_seismic_fields(buf: &mut &[u8]) -> alloy_rlp::Result<Signed<SeismicTransaction>> {
-        let header = Header::decode(buf)?;
-        if !header.list {
-            return Err(alloy_rlp::Error::UnexpectedString);
-        }
-
-        // record original length so we can check encoding
-        let original_len = buf.len();
-
-        let tx = SeismicTransaction::decode_fields(buf)?;
-        let signature = Signature::decode_rlp_vrs(buf)?;
-
-        let signed = tx.into_signed(signature);
-        if buf.len() + header.payload_length != original_len {
-            return Err(alloy_rlp::Error::ListLengthMismatch {
-                expected: header.payload_length,
-                got: original_len - buf.len(),
-            });
-        }
-
-        Ok(signed)
+pub fn decode_signed_seismic_fields(
+    buf: &mut &[u8],
+) -> alloy_rlp::Result<Signed<SeismicTransaction>> {
+    let header = Header::decode(buf)?;
+    if !header.list {
+        return Err(alloy_rlp::Error::UnexpectedString);
     }
 
+    // record original length so we can check encoding
+    let original_len = buf.len();
+
+    let tx = SeismicTransaction::decode_fields(buf)?;
+    let signature = Signature::decode_rlp_vrs(buf)?;
+
+    let signed = tx.into_signed(signature);
+    if buf.len() + header.payload_length != original_len {
+        return Err(alloy_rlp::Error::ListLengthMismatch {
+            expected: header.payload_length,
+            got: original_len - buf.len(),
+        });
+    }
+
+    Ok(signed)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SecretData {
@@ -461,4 +454,17 @@ pub struct SecretData {
     pub salt: Bytes,
 }
 
+/// Seismic specific transaction fields
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SeismicTransactionFields {
+    /// The secret data for the transaction
+    #[serde(rename = "secretData", skip_serializing_if = "Option::is_none")]
+    pub secret_data: Option<Vec<SecretData>>,
+}
+
+impl From<SeismicTransactionFields> for OtherFields {
+    fn from(value: SeismicTransactionFields) -> Self {
+        serde_json::to_value(value).unwrap().try_into().unwrap()
+    }
+}
 

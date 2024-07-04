@@ -49,7 +49,6 @@ pub trait InspectorExt<DB: Database>: Inspector<DB> {
 impl<DB: Database> InspectorExt<DB> for NoOpInspector {}
 impl<DB: Database> InspectorExt<DB> for AccessListInspector {}
 
-
 lazy_static::lazy_static! {
     pub static ref SEISMIC_DB: seismic_db::SyncInMemoryDB = seismic_db::SyncInMemoryDB::new();
 }
