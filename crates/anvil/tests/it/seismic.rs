@@ -95,21 +95,73 @@ async fn test_seismic_transaction() {
             other: SeismicTransactionFields {
             secret_data: Some(vec![SecretData {
                     index: 0,
-                    preimage: PreImageValue::Uint(1),
+                    preimage: PreImageValue::Uint(10),
                     preimage_type: "uint256".to_string(),
                     salt: B256::from(U256::from(0)).into(),
                 }]),
             }
             .into(),
         };
+
+        println!("The local hash is: {:?}", get_commitment(value));
     
     let pending_set = provider.send_transaction(tx).await.unwrap().register().await.unwrap();
+
+    
 
     api.evm_mine(None).await.unwrap();
 
     let receipt = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
-    println!("the set number gives the output: {:?}", receipt);
+    assert!(receipt.is_some());
+
+        let value = U256::from(20);
+
+        let input_data = get_input_data(ADD_SELECTOR, get_commitment(value), None);
+
+
+        let tx = TransactionRequest::default()
+            .with_from(from)
+            .with_to(to)
+            .with_gas_limit(210000)
+            .with_input(input_data);
+        let tx = WithOtherFields {
+            inner: tx,
+            other: SeismicTransactionFields {
+            secret_data: Some(vec![SecretData {
+                    index: 0,
+                    preimage: PreImageValue::Uint(20),
+                    preimage_type: "uint256".to_string(),
+                    salt: B256::from(U256::from(0)).into(),
+                }]),
+            }
+            .into(),
+        };
+
+    let pending_add = provider.send_transaction(tx).await.unwrap().register().await.unwrap();
+
+    api.evm_mine(None).await.unwrap();
+
+    let receipt = provider.get_transaction_receipt(pending_add.tx_hash().to_owned()).await.unwrap();
+    assert!(receipt.is_some());
+
+    let input_data_get = hex::decode(GET_NUMBER_SELECTOR).unwrap();
+
+    let tx = TransactionRequest::default()
+            .with_from(from)
+            .with_to(to)
+            .with_gas_limit(210000)
+            .with_input(input_data_get);
+
+    let get_tx = WithOtherFields::new(tx);
+
+    let pending_get = provider.send_transaction(get_tx).await.unwrap().register().await.unwrap();
+
+    api.evm_mine(None).await.unwrap();
+
+    let receipt = provider.get_transaction_receipt(pending_get.tx_hash().to_owned()).await.unwrap().unwrap();
+    println!("Get receipt {:?}", receipt);
     panic!();
+
     // assert_eq!(receipt.from, from);
     // assert_eq!(receipt.to, Some(to));
 }
