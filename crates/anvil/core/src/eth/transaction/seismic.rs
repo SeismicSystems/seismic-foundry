@@ -322,6 +322,10 @@ impl SeismicTransaction {
             access_list: Decodable::decode(buf)?,
         })
     }
+
+    pub fn tx_type(&self) -> u8 {
+        0x64
+    }
 }
 
 impl Transaction for SeismicTransaction {
@@ -359,12 +363,13 @@ impl SignableTransaction<Signature> for SeismicTransaction {
         self.chain_id = chain_id;
     }
 
-    fn encode_for_signing(&self, _out: &mut dyn alloy_rlp::BufMut) {
-        unimplemented!()
+    fn encode_for_signing(&self, out: &mut dyn alloy_rlp::BufMut) {
+        out.put_u8(self.tx_type());
+        self.encode(out)
     }
 
     fn payload_len_for_signature(&self) -> usize {
-        unimplemented!()
+        1 + self.length()
     }
 
     fn into_signed(self, signature: Signature) -> Signed<Self> {
@@ -444,6 +449,18 @@ pub fn decode_signed_seismic_fields(
     }
 
     Ok(signed)
+}
+
+impl Encodable for SeismicTransaction{
+    fn encode(&self, out: &mut dyn BufMut) {
+        Header { list: true, payload_length: self.fields_len() }.encode(out);
+        self.encode_fields(out);
+    }
+
+    fn length(&self) -> usize {
+        let payload_length = self.fields_len();
+        Header { list: true, payload_length }.length() + payload_length
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

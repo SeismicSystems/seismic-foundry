@@ -842,6 +842,7 @@ dependencies = [
  "seismic-db",
  "seismic-inspector",
  "seismic-preimages",
+ "seismic-types",
  "serde",
  "serde_json",
  "serde_repr",

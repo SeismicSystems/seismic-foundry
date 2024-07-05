@@ -65,7 +65,7 @@ use anvil_core::{
     types::Work,
 };
 use anvil_rpc::{error::RpcError, response::ResponseResult};
-use foundry_common::provider::ProviderBuilder;
+use foundry_common::{provider::ProviderBuilder, shell::println};
 use foundry_evm::{
     backend::DatabaseError,
     decode::RevertDecoder,
@@ -958,6 +958,7 @@ impl EthApi {
 
         //insert committing the secrets somewhere here -- include salts.
         if let TypedTransactionRequest::Seismic(seismic_data) = &request {
+            println!("Detected Seismic transaction");
             let mut db = crate::eth::SEISMIC_DB.clone();
             let secrets: Vec<SecretData> = seismic_data.secret_data.clone();
             let input_pre_images: Vec<InputPreImage> = secrets
@@ -995,7 +996,7 @@ impl EthApi {
         let requires = required_marker(nonce, on_chain_nonce, from);
         let provides = vec![to_marker(nonce, from)];
         debug_assert!(requires != provides);
-
+        println!("Adding pending transaction to pool");
         self.add_pending_transaction(pending_transaction, requires, provides)
     }
 
