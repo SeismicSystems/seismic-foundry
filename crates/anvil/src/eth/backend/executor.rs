@@ -18,6 +18,7 @@ use anvil_core::eth::{
     },
     trie,
 };
+use foundry_common::shell::println;
 use foundry_evm::{
     backend::DatabaseError,
     revm::{
@@ -304,19 +305,25 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
         let mut inspector = Inspector::default().with_tracing().with_seismic();
         if self.enable_steps_tracing {
             inspector = inspector.with_steps_tracing();
+            
         }
+        let seismic_present = inspector.seismic.is_some();
 
         let exec_result = {
             let mut evm =
                 foundry_evm::utils::new_evm_with_inspector(&mut *self.db, env, &mut inspector);
+                println!("Hi {}", seismic_present);
+                println!("reached the new evm");
             if let Some(factory) = &self.precompile_factory {
                 inject_precompiles(&mut evm, factory.precompiles());
             }
-
             trace!(target: "backend", "[{:?}] executing", transaction.hash());
             // transact and commit the transaction
             match evm.transact_commit() {
-                Ok(exec_result) => exec_result,
+                Ok(exec_result) => {
+                    println!("Ok exec result!");
+                    exec_result
+                },
                 Err(err) => {
                     warn!(target: "backend", "[{:?}] failed to execute: {:?}", transaction.hash(), err);
                     match err {
@@ -327,6 +334,8 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
                             ))
                         }
                         EVMError::Transaction(err) => {
+                            println!("Invalid transaction error");
+                            println!("Error is {:?}", err);
                             return Some(TransactionExecutionOutcome::Invalid(
                                 transaction,
                                 err.into(),

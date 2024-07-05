@@ -88,12 +88,12 @@ async fn test_seismic_transaction() {
         let tx = TransactionRequest::default()
             .with_from(from)
             .with_to(to)
-            .with_gas_limit(21000)
+            .with_gas_limit(210000)
             .with_input(input_data);
         let tx = WithOtherFields {
             inner: tx,
             other: SeismicTransactionFields {
-                secret_data: Some(vec![SecretData {
+            secret_data: Some(vec![SecretData {
                     index: 0,
                     preimage: PreImageValue::Uint(1),
                     preimage_type: "uint256".to_string(),
