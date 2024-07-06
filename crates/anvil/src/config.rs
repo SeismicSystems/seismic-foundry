@@ -855,7 +855,7 @@ impl NodeConfig {
     /// [Backend](mem::Backend)
     ///
     /// *Note*: only memory based backend for now
-    pub(crate) async fn setup(&mut self) -> mem::Backend {
+    pub(crate) async fn setup(&mut self) -> mem::Backend { // probable issue in how the db is being handled.
         // configure the revm environment
 
         let mut cfg =

@@ -973,6 +973,7 @@ impl EthApi {
                 if seismic_preimages::bulk_commit_with_db(&mut db, &addr, &input_pre_images)
                     .is_err()
                 {
+                    println!("The address being committed to is: {:?}", addr);
                     return Err(BlockchainError::Message("Failed to commit preimages".to_string()))
                 }
             }

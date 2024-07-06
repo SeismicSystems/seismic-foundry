@@ -95,7 +95,10 @@ impl<DB: Database> revm::Inspector<DB> for Inspector {
         outcome: CallOutcome,
     ) -> CallOutcome {
         let outcome = match &mut self.seismic {
-            Some(seismic) => seismic.call_end(ecx, inputs, outcome),
+            Some(seismic) => {
+                println!("Seismic call ended.");
+                seismic.call_end(ecx, inputs, outcome)
+            },
             None => outcome,
         };
         if let Some(tracer) = &mut self.tracer {

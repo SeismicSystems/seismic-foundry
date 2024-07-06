@@ -8,6 +8,7 @@ use crate::{
     mem::inspector::Inspector,
     PrecompileFactory,
 };
+use revm::inspector_handle_register;
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom};
 use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{Bloom, BloomInput, Log, B256};
@@ -173,7 +174,7 @@ impl<'a, DB: Db + ?Sized, Validator: TransactionValidator> TransactionExecutor<'
                 cumulative_blob_gas_used =
                     Some(cumulative_blob_gas_used.unwrap_or(0u128).saturating_add(tx_blob_gas));
             }
-            let receipt = tx.create_receipt(&mut cumulative_gas_used);
+            let receipt: TypedReceipt = tx.create_receipt(&mut cumulative_gas_used);
 
             let ExecutedTransaction { transaction, logs, out, traces, exit_reason: exit, .. } = tx;
             build_logs_bloom(logs.clone(), &mut bloom);
@@ -311,7 +312,12 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
 
         let exec_result = {
             let mut evm =
-                foundry_evm::utils::new_evm_with_inspector(&mut *self.db, env, &mut inspector);
+            revm::Evm::builder()
+            .with_db(&mut self.db)
+            .with_external_context(inspector.clone())
+            .with_env_with_handler_cfg(env)
+            .append_handler_register(inspector_handle_register)
+            .build();
                 println!("Hi {}", seismic_present);
                 println!("reached the new evm");
             if let Some(factory) = &self.precompile_factory {

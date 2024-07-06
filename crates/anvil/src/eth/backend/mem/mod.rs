@@ -966,7 +966,7 @@ impl Backend {
                     enable_steps_tracing: self.enable_steps_tracing,
                     precompile_factory: self.precompile_factory.clone(),
                 };
-                let executed_tx = executor.execute();
+                let executed_tx = executor.execute(); // key part where the actual execution happens.
 
                 // we also need to update the new blockhash in the db itself
                 let block_hash = executed_tx.block.block.header.hash_slow();
@@ -1190,6 +1190,7 @@ impl Backend {
     where
         D: DatabaseRef<Error = DatabaseError>,
     {
+        println!("Call with state reached.");
         let mut inspector = Inspector::default().with_seismic();
 
         let env = self.build_call_env(request, fee_details, block_env);
