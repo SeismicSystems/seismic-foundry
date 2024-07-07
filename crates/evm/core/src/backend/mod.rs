@@ -1410,9 +1410,11 @@ impl DatabaseRef for Backend {
 
 impl DatabaseCommit for Backend {
     fn commit(&mut self, changes: Map<Address, Account>) {
+        println!("Committing state changes!");
         if let Some(db) = self.active_fork_db_mut() {
             db.commit(changes)
         } else {
+           
             self.mem_db.commit(changes)
         }
     }

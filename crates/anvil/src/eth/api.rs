@@ -2252,6 +2252,7 @@ impl EthApi {
 
     /// Executes the `evm_mine` and returns the number of blocks mined
     async fn do_evm_mine(&self, opts: Option<MineOptions>) -> Result<u64> {
+        println!("do evm mine!!");
         let mut blocks_to_mine = 1u64;
 
         if let Some(opts) = opts {

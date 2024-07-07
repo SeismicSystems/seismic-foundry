@@ -855,7 +855,7 @@ impl NodeConfig {
     /// [Backend](mem::Backend)
     ///
     /// *Note*: only memory based backend for now
-    pub(crate) async fn setup(&mut self) -> mem::Backend { // probable issue in how the db is being handled.
+    pub(crate) async fn setup(&mut self) -> mem::Backend { // probable issue in how the db is being handled -- needs to mirror inmemory DB
         // configure the revm environment
 
         let mut cfg =
@@ -895,7 +895,8 @@ impl NodeConfig {
             if let Some(eth_rpc_url) = self.eth_rpc_url.clone() {
                 self.setup_fork_db(eth_rpc_url, &mut env, &fees).await
             } else {
-                (Arc::new(tokio::sync::RwLock::new(Box::<MemDb>::default())), None)
+                // (crate::eth::SEISMIC_DB.clone(), None)
+               (Arc::new(tokio::sync::RwLock::new(Box::<MemDb>::default())), None)
             };
 
         // if provided use all settings of `genesis.json`

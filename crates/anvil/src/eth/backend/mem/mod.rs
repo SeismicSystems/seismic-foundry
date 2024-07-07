@@ -914,6 +914,7 @@ impl Backend {
         &self,
         pool_transactions: Vec<Arc<PoolTransaction>>,
     ) -> MinedBlockOutcome {
+        println!("mine_block call!");
         self.do_mine_block(pool_transactions).await
     }
 
@@ -921,6 +922,7 @@ impl Backend {
         &self,
         pool_transactions: Vec<Arc<PoolTransaction>>,
     ) -> MinedBlockOutcome {
+        println!("mining a block!");
         trace!(target: "backend", "creating new block with {} transactions", pool_transactions.len());
 
         let (outcome, header, block_hash) = {
@@ -954,6 +956,7 @@ impl Backend {
 
             let (executed_tx, block_hash) = {
                 let mut db = self.db.write().await;
+                println!("db just written and awaited :D");
                 let executor = TransactionExecutor {
                     db: &mut *db,
                     validator: self,
@@ -1190,7 +1193,7 @@ impl Backend {
     where
         D: DatabaseRef<Error = DatabaseError>,
     {
-        println!("Call with state reached.");
+        println!("Call with state reached!!!");
         let mut inspector = Inspector::default().with_seismic();
 
         let env = self.build_call_env(request, fee_details, block_env);

@@ -65,7 +65,7 @@ async fn test_seismic_transaction() {
         .with_deploy_code(bytecode.clone());    
     let deploy_tx = WithOtherFields::new(deploy_tx);
 
-        let pending = provider.send_transaction(deploy_tx).await.unwrap().register().await.unwrap();
+        let pending = provider.send_transaction(deploy_tx).await.unwrap();
 
         // mine block
         api.evm_mine(None).await.unwrap();
@@ -105,8 +105,8 @@ async fn test_seismic_transaction() {
 
         println!("The local hash is: {:?}", get_commitment(value));
     
-    let pending_set = provider.send_transaction(tx).await.unwrap().register().await.unwrap();
-
+    let pending_set = provider.send_transaction(tx).await.unwrap();
+    
     
 
     api.evm_mine(None).await.unwrap();
@@ -137,7 +137,7 @@ async fn test_seismic_transaction() {
             .into(),
         };
 
-    let pending_add = provider.send_transaction(tx).await.unwrap().register().await.unwrap();
+    let pending_add = provider.send_transaction(tx).await.unwrap();
 
     api.evm_mine(None).await.unwrap();
 
@@ -154,7 +154,7 @@ async fn test_seismic_transaction() {
 
     let get_tx = WithOtherFields::new(tx);
 
-    let pending_get = provider.send_transaction(get_tx).await.unwrap().register().await.unwrap();
+    let pending_get = provider.send_transaction(get_tx).await.unwrap();
 
     api.evm_mine(None).await.unwrap();
 

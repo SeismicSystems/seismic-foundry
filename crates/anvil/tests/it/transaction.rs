@@ -361,6 +361,7 @@ async fn can_deploy_and_mine_manually() {
 
     let _tx = tx.get_receipt().await.unwrap();
     let greeting = greeter_contract.greet().call().await.unwrap();
+    panic!();
     assert_eq!("Another Message", greeting._0);
 }
 
