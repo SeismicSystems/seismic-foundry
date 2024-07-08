@@ -7642,9 +7642,11 @@ dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
  "auto_impl",
+ "futures",
  "redis",
  "seismic-types",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]

@@ -15,4 +15,5 @@ pub mod util;
 
 lazy_static::lazy_static! {
     pub static ref SEISMIC_DB: seismic_db::SyncInMemoryDB = seismic_db::SyncInMemoryDB::new();
+    pub static ref SEISMIC_DB_BACKEND_COMPATIBLE: seismic_db::SyncInMemoryDBAnvil = seismic_db::SyncInMemoryDBAnvil::new(); 
 }

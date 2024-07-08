@@ -18,7 +18,7 @@ use foundry_evm::{
 /// The [`revm::Inspector`] used when transacting in the evm
 #[derive(Clone, Debug, Default)]
 pub struct Inspector {
-    pub seismic: Option<seismic_inspector::SeismicInspector<seismic_db::SyncInMemoryDB>>,
+    pub seismic: Option<seismic_inspector::SeismicInspector<seismic_db::SyncInMemoryDBAnvil>>,
     pub tracer: Option<TracingInspector>,
     /// collects all `console.sol` logs
     pub log_collector: LogCollector,
@@ -45,7 +45,7 @@ impl Inspector {
     }
 
     pub fn with_seismic(mut self) -> Self {
-        let db = crate::eth::SEISMIC_DB.clone();
+        let db = crate::eth::SEISMIC_DB_BACKEND_COMPATIBLE.clone();
         self.seismic = Some(seismic_inspector::get_new_seismic_inspector(db));
         self
     }
