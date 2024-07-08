@@ -39,7 +39,6 @@ use foundry_evm::{
 use parking_lot::RwLock;
 use rand::thread_rng;
 use revm::primitives::BlobExcessGasAndPrice;
-use seismic_db::SyncInMemoryDBAnvil;
 use serde_json::{json, to_writer, Value};
 use std::{
     collections::HashMap,
@@ -896,8 +895,8 @@ impl NodeConfig {
             if let Some(eth_rpc_url) = self.eth_rpc_url.clone() {
                 self.setup_fork_db(eth_rpc_url, &mut env, &fees).await
             } else {
-                (SyncInMemoryDBAnvil::new(), None)
-              // (Arc::new(tokio::sync::RwLock::new(Box::<MemDb>::default())), None)
+                // (SyncInMemoryDBAnvil::new().into_expected_for_backend(), None) // needs to implement trait `Db`
+              (Arc::new(tokio::sync::RwLock::new(Box::<MemDb>::default())), None)
             };
 
         // if provided use all settings of `genesis.json`
