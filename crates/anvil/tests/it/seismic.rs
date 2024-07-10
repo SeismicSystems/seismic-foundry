@@ -1,16 +1,18 @@
 use crate::utils::http_provider_with_signer;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_network::{EthereumWallet, TransactionBuilder};
-use alloy_primitives::{b256, hex::FromHex, Bytes, U128, U256, B256,hex, bytes};
+use alloy_primitives::{b256, hex::FromHex, Bytes, U128, U256, B256,hex, bytes, keccak256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
 use alloy_rlp::{Decodable, Encodable, Header, EMPTY_STRING_CODE};
+use seismic_db::CommitmentDatabase;
 use seismic_preimages::PreImageValue;
 use seismic_types::Secret;
 use anvil_core::eth::transaction::seismic::{SeismicTransactionFields, SecretData};
 use std::{fs, str::FromStr};
+use seismic_types::secret::use_zero_salt;
 
 // common utils
 
@@ -28,7 +30,7 @@ pub fn load_bytecode_from_file(file_path: &str) -> Vec<u8> {
 
 
 pub fn get_commitment(value: U256) -> B256 {
-    let secret = Secret::unsalted(value);
+    let secret = Secret::new(value);
     secret.commit_b256()
 }
 
@@ -55,6 +57,7 @@ pub fn get_input_data(selector: &str, secret_a: B256, secret_b: Option<B256>) ->
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_transaction() {
+    use_zero_salt();
     let (api, handle) = spawn(NodeConfig::test()).await;
     let provider = handle.http_provider();
     let deployer = handle.dev_accounts().next().unwrap();
@@ -113,6 +116,16 @@ async fn test_seismic_transaction() {
 
     let receipt = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
+
+    let mut to_hash = get_commitment(value).to_vec();
+    to_hash.extend_from_slice(&to.as_ref());
+    let commitment_key = keccak256(to_hash);
+
+    println!("The commitment key on the test is: {:?}", B256::from(commitment_key));
+
+    let commitment = anvil::eth::SEISMIC_DB.clone().get_commitment(commitment_key).unwrap().unwrap();
+
+    println!("The commitment is: {:?}", commitment);
 
         let value = U256::from(20);
 
