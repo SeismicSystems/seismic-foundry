@@ -2159,6 +2159,9 @@ interface Vm {
     /// Store a Seismic secret boolean value
     #[cheatcode(group = Evm, safety = Unsafe)]
     function commitBool(address contractAddress, bool value) external returns (uint256);
+
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function commitAddress(address contractAddress, address value) external returns (uint256);
     
     /// Store a Seismic secret uint8 value
     #[cheatcode(group = Evm, safety = Unsafe)]
@@ -2219,6 +2222,9 @@ interface Vm {
     /// Retrieve the preimage of a commitment to a boolean
     #[cheatcode(group = Evm, safety = Safe)]
     function unwrapSbool(address contractAddress, uint256 commitment) external returns (bool);
+
+    #[cheatcode(group = Evm, safety = Safe)]
+    function unwrapSaddress(address contractAddress, uint256 commitment) external returns (address);
 
     /// Retrieve the preimage of a commitment to a uint8
     #[cheatcode(group = Evm, safety = Safe)]
