@@ -7,19 +7,21 @@ use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
 use alloy_rlp::{Decodable, Encodable, Header, EMPTY_STRING_CODE};
+use hyper::header::USER_AGENT;
 use seismic_db::CommitmentDatabase;
 use seismic_preimages::PreImageValue;
 use seismic_types::Secret;
 use anvil_core::eth::transaction::seismic::{SeismicTransactionFields, SecretData};
 use std::{fs, str::FromStr};
 use seismic_types::secret::use_zero_salt;
-
+use tokio::runtime::Handle;
 // common utils
 
 pub const TEST_BYTECODE_PATH: &str = "/tests/it/seismic_test_bytecode.txt";
 pub const SET_NUMBER_SELECTOR: &str = "3fb5c1cb";
 pub const ADD_SELECTOR: &str = "1003e2d2"; // add(uint256)
 pub const GET_NUMBER_SELECTOR: &str = "f2c9ecd8";
+
 
 /// Loads the bytecode from a file and returns it as a vector of bytes.
 pub fn load_bytecode_from_file(file_path: &str) -> Vec<u8> {
@@ -68,7 +70,7 @@ async fn test_seismic_transaction() {
         .with_deploy_code(bytecode.clone());    
     let deploy_tx = WithOtherFields::new(deploy_tx);
 
-        let pending = provider.send_transaction(deploy_tx).await.unwrap();
+    let pending = provider.send_transaction(deploy_tx).await.unwrap();
 
         // mine block
         api.evm_mine(None).await.unwrap();
@@ -76,6 +78,7 @@ async fn test_seismic_transaction() {
         let receipt =
         provider.get_transaction_receipt(pending.tx_hash().to_owned()).await.unwrap().unwrap();
         assert!(receipt.contract_address.is_some());
+        println!(" --- Contract deployed at: {:?} --- ", receipt.contract_address.unwrap());
 
 
         let accounts: Vec<_> = handle.dev_wallets().collect();
@@ -107,15 +110,15 @@ async fn test_seismic_transaction() {
         };
 
         println!("The local hash is: {:?}", get_commitment(value));
-    
+
     let pending_set = provider.send_transaction(tx).await.unwrap();
-    
     
 
     api.evm_mine(None).await.unwrap();
 
     let receipt = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
+    println!(" --- Set receipt: {:?} --- ", receipt);
 
     let mut to_hash = get_commitment(value).to_vec();
     to_hash.extend_from_slice(&to.as_ref());
@@ -157,6 +160,8 @@ async fn test_seismic_transaction() {
     let receipt = provider.get_transaction_receipt(pending_add.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
+    println!(" --- Add receipt: {:?} --- ", receipt);
+
     let input_data_get = hex::decode(GET_NUMBER_SELECTOR).unwrap();
 
     let tx = TransactionRequest::default()
@@ -171,8 +176,10 @@ async fn test_seismic_transaction() {
 
     api.evm_mine(None).await.unwrap();
 
+   
+
     let receipt = provider.get_transaction_receipt(pending_get.tx_hash().to_owned()).await.unwrap().unwrap();
-    println!("Get receipt {:?}", receipt);
+    println!(" --- Get receipt: {:?} --- ", receipt);
     panic!();
 
     // assert_eq!(receipt.from, from);
