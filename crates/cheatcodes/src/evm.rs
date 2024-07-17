@@ -679,13 +679,13 @@ macro_rules! impl_commit_reveal {
 
 macro_rules! impl_commit_reveal_uint {
     ($digit:literal, $alloy_type:ident, $primitive_type:ident) => {
-        impl_commit_reveal!(commitUint, unwrapSuint, $digit, $alloy_type, $primitive_type);
+        impl_commit_reveal!(commitUint, revealSuint, $digit, $alloy_type, $primitive_type);
     };
 }
 
 macro_rules! impl_commit_reveal_int {
     ($digit:literal, $alloy_type:ident, $primitive_type:ident) => {
-        impl_commit_reveal!(commitInt, unwrapSint, $digit, $alloy_type, $primitive_type);
+        impl_commit_reveal!(commitInt, revealSint, $digit, $alloy_type, $primitive_type);
     };
 }
 
@@ -705,7 +705,7 @@ impl_commit_reveal_int!(128, I128, i128);
 impl_commit_reveal_int!(256, I256, I256);
 impl_commit_reveal_int!("", I256, I256);
 
-/// manually implement the `commitBool` and `unwrapSbool` cheatcodes
+/// manually implement the `commitBool` and `revealSbool` cheatcodes
 impl Cheatcode for commitBoolCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contractAddress, value } = self;
@@ -715,7 +715,7 @@ impl Cheatcode for commitBoolCall {
     }
 }
 
-impl Cheatcode for unwrapSboolCall {
+impl Cheatcode for revealSboolCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contractAddress, commitment } = self;
         let mut db = foundry_evm_core::SEISMIC_DB.clone();
@@ -733,7 +733,7 @@ impl Cheatcode for commitAddressCall {
     }
 }
 
-impl Cheatcode for unwrapSaddressCall {
+impl Cheatcode for revealSaddressCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contractAddress, commitment } = self;
         let mut db = foundry_evm_core::SEISMIC_DB.clone();
