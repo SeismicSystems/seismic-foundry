@@ -8573,12 +8573,12 @@
     },
     {
       "func": {
-        "id": "unwrapSaddress",
+        "id": "revealSaddress",
         "description": "",
-        "declaration": "function unwrapSaddress(address contractAddress, uint256 commitment) external returns (address);",
+        "declaration": "function revealSaddress(address contractAddress, uint256 commitment) external returns (address);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSaddress(address,uint256)",
+        "signature": "revealSaddress(address,uint256)",
         "selector": "0x655e4263",
         "selectorBytes": [
           101,
@@ -8593,12 +8593,12 @@
     },
     {
       "func": {
-        "id": "unwrapSbool",
+        "id": "revealSbool",
         "description": "Retrieve the preimage of a commitment to a boolean",
-        "declaration": "function unwrapSbool(address contractAddress, uint256 commitment) external returns (bool);",
+        "declaration": "function revealSbool(address contractAddress, uint256 commitment) external returns (bool);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSbool(address,uint256)",
+        "signature": "revealSbool(address,uint256)",
         "selector": "0x37c02269",
         "selectorBytes": [
           55,
@@ -8613,12 +8613,12 @@
     },
     {
       "func": {
-        "id": "unwrapSint",
+        "id": "revealSint",
         "description": "Retrieve the preimage of a commitment to an int256",
-        "declaration": "function unwrapSint(address contractAddress, uint256 commitment) external returns (int);",
+        "declaration": "function revealSint(address contractAddress, uint256 commitment) external returns (int);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSint(address,uint256)",
+        "signature": "revealSint(address,uint256)",
         "selector": "0x06a920d0",
         "selectorBytes": [
           6,
@@ -8633,12 +8633,12 @@
     },
     {
       "func": {
-        "id": "unwrapSint128",
+        "id": "revealSint128",
         "description": "Retrieve the preimage of a commitment to an int128",
-        "declaration": "function unwrapSint128(address contractAddress, uint256 commitment) external returns (int128);",
+        "declaration": "function revealSint128(address contractAddress, uint256 commitment) external returns (int128);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSint128(address,uint256)",
+        "signature": "revealSint128(address,uint256)",
         "selector": "0x2762841f",
         "selectorBytes": [
           39,
@@ -8653,12 +8653,12 @@
     },
     {
       "func": {
-        "id": "unwrapSint16",
+        "id": "revealSint16",
         "description": "Retrieve the preimage of a commitment to an int16",
-        "declaration": "function unwrapSint16(address contractAddress, uint256 commitment) external returns (int16);",
+        "declaration": "function revealSint16(address contractAddress, uint256 commitment) external returns (int16);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSint16(address,uint256)",
+        "signature": "revealSint16(address,uint256)",
         "selector": "0xe29276d1",
         "selectorBytes": [
           226,
@@ -8673,12 +8673,12 @@
     },
     {
       "func": {
-        "id": "unwrapSint256",
+        "id": "revealSint256",
         "description": "Retrieve the preimage of a commitment to an int256",
-        "declaration": "function unwrapSint256(address contractAddress, uint256 commitment) external returns (int256);",
+        "declaration": "function revealSint256(address contractAddress, uint256 commitment) external returns (int256);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSint256(address,uint256)",
+        "signature": "revealSint256(address,uint256)",
         "selector": "0xda5412b8",
         "selectorBytes": [
           218,
@@ -8693,12 +8693,12 @@
     },
     {
       "func": {
-        "id": "unwrapSint32",
+        "id": "revealSint32",
         "description": "Retrieve the preimage of a commitment to an int32",
-        "declaration": "function unwrapSint32(address contractAddress, uint256 commitment) external returns (int32);",
+        "declaration": "function revealSint32(address contractAddress, uint256 commitment) external returns (int32);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSint32(address,uint256)",
+        "signature": "revealSint32(address,uint256)",
         "selector": "0x1e691d39",
         "selectorBytes": [
           30,
@@ -8713,12 +8713,12 @@
     },
     {
       "func": {
-        "id": "unwrapSint64",
+        "id": "revealSint64",
         "description": "Retrieve the preimage of a commitment to an int64",
-        "declaration": "function unwrapSint64(address contractAddress, uint256 commitment) external returns (int64);",
+        "declaration": "function revealSint64(address contractAddress, uint256 commitment) external returns (int64);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSint64(address,uint256)",
+        "signature": "revealSint64(address,uint256)",
         "selector": "0xcb6cedeb",
         "selectorBytes": [
           203,
@@ -8733,12 +8733,12 @@
     },
     {
       "func": {
-        "id": "unwrapSint8",
+        "id": "revealSint8",
         "description": "Retrieve the preimage of a commitment to an int8",
-        "declaration": "function unwrapSint8(address contractAddress, uint256 commitment) external returns (int8);",
+        "declaration": "function revealSint8(address contractAddress, uint256 commitment) external returns (int8);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSint8(address,uint256)",
+        "signature": "revealSint8(address,uint256)",
         "selector": "0x899793b8",
         "selectorBytes": [
           137,
@@ -8753,12 +8753,12 @@
     },
     {
       "func": {
-        "id": "unwrapSuint",
+        "id": "revealSuint",
         "description": "Retrieve the preimage of a commitment to a uint",
-        "declaration": "function unwrapSuint(address contractAddress, uint256 commitment) external returns (uint);",
+        "declaration": "function revealSuint(address contractAddress, uint256 commitment) external returns (uint);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSuint(address,uint256)",
+        "signature": "revealSuint(address,uint256)",
         "selector": "0x04e11d70",
         "selectorBytes": [
           4,
@@ -8773,12 +8773,12 @@
     },
     {
       "func": {
-        "id": "unwrapSuint128",
+        "id": "revealSuint128",
         "description": "Retrieve the preimage of a commitment to a uint128",
-        "declaration": "function unwrapSuint128(address contractAddress, uint256 commitment) external returns (uint256);",
+        "declaration": "function revealSuint128(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSuint128(address,uint256)",
+        "signature": "revealSuint128(address,uint256)",
         "selector": "0x489d746d",
         "selectorBytes": [
           72,
@@ -8793,12 +8793,12 @@
     },
     {
       "func": {
-        "id": "unwrapSuint16",
+        "id": "revealSuint16",
         "description": "Retrieve the preimage of a commitment to a uint16",
-        "declaration": "function unwrapSuint16(address contractAddress, uint256 commitment) external returns (uint256);",
+        "declaration": "function revealSuint16(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSuint16(address,uint256)",
+        "signature": "revealSuint16(address,uint256)",
         "selector": "0x4c124811",
         "selectorBytes": [
           76,
@@ -8813,12 +8813,12 @@
     },
     {
       "func": {
-        "id": "unwrapSuint256",
+        "id": "revealSuint256",
         "description": "Retrieve the preimage of a commitment to a uint256",
-        "declaration": "function unwrapSuint256(address contractAddress, uint256 commitment) external returns (uint256);",
+        "declaration": "function revealSuint256(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSuint256(address,uint256)",
+        "signature": "revealSuint256(address,uint256)",
         "selector": "0x8679c32f",
         "selectorBytes": [
           134,
@@ -8833,12 +8833,12 @@
     },
     {
       "func": {
-        "id": "unwrapSuint32",
+        "id": "revealSuint32",
         "description": "Retrieve the preimage of a commitment to a uint32",
-        "declaration": "function unwrapSuint32(address contractAddress, uint256 commitment) external returns (uint256);",
+        "declaration": "function revealSuint32(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSuint32(address,uint256)",
+        "signature": "revealSuint32(address,uint256)",
         "selector": "0x8ac16dc6",
         "selectorBytes": [
           138,
@@ -8853,12 +8853,12 @@
     },
     {
       "func": {
-        "id": "unwrapSuint64",
+        "id": "revealSuint64",
         "description": "Retrieve the preimage of a commitment to a uint64",
-        "declaration": "function unwrapSuint64(address contractAddress, uint256 commitment) external returns (uint256);",
+        "declaration": "function revealSuint64(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSuint64(address,uint256)",
+        "signature": "revealSuint64(address,uint256)",
         "selector": "0x9684dd7d",
         "selectorBytes": [
           150,
@@ -8873,12 +8873,12 @@
     },
     {
       "func": {
-        "id": "unwrapSuint8",
+        "id": "revealSuint8",
         "description": "Retrieve the preimage of a commitment to a uint8",
-        "declaration": "function unwrapSuint8(address contractAddress, uint256 commitment) external returns (uint256);",
+        "declaration": "function revealSuint8(address contractAddress, uint256 commitment) external returns (uint256);",
         "visibility": "external",
         "mutability": "",
-        "signature": "unwrapSuint8(address,uint256)",
+        "signature": "revealSuint8(address,uint256)",
         "selector": "0x5472e687",
         "selectorBytes": [
           84,
