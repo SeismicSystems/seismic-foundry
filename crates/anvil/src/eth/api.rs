@@ -79,6 +79,7 @@ use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
 use seismic_preimages::{InputPreImage, PreImageValue};
 use std::{collections::HashSet, future::Future, io::Read, sync::Arc, time::Duration};
+use super::util::get_commitment;
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -970,6 +971,10 @@ impl EthApi {
                 .collect();
 
             if let TxKind::Call(addr) = seismic_data.to {
+                let commitment = Bytes::from(get_commitment(seismic_data.value));
+                if seismic_data.input != commitment {
+                    return Err(BlockchainError::Message("Commitment does not match seismic data input".to_string()));
+                }
                 if seismic_preimages::bulk_commit_with_db(&mut db, &addr, &input_pre_images)
                     .is_err()
                 {

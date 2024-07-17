@@ -4,6 +4,8 @@ use foundry_evm::revm::{
     primitives::SpecId,
 };
 use std::fmt;
+use seismic_types::Secret;
+use alloy_primitives::{B256, U256};
 
 pub fn get_precompiles_for(spec_id: SpecId) -> Vec<Address> {
     Precompiles::new(PrecompileSpecId::from_spec_id(spec_id)).addresses().copied().collect()
@@ -55,4 +57,9 @@ impl<'a> fmt::Debug for HexDisplay<'a> {
         }
         Ok(())
     }
+}
+
+pub fn get_commitment(value: U256) -> B256 {
+    let secret = Secret::new(value);
+    secret.commit_b256()
 }
