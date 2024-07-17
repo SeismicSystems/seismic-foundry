@@ -98,7 +98,6 @@ impl<DB: Database> revm::Inspector<DB> for Inspector {
             return seismic.call_end(ecx, inputs, outcome);
         }
         if let Some(tracer) = &mut self.tracer {
-            println!("Tracer call ended.");
             return tracer.call_end(ecx, inputs, outcome);
         }
 

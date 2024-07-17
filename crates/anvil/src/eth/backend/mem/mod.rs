@@ -53,8 +53,8 @@ use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
-        DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
-        TransactionInfo, TypedReceipt, TypedTransaction,
+        seismic::SeismicTx, DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction,
+        ReceiptResponse, TransactionInfo, TypedReceipt, TypedTransaction,
     },
     utils::meets_eip155,
 };
@@ -144,7 +144,7 @@ pub struct Backend {
     /// endpoints. Therefor the `Db` is guarded by a `tokio::sync::RwLock` here so calls that
     /// need to read from it, while it's currently written to, don't block. E.g. a new block is
     /// currently mined and a new [`Self::set_storage_at()`] request is being executed.
-    db: Arc<AsyncRwLock<Box<dyn Db>>>, // probably need to modify this.
+    db: Arc<AsyncRwLock<Box<dyn Db>>>,
     /// stores all block related data in memory
     blockchain: Blockchain,
     /// Historic states of previous blocks
@@ -914,7 +914,6 @@ impl Backend {
         &self,
         pool_transactions: Vec<Arc<PoolTransaction>>,
     ) -> MinedBlockOutcome {
-        println!("mine_block call!");
         self.do_mine_block(pool_transactions).await
     }
 
@@ -922,7 +921,6 @@ impl Backend {
         &self,
         pool_transactions: Vec<Arc<PoolTransaction>>,
     ) -> MinedBlockOutcome {
-        println!("mining a block!");
         trace!(target: "backend", "creating new block with {} transactions", pool_transactions.len());
 
         let (outcome, header, block_hash) = {
@@ -956,7 +954,6 @@ impl Backend {
 
             let (executed_tx, block_hash) = {
                 let mut db = self.db.write().await;
-                println!("db just written and awaited :D");
                 let executor = TransactionExecutor {
                     db: &mut *db,
                     validator: self,
@@ -969,7 +966,6 @@ impl Backend {
                     enable_steps_tracing: self.enable_steps_tracing,
                     precompile_factory: self.precompile_factory.clone(),
                 };
-                println!("-- executor configured for mining a block -");
                 let executed_tx = executor.execute(); // key part where the actual execution happens.
 
                 // we also need to update the new blockhash in the db itself
@@ -1194,7 +1190,6 @@ impl Backend {
     where
         D: DatabaseRef<Error = DatabaseError>,
     {
-        println!("Call with state reached!!!");
         let mut inspector = Inspector::default().with_seismic();
 
         let env = self.build_call_env(request, fee_details, block_env);
@@ -2043,7 +2038,7 @@ impl Backend {
                 .header
                 .base_fee_per_gas
                 .unwrap_or_else(|| self.base_fee())
-                .saturating_add(t.tx().max_priority_fee_per_gas),
+                .saturating_add(t.tx().base().max_priority_fee_per_gas),
         };
 
         let receipts = self.get_receipts(block.transactions.iter().map(|tx| tx.hash()));

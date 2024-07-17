@@ -1,23 +1,16 @@
-use crate::utils::http_provider_with_signer;
-use alloy_eips::eip2718::Encodable2718;
-use alloy_network::{EthereumWallet, TransactionBuilder};
-use alloy_primitives::{
-    b256, bytes, hex, hex::FromHex, keccak256, Address, Bytes, B256, U128, U256,
-};
+use alloy_network::TransactionBuilder;
+use alloy_primitives::{hex, keccak256, Address, Bytes, B256, U256};
 use alloy_provider::Provider;
-use alloy_rlp::{Decodable, Encodable, Header, EMPTY_STRING_CODE};
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
 use anvil_core::eth::transaction::seismic::{SecretData, SeismicTransactionFields};
-use hyper::header::USER_AGENT;
 use seismic_db::CommitmentDatabase;
 use seismic_preimages::PreImageValue;
 use seismic_types::{secret::use_zero_salt, Secret};
-use std::{fs, str::FromStr};
-use tokio::runtime::Handle;
-// common utils
+use std::fs;
 
+// common utils
 pub const TEST_BYTECODE_PATH: &str = "/tests/it/seismic_test_bytecode.txt";
 pub const SET_NUMBER_SELECTOR: &str = "3fb5c1cb";
 pub const ADD_SELECTOR: &str = "1003e2d2"; // add(uint256)
@@ -30,11 +23,13 @@ pub fn load_bytecode_from_file(file_path: &str) -> Vec<u8> {
     hex::decode(bytecode_str.trim()).expect("Failed to decode bytecode")
 }
 
+/// Gets the commitment for a value with salt 0
 pub fn get_commitment(value: U256) -> B256 {
     let secret = Secret::new(value);
     secret.commit_b256()
 }
 
+/// Gets the input data for a given selector function and one or two values
 pub fn get_input_data(selector: &str, secret_a: B256, secret_b: Option<B256>) -> Bytes {
     let selector_bytes: Vec<u8> = hex::decode(&selector[0..8]).expect("Invalid selector");
 
@@ -55,6 +50,7 @@ pub fn get_input_data(selector: &str, secret_a: B256, secret_b: Option<B256>) ->
     input_data.into()
 }
 
+/// Computes the commitment key to index into the db
 pub fn compute_commitment_key(value: U256, address: Address) -> B256 {
     let mut to_hash = get_commitment(value).to_vec();
     to_hash.extend_from_slice(&address.as_ref());

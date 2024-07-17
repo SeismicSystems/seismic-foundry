@@ -426,7 +426,6 @@ impl InspectorStack {
         inputs: &CallInputs,
         outcome: CallOutcome,
     ) -> CallOutcome {
-        println!("call end is being called!");
         let result = outcome.result.result;
         call_inspectors_adjust_depth!(
             #[ret]
@@ -467,7 +466,6 @@ impl InspectorStack {
         let ecx = &mut ecx.inner;
         ecx.db.commit(ecx.journaled_state.state.clone());
 
-        println!("committed state in transact_inner!");
         let nonce = ecx
             .journaled_state
             .load_account(caller, &mut ecx.db)
@@ -702,10 +700,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
                 call.value.get(),
             );
             return Some(CallOutcome { result, memory_offset: call.return_memory_offset.clone() })
-        } else {
-            println!("no transact inner called!");
         }
-
         None
     }
 

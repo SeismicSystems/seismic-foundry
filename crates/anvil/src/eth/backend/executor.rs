@@ -18,7 +18,6 @@ use anvil_core::eth::{
     },
     trie,
 };
-use foundry_common::shell::println;
 use foundry_evm::{
     backend::DatabaseError,
     revm::{
@@ -30,7 +29,7 @@ use foundry_evm::{
     },
     traces::CallTraceNode,
 };
-use revm::{inspector_handle_register, primitives::MAX_BLOB_GAS_PER_BLOCK};
+use revm::primitives::MAX_BLOB_GAS_PER_BLOCK;
 use std::sync::Arc;
 
 /// Represents an executed transaction (transacted on the DB)
@@ -241,7 +240,6 @@ impl<'a, DB: Db + ?Sized, Validator: TransactionValidator> TransactionExecutor<'
             tx_env.optimism.enveloped_tx =
                 Some(alloy_rlp::encode(&tx.transaction.transaction).into());
         }
-        // seismic will come in here as well since this is the executor
         EnvWithHandlerCfg::new_with_cfg_env(self.cfg_env.clone(), self.block_env.clone(), tx_env)
     }
 }
@@ -306,27 +304,20 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
         if self.enable_steps_tracing {
             inspector = inspector.with_steps_tracing();
         }
-        let seismic_present = inspector.seismic.is_some();
-
         let exec_result = {
             let mut evm = revm::Evm::builder()
                 .with_db(&mut self.db)
                 .with_external_context(inspector.clone())
                 .with_env_with_handler_cfg(env)
-                .append_handler_register(inspector_handle_register)
+                .append_handler_register(revm::inspector_handle_register)
                 .build();
-            println!("Hi {}", seismic_present);
-            println!("reached the new evm");
             if let Some(factory) = &self.precompile_factory {
                 inject_precompiles(&mut evm, factory.precompiles());
             }
             trace!(target: "backend", "[{:?}] executing", transaction.hash());
             // transact and commit the transaction
             match evm.transact_commit() {
-                Ok(exec_result) => {
-                    println!("Ok exec result!");
-                    exec_result
-                }
+                Ok(exec_result) => exec_result,
                 Err(err) => {
                     warn!(target: "backend", "[{:?}] failed to execute: {:?}", transaction.hash(), err);
                     match err {
@@ -337,8 +328,8 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
                             ))
                         }
                         EVMError::Transaction(err) => {
-                            println!("Invalid transaction error");
-                            println!("Error is {:?}", err);
+                            warn!("Invalid transaction error");
+                            warn!("Error is {:?}", err);
                             return Some(TransactionExecutionOutcome::Invalid(
                                 transaction,
                                 err.into(),

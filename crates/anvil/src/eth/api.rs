@@ -1,7 +1,6 @@
 use super::{
     backend::mem::{state, BlockRequest, State},
     sign::build_typed_transaction,
-    util::process_secret_data,
 };
 use crate::{
     eth::{
@@ -58,15 +57,16 @@ use anvil_core::{
     eth::{
         block::BlockInfo,
         transaction::{
-            seismic::SecretData, transaction_request_to_typed, PendingTransaction, ReceiptResponse,
-            TypedTransaction, TypedTransactionRequest,
+            seismic::{SecretData, SeismicTx},
+            transaction_request_to_typed, PendingTransaction, ReceiptResponse, TypedTransaction,
+            TypedTransactionRequest,
         },
         EthRequest,
     },
     types::Work,
 };
 use anvil_rpc::{error::RpcError, response::ResponseResult};
-use foundry_common::{provider::ProviderBuilder, shell::println};
+use foundry_common::provider::ProviderBuilder;
 use foundry_evm::{
     backend::DatabaseError,
     decode::RevertDecoder,
@@ -78,9 +78,7 @@ use foundry_evm::{
 };
 use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
-use seismic_preimages::{InputPreImage, PreImage, PreImageValue};
-use seismic_types::{primitive::PrimitiveBytes, Secret};
-use std::{collections::HashSet, future::Future, io::Read, sync::Arc, time::Duration};
+use std::{collections::HashSet, future::Future, sync::Arc, time::Duration};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -163,7 +161,6 @@ impl EthApi {
                 self.transaction_by_hash(hash).await.to_rpc_result()
             }
             EthRequest::EthSendTransaction(request) => {
-                // check for the flag somewhere here?
                 self.send_transaction(*request).await.to_rpc_result()
             }
             EthRequest::EthChainId(_) => self.eth_chain_id().to_rpc_result(),
@@ -472,10 +469,6 @@ impl EthApi {
                 return build_typed_transaction(request, nil_signature) // Deposit transactions do
                                                                        // not include a signature
             }
-            /* TypedTransactionRequest::Seismic(_) => {
-                // Seismic transactions do not sign the secret_data fields
-                return build_typed_transaction(request, seismic_signature)
-            }  */
             _ => {
                 for signer in self.signers.iter() {
                     if signer.accounts().contains(from) {
@@ -958,24 +951,30 @@ impl EthApi {
 
         let request = self.build_typed_tx_request(request, nonce)?;
 
-        //insert committing the secrets somewhere here -- include salts.
+        // secrets committed when a Seismic transaction is detected.
         if let TypedTransactionRequest::Seismic(seismic_data) = &request {
-            println!("Detected Seismic transaction");
+            foundry_common::shell::println(format!(
+                "Detected Seismic transaction with {} preimages",
+                seismic_data.secret_data.len()
+            ))
+            .unwrap_or_else(|e| eprintln!("Failed to print message: {}", e));
             let mut db = crate::eth::SEISMIC_DB.clone();
-            process_secret_data(seismic_data.secret_data.clone(), &seismic_data.input)?;
+            super::seismic_util::process_secret_data(
+                seismic_data.secret_data.clone(),
+                &seismic_data.base().input,
+            )?;
             let secrets: Vec<SecretData> = seismic_data.secret_data.clone();
-            let input_pre_images: Vec<InputPreImage> = secrets
+            let input_pre_images: Vec<seismic_preimages::InputPreImage> = secrets
                 .iter()
-                .map(|secret| InputPreImage {
+                .map(|secret| seismic_preimages::InputPreImage {
                     value: secret.preimage.clone(),
                     type_: secret.preimage_type.clone(),
                 })
                 .collect();
-            if let TxKind::Call(addr) = seismic_data.to {
+            if let TxKind::Call(addr) = seismic_data.base().to {
                 if seismic_preimages::bulk_commit_with_db(&mut db, &addr, &input_pre_images)
                     .is_err()
                 {
-                    println!("The address being committed to is: {:?}", addr);
                     return Err(BlockchainError::Message("Failed to commit preimages".to_string()))
                 }
             }
@@ -999,7 +998,6 @@ impl EthApi {
         let requires = required_marker(nonce, on_chain_nonce, from);
         let provides = vec![to_marker(nonce, from)];
         debug_assert!(requires != provides);
-        println!("Adding pending transaction to pool");
         self.add_pending_transaction(pending_transaction, requires, provides)
     }
 
@@ -2254,7 +2252,6 @@ impl EthApi {
 
     /// Executes the `evm_mine` and returns the number of blocks mined
     async fn do_evm_mine(&self, opts: Option<MineOptions>) -> Result<u64> {
-        println!("do evm mine!!");
         let mut blocks_to_mine = 1u64;
 
         if let Some(opts) = opts {
@@ -2617,11 +2614,11 @@ impl EthApi {
                 TypedTransactionRequest::Deposit(m)
             }
             Some(TypedTransactionRequest::Seismic(mut m)) => {
-                m.nonce = nonce;
-                m.chain_id = chain_id;
-                m.gas_limit = gas_limit;
+                m.base_mut().nonce = nonce;
+                m.base_mut().chain_id = chain_id;
+                m.base_mut().gas_limit = gas_limit;
                 if max_fee_per_gas.is_none() {
-                    m.max_fee_per_gas = self.gas_price();
+                    m.base_mut().max_fee_per_gas = self.gas_price();
                 }
                 TypedTransactionRequest::Seismic(m)
             }
@@ -2758,7 +2755,7 @@ fn determine_base_gas_by_kind(request: &WithOtherFields<TransactionRequest>) -> 
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,
                 TxKind::Create => MIN_CREATE_GAS,
             },
-            TypedTransactionRequest::Seismic(req) => match req.to {
+            TypedTransactionRequest::Seismic(req) => match req.base().to {
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,
                 TxKind::Create => MIN_CREATE_GAS,
             },

@@ -6,7 +6,7 @@ use alloy_eips::{
     calc_next_block_base_fee, eip1559::BaseFeeParams, eip4844::MAX_DATA_GAS_PER_BLOCK,
 };
 use alloy_primitives::B256;
-use anvil_core::eth::transaction::TypedTransaction;
+use anvil_core::eth::transaction::{seismic::SeismicTx, TypedTransaction};
 use foundry_evm::revm::primitives::{BlobExcessGasAndPrice, SpecId};
 use futures::StreamExt;
 use parking_lot::{Mutex, RwLock};
@@ -290,8 +290,9 @@ impl FeeHistoryService {
                         Some(TypedTransaction::Deposit(_)) => 0,
                         Some(TypedTransaction::Seismic(t)) => t
                             .tx()
+                            .base()
                             .max_priority_fee_per_gas
-                            .min(t.tx().max_fee_per_gas.saturating_sub(base_fee)),
+                            .min(t.tx().base().max_fee_per_gas.saturating_sub(base_fee)),
                         None => 0,
                     };
 
