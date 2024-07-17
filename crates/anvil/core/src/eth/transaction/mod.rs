@@ -1419,8 +1419,8 @@ impl Encodable2718 for TypedReceipt {
             Self::EIP2930(r) => ReceiptEnvelope::Eip2930(r.clone()).encode_2718_len(),
             Self::EIP1559(r) => ReceiptEnvelope::Eip1559(r.clone()).encode_2718_len(),
             Self::EIP4844(r) => ReceiptEnvelope::Eip4844(r.clone()).encode_2718_len(),
-            Self::Seismic(r) => 1 + r.length(), /* under the hood, encode_2718_len(), if not a
-                                                  * legacy transaction, is r.length()+1 */
+            Self::Seismic(r) => 1 + r.length(), /* under the hood, encode_2718_len(), if not a */
+            // legacy transaction, is r.length()+1
             Self::Deposit(r) => 1 + r.length(),
         }
     }

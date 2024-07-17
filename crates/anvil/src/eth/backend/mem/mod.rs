@@ -144,7 +144,7 @@ pub struct Backend {
     /// endpoints. Therefor the `Db` is guarded by a `tokio::sync::RwLock` here so calls that
     /// need to read from it, while it's currently written to, don't block. E.g. a new block is
     /// currently mined and a new [`Self::set_storage_at()`] request is being executed.
-    db: Arc<AsyncRwLock<Box<dyn Db>>>, // probably need to modify this. 
+    db: Arc<AsyncRwLock<Box<dyn Db>>>, // probably need to modify this.
     /// stores all block related data in memory
     blockchain: Blockchain,
     /// Historic states of previous blocks
@@ -900,7 +900,6 @@ impl Backend {
             enable_steps_tracing: self.enable_steps_tracing,
             precompile_factory: self.precompile_factory.clone(),
         };
-
 
         // create a new pending block
         let executed = executor.execute();

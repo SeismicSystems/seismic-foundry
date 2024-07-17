@@ -693,7 +693,6 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
             !self.in_inner_context &&
             ecx.journaled_state.depth == 1
         {
-
             let (result, _) = self.transact_inner(
                 ecx,
                 TxKind::Call(call.target_address),
@@ -703,8 +702,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
                 call.value.get(),
             );
             return Some(CallOutcome { result, memory_offset: call.return_memory_offset.clone() })
-        }
-        else{
+        } else {
             println!("no transact inner called!");
         }
 

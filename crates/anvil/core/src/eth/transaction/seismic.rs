@@ -451,7 +451,7 @@ pub fn decode_signed_seismic_fields(
     Ok(signed)
 }
 
-impl Encodable for SeismicTransaction{
+impl Encodable for SeismicTransaction {
     fn encode(&self, out: &mut dyn BufMut) {
         Header { list: true, payload_length: self.fields_len() }.encode(out);
         self.encode_fields(out);
@@ -484,4 +484,3 @@ impl From<SeismicTransactionFields> for OtherFields {
         serde_json::to_value(value).unwrap().try_into().unwrap()
     }
 }
-

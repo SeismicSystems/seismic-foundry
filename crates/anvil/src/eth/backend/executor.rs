@@ -8,7 +8,6 @@ use crate::{
     mem::inspector::Inspector,
     PrecompileFactory,
 };
-use revm::inspector_handle_register;
 use alloy_consensus::{Header, Receipt, ReceiptWithBloom};
 use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{Bloom, BloomInput, Log, B256};
@@ -31,7 +30,7 @@ use foundry_evm::{
     },
     traces::CallTraceNode,
 };
-use revm::primitives::MAX_BLOB_GAS_PER_BLOCK;
+use revm::{inspector_handle_register, primitives::MAX_BLOB_GAS_PER_BLOCK};
 use std::sync::Arc;
 
 /// Represents an executed transaction (transacted on the DB)
@@ -306,20 +305,18 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
         let mut inspector = Inspector::default().with_tracing().with_seismic();
         if self.enable_steps_tracing {
             inspector = inspector.with_steps_tracing();
-            
         }
         let seismic_present = inspector.seismic.is_some();
 
         let exec_result = {
-            let mut evm =
-            revm::Evm::builder()
-            .with_db(&mut self.db)
-            .with_external_context(inspector.clone())
-            .with_env_with_handler_cfg(env)
-            .append_handler_register(inspector_handle_register)
-            .build();
-                println!("Hi {}", seismic_present);
-                println!("reached the new evm");
+            let mut evm = revm::Evm::builder()
+                .with_db(&mut self.db)
+                .with_external_context(inspector.clone())
+                .with_env_with_handler_cfg(env)
+                .append_handler_register(inspector_handle_register)
+                .build();
+            println!("Hi {}", seismic_present);
+            println!("reached the new evm");
             if let Some(factory) = &self.precompile_factory {
                 inject_precompiles(&mut evm, factory.precompiles());
             }
@@ -329,7 +326,7 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
                 Ok(exec_result) => {
                     println!("Ok exec result!");
                     exec_result
-                },
+                }
                 Err(err) => {
                     warn!(target: "backend", "[{:?}] failed to execute: {:?}", transaction.hash(), err);
                     match err {

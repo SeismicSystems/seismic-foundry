@@ -1414,7 +1414,6 @@ impl DatabaseCommit for Backend {
         if let Some(db) = self.active_fork_db_mut() {
             db.commit(changes)
         } else {
-           
             self.mem_db.commit(changes)
         }
     }
