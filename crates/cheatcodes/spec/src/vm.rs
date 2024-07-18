@@ -2228,23 +2228,23 @@ interface Vm {
 
     /// Retrieve the preimage of a commitment to a uint8
     #[cheatcode(group = Evm, safety = Safe)]
-    function revealSuint8(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint8(address contractAddress, uint256 commitment) external returns (uint8);
 
     /// Retrieve the preimage of a commitment to a uint16
     #[cheatcode(group = Evm, safety = Safe)]
-    function revealSuint16(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint16(address contractAddress, uint256 commitment) external returns (uint16);
 
     /// Retrieve the preimage of a commitment to a uint32
     #[cheatcode(group = Evm, safety = Safe)]
-    function revealSuint32(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint32(address contractAddress, uint256 commitment) external returns (uint32);
 
     /// Retrieve the preimage of a commitment to a uint64
     #[cheatcode(group = Evm, safety = Safe)]
-    function revealSuint64(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint64(address contractAddress, uint256 commitment) external returns (uint64);
 
     /// Retrieve the preimage of a commitment to a uint128
     #[cheatcode(group = Evm, safety = Safe)]
-    function revealSuint128(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint128(address contractAddress, uint256 commitment) external returns (uint128);
 
     /// Retrieve the preimage of a commitment to a uint256
     #[cheatcode(group = Evm, safety = Safe)]
