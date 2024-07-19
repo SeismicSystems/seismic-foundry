@@ -12,6 +12,7 @@ use core::fmt;
 use foundry_config::{Chain, Config, FigmentProviders};
 use futures::FutureExt;
 use rand::{rngs::StdRng, SeedableRng};
+use seismic_types::secret::use_zero_salt;
 use std::{
     future::Future,
     net::IpAddr,
@@ -271,6 +272,7 @@ impl NodeArgs {
     ///
     /// See also [crate::spawn()]
     pub async fn run(self) -> eyre::Result<()> {
+        use_zero_salt();
         let dump_state = self.dump_state_path();
         let dump_interval =
             self.state_interval.map(Duration::from_secs).unwrap_or(DEFAULT_DUMP_INTERVAL);

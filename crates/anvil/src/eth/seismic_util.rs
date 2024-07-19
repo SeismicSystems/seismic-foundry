@@ -13,7 +13,9 @@ pub fn process_secret_data(
     input: &[u8],
 ) -> Result<(), BlockchainError> {
     let input_pre_images = create_input_pre_images(&secret_data);
+
     let preimages = parse_preimages(&input_pre_images)?;
+
     let calculated_secrets = create_secrets(&preimages);
 
     let calculated_commitments = calculate_commitments(&calculated_secrets);

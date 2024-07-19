@@ -46,7 +46,6 @@ pub fn get_input_data(selector: &str, secret_a: B256, secret_b: Option<B256>) ->
         let secret_b_bytes: Bytes = secret_b.into();
         input_data.extend_from_slice(&secret_b_bytes);
     }
-
     input_data.into()
 }
 
