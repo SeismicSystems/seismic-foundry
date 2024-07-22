@@ -28,6 +28,41 @@ git checkout seismic
 cargo install --root=$HOME/.seismic --profile dev --path ./crates/anvil
 ```
 
+### Merging in upstream foundry-rs/main
+First make sure you have set a public origin:
+```sh
+git remote add public https://github.com/foundry-rs/foundry.git
+```
+
+Then checkout to `master` and pull in changes from `public/master`, and push to `origin/master`
+```sh
+git checkout master
+git pull public master
+git push origin master
+```
+
+Then checkout to `seismic`, pull in `origin/master`, and checkout to a new branch
+```sh
+git checkout seismic
+git pull origin master
+git checkout -b merge-in-public-master
+```
+
+You will likely see some merge conflicts. For Cargo.lock, simply checkout to `origin/master`:
+```sh
+git checkout master -- Cargo.lock
+```
+
+For the rest, resolve them manually. This might be a pain. When you are done, make sure our Seismic-specific tests pass:
+```sh
+cargo test -- test_seismic_transaction
+```
+
+And then push your branch to GitHub & merge in the pull request with a squash commit
+```sh
+git push origin merge-in-public-master  # then merge it on the UI
+```
+
 ## Foundry
 
 ![Github Actions][gha-badge] [![Telegram Chat][tg-badge]][tg-url] [![Telegram Support][tg-support-badge]][tg-support-url]
