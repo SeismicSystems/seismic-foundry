@@ -466,8 +466,7 @@ impl EthApi {
                         false,
                     )
                     .unwrap();
-                return build_typed_transaction(request, nil_signature) // Deposit transactions do
-                                                                       // not include a signature
+                return build_typed_transaction(request, nil_signature)
             }
             _ => {
                 for signer in self.signers.iter() {
