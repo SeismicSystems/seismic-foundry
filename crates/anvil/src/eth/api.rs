@@ -441,10 +441,10 @@ impl EthApi {
                         match e {
                             seismic_preimages::SeismicRpcError::ParseError(_) => {
                                 ResponseResult::Error(RpcError::invalid_params(msg))
-                            }
+                            },
                             seismic_preimages::SeismicRpcError::DbError(_) => {
                                 ResponseResult::Error(RpcError::internal_error_with(msg))
-                            }
+                            },
                         }
                     }
                 }
@@ -997,6 +997,7 @@ impl EthApi {
         let requires = required_marker(nonce, on_chain_nonce, from);
         let provides = vec![to_marker(nonce, from)];
         debug_assert!(requires != provides);
+
         self.add_pending_transaction(pending_transaction, requires, provides)
     }
 
