@@ -464,6 +464,7 @@ impl InspectorStack {
         value: U256,
     ) -> (InterpreterResult, Option<Address>) {
         let ecx = &mut ecx.inner;
+
         ecx.db.commit(ecx.journaled_state.state.clone());
 
         let nonce = ecx
@@ -701,6 +702,7 @@ impl<DB: DatabaseExt + DatabaseCommit> Inspector<&mut DB> for InspectorStack {
             );
             return Some(CallOutcome { result, memory_offset: call.return_memory_offset.clone() })
         }
+
         None
     }
 
