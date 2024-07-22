@@ -36,10 +36,6 @@ pub use debug::DebugTraceIdentifier;
 
 pub type Traces = Vec<(TraceKind, CallTraceArena)>;
 
-lazy_static::lazy_static! {
-    static ref SEISMIC_CHIPS: std::collections::HashSet<alloy_primitives::Address> = seismic_chips::get_address_set();
-}
-
 /// Render a collection of call traces.
 /// Decode a collection of call traces.
 ///

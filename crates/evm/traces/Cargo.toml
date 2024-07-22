@@ -45,8 +45,5 @@ rayon.workspace = true
 solang-parser.workspace = true
 revm.workspace = true
 
-lazy_static.workspace = true
-seismic-chips.workspace = true
-
 [dev-dependencies]
 tempfile.workspace = true
