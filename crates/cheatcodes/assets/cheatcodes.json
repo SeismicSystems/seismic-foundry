@@ -7113,6 +7113,326 @@
     },
     {
       "func": {
+        "id": "revealSaddress",
+        "description": "",
+        "declaration": "function revealSaddress(address contractAddress, uint256 commitment) external returns (address);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSaddress(address,uint256)",
+        "selector": "0xcfff5c3b",
+        "selectorBytes": [
+          207,
+          255,
+          92,
+          59
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSbool",
+        "description": "Retrieve the preimage of a commitment to a boolean",
+        "declaration": "function revealSbool(address contractAddress, uint256 commitment) external returns (bool);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSbool(address,uint256)",
+        "selector": "0x11945913",
+        "selectorBytes": [
+          17,
+          148,
+          89,
+          19
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSint",
+        "description": "Retrieve the preimage of a commitment to an int256",
+        "declaration": "function revealSint(address contractAddress, uint256 commitment) external returns (int);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSint(address,uint256)",
+        "selector": "0x31f5c1a1",
+        "selectorBytes": [
+          49,
+          245,
+          193,
+          161
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSint128",
+        "description": "Retrieve the preimage of a commitment to an int128",
+        "declaration": "function revealSint128(address contractAddress, uint256 commitment) external returns (int128);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSint128(address,uint256)",
+        "selector": "0x94e6432b",
+        "selectorBytes": [
+          148,
+          230,
+          67,
+          43
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSint16",
+        "description": "Retrieve the preimage of a commitment to an int16",
+        "declaration": "function revealSint16(address contractAddress, uint256 commitment) external returns (int16);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSint16(address,uint256)",
+        "selector": "0xfe7483b0",
+        "selectorBytes": [
+          254,
+          116,
+          131,
+          176
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSint256",
+        "description": "Retrieve the preimage of a commitment to an int256",
+        "declaration": "function revealSint256(address contractAddress, uint256 commitment) external returns (int256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSint256(address,uint256)",
+        "selector": "0x306ebf63",
+        "selectorBytes": [
+          48,
+          110,
+          191,
+          99
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSint32",
+        "description": "Retrieve the preimage of a commitment to an int32",
+        "declaration": "function revealSint32(address contractAddress, uint256 commitment) external returns (int32);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSint32(address,uint256)",
+        "selector": "0x6a4444ea",
+        "selectorBytes": [
+          106,
+          68,
+          68,
+          234
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSint64",
+        "description": "Retrieve the preimage of a commitment to an int64",
+        "declaration": "function revealSint64(address contractAddress, uint256 commitment) external returns (int64);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSint64(address,uint256)",
+        "selector": "0xd7201601",
+        "selectorBytes": [
+          215,
+          32,
+          22,
+          1
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSint8",
+        "description": "Retrieve the preimage of a commitment to an int8",
+        "declaration": "function revealSint8(address contractAddress, uint256 commitment) external returns (int8);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSint8(address,uint256)",
+        "selector": "0x75575c8d",
+        "selectorBytes": [
+          117,
+          87,
+          92,
+          141
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSuint",
+        "description": "Retrieve the preimage of a commitment to a uint",
+        "declaration": "function revealSuint(address contractAddress, uint256 commitment) external returns (uint);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSuint(address,uint256)",
+        "selector": "0x340870e7",
+        "selectorBytes": [
+          52,
+          8,
+          112,
+          231
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSuint128",
+        "description": "Retrieve the preimage of a commitment to a uint128",
+        "declaration": "function revealSuint128(address contractAddress, uint256 commitment) external returns (uint128);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSuint128(address,uint256)",
+        "selector": "0xc3bd5ce3",
+        "selectorBytes": [
+          195,
+          189,
+          92,
+          227
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSuint16",
+        "description": "Retrieve the preimage of a commitment to a uint16",
+        "declaration": "function revealSuint16(address contractAddress, uint256 commitment) external returns (uint16);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSuint16(address,uint256)",
+        "selector": "0x1cd2d954",
+        "selectorBytes": [
+          28,
+          210,
+          217,
+          84
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSuint256",
+        "description": "Retrieve the preimage of a commitment to a uint256",
+        "declaration": "function revealSuint256(address contractAddress, uint256 commitment) external returns (uint256);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSuint256(address,uint256)",
+        "selector": "0x9114c05c",
+        "selectorBytes": [
+          145,
+          20,
+          192,
+          92
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSuint32",
+        "description": "Retrieve the preimage of a commitment to a uint32",
+        "declaration": "function revealSuint32(address contractAddress, uint256 commitment) external returns (uint32);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSuint32(address,uint256)",
+        "selector": "0x8a614f68",
+        "selectorBytes": [
+          138,
+          97,
+          79,
+          104
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSuint64",
+        "description": "Retrieve the preimage of a commitment to a uint64",
+        "declaration": "function revealSuint64(address contractAddress, uint256 commitment) external returns (uint64);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSuint64(address,uint256)",
+        "selector": "0x59678671",
+        "selectorBytes": [
+          89,
+          103,
+          134,
+          113
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
+        "id": "revealSuint8",
+        "description": "Retrieve the preimage of a commitment to a uint8",
+        "declaration": "function revealSuint8(address contractAddress, uint256 commitment) external returns (uint8);",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "revealSuint8(address,uint256)",
+        "selector": "0xb98b8f0d",
+        "selectorBytes": [
+          185,
+          139,
+          143,
+          13
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "safe"
+    },
+    {
+      "func": {
         "id": "revertTo",
         "description": "Revert the state of the EVM to a previous snapshot\nTakes the snapshot ID to revert to.\nReturns `true` if the snapshot was successfully reverted.\nReturns `false` if the snapshot does not exist.\n**Note:** This does not automatically delete the snapshot. To delete the snapshot use `deleteSnapshot`.",
         "declaration": "function revertTo(uint256 snapshotId) external returns (bool success);",
@@ -8568,326 +8888,6 @@
         ]
       },
       "group": "filesystem",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSaddress",
-        "description": "",
-        "declaration": "function unwrapSaddress(address contractAddress, uint256 commitment) external returns (address);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSaddress(address,uint256)",
-        "selector": "0x655e4263",
-        "selectorBytes": [
-          101,
-          94,
-          66,
-          99
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSbool",
-        "description": "Retrieve the preimage of a commitment to a boolean",
-        "declaration": "function unwrapSbool(address contractAddress, uint256 commitment) external returns (bool);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSbool(address,uint256)",
-        "selector": "0x37c02269",
-        "selectorBytes": [
-          55,
-          192,
-          34,
-          105
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSint",
-        "description": "Retrieve the preimage of a commitment to an int256",
-        "declaration": "function unwrapSint(address contractAddress, uint256 commitment) external returns (int);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSint(address,uint256)",
-        "selector": "0x06a920d0",
-        "selectorBytes": [
-          6,
-          169,
-          32,
-          208
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSint128",
-        "description": "Retrieve the preimage of a commitment to an int128",
-        "declaration": "function unwrapSint128(address contractAddress, uint256 commitment) external returns (int128);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSint128(address,uint256)",
-        "selector": "0x2762841f",
-        "selectorBytes": [
-          39,
-          98,
-          132,
-          31
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSint16",
-        "description": "Retrieve the preimage of a commitment to an int16",
-        "declaration": "function unwrapSint16(address contractAddress, uint256 commitment) external returns (int16);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSint16(address,uint256)",
-        "selector": "0xe29276d1",
-        "selectorBytes": [
-          226,
-          146,
-          118,
-          209
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSint256",
-        "description": "Retrieve the preimage of a commitment to an int256",
-        "declaration": "function unwrapSint256(address contractAddress, uint256 commitment) external returns (int256);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSint256(address,uint256)",
-        "selector": "0xda5412b8",
-        "selectorBytes": [
-          218,
-          84,
-          18,
-          184
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSint32",
-        "description": "Retrieve the preimage of a commitment to an int32",
-        "declaration": "function unwrapSint32(address contractAddress, uint256 commitment) external returns (int32);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSint32(address,uint256)",
-        "selector": "0x1e691d39",
-        "selectorBytes": [
-          30,
-          105,
-          29,
-          57
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSint64",
-        "description": "Retrieve the preimage of a commitment to an int64",
-        "declaration": "function unwrapSint64(address contractAddress, uint256 commitment) external returns (int64);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSint64(address,uint256)",
-        "selector": "0xcb6cedeb",
-        "selectorBytes": [
-          203,
-          108,
-          237,
-          235
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSint8",
-        "description": "Retrieve the preimage of a commitment to an int8",
-        "declaration": "function unwrapSint8(address contractAddress, uint256 commitment) external returns (int8);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSint8(address,uint256)",
-        "selector": "0x899793b8",
-        "selectorBytes": [
-          137,
-          151,
-          147,
-          184
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSuint",
-        "description": "Retrieve the preimage of a commitment to a uint",
-        "declaration": "function unwrapSuint(address contractAddress, uint256 commitment) external returns (uint);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSuint(address,uint256)",
-        "selector": "0x04e11d70",
-        "selectorBytes": [
-          4,
-          225,
-          29,
-          112
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSuint128",
-        "description": "Retrieve the preimage of a commitment to a uint128",
-        "declaration": "function unwrapSuint128(address contractAddress, uint256 commitment) external returns (uint256);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSuint128(address,uint256)",
-        "selector": "0x489d746d",
-        "selectorBytes": [
-          72,
-          157,
-          116,
-          109
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSuint16",
-        "description": "Retrieve the preimage of a commitment to a uint16",
-        "declaration": "function unwrapSuint16(address contractAddress, uint256 commitment) external returns (uint256);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSuint16(address,uint256)",
-        "selector": "0x4c124811",
-        "selectorBytes": [
-          76,
-          18,
-          72,
-          17
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSuint256",
-        "description": "Retrieve the preimage of a commitment to a uint256",
-        "declaration": "function unwrapSuint256(address contractAddress, uint256 commitment) external returns (uint256);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSuint256(address,uint256)",
-        "selector": "0x8679c32f",
-        "selectorBytes": [
-          134,
-          121,
-          195,
-          47
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSuint32",
-        "description": "Retrieve the preimage of a commitment to a uint32",
-        "declaration": "function unwrapSuint32(address contractAddress, uint256 commitment) external returns (uint256);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSuint32(address,uint256)",
-        "selector": "0x8ac16dc6",
-        "selectorBytes": [
-          138,
-          193,
-          109,
-          198
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSuint64",
-        "description": "Retrieve the preimage of a commitment to a uint64",
-        "declaration": "function unwrapSuint64(address contractAddress, uint256 commitment) external returns (uint256);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSuint64(address,uint256)",
-        "selector": "0x9684dd7d",
-        "selectorBytes": [
-          150,
-          132,
-          221,
-          125
-        ]
-      },
-      "group": "evm",
-      "status": "stable",
-      "safety": "safe"
-    },
-    {
-      "func": {
-        "id": "unwrapSuint8",
-        "description": "Retrieve the preimage of a commitment to a uint8",
-        "declaration": "function unwrapSuint8(address contractAddress, uint256 commitment) external returns (uint256);",
-        "visibility": "external",
-        "mutability": "",
-        "signature": "unwrapSuint8(address,uint256)",
-        "selector": "0x5472e687",
-        "selectorBytes": [
-          84,
-          114,
-          230,
-          135
-        ]
-      },
-      "group": "evm",
       "status": "stable",
       "safety": "safe"
     },
