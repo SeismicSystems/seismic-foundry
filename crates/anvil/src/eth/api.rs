@@ -57,6 +57,7 @@ use anvil_core::{
     eth::{
         block::BlockInfo,
         transaction::{
+            seismic::{SecretData, SeismicTx},
             transaction_request_to_typed, PendingTransaction, ReceiptResponse, TypedTransaction,
             TypedTransactionRequest,
         },
@@ -948,6 +949,35 @@ impl EthApi {
         }
 
         let request = self.build_typed_tx_request(request, nonce)?;
+
+        // secrets committed when a Seismic transaction is detected.
+        if let TypedTransactionRequest::Seismic(seismic_data) = &request {
+            foundry_common::shell::println(format!(
+                "Detected Seismic transaction with {} preimages",
+                seismic_data.secret_data.len()
+            ))
+            .unwrap_or_else(|e| eprintln!("Failed to print message: {}", e));
+            let mut db = crate::eth::SEISMIC_DB.clone();
+            super::seismic_util::process_secret_data(
+                seismic_data.secret_data.clone(),
+                &seismic_data.base().input,
+            )?;
+            let secrets: Vec<SecretData> = seismic_data.secret_data.clone();
+            let input_pre_images: Vec<seismic_preimages::InputPreImage> = secrets
+                .iter()
+                .map(|secret| seismic_preimages::InputPreImage {
+                    value: secret.preimage.clone(),
+                    type_: secret.preimage_type.clone(),
+                })
+                .collect();
+            if let TxKind::Call(addr) = seismic_data.base().to {
+                if seismic_preimages::bulk_commit_with_db(&mut db, &addr, &input_pre_images)
+                    .is_err()
+                {
+                    return Err(BlockchainError::Message("Failed to commit preimages".to_string()))
+                }
+            }
+        }
 
         // if the sender is currently impersonated we need to "bypass" signing
         let pending_transaction = if self.is_impersonated(from) {
@@ -2583,6 +2613,15 @@ impl EthApi {
                 m.gas_limit = gas_limit;
                 TypedTransactionRequest::Deposit(m)
             }
+            Some(TypedTransactionRequest::Seismic(mut m)) => {
+                m.base_mut().nonce = nonce;
+                m.base_mut().chain_id = chain_id;
+                m.base_mut().gas_limit = gas_limit;
+                if max_fee_per_gas.is_none() {
+                    m.base_mut().max_fee_per_gas = self.gas_price();
+                }
+                TypedTransactionRequest::Seismic(m)
+            }
             None => return Err(BlockchainError::FailedToDecodeTransaction),
         };
         Ok(request)
@@ -2659,6 +2698,7 @@ impl EthApi {
             TypedTransaction::EIP1559(_) => self.backend.ensure_eip1559_active(),
             TypedTransaction::EIP4844(_) => self.backend.ensure_eip4844_active(),
             TypedTransaction::Deposit(_) => self.backend.ensure_op_deposits_active(),
+            TypedTransaction::Seismic(_) => Ok(()),
             TypedTransaction::Legacy(_) => Ok(()),
         }
     }
@@ -2712,6 +2752,10 @@ fn determine_base_gas_by_kind(request: &WithOtherFields<TransactionRequest>) -> 
             },
             TypedTransactionRequest::EIP4844(_) => MIN_TRANSACTION_GAS,
             TypedTransactionRequest::Deposit(req) => match req.kind {
+                TxKind::Call(_) => MIN_TRANSACTION_GAS,
+                TxKind::Create => MIN_CREATE_GAS,
+            },
+            TypedTransactionRequest::Seismic(req) => match req.base().to {
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,
                 TxKind::Create => MIN_CREATE_GAS,
             },

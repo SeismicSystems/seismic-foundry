@@ -719,7 +719,11 @@ impl Cheatcode for revealSboolCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contractAddress, commitment } = self;
         let mut db = foundry_evm_core::SEISMIC_DB.clone();
-        let preimage = seismic_preimages::reveal::<alloy_primitives::ruint::aliases::U1, bool, _>(&mut db, contractAddress, commitment)?;
+        let preimage = seismic_preimages::reveal::<alloy_primitives::ruint::aliases::U1, bool, _>(
+            &mut db,
+            contractAddress,
+            commitment,
+        )?;
         Ok(preimage.abi_encode())
     }
 }
@@ -737,7 +741,11 @@ impl Cheatcode for revealSaddressCall {
     fn apply_full<DB: DatabaseExt>(&self, _ccx: &mut CheatsCtxt<DB>) -> Result {
         let Self { contractAddress, commitment } = self;
         let mut db = foundry_evm_core::SEISMIC_DB.clone();
-        let preimage = seismic_preimages::reveal::<alloy_primitives::Address, Address, _>(&mut db, contractAddress, commitment)?;
+        let preimage = seismic_preimages::reveal::<alloy_primitives::Address, Address, _>(
+            &mut db,
+            contractAddress,
+            commitment,
+        )?;
         Ok(preimage.abi_encode())
     }
 }

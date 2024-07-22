@@ -71,6 +71,7 @@ impl ExecutedTransaction {
                 deposit_nonce: Some(tx.nonce),
                 deposit_receipt_version: Some(1),
             }),
+            TypedTransaction::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         }
     }
 }
@@ -239,7 +240,6 @@ impl<'a, DB: Db + ?Sized, Validator: TransactionValidator> TransactionExecutor<'
             tx_env.optimism.enveloped_tx =
                 Some(alloy_rlp::encode(&tx.transaction.transaction).into());
         }
-
         EnvWithHandlerCfg::new_with_cfg_env(self.cfg_env.clone(), self.block_env.clone(), tx_env)
     }
 }
@@ -304,14 +304,16 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
         if self.enable_steps_tracing {
             inspector = inspector.with_steps_tracing();
         }
-
         let exec_result = {
-            let mut evm =
-                foundry_evm::utils::new_evm_with_inspector(&mut *self.db, env, &mut inspector);
+            let mut evm = revm::Evm::builder()
+                .with_db(&mut self.db)
+                .with_external_context(inspector.clone())
+                .with_env_with_handler_cfg(env)
+                .append_handler_register(revm::inspector_handle_register)
+                .build();
             if let Some(factory) = &self.precompile_factory {
                 inject_precompiles(&mut evm, factory.precompiles());
             }
-
             trace!(target: "backend", "[{:?}] executing", transaction.hash());
             // transact and commit the transaction
             match evm.transact_commit() {
@@ -326,6 +328,7 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
                             ))
                         }
                         EVMError::Transaction(err) => {
+                            warn!("Invalid transaction error:\n{:?}", err);
                             return Some(TransactionExecutionOutcome::Invalid(
                                 transaction,
                                 err.into(),

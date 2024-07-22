@@ -258,4 +258,4 @@ seismic-chips = { path = "../mantle/crates/chips" }
 seismic-db = { path = "../mantle/crates/db" }
 seismic-inspector = { path = "../mantle/crates/inspector" }
 seismic-preimages = { path = "../mantle/crates/preimages" }
-seismic-types = { path = "../mantle/crates/types" }
+seismic-types = { path = "../mantle/crates/types", features = ["zero-salt"]}

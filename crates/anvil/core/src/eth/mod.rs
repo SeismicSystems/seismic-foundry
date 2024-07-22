@@ -754,14 +754,8 @@ pub enum EthRequest {
     )]
     RemovePoolTransactions(Address),
 
-    #[cfg_attr(
-        feature = "serde",
-        serde(rename = "seismic_commit")
-    )]
-    SeismicCommit(
-        Address,
-        Vec<seismic_preimages::InputPreImage>
-    )
+    #[cfg_attr(feature = "serde", serde(rename = "seismic_commit"))]
+    SeismicCommit(Address, Vec<seismic_preimages::InputPreImage>),
 }
 
 /// Represents ethereum JSON-RPC API

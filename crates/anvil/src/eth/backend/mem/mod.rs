@@ -56,6 +56,7 @@ use anvil_core::eth::{
         DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
         TransactionInfo, TypedReceipt, TypedTransaction,
     },
+    transaction::seismic::SeismicTx,
     utils::meets_eip155,
 };
 use anvil_rpc::error::RpcError;
@@ -2034,6 +2035,11 @@ impl Backend {
                 .unwrap_or_else(|| self.base_fee())
                 .saturating_add(t.tx().tx().max_priority_fee_per_gas),
             TypedTransaction::Deposit(_) => 0_u128,
+            TypedTransaction::Seismic(t) => block
+                .header
+                .base_fee_per_gas
+                .unwrap_or_else(|| self.base_fee())
+                .saturating_add(t.tx().base().max_priority_fee_per_gas),
         };
 
         let receipts = self.get_receipts(block.transactions.iter().map(|tx| tx.hash()));
@@ -2072,6 +2078,7 @@ impl Backend {
                 deposit_nonce: r.deposit_nonce,
                 deposit_receipt_version: r.deposit_receipt_version,
             }),
+            TypedReceipt::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         };
 
         let inner = TransactionReceipt {
