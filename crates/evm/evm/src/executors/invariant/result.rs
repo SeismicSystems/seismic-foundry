@@ -7,6 +7,7 @@ use alloy_dyn_abi::JsonAbiExt;
 use eyre::Result;
 use foundry_config::InvariantConfig;
 use foundry_evm_core::utils::StateChangeset;
+use foundry_evm_coverage::HitMaps;
 use foundry_evm_fuzz::{
     invariant::{BasicTxDetails, FuzzRunIdentifiedContracts, InvariantContract},
     FuzzedCases,
@@ -27,6 +28,8 @@ pub struct InvariantFuzzTestResult {
     pub last_run_inputs: Vec<BasicTxDetails>,
     /// Additional traces used for gas report construction.
     pub gas_report_traces: Vec<Vec<CallTraceArena>>,
+    /// The coverage info collected during the invariant test runs.
+    pub coverage: Option<HitMaps>,
 }
 
 /// Enriched results of an invariant run check.
@@ -86,9 +89,8 @@ pub(crate) fn assert_invariants(
     Ok(Some(call_result))
 }
 
-/// Verifies that the invariant run execution can continue.
-/// Returns the mapping of (Invariant Function Name -> Call Result, Logs, Traces) if invariants were
-/// asserted.
+/// Returns if invariant test can continue and last successful call result of the invariant test
+/// function (if it can continue).
 pub(crate) fn can_continue(
     invariant_contract: &InvariantContract<'_>,
     invariant_test: &InvariantTest,
@@ -145,6 +147,10 @@ pub(crate) fn can_continue(
             invariant_data.failures.error = Some(InvariantFuzzError::Revert(case_data));
 
             return Ok(RichInvariantResults::new(false, None));
+        } else if call_result.reverted {
+            // If we don't fail test on revert then remove last reverted call from inputs.
+            // This improves shrinking performance as irrelevant calls won't be checked again.
+            invariant_run.inputs.pop();
         }
     }
     Ok(RichInvariantResults::new(true, call_results))

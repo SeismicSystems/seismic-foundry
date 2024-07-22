@@ -1,13 +1,15 @@
 //! Anvil specific [`revm::Inspector`] implementation
 
-use crate::{eth::macros::node_info, revm::Database};
+use crate::revm::Database;
 use alloy_primitives::{Address, Log};
 use foundry_evm::{
     call_inspectors,
     decode::decode_console_logs,
     inspectors::{LogCollector, TracingInspector},
     revm::{
-        interpreter::{CallInputs, CallOutcome, CreateInputs, CreateOutcome, Interpreter},
+        interpreter::{
+            CallInputs, CallOutcome, CreateInputs, CreateOutcome, EOFCreateInputs, Interpreter,
+        },
         primitives::U256,
         EvmContext,
     },
@@ -21,21 +23,33 @@ pub struct Inspector {
     pub seismic: Option<seismic_inspector::SeismicInspector<seismic_db::SyncInMemoryDB>>,
     pub tracer: Option<TracingInspector>,
     /// collects all `console.sol` logs
-    pub log_collector: LogCollector,
+    pub log_collector: Option<LogCollector>,
 }
 
 impl Inspector {
+    pub fn with_seismic(mut self) -> Self {
+        let db = crate::eth::SEISMIC_DB.clone();
+        self.seismic = Some(seismic_inspector::get_new_seismic_inspector(db));
+        self
+    }
 
     /// Called after the inspecting the evm
     ///
     /// This will log all `console.sol` logs
     pub fn print_logs(&self) {
-        print_logs(&self.log_collector.logs)
+        if let Some(collector) = &self.log_collector {
+            print_logs(&collector.logs);
+        }
     }
 
     /// Configures the `Tracer` [`revm::Inspector`]
     pub fn with_tracing(mut self) -> Self {
         self.tracer = Some(TracingInspector::new(TracingInspectorConfig::all().set_steps(false)));
+        self
+    }
+
+    pub fn with_config(mut self, config: TracingInspectorConfig) -> Self {
+        self.tracer = Some(TracingInspector::new(config));
         self
     }
 
@@ -45,9 +59,9 @@ impl Inspector {
         self
     }
 
-    pub fn with_seismic(mut self) -> Self {
-        let db = crate::eth::SEISMIC_DB.clone();
-        self.seismic = Some(seismic_inspector::get_new_seismic_inspector(db));
+    /// Configures the `Tracer` [`revm::Inspector`]
+    pub fn with_log_collector(mut self) -> Self {
+        self.log_collector = Some(Default::default());
         self
     }
 }
@@ -71,16 +85,16 @@ impl<DB: Database> revm::Inspector<DB> for Inspector {
         });
     }
 
-    fn log(&mut self, ecx: &mut EvmContext<DB>, log: &Log) {
-        call_inspectors!([&mut self.seismic, &mut self.tracer, Some(&mut self.log_collector)], |inspector| {
-            inspector.log(ecx, log);
+    fn log(&mut self, interp: &mut Interpreter, ecx: &mut EvmContext<DB>, log: &Log) {
+        call_inspectors!([&mut self.seismic, &mut self.tracer, &mut self.log_collector], |inspector| {
+            inspector.log(interp, ecx, log);
         });
     }
 
     fn call(&mut self, ecx: &mut EvmContext<DB>, inputs: &mut CallInputs) -> Option<CallOutcome> {
         call_inspectors!(
             #[ret]
-            [&mut self.seismic, &mut self.tracer, Some(&mut self.log_collector)],
+            [&mut self.seismic, &mut self.tracer, &mut self.log_collector],
             |inspector| inspector.call(ecx, inputs).map(Some),
         );
         None
@@ -128,6 +142,35 @@ impl<DB: Database> revm::Inspector<DB> for Inspector {
         outcome
     }
 
+    #[inline]
+    fn eofcreate(
+        &mut self,
+        ecx: &mut EvmContext<DB>,
+        inputs: &mut EOFCreateInputs,
+    ) -> Option<CreateOutcome> {
+        if let Some(tracer) = &mut self.tracer {
+            if let Some(out) = tracer.eofcreate(ecx, inputs) {
+                return Some(out);
+            }
+        }
+        None
+    }
+
+    #[inline]
+    fn eofcreate_end(
+        &mut self,
+        ecx: &mut EvmContext<DB>,
+        inputs: &EOFCreateInputs,
+        outcome: CreateOutcome,
+    ) -> CreateOutcome {
+        if let Some(tracer) = &mut self.tracer {
+            return tracer.eofcreate_end(ecx, inputs, outcome);
+        }
+
+        outcome
+    }
+
+    #[inline]
     fn selfdestruct(&mut self, contract: Address, target: Address, value: U256) {
         if let Some(tracer) = &mut self.tracer {
             revm::Inspector::<DB>::selfdestruct(tracer, contract, target, value);
@@ -140,6 +183,6 @@ impl<DB: Database> InspectorExt<DB> for Inspector {}
 /// Prints all the logs
 pub fn print_logs(logs: &[Log]) {
     for log in decode_console_logs(logs) {
-        node_info!("{}", log);
+        tracing::info!(target: crate::logging::EVM_CONSOLE_LOG_TARGET, "{}", log);
     }
 }
