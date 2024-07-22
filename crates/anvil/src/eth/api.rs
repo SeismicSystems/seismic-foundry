@@ -446,7 +446,7 @@ impl EthApi {
                                 ResponseResult::Error(RpcError::internal_error_with(msg))
                             },
                         }
-                    }
+                    },
                 }
             }
         }
