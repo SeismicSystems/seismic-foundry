@@ -25,6 +25,7 @@ pub struct Inspector {
 }
 
 impl Inspector {
+
     /// Called after the inspecting the evm
     ///
     /// This will log all `console.sol` logs
@@ -71,12 +72,9 @@ impl<DB: Database> revm::Inspector<DB> for Inspector {
     }
 
     fn log(&mut self, ecx: &mut EvmContext<DB>, log: &Log) {
-        call_inspectors!(
-            [&mut self.seismic, &mut self.tracer, Some(&mut self.log_collector)],
-            |inspector| {
-                inspector.log(ecx, log);
-            }
-        );
+        call_inspectors!([&mut self.seismic, &mut self.tracer, Some(&mut self.log_collector)], |inspector| {
+            inspector.log(ecx, log);
+        });
     }
 
     fn call(&mut self, ecx: &mut EvmContext<DB>, inputs: &mut CallInputs) -> Option<CallOutcome> {

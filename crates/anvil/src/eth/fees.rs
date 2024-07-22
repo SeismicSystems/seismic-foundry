@@ -6,7 +6,8 @@ use alloy_eips::{
     calc_next_block_base_fee, eip1559::BaseFeeParams, eip4844::MAX_DATA_GAS_PER_BLOCK,
 };
 use alloy_primitives::B256;
-use anvil_core::eth::transaction::{seismic::SeismicTx, TypedTransaction};
+use anvil_core::eth::transaction::TypedTransaction;
+use anvil_core::eth::transaction::seismic::SeismicTx;
 use foundry_evm::revm::primitives::{BlobExcessGasAndPrice, SpecId};
 use futures::StreamExt;
 use parking_lot::{Mutex, RwLock};

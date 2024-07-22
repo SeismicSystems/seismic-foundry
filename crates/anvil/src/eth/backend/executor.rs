@@ -172,7 +172,7 @@ impl<'a, DB: Db + ?Sized, Validator: TransactionValidator> TransactionExecutor<'
                 cumulative_blob_gas_used =
                     Some(cumulative_blob_gas_used.unwrap_or(0u128).saturating_add(tx_blob_gas));
             }
-            let receipt: TypedReceipt = tx.create_receipt(&mut cumulative_gas_used);
+            let receipt = tx.create_receipt(&mut cumulative_gas_used);
 
             let ExecutedTransaction { transaction, logs, out, traces, exit_reason: exit, .. } = tx;
             build_logs_bloom(logs.clone(), &mut bloom);
@@ -328,8 +328,7 @@ impl<'a, 'b, DB: Db + ?Sized, Validator: TransactionValidator> Iterator
                             ))
                         }
                         EVMError::Transaction(err) => {
-                            warn!("Invalid transaction error");
-                            warn!("Error is {:?}", err);
+                            warn!("Invalid transaction error:\n{:?}", err);
                             return Some(TransactionExecutionOutcome::Invalid(
                                 transaction,
                                 err.into(),

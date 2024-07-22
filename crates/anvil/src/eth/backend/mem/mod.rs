@@ -53,9 +53,10 @@ use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
-        seismic::SeismicTx, DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction,
-        ReceiptResponse, TransactionInfo, TypedReceipt, TypedTransaction,
+        DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
+        TransactionInfo, TypedReceipt, TypedTransaction,
     },
+    transaction::seismic::SeismicTx,
     utils::meets_eip155,
 };
 use anvil_rpc::error::RpcError;
@@ -966,7 +967,7 @@ impl Backend {
                     enable_steps_tracing: self.enable_steps_tracing,
                     precompile_factory: self.precompile_factory.clone(),
                 };
-                let executed_tx = executor.execute(); // key part where the actual execution happens.
+                let executed_tx = executor.execute();
 
                 // we also need to update the new blockhash in the db itself
                 let block_hash = executed_tx.block.block.header.hash_slow();

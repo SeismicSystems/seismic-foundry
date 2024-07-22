@@ -2162,7 +2162,7 @@ interface Vm {
 
     #[cheatcode(group = Evm, safety = Unsafe)]
     function commitAddress(address contractAddress, address value) external returns (uint256);
-
+    
     /// Store a Seismic secret uint8 value
     #[cheatcode(group = Evm, safety = Unsafe)]
     function commitUint8(address contractAddress, uint8 value) external returns (uint256);
@@ -2218,69 +2218,69 @@ interface Vm {
     /// Store a Seismic secret int256 value
     #[cheatcode(group = Evm, safety = Unsafe)]
     function commitInt(address contractAddress, int value) external returns (uint256);
-
+    
     /// Retrieve the preimage of a commitment to a boolean
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSbool(address contractAddress, uint256 commitment) external returns (bool);
+    function revealSbool(address contractAddress, uint256 commitment) external returns (bool);
 
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSaddress(address contractAddress, uint256 commitment) external returns (address);
+    function revealSaddress(address contractAddress, uint256 commitment) external returns (address);
 
     /// Retrieve the preimage of a commitment to a uint8
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSuint8(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint8(address contractAddress, uint256 commitment) external returns (uint8);
 
     /// Retrieve the preimage of a commitment to a uint16
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSuint16(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint16(address contractAddress, uint256 commitment) external returns (uint16);
 
     /// Retrieve the preimage of a commitment to a uint32
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSuint32(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint32(address contractAddress, uint256 commitment) external returns (uint32);
 
     /// Retrieve the preimage of a commitment to a uint64
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSuint64(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint64(address contractAddress, uint256 commitment) external returns (uint64);
 
     /// Retrieve the preimage of a commitment to a uint128
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSuint128(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint128(address contractAddress, uint256 commitment) external returns (uint128);
 
     /// Retrieve the preimage of a commitment to a uint256
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSuint256(address contractAddress, uint256 commitment) external returns (uint256);
+    function revealSuint256(address contractAddress, uint256 commitment) external returns (uint256);
 
     /// Retrieve the preimage of a commitment to a uint
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSuint(address contractAddress, uint256 commitment) external returns (uint);
+    function revealSuint(address contractAddress, uint256 commitment) external returns (uint);
 
     /// Retrieve the preimage of a commitment to an int8
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSint8(address contractAddress, uint256 commitment) external returns (int8);
+    function revealSint8(address contractAddress, uint256 commitment) external returns (int8);
 
     /// Retrieve the preimage of a commitment to an int16
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSint16(address contractAddress, uint256 commitment) external returns (int16);
+    function revealSint16(address contractAddress, uint256 commitment) external returns (int16);
 
     /// Retrieve the preimage of a commitment to an int32
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSint32(address contractAddress, uint256 commitment) external returns (int32);
+    function revealSint32(address contractAddress, uint256 commitment) external returns (int32);
 
     /// Retrieve the preimage of a commitment to an int64
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSint64(address contractAddress, uint256 commitment) external returns (int64);
+    function revealSint64(address contractAddress, uint256 commitment) external returns (int64);
 
     /// Retrieve the preimage of a commitment to an int128
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSint128(address contractAddress, uint256 commitment) external returns (int128);
+    function revealSint128(address contractAddress, uint256 commitment) external returns (int128);
 
     /// Retrieve the preimage of a commitment to an int256
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSint256(address contractAddress, uint256 commitment) external returns (int256);
+    function revealSint256(address contractAddress, uint256 commitment) external returns (int256);
 
     /// Retrieve the preimage of a commitment to an int256
     #[cheatcode(group = Evm, safety = Safe)]
-    function unwrapSint(address contractAddress, uint256 commitment) external returns (int);
+    function revealSint(address contractAddress, uint256 commitment) external returns (int);
 }
 }
 
