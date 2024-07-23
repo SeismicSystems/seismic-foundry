@@ -273,5 +273,8 @@ proptest = "1"
 comfy-table = "7"
 
 [patch.crates-io]
+# If our dependencies depend on revm/revm-primitives,
+# then this will override whatever versions they point to
+# and instead use our local version
 revm = { path = "../seismic-revm/crates/revm" }
 revm-primitives = { path = "../seismic-revm/crates/primitives" }
