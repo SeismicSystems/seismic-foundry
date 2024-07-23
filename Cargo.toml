@@ -173,7 +173,7 @@ solang-parser = "=0.3.3"
 ## revm
 # no default features to avoid c-kzg
 revm = { path = "../seismic-revm/crates/revm", default-features = false }
-revm-primitives = { path = "../seismic-revm/crates/primitives", version = "5.0.0", default-features = false }
+revm-primitives = { path = "../seismic-revm/crates/primitives", default-features = false }
 revm-inspectors = { version = "0.5", features = ["serde"] }
 
 ## ethers
@@ -271,3 +271,7 @@ tower-http = "0.5"
 soldeer = "0.2.19"
 proptest = "1"
 comfy-table = "7"
+
+[patch.crates-io]
+revm = { path = "../seismic-revm/crates/revm" }
+revm-primitives = { path = "../seismic-revm/crates/primitives" }
