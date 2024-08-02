@@ -90,6 +90,7 @@ pub trait CheatcodesExecutor {
             ),
             db: &mut ccx.ecx.db as &mut dyn DatabaseExt,
             error,
+            kernel: revm::kernel::kernel::Kernel::default(),
             l1_block_info,
             valid_authorizations: std::mem::take(&mut ccx.ecx.valid_authorizations),
         };
