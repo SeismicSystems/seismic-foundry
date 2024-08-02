@@ -3467,6 +3467,7 @@ name = "forge-script"
 version = "0.2.0"
 dependencies = [
  "alloy-chains",
+ "alloy-consensus",
  "alloy-dyn-abi",
  "alloy-eips",
  "alloy-json-abi",
@@ -3525,11 +3526,13 @@ dependencies = [
 name = "forge-verify"
 version = "0.2.0"
 dependencies = [
+ "alloy-dyn-abi",
  "alloy-json-abi",
  "alloy-primitives",
  "alloy-provider",
  "alloy-rpc-types",
  "async-trait",
+ "ciborium",
  "clap",
  "eyre",
  "foundry-block-explorers",
@@ -3585,16 +3588,19 @@ dependencies = [
 name = "foundry-cheatcodes"
 version = "0.2.0"
 dependencies = [
+ "alloy-consensus",
  "alloy-dyn-abi",
  "alloy-genesis",
  "alloy-json-abi",
  "alloy-primitives",
  "alloy-provider",
+ "alloy-rlp",
  "alloy-rpc-types",
  "alloy-signer",
  "alloy-signer-local",
  "alloy-sol-types",
  "base64 0.22.1",
+ "chrono",
  "dialoguer",
  "eyre",
  "foundry-cheatcodes-spec",
@@ -3606,6 +3612,7 @@ dependencies = [
  "itertools 0.13.0",
  "jsonpath_lib",
  "k256",
+ "memchr",
  "p256",
  "parking_lot",
  "paste",
@@ -3620,6 +3627,7 @@ dependencies = [
  "thiserror",
  "toml 0.8.19",
  "tracing",
+ "vergen",
  "walkdir",
 ]
 
@@ -3674,6 +3682,7 @@ dependencies = [
 name = "foundry-common"
 version = "0.2.0"
 dependencies = [
+ "alloy-consensus",
  "alloy-contract",
  "alloy-dyn-abi",
  "alloy-json-abi",
@@ -4142,6 +4151,7 @@ dependencies = [
  "aws-sdk-kms",
  "clap",
  "derive_builder",
+ "eth-keystore",
  "eyre",
  "foundry-config",
  "gcloud-sdk",

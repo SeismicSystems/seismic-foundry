@@ -542,6 +542,7 @@ fn expect_revert(
 }
 
 pub(crate) fn handle_expect_revert(
+    is_cheatcode: bool,
     is_create: bool,
     expected_revert: Option<&[u8]>,
     status: InstructionResult,
@@ -555,7 +556,7 @@ pub(crate) fn handle_expect_revert(
         }
     };
 
-    ensure!(!matches!(status, return_ok!()), "call did not revert as expected");
+    ensure!(!matches!(status, return_ok!()), "next call did not revert as expected");
 
     // If None, accept any revert
     let Some(expected_revert) = expected_revert else {
@@ -578,14 +579,19 @@ pub(crate) fn handle_expect_revert(
         }
     }
 
-    if actual_revert == expected_revert {
+    if actual_revert == expected_revert ||
+        (is_cheatcode && memchr::memmem::find(&actual_revert, expected_revert).is_some())
+    {
         Ok(success_return())
     } else {
         let stringify = |data: &[u8]| {
-            String::abi_decode(data, false)
-                .ok()
-                .or_else(|| std::str::from_utf8(data).ok().map(ToOwned::to_owned))
-                .unwrap_or_else(|| hex::encode_prefixed(data))
+            if let Ok(s) = String::abi_decode(data, false) {
+                return s;
+            }
+            if data.is_ascii() {
+                return std::str::from_utf8(data).unwrap().to_owned();
+            }
+            hex::encode_prefixed(data)
         };
         Err(fmt_err!(
             "Error != expected error: {} != {}",
