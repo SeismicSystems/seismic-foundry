@@ -33,6 +33,7 @@ alloy-primitives = { workspace = true, features = [
 ] }
 alloy-sol-types.workspace = true
 revm = { workspace = true, default-features = false, features = [
+    "seismic",
     "std",
     "serde",
     "memory_limit",

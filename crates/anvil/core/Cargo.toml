@@ -16,6 +16,7 @@ workspace = true
 foundry-common.workspace = true
 foundry-evm.workspace = true
 revm = { workspace = true, default-features = false, features = [
+    "seismic",
     "std",
     "serde",
     "memory_limit",
