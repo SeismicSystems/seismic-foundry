@@ -30,6 +30,7 @@ alloy-primitives = { workspace = true, features = [
     "rlp",
 ] }
 revm = { workspace = true, features = [
+    "seismic",
     "std",
     "serde",
     "memory_limit",

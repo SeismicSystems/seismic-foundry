@@ -39,6 +39,7 @@ foundry-evm.workspace = true
 bytes = "1.4.0"
 k256.workspace = true
 revm = { workspace = true, features = [
+    "seismic",
     "std",
     "serde",
     "memory_limit",
