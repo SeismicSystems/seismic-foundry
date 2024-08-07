@@ -18,7 +18,7 @@ foundry-common-fmt.workspace = true
 foundry-macros.workspace = true
 
 alloy-primitives.workspace = true
-alloy-sol-types = { workspace = true, features = ["json", "seismic"] }
+alloy-sol-types = { workspace = true, features = ["json"] }
 
 derive_more.workspace = true
 itertools.workspace = true

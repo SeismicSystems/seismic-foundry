@@ -203,12 +203,12 @@ alloy-transport-http = { version = "0.2.1", default-features = false }
 alloy-transport-ipc = { version = "0.2.1", default-features = false }
 alloy-transport-ws = { version = "0.2.1", default-features = false }
 
-alloy-dyn-abi = "0.7.7"
+alloy-dyn-abi = { version = "0.7.7", features = ["std", "seismic"] }
 alloy-json-abi = "0.7.7"
 alloy-primitives = { version = "0.7.7", features = ["getrandom", "rand"] }
 alloy-sol-macro-expander = "0.7.7"
 alloy-sol-macro-input = "0.7.7"
-alloy-sol-types = { version = "0.7.7", features = ["seismic"] }
+alloy-sol-types = "0.7.7"
 syn-solidity = "0.7.7"
 
 alloy-chains = "0.1"
@@ -278,4 +278,5 @@ comfy-table = "7"
 # and instead use our local version
 revm = { path = "../seismic-revm/crates/revm" }
 revm-primitives = { path = "../seismic-revm/crates/primitives" }
-alloy-sol-types = { path = "../seismic-alloy-core/crates/sol-types" }
+alloy-dyn-abi = { path = "../seismic-alloy-core/crates/dyn-abi" }
+alloy-sol-type-parser = { path = "../seismic-alloy-core/crates/sol-type-parser" }
