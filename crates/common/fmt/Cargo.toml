@@ -31,6 +31,3 @@ comfy-table.workspace = true
 [dev-dependencies]
 foundry-macros.workspace = true
 similar-asserts.workspace = true
-
-[features]
-seismic = []
