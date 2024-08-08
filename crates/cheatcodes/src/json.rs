@@ -625,6 +625,7 @@ fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
         DynSolValue::Tuple(values) => Ok(Value::Array(
             values.into_iter().map(serialize_value_as_json).collect::<Result<_>>()?,
         )),
+        DynSolValue::Saddress(w) | DynSolValue::Sint(w, _) | DynSolValue::Suint(w, _) => Ok(Value::String(hex::encode_prefixed(&w[..32]))),
         DynSolValue::Function(_) => bail!("cannot serialize function pointer"),
     }
 }

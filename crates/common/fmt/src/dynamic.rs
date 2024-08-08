@@ -62,6 +62,7 @@ impl DynValueFormatter {
                     self.tuple(tuple, f)
                 }
             }
+            &DynSolValue::Saddress(inner) | &DynSolValue::Sint(inner, _) | &DynSolValue::Suint(inner, _) => write!(f, "{inner}")
         }
     }
 

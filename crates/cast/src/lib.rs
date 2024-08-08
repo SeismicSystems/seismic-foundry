@@ -1677,10 +1677,9 @@ impl SimpleCast {
             DynSolType::FixedBytes(_) |
             DynSolType::Address |
             DynSolType::Function => hasher.update(v.as_word().unwrap()),
-
+            DynSolType::Saddress | DynSolType::Sint(_) | DynSolType::Suint(_) => hasher.update(v.as_word().unwrap()),
             // For strings and byte arrays, `h(k)` is just the unpadded data.
             DynSolType::String | DynSolType::Bytes => hasher.update(v.as_packed_seq().unwrap()),
-
             DynSolType::Array(..) |
             DynSolType::FixedArray(..) |
             DynSolType::Tuple(..) |

@@ -273,10 +273,21 @@ proptest = "1"
 comfy-table = "7"
 
 [patch.crates-io]
-# If our dependencies depend on revm/revm-primitives,
+# If our dependencies depend on these things,
 # then this will override whatever versions they point to
 # and instead use our local version
+
+# seismic-revm
 revm = { path = "../seismic-revm/crates/revm" }
 revm-primitives = { path = "../seismic-revm/crates/primitives" }
+
+# seismic-alloy-core
+alloy-core = { path = "../seismic-alloy-core/crates/core" }
 alloy-dyn-abi = { path = "../seismic-alloy-core/crates/dyn-abi" }
+alloy-json-abi = { path = "../seismic-alloy-core/crates/json-abi" }
+alloy-primitives = { path = "../seismic-alloy-core/crates/primitives" }
+alloy-sol-macro = { path = "../seismic-alloy-core/crates/sol-macro" }
+alloy-sol-macro-expander = { path = "../seismic-alloy-core/crates/sol-macro-expander" }
+alloy-sol-macro-input = { path = "../seismic-alloy-core/crates/sol-macro-input" }
+alloy-sol-types = { path = "../seismic-alloy-core/crates/sol-types" }
 alloy-sol-type-parser = { path = "../seismic-alloy-core/crates/sol-type-parser" }
