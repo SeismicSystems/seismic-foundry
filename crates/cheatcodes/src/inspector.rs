@@ -29,6 +29,7 @@ use foundry_evm_core::{
     InspectorExt,
 };
 use itertools::Itertools;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use revm::{
     interpreter::{
         opcode, CallInputs, CallOutcome, CallScheme, CreateInputs, CreateOutcome, EOFCreateInputs,
@@ -316,6 +317,9 @@ pub struct Cheatcodes {
     /// Breakpoints supplied by the `breakpoint` cheatcode.
     /// `char -> (address, pc)`
     pub breakpoints: Breakpoints,
+
+    /// Optional RNG algorithm.
+    rng: Option<StdRng>,
 }
 
 // This is not derived because calling this in `fn new` with `..Default::default()` creates a second
@@ -357,6 +361,7 @@ impl Cheatcodes {
             mapping_slots: Default::default(),
             pc: Default::default(),
             breakpoints: Default::default(),
+            rng: Default::default(),
         }
     }
 
@@ -926,6 +931,13 @@ impl Cheatcodes {
         }
 
         None
+    }
+
+    pub fn rng(&mut self) -> &mut impl Rng {
+        self.rng.get_or_insert_with(|| match self.config.seed {
+            Some(seed) => StdRng::from_seed(seed.to_be_bytes::<32>()),
+            None => StdRng::from_entropy(),
+        })
     }
 }
 

@@ -184,6 +184,8 @@ pub struct Backend {
     slots_in_an_epoch: u64,
     /// Precompiles to inject to the EVM.
     precompile_factory: Option<Arc<dyn PrecompileFactory>>,
+    /// Prevent race conditions during mining
+    mining: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl Backend {
@@ -260,6 +262,7 @@ impl Backend {
             node_config,
             slots_in_an_epoch,
             precompile_factory,
+            mining: Arc::new(tokio::sync::Mutex::new(())),
         };
 
         if let Some(interval_block_time) = automine_block_time {
@@ -928,6 +931,7 @@ impl Backend {
         &self,
         pool_transactions: Vec<Arc<PoolTransaction>>,
     ) -> MinedBlockOutcome {
+        let _mining_guard = self.mining.lock().await;
         trace!(target: "backend", "creating new block with {} transactions", pool_transactions.len());
 
         let (outcome, header, block_hash) = {
@@ -2239,14 +2243,17 @@ impl Backend {
     /// Returns the blocks receipts for the given number
     pub async fn block_receipts(
         &self,
-        number: BlockNumber,
+        number: BlockId,
     ) -> Result<Option<Vec<ReceiptResponse>>, BlockchainError> {
         if let Some(receipts) = self.mined_block_receipts(number) {
             return Ok(Some(receipts));
         }
 
         if let Some(fork) = self.get_fork() {
-            let number = self.convert_block_number(Some(number));
+            let number = match self.ensure_block_number(Some(number)).await {
+                Err(_) => return Ok(None),
+                Ok(n) => n,
+            };
 
             if fork.predates_fork_inclusive(number) {
                 let receipts = fork.block_receipts(number).await?;
