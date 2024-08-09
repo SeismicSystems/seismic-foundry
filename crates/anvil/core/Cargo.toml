@@ -40,6 +40,8 @@ rand = "0.8"
 
 # Seismic
 seismic-preimages.workspace = true
+seismic-transaction.workspace = true
+
 
 [features]
 default = ["serde"]

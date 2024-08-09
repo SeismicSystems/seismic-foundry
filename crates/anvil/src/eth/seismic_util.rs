@@ -1,7 +1,7 @@
 use crate::eth::error::BlockchainError;
 use alloy_primitives::{B256, U256};
-use anvil_core::eth::transaction::seismic::SecretData;
 use seismic_preimages::{InputPreImage, PreImage};
+use seismic_transaction::types::SecretData;
 use seismic_types::{primitive::PrimitiveBytes, Secret};
 pub fn get_commitment(value: U256) -> B256 {
     let secret = Secret::new(value);

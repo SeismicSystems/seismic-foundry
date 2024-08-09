@@ -4,10 +4,10 @@ use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
-use anvil_core::eth::transaction::seismic::{SecretData, SeismicTransactionFields};
 use seismic_db::CommitmentDatabase;
 use seismic_preimages::PreImageValue;
 use seismic_types::{secret::use_zero_salt, Secret};
+use seismic_transaction::types::{SecretData, SeismicTransactionFields};
 use std::fs;
 
 // common utils

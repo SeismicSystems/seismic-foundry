@@ -135,6 +135,7 @@ seismic-db = { path = "../mantle/crates/db" }
 seismic-inspector = { path = "../mantle/crates/inspector" }
 seismic-preimages = { path = "../mantle/crates/preimages" }
 seismic-types = { path = "../mantle/crates/types", features = ["zero-salt"]}
+seismic-transaction = { path = "../mantle/crates/seismic-transaction" }
 
 anvil = { path = "crates/anvil" }
 cast = { path = "crates/cast" }

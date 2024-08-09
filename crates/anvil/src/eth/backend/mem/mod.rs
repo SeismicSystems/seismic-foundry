@@ -60,11 +60,9 @@ use anvil_core::eth::{
         DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
         TransactionInfo, TypedReceipt, TypedTransaction,
     },
-    transaction::seismic::SeismicTx,
     utils::meets_eip155,
 };
 use anvil_rpc::error::RpcError;
-
 use alloy_chains::NamedChain;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use foundry_evm::{
@@ -92,6 +90,7 @@ use revm::{
         calc_blob_gasprice, BlobExcessGasAndPrice, HashMap, OptimismFields, ResultAndState,
     },
 };
+use seismic_transaction::transaction::SeismicTx;
 use std::{
     collections::BTreeMap,
     io::{Read, Write},

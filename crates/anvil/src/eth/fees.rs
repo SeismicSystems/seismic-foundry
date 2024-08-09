@@ -8,10 +8,10 @@ use alloy_eips::{
 };
 use alloy_primitives::B256;
 use anvil_core::eth::transaction::TypedTransaction;
-use anvil_core::eth::transaction::seismic::SeismicTx;
 use foundry_evm::revm::primitives::{BlobExcessGasAndPrice, SpecId};
 use futures::StreamExt;
 use parking_lot::{Mutex, RwLock};
+use seismic_transaction::transaction::SeismicTx;
 use std::{
     collections::BTreeMap,
     fmt,

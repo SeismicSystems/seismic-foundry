@@ -1,9 +1,6 @@
 //! Transaction related types
 
-use crate::eth::transaction::{
-    optimism::{DepositTransaction, DepositTransactionRequest},
-    seismic::{SecretData, SeismicTransaction, SeismicTransactionRequest},
-};
+use crate::eth::transaction::optimism::{DepositTransaction, DepositTransactionRequest};
 use alloy_consensus::{
     transaction::{
         eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
@@ -31,12 +28,17 @@ use revm::{
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, Mul};
 
-use self::seismic::{
-    decode_signed_seismic_fields, decode_signed_seismic_tx, encode_2718_len,
-    encode_2718_seismic_transaction, SeismicTransactionBase, SeismicTx,
+use seismic_transaction::{
+    encoding_decoding::{
+        decode_signed_seismic_fields, decode_signed_seismic_tx, encode_2718_len,
+        encode_2718_seismic_transaction,
+    },
+    types::SecretData,
+    transaction::{SeismicTransactionBase, SeismicTransactionRequest, SeismicTransaction, SeismicTx},  
 };
 
-pub mod seismic;
+
+
 pub mod optimism;
 
 /// Converts a [TransactionRequest] into a [TypedTransactionRequest].

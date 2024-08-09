@@ -59,7 +59,6 @@ use anvil_core::{
     eth::{
         block::BlockInfo,
         transaction::{
-            seismic::{SecretData, SeismicTx},
             transaction_request_to_typed, PendingTransaction, ReceiptResponse, TypedTransaction,
             TypedTransactionRequest,
         },
@@ -80,6 +79,7 @@ use foundry_evm::{
 };
 use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
+use seismic_transaction::{transaction::SeismicTx, types::SecretData};
 use std::{collections::HashSet, future::Future, sync::Arc, time::Duration};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
