@@ -172,8 +172,8 @@ solang-parser = "=0.3.3"
 
 ## revm
 # no default features to avoid c-kzg
-revm = { path = "../seismic-revm/crates/revm", default-features = false }
-revm-primitives = { path = "../seismic-revm/crates/primitives", default-features = false }
+revm = { path = "../seismic-revm/crates/revm", default-features = false, features = ["seismic"] }
+revm-primitives = { path = "../seismic-revm/crates/primitives", default-features = false, features = ["seismic"] }
 revm-inspectors = { version = "0.5", features = ["serde"] }
 
 ## ethers
@@ -282,7 +282,7 @@ revm = { path = "../seismic-revm/crates/revm" }
 revm-primitives = { path = "../seismic-revm/crates/primitives" }
 
 # seismic-alloy-core
-alloy-core = { path = "../seismic-alloy-core/crates/core" }
+# alloy-core = { path = "../seismic-alloy-core/crates/core" }
 alloy-dyn-abi = { path = "../seismic-alloy-core/crates/dyn-abi" }
 alloy-json-abi = { path = "../seismic-alloy-core/crates/json-abi" }
 alloy-primitives = { path = "../seismic-alloy-core/crates/primitives" }

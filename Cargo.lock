@@ -10086,7 +10086,3 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
-
-[[patch.unused]]
-name = "alloy-core"
-version = "0.7.7"
