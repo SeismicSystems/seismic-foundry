@@ -73,12 +73,12 @@ pub fn find_project_root_path(path: Option<&PathBuf>) -> std::io::Result<PathBuf
     while cwd.starts_with(&boundary) {
         let file_path = cwd.join(Config::FILE_NAME);
         if file_path.is_file() {
-            return Ok(cwd.to_path_buf())
+            return Ok(cwd.to_path_buf());
         }
         if let Some(parent) = cwd.parent() {
             cwd = parent;
         } else {
-            break
+            break;
         }
     }
     // no foundry.toml found
@@ -197,7 +197,7 @@ pub fn get_available_profiles(toml_path: impl AsRef<Path>) -> eyre::Result<Vec<S
     let mut result = vec![Config::DEFAULT_PROFILE.to_string()];
 
     if !toml_path.as_ref().exists() {
-        return Ok(result)
+        return Ok(result);
     }
 
     let doc = read_toml(toml_path)?;
@@ -296,24 +296,26 @@ impl FromStr for Numeric {
 
 /// Returns the [SpecId] derived from [EvmVersion]
 #[inline]
-pub fn evm_spec_id(evm_version: &EvmVersion) -> SpecId {
+pub fn evm_spec_id(_evm_version: &EvmVersion) -> SpecId {
+    /*
+    match evm_version {
+        EvmVersion::Homestead => SpecId::HOMESTEAD,
+        EvmVersion::TangerineWhistle => SpecId::TANGERINE,
+        EvmVersion::SpuriousDragon => SpecId::SPURIOUS_DRAGON,
+        EvmVersion::Byzantium => SpecId::BYZANTIUM,
+        EvmVersion::Constantinople => SpecId::CONSTANTINOPLE,
+        EvmVersion::Petersburg => SpecId::PETERSBURG,
+        EvmVersion::Istanbul => SpecId::ISTANBUL,
+        EvmVersion::Berlin => SpecId::BERLIN,
+        EvmVersion::London => SpecId::LONDON,
+        EvmVersion::Paris => SpecId::MERGE,
+        EvmVersion::Shanghai => SpecId::SHANGHAI,
+        EvmVersion::Cancun => SpecId::CANCUN,
+        EvmVersion::Prague => SpecId::PRAGUE_EOF,
+        EvmVersion::Mercury => SpecId::MERCURY,
+    }
+    */
     return SpecId::MERCURY;
-    // match evm_version {
-    //     EvmVersion::Homestead => SpecId::HOMESTEAD,
-    //     EvmVersion::TangerineWhistle => SpecId::TANGERINE,
-    //     EvmVersion::SpuriousDragon => SpecId::SPURIOUS_DRAGON,
-    //     EvmVersion::Byzantium => SpecId::BYZANTIUM,
-    //     EvmVersion::Constantinople => SpecId::CONSTANTINOPLE,
-    //     EvmVersion::Petersburg => SpecId::PETERSBURG,
-    //     EvmVersion::Istanbul => SpecId::ISTANBUL,
-    //     EvmVersion::Berlin => SpecId::BERLIN,
-    //     EvmVersion::London => SpecId::LONDON,
-    //     EvmVersion::Paris => SpecId::MERGE,
-    //     EvmVersion::Shanghai => SpecId::SHANGHAI,
-    //     EvmVersion::Cancun => SpecId::CANCUN,
-    //     EvmVersion::Prague => SpecId::PRAGUE_EOF,
-    //     EvmVersion::Mercury => SpecId::MERCURY,
-    // }
 }
 
 #[cfg(test)]

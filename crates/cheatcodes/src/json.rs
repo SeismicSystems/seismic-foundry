@@ -625,7 +625,11 @@ fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
         DynSolValue::Tuple(values) => Ok(Value::Array(
             values.into_iter().map(serialize_value_as_json).collect::<Result<_>>()?,
         )),
-        DynSolValue::Saddress(w) | DynSolValue::Sint(w, _) | DynSolValue::Suint(w, _) => Ok(Value::String(hex::encode_prefixed(&w[..32]))),
+        DynSolValue::Saddress(c) | DynSolValue::Sint(c, _) | DynSolValue::Suint(c, _) => {
+            // let serde handle number parsing
+            let commitment = serde_json::from_str(&c.to_string())?;
+            Ok(Value::Number(commitment))
+        }
         DynSolValue::Function(_) => bail!("cannot serialize function pointer"),
     }
 }
@@ -664,7 +668,7 @@ fn resolve_type(type_description: &str) -> Result<DynSolType> {
             resolver.ingest(t.to_owned());
         }
 
-        return Ok(resolver.resolve(main_type)?)
+        return Ok(resolver.resolve(main_type)?);
     };
 
     bail!("type description should be a valid Solidity type or a EIP712 `encodeType` string")
