@@ -205,7 +205,7 @@ alloy-transport-ws = { version = "0.2.1", default-features = false }
 
 alloy-dyn-abi = { version = "0.7.7", features = ["std", "seismic"] }
 alloy-json-abi = "0.7.7"
-alloy-primitives = { version = "0.7.7", features = ["getrandom", "rand"] }
+alloy-primitives = { version = "0.7.7", features = ["getrandom", "rand", "seismic"] }
 alloy-sol-macro-expander = { version = "0.7.7", features = ["seismic"]}
 alloy-sol-macro-input = "0.7.7"
 alloy-sol-types = { version = "0.7.7", features = ["seismic"] }

@@ -9,7 +9,6 @@ pub fn console_fmt(input: &DeriveInput) -> TokenStream {
         Data::Enum(e) => derive_enum(e),
         Data::Union(_) => return quote!(compile_error!("Unions are unsupported");),
     };
-
     quote! {
         impl ConsoleFmt for #name {
             #tokens
@@ -42,6 +41,7 @@ fn impl_struct(s: &DataStruct) -> Option<TokenStream> {
         _ => String::new(),
     };
 
+    // println!("{:?}", s);
     let args: Punctuated<TokenStream, Token![,]> = fields
         .into_iter()
         .enumerate()
