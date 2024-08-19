@@ -9449,9 +9449,9 @@
     {
         "inputs": [
             {
-                "internalType": "suint256",
+                "internalType": "saddress",
                 "name": "",
-                "type": "suint256"
+                "type": "saddress"
             }
         ],
         "name": "log",

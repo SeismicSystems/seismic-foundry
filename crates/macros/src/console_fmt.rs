@@ -4,6 +4,7 @@ use syn::{punctuated::Punctuated, Data, DataEnum, DataStruct, DeriveInput, Field
 
 pub fn console_fmt(input: &DeriveInput) -> TokenStream {
     let name = &input.ident;
+    // println!("\n\nDerive Input\n{:#?}", input);
     let tokens = match &input.data {
         Data::Struct(s) => derive_struct(s),
         Data::Enum(e) => derive_enum(e),
