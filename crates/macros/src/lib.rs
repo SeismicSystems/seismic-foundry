@@ -17,9 +17,7 @@ mod console_fmt;
 
 #[proc_macro_derive(ConsoleFmt)]
 pub fn console_fmt(input: TokenStream) -> TokenStream {
-    // println!("ConsoleFmt Input\n\n{:#?}", input);
     let input = parse_macro_input!(input as DeriveInput);
-    // println!("\n\nDerive Input\n{:#?}", input);
     console_fmt::console_fmt(&input).into()
 }
 
