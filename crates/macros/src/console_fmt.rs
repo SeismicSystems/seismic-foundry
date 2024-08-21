@@ -41,7 +41,6 @@ fn impl_struct(s: &DataStruct) -> Option<TokenStream> {
         _ => String::new(),
     };
 
-    // println!("{:?}", s);
     let args: Punctuated<TokenStream, Token![,]> = fields
         .into_iter()
         .enumerate()
