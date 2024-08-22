@@ -1,6 +1,6 @@
 use super::{format_int_exp, format_uint_exp};
 use alloy_dyn_abi::{DynSolType, DynSolValue};
-use alloy_primitives::hex;
+use alloy_primitives::{aliases::{SInt, SUInt}, hex, SAddress};
 use std::fmt;
 
 /// [`DynSolValue`] formatter.
@@ -62,7 +62,7 @@ impl DynValueFormatter {
                     self.tuple(tuple, f)
                 }
             }
-            &DynSolValue::Saddress(inner) | &DynSolValue::Sint(inner, _) | &DynSolValue::Suint(inner, _) => write!(f, "{inner}")
+            &DynSolValue::Saddress(SAddress(inner)) | &DynSolValue::Sint(SInt(inner), _) | &DynSolValue::Suint(SUInt(inner), _) => write!(f, "{inner}")
         }
     }
 

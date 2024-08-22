@@ -204,12 +204,12 @@ alloy-transport-ipc = { version = "0.2.1", default-features = false }
 alloy-transport-ws = { version = "0.2.1", default-features = false }
 
 alloy-dyn-abi = { version = "0.7.7", features = ["std", "seismic"] }
-alloy-json-abi = "0.7.7"
-alloy-primitives = { version = "0.7.7", features = ["getrandom", "rand"] }
-alloy-sol-macro-expander = "0.7.7"
-alloy-sol-macro-input = "0.7.7"
-alloy-sol-types = "0.7.7"
-syn-solidity = "0.7.7"
+alloy-json-abi = { version = "0.7.7", features = ["seismic"] }
+alloy-primitives = { version = "0.7.7", features = ["getrandom", "rand", "seismic"] }
+alloy-sol-macro-expander = { version = "0.7.7", features = ["seismic"]}
+alloy-sol-macro-input = { version = "0.7.7", features = ["seismic"] }
+alloy-sol-types = { version = "0.7.7", features = ["seismic"] }
+syn-solidity = { version = "0.7.7", features = ["seismic"] }
 
 alloy-chains = "0.1"
 alloy-rlp = "0.3.3"

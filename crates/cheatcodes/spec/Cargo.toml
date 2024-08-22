@@ -16,7 +16,7 @@ workspace = true
 
 [dependencies]
 foundry-macros.workspace = true
-alloy-sol-types = { workspace = true, features = ["json"] }
+alloy-sol-types = { workspace = true, features = ["json", "seismic"] }
 serde.workspace = true
 
 # schema
