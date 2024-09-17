@@ -1694,6 +1694,9 @@ impl SimpleCast {
             DynSolType::CustomStruct { .. } => {
                 eyre::bail!("Type `{v_ty}` is not supported as a mapping key")
             }
+            DynSolType::Saddress | DynSolType::Sint(_) | DynSolType::Suint(_) => {
+                hasher.update(v.as_word().unwrap())
+            }
         }
 
         let p = DynSolType::Uint(256)
