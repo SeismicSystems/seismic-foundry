@@ -2,7 +2,7 @@
 
 use crate::{string, Cheatcode, Cheatcodes, Result, Vm::*};
 use alloy_dyn_abi::{eip712_parser::EncodeType, DynSolType, DynSolValue, Resolver};
-use alloy_primitives::{hex, Address, B256, I256};
+use alloy_primitives::{aliases::{SInt, SUInt}, hex, Address, SAddress, B256, I256};
 use alloy_sol_types::SolValue;
 use foundry_common::fs;
 use foundry_config::fs_permissions::FsAccessKind;
@@ -629,6 +629,11 @@ fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
             values.into_iter().map(serialize_value_as_json).collect::<Result<_>>()?,
         )),
         DynSolValue::Function(_) => bail!("cannot serialize function pointer"),
+        DynSolValue::Saddress(SAddress(c)) | DynSolValue::Sint(SInt(c), _) | DynSolValue::Suint(SUInt(c), _) => {
+            // let serde handle number parsing
+            let commitment = serde_json::from_str(&c.to_string())?;
+            Ok(Value::Number(commitment))
+        }
     }
 }
 

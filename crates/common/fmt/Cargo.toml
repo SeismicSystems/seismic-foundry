@@ -15,7 +15,7 @@ workspace = true
 
 [dependencies]
 alloy-primitives.workspace = true
-alloy-dyn-abi = { workspace = true, features = ["eip712"] }
+alloy-dyn-abi = { workspace = true, features = ["eip712", "seismic"] }
 yansi.workspace = true
 
 # ui
