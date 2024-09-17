@@ -1,5 +1,68 @@
 <img src=".github/logo.png" alt="Foundry logo" align="right" width="120" />
 
+## Seismic
+
+All Seismic modifications live on the `seismic` branch; the [original](https://github.com/foundry-rs/foundry) repository is on the `master` branch. We do this to always maintain a clear diff the changes it takes to make Foundry work with Seismic
+
+Make sure that you have added `~/.seismic/bin` to your path:
+
+```sh
+export PATH="$PATH:$HOME/.seismic/bin"
+```
+
+Finally, make sure you have locally cloned this repository in the same directory as `mantle`. This is a temporary requirement until we are able to specify the mantle dependency in a way that does not involve using local paths. If you are curious about how this is configured, see the Cargo.toml in the root of this repository
+
+### Seismic Forge
+To build `sforge` from source, run this from the root of this repository:
+
+```sh
+git checkout seismic
+cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge
+```
+
+### Seismic Anvil
+To build `sanvil` from source, run this from the root of this repository:
+
+```sh
+git checkout seismic
+cargo install --root=$HOME/.seismic --profile dev --path ./crates/anvil
+```
+
+### Merging in upstream foundry-rs/main
+First make sure you have set a public origin:
+```sh
+git remote add public https://github.com/foundry-rs/foundry.git
+```
+
+Then checkout to `master` and pull in changes from `public/master`, and push to `origin/master`
+```sh
+git checkout master
+git pull public master
+git push origin master
+```
+
+Then checkout to `seismic`, pull in `origin/master`, and checkout to a new branch
+```sh
+git checkout seismic
+git pull origin master
+git checkout -b merge-in-public-master
+```
+
+You will likely see some merge conflicts. For Cargo.lock, simply checkout to `origin/master`:
+```sh
+git checkout master -- Cargo.lock
+```
+
+For the rest, resolve them manually. This might be a pain. When you are done, make sure our Seismic-specific tests pass:
+```sh
+cargo test -- test_seismic_transaction
+```
+
+And then push your branch to GitHub & merge in the pull request with a squash commit
+```sh
+git push origin merge-in-public-master  # then merge it on the UI
+```
+
 ## Foundry
 
 ![Github Actions][gha-badge] [![Telegram Chat][tg-badge]][tg-url] [![Telegram Support][tg-support-badge]][tg-support-url]
