@@ -123,13 +123,17 @@ pub trait CheatcodesExecutor {
 
             // Handle EOF bytecode
             let first_frame_or_result = if evm.handler.cfg.spec_id.is_enabled_in(SpecId::PRAGUE_EOF)
-                && inputs.scheme == CreateScheme::Create && inputs.init_code.starts_with(&EOF_MAGIC_BYTES)
+                && inputs.scheme == CreateScheme::Create
+                && inputs.init_code.starts_with(&EOF_MAGIC_BYTES)
             {
                 evm.handler.execution().eofcreate(
                     &mut evm.context,
-                    Box::new(EOFCreateInputs::new(inputs.caller, inputs.value, inputs.gas_limit, EOFCreateKind::Tx {
-                        initdata: inputs.init_code,
-                    })),
+                    Box::new(EOFCreateInputs::new(
+                        inputs.caller,
+                        inputs.value,
+                        inputs.gas_limit,
+                        EOFCreateKind::Tx { initdata: inputs.init_code },
+                    )),
                 )?
             } else {
                 evm.handler.execution().create(&mut evm.context, Box::new(inputs))?

@@ -217,7 +217,7 @@ impl MaybeImpersonatedTransaction {
     #[cfg(feature = "impersonated-tx")]
     pub fn hash(&self) -> B256 {
         if let Some(sender) = self.impersonated_sender {
-            return self.transaction.impersonated_hash(sender)
+            return self.transaction.impersonated_hash(sender);
         }
         self.transaction.hash()
     }
