@@ -274,10 +274,8 @@ comfy-table = "7"
 
 # seismic-revm
 revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7176369" }
-revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7176369" }
 
 # seismic-alloy-core
-alloy-core = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949" }
 alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949" }
 alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949" }
 alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949" }

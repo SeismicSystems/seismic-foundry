@@ -9780,16 +9780,6 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "alloy-core"
-version = "0.8.1"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=93e5949#93e5949f20f8c701351aa4134d9fa03cbc4ad1ef"
-
-[[patch.unused]]
 name = "revm"
 version = "14.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=7176369#71763699d7b4b002d121f3fb2714fff63c38b607"
-
-[[patch.unused]]
-name = "revm-primitives"
-version = "9.0.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=7176369#71763699d7b4b002d121f3fb2714fff63c38b607"
