@@ -197,7 +197,7 @@ alloy-transport-ws = { version = "0.3.5", default-features = false }
 ## alloy-core
 alloy-dyn-abi = { version = "0.8.1", features = ["seismic", "std"] }
 alloy-json-abi = { version = "0.8.1", features = ["seismic"] }
-alloy-primitives = { version = "0.8.1", features = ["getrandom", "rand", "seismic"] }
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949", features = ["getrandom", "rand", "seismic"] }
 alloy-sol-macro-expander = { version = "0.8.1", features = ["seismic"] }
 alloy-sol-macro-input = { version = "0.8.1", features = ["seismic"] }
 alloy-sol-types = { version = "0.8.1", features = ["seismic"] }
