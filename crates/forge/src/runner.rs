@@ -279,7 +279,7 @@ impl<'a> ContractRunner<'a> {
                 [("setUp()".to_string(), TestResult::fail("multiple setUp functions".to_string()))]
                     .into(),
                 warnings,
-            );
+            )
         }
 
         // Check if `afterInvariant` function with valid signature declared.
@@ -295,7 +295,7 @@ impl<'a> ContractRunner<'a> {
                 )]
                 .into(),
                 warnings,
-            );
+            )
         }
         let call_after_invariant = after_invariant_fns.first().map_or(false, |after_invariant_fn| {
             let match_sig = after_invariant_fn.name == "afterInvariant";
@@ -329,7 +329,7 @@ impl<'a> ContractRunner<'a> {
                 start.elapsed(),
                 [("setUp()".to_string(), TestResult::setup_fail(setup))].into(),
                 warnings,
-            );
+            )
         }
 
         // Filter out functions sequentially since it's very fast and there is no need to do it
@@ -475,7 +475,7 @@ impl<'a> ContractRunner<'a> {
             U256::ZERO,
             Some(self.revert_decoder),
         ) {
-            return test_result.invariant_skip();
+            return test_result.invariant_skip()
         };
 
         let mut evm = InvariantExecutor::new(
@@ -536,7 +536,7 @@ impl<'a> ContractRunner<'a> {
                         replayed_entirely,
                         &invariant_contract.invariant_function.name,
                         call_sequence,
-                    );
+                    )
                 }
             }
         }
@@ -665,7 +665,7 @@ impl<'a> ContractRunner<'a> {
         // Check the last test result and skip the test
         // if it's marked as so.
         if let Some("SKIPPED") = result.reason.as_deref() {
-            return test_result.single_skip();
+            return test_result.single_skip()
         }
         test_result.fuzz_result(result)
     }
@@ -707,7 +707,7 @@ impl<'a> ContractRunner<'a> {
 
                         // To continue unit test execution the call should not revert.
                         if call_result.reverted {
-                            return Err(test_result.single_fail(None));
+                            return Err(test_result.single_fail(None))
                         }
                     }
                     Err(_) => return Err(test_result.single_fail(None)),

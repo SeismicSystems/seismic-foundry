@@ -162,7 +162,7 @@ pub fn create2_handler_register<DB: revm::Database, I: InspectorExt<DB>>(
                         gas: Gas::new(gas_limit),
                     },
                     memory_offset: 0..0,
-                })));
+                })))
             }
 
             // Handle potential inspector override.
