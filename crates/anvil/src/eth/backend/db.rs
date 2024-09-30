@@ -19,6 +19,7 @@ use foundry_evm::{
         Database, DatabaseCommit,
     },
 };
+use revm::primitives::FlaggedStorage;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt, path::Path};
 
@@ -112,7 +113,12 @@ pub trait Db:
     }
 
     /// Sets the balance of the given address
-    fn set_storage_at(&mut self, address: Address, slot: U256, val: U256) -> DatabaseResult<()>;
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: U256,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()>;
 
     /// inserts a blockhash for the given number
     fn insert_block_hash(&mut self, number: U256, hash: B256);
@@ -152,7 +158,7 @@ pub trait Db:
             );
 
             for (k, v) in account.storage.into_iter() {
-                self.set_storage_at(addr, k, v)?;
+                self.set_storage_at(addr, k, v.into())?;
             }
         }
         Ok(true)
@@ -184,7 +190,12 @@ impl<T: DatabaseRef<Error = DatabaseError> + Send + Sync + Clone + fmt::Debug> D
         self.insert_account_info(address, account)
     }
 
-    fn set_storage_at(&mut self, address: Address, slot: U256, val: U256) -> DatabaseResult<()> {
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: U256,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()> {
         self.insert_account_storage(address, slot, val)
     }
 
@@ -292,7 +303,7 @@ impl DatabaseRef for StateDb {
         self.0.code_by_hash_ref(code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> DatabaseResult<U256> {
+    fn storage_ref(&self, address: Address, index: U256) -> DatabaseResult<FlaggedStorage> {
         self.0.storage_ref(address, index)
     }
 
@@ -356,7 +367,7 @@ pub struct SerializableAccountRecord {
     pub nonce: u64,
     pub balance: U256,
     pub code: Bytes,
-    pub storage: BTreeMap<U256, U256>,
+    pub storage: BTreeMap<U256, FlaggedStorage>,
 }
 
 /// Defines a backwards-compatible enum for transactions.

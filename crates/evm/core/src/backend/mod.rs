@@ -20,7 +20,7 @@ use revm::{
     precompile::{PrecompileSpecId, Precompiles},
     primitives::{
         Account, AccountInfo, Bytecode, Env, EnvWithHandlerCfg, EvmState, EvmStorageSlot,
-        HashMap as Map, Log, ResultAndState, SpecId, KECCAK_EMPTY,
+        FlaggedStorage, HashMap as Map, Log, ResultAndState, SpecId, KECCAK_EMPTY,
     },
     Database, DatabaseCommit, JournaledState,
 };
@@ -528,7 +528,7 @@ impl Backend {
         &mut self,
         address: Address,
         slot: U256,
-        value: U256,
+        value: FlaggedStorage,
     ) -> Result<(), DatabaseError> {
         if let Some(db) = self.active_fork_db_mut() {
             db.insert_account_storage(address, slot, value)
@@ -544,7 +544,7 @@ impl Backend {
     pub fn replace_account_storage(
         &mut self,
         address: Address,
-        storage: Map<U256, U256>,
+        storage: Map<U256, FlaggedStorage>,
     ) -> Result<(), DatabaseError> {
         if let Some(db) = self.active_fork_db_mut() {
             db.replace_account_storage(address, storage)
@@ -1402,7 +1402,7 @@ impl DatabaseExt for Backend {
                                     .get(&slot)
                                     .map(|s| s.present_value)
                                     .unwrap_or_default(),
-                                U256::from_be_bytes(value.0),
+                                U256::from_be_bytes(value.0).into(),
                             ),
                         )
                     })
@@ -1475,7 +1475,7 @@ impl DatabaseRef for Backend {
         }
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         if let Some(db) = self.active_fork_db() {
             DatabaseRef::storage_ref(db, address, index)
         } else {
@@ -1520,7 +1520,7 @@ impl Database for Backend {
         }
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage(&mut self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         if let Some(db) = self.active_fork_db_mut() {
             Ok(Database::storage(db, address, index)?)
         } else {

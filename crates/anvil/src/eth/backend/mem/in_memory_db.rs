@@ -14,6 +14,7 @@ use foundry_evm::{
     backend::{BlockchainDb, DatabaseResult, StateSnapshot},
     hashbrown::HashMap,
 };
+use revm::primitives::FlaggedStorage;
 
 // reexport for convenience
 pub use foundry_evm::{backend::MemDb, revm::db::DatabaseRef};
@@ -24,7 +25,12 @@ impl Db for MemDb {
         self.inner.insert_account_info(address, account)
     }
 
-    fn set_storage_at(&mut self, address: Address, slot: U256, val: U256) -> DatabaseResult<()> {
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: U256,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()> {
         self.inner.insert_account_storage(address, slot, val)
     }
 
@@ -202,8 +208,8 @@ mod tests {
             },
         );
 
-        db.set_storage_at(test_addr, U256::from(1234567), U256::from(1)).unwrap();
-        db.set_storage_at(test_addr, U256::from(1234568), U256::from(2)).unwrap();
+        db.set_storage_at(test_addr, U256::from(1234567), U256::from(1).into()).unwrap();
+        db.set_storage_at(test_addr, U256::from(1234568), U256::from(2).into()).unwrap();
 
         let mut new_state = SerializableState::default();
 

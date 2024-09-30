@@ -12,6 +12,7 @@ use foundry_evm::{
     fork::database::ForkDbSnapshot,
     revm::Database,
 };
+use revm::primitives::FlaggedStorage;
 
 pub use foundry_evm::fork::database::ForkedDatabase;
 use foundry_evm::revm::primitives::BlockEnv;
@@ -22,7 +23,12 @@ impl Db for ForkedDatabase {
         self.database_mut().insert_account(address, account)
     }
 
-    fn set_storage_at(&mut self, address: Address, slot: U256, val: U256) -> DatabaseResult<()> {
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: U256,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()> {
         // this ensures the account is loaded first
         let _ = Database::basic(self, address)?;
         self.database_mut().set_storage_at(address, slot, val)

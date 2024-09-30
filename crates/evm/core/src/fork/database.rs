@@ -10,7 +10,7 @@ use foundry_fork_db::{BlockchainDb, DatabaseError, SharedBackend};
 use parking_lot::Mutex;
 use revm::{
     db::{CacheDB, DatabaseRef},
-    primitives::{Account, AccountInfo, Bytecode, HashMap as Map},
+    primitives::{Account, AccountInfo, Bytecode, FlaggedStorage, HashMap as Map},
     Database, DatabaseCommit,
 };
 use std::sync::Arc;
@@ -163,7 +163,7 @@ impl Database for ForkedDatabase {
         Database::code_by_hash(&mut self.cache_db, code_hash)
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage(&mut self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         Database::storage(&mut self.cache_db, address, index)
     }
 
@@ -183,7 +183,7 @@ impl DatabaseRef for ForkedDatabase {
         self.cache_db.code_by_hash_ref(code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(&self.cache_db, address, index)
     }
 
@@ -208,8 +208,13 @@ pub struct ForkDbSnapshot {
 }
 
 impl ForkDbSnapshot {
-    fn get_storage(&self, address: Address, index: U256) -> Option<U256> {
-        self.local.accounts.get(&address).and_then(|account| account.storage.get(&index)).copied()
+    fn get_storage(&self, address: Address, index: U256) -> Option<FlaggedStorage> {
+        self.local
+            .accounts
+            .get(&address)
+            .and_then(|account| account.storage.get(&index))
+            .copied()
+            .into()
     }
 }
 
@@ -237,7 +242,7 @@ impl DatabaseRef for ForkDbSnapshot {
         self.local.code_by_hash_ref(code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         match self.local.accounts.get(&address) {
             Some(account) => match account.storage.get(&index) {
                 Some(entry) => Ok(*entry),
