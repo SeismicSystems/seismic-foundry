@@ -195,13 +195,13 @@ alloy-transport-ipc = { version = "0.3.5", default-features = false }
 alloy-transport-ws = { version = "0.3.5", default-features = false }
 
 ## alloy-core
-alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068",  features = ["seismic", "std"] }
-alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068",  features = ["seismic"] }
-alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068", features = ["getrandom", "rand", "seismic"] }
-alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068", features = ["seismic"] }
-alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068", features = ["seismic"] }
-alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068", features = ["seismic"] }
-syn-solidity = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068", features = ["seismic"] }
+alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735",  features = ["seismic", "std"] }
+alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735",  features = ["seismic"] }
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735", features = ["getrandom", "rand", "seismic"] }
+alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735", features = ["seismic"] }
+alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735", features = ["seismic"] }
+alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735", features = ["seismic"] }
+syn-solidity = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735", features = ["seismic"] }
 
 alloy-chains = "0.1"
 alloy-rlp = "0.3"
@@ -277,11 +277,11 @@ revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "da
 revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "da46620f" }
 
 # seismic-alloy-core
-alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068" }
-alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068" }
-alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068" }
-alloy-sol-macro = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068" }
-alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068" }
-alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068" }
-alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068" }
-alloy-sol-type-parser = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0a66068" }
+alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735" }
+alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735" }
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735" }
+alloy-sol-macro = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735" }
+alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735" }
+alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735" }
+alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735" }
+alloy-sol-type-parser = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "6641735" }
