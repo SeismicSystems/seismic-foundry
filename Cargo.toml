@@ -164,8 +164,8 @@ solang-parser = "=0.3.3"
 
 ## revm
 # no default features to avoid c-kzg
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7176369", default-features = false }
-revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7176369", default-features = false }
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "52b3ab1", default-features = false }
+revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "52b3ab1", default-features = false }
 revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "a77b988", features = ["serde"] }
 
 ## ethers
@@ -273,8 +273,8 @@ comfy-table = "7"
 # and instead use our local version
 
 # seismic-revm
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7176369" }
-revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7176369" }
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "52b3ab1" }
+revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "52b3ab1" }
 
 # seismic-alloy-core
 alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0af97ab" }
