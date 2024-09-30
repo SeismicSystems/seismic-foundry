@@ -195,13 +195,13 @@ alloy-transport-ipc = { version = "0.3.5", default-features = false }
 alloy-transport-ws = { version = "0.3.5", default-features = false }
 
 ## alloy-core
-alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949",  features = ["seismic", "std"] }
-alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949",  features = ["seismic"] }
-alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949", features = ["getrandom", "rand", "seismic"] }
-alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949", features = ["seismic"] }
-alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949", features = ["seismic"] }
-alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949", features = ["seismic"] }
-syn-solidity = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "93e5949", features = ["seismic"] }
+alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0af97ab",  features = ["seismic", "std"] }
+alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0af97ab",  features = ["seismic"] }
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0af97ab", features = ["getrandom", "rand", "seismic"] }
+alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0af97ab", features = ["seismic"] }
+alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0af97ab", features = ["seismic"] }
+alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0af97ab", features = ["seismic"] }
+syn-solidity = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "0af97ab", features = ["seismic"] }
 
 alloy-chains = "0.1"
 alloy-rlp = "0.3"
