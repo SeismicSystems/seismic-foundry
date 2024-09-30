@@ -70,7 +70,7 @@ impl ForgeTestProfile {
             settings.evm_version = Some(EvmVersion::Cancun);
         }
 
-        SolcConfig::builder().settings(settings).build()
+        SolcConfig { settings: SolcConfig::builder().settings(settings).build() }
     }
 
     pub fn project(&self) -> Project {
