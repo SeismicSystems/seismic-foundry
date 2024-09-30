@@ -209,7 +209,12 @@ pub struct ForkDbSnapshot {
 
 impl ForkDbSnapshot {
     fn get_storage(&self, address: Address, index: U256) -> Option<FlaggedStorage> {
-        self.local.accounts.get(&address).and_then(|account| account.storage.get(&index)).copied().into()
+        self.local
+            .accounts
+            .get(&address)
+            .and_then(|account| account.storage.get(&index))
+            .copied()
+            .into()
     }
 }
 

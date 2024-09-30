@@ -113,7 +113,12 @@ pub trait Db:
     }
 
     /// Sets the balance of the given address
-    fn set_storage_at(&mut self, address: Address, slot: U256, val: FlaggedStorage) -> DatabaseResult<()>;
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: U256,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()>;
 
     /// inserts a blockhash for the given number
     fn insert_block_hash(&mut self, number: U256, hash: B256);
@@ -185,7 +190,12 @@ impl<T: DatabaseRef<Error = DatabaseError> + Send + Sync + Clone + fmt::Debug> D
         self.insert_account_info(address, account)
     }
 
-    fn set_storage_at(&mut self, address: Address, slot: U256, val: FlaggedStorage) -> DatabaseResult<()> {
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: U256,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()> {
         self.insert_account_storage(address, slot, val)
     }
 

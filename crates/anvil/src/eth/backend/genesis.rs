@@ -49,7 +49,11 @@ impl GenesisConfig {
                 db.insert_account(addr, self.genesis_to_account_info(&acc));
                 // insert all storage values
                 for (k, v) in storage.unwrap_or_default().iter() {
-                    db.set_storage_at(addr, U256::from_be_bytes(k.0), U256::from_be_bytes(v.0).into())?;
+                    db.set_storage_at(
+                        addr,
+                        U256::from_be_bytes(k.0),
+                        U256::from_be_bytes(v.0).into(),
+                    )?;
                 }
             }
         }

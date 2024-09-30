@@ -19,7 +19,8 @@ use revm::{
     inspectors::NoOpInspector,
     precompile::{PrecompileSpecId, Precompiles},
     primitives::{
-        Account, AccountInfo, Bytecode, Env, EnvWithHandlerCfg, EvmState, EvmStorageSlot, FlaggedStorage, HashMap as Map, Log, ResultAndState, SpecId, KECCAK_EMPTY
+        Account, AccountInfo, Bytecode, Env, EnvWithHandlerCfg, EvmState, EvmStorageSlot,
+        FlaggedStorage, HashMap as Map, Log, ResultAndState, SpecId, KECCAK_EMPTY,
     },
     Database, DatabaseCommit, JournaledState,
 };

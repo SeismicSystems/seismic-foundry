@@ -16,7 +16,8 @@ use foundry_fork_db::DatabaseError;
 use revm::{
     db::DatabaseRef,
     primitives::{
-        Account, AccountInfo, Bytecode, Env, EnvWithHandlerCfg, FlaggedStorage, HashMap as Map, ResultAndState, SpecId
+        Account, AccountInfo, Bytecode, Env, EnvWithHandlerCfg, FlaggedStorage, HashMap as Map,
+        ResultAndState, SpecId,
     },
     Database, DatabaseCommit, JournaledState,
 };

@@ -89,7 +89,8 @@ use parking_lot::{Mutex, RwLock};
 use revm::{
     db::WrapDatabaseRef,
     primitives::{
-        calc_blob_gasprice, BlobExcessGasAndPrice, FlaggedStorage, HashMap, OptimismFields, ResultAndState
+        calc_blob_gasprice, BlobExcessGasAndPrice, FlaggedStorage, HashMap, OptimismFields,
+        ResultAndState,
     },
 };
 use std::{
