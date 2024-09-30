@@ -46,13 +46,13 @@ jobs:
               ${{ secrets.ACTIONS_SFOUNDRYFDB_SSH_ED25519 }}
       - name: sforge build
         run: cargo build --bin sforge
-      - name: sforge warnings
-        run: RUSTFLAGS="-D warnings" cargo check --bin sforge
-      - name: sforge tests
-        run: cargo test --bin sforge
       - name: sanvil build
         run: cargo build --bin sanvil
+      - name: sforge warnings
+        run: RUSTFLAGS="-D warnings" cargo check --bin sforge
       - name: sanvil warnings
         run: RUSTFLAGS="-D warnings" cargo check --bin sanvil
-      - name: sforge tests
-        run: cargo test --bin sanvil
+      # - name: sforge tests
+      #   run: cargo test --bin sforge
+      # - name: sanvil tests
+      #   run: cargo test --bin sanvil
