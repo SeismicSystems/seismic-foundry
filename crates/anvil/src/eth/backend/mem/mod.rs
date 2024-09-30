@@ -2542,7 +2542,7 @@ fn get_pool_transactions_nonce(
         .max()
     {
         let tx_count = highest_nonce.saturating_add(1);
-        return Some(tx_count);
+        return Some(tx_count)
     }
     None
 }
@@ -2645,17 +2645,17 @@ impl TransactionValidator for Backend {
 
             // Ensure there are blob hashes.
             if blob_count == 0 {
-                return Err(InvalidTransactionError::NoBlobHashes);
+                return Err(InvalidTransactionError::NoBlobHashes)
             }
 
             // Ensure the tx does not exceed the max blobs per block.
             if blob_count > MAX_BLOBS_PER_BLOCK {
-                return Err(InvalidTransactionError::TooManyBlobs(MAX_BLOBS_PER_BLOCK, blob_count));
+                return Err(InvalidTransactionError::TooManyBlobs(MAX_BLOBS_PER_BLOCK, blob_count))
             }
 
             // Check for any blob validation errors
             if let Err(err) = tx.validate(env.cfg.kzg_settings.get()) {
-                return Err(InvalidTransactionError::BlobTransactionValidationError(err));
+                return Err(InvalidTransactionError::BlobTransactionValidationError(err))
             }
         }
 

@@ -112,12 +112,12 @@ impl Cheatcode for pauseTracingCall {
     ) -> Result {
         let Some(tracer) = executor.tracing_inspector().and_then(|t| t.as_ref()) else {
             // No tracer -> nothing to pause
-            return Ok(Default::default());
+            return Ok(Default::default())
         };
 
         // If paused earlier, ignore the call
         if ccx.state.ignored_traces.last_pause_call.is_some() {
-            return Ok(Default::default());
+            return Ok(Default::default())
         }
 
         let cur_node = &tracer.traces().nodes().last().expect("no trace nodes");
@@ -135,12 +135,12 @@ impl Cheatcode for resumeTracingCall {
     ) -> Result {
         let Some(tracer) = executor.tracing_inspector().and_then(|t| t.as_ref()) else {
             // No tracer -> nothing to unpause
-            return Ok(Default::default());
+            return Ok(Default::default())
         };
 
         let Some(start) = ccx.state.ignored_traces.last_pause_call.take() else {
             // Nothing to unpause
-            return Ok(Default::default());
+            return Ok(Default::default())
         };
 
         let node = &tracer.traces().nodes().last().expect("no trace nodes");
