@@ -285,11 +285,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "260d3ff3bff0bb84599f032a2f2c6828180b0ea0cd41fdaf44f39cef3ba41861"
 dependencies = [
  "alloy-rlp",
- "arbitrary",
  "bytes",
  "cfg-if",
  "const-hex",
- "derive_arbitrary",
  "derive_more 1.0.0",
  "hashbrown 0.14.5",
  "hex-literal",
@@ -299,7 +297,6 @@ dependencies = [
  "keccak-asm",
  "paste",
  "proptest",
- "proptest-derive",
  "rand",
  "ruint",
  "rustc-hash",
@@ -5104,7 +5101,6 @@ version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68b900aa2f7301e21c36462b170ee99994de34dff39a4a6a528e80e7376d07e5"
 dependencies = [
- "arbitrary",
  "equivalent",
  "hashbrown 0.14.5",
  "serde",
@@ -7112,7 +7108,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "14.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=d584c05b#d584c05b82be179a61b26b7c7f35a89780ea1d99"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=da46620f#da46620fd9e42b736b496e9d0c60ddbf975f0be0"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -7157,7 +7153,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "10.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=d584c05b#d584c05b82be179a61b26b7c7f35a89780ea1d99"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=da46620f#da46620fd9e42b736b496e9d0c60ddbf975f0be0"
 dependencies = [
  "revm-primitives 9.0.0",
  "serde",
@@ -7176,7 +7172,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "11.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=d584c05b#d584c05b82be179a61b26b7c7f35a89780ea1d99"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=da46620f#da46620fd9e42b736b496e9d0c60ddbf975f0be0"
 dependencies = [
  "aurora-engine-modexp",
  "c-kzg",
@@ -7212,10 +7208,10 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "9.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=d584c05b#d584c05b82be179a61b26b7c7f35a89780ea1d99"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=da46620f#da46620fd9e42b736b496e9d0c60ddbf975f0be0"
 dependencies = [
  "alloy-eips",
- "alloy-primitives 0.8.5",
+ "alloy-primitives 0.8.1",
  "auto_impl",
  "bitflags 2.6.0",
  "bitvec",
