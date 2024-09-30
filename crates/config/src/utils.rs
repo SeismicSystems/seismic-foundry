@@ -200,7 +200,7 @@ pub fn get_available_profiles(toml_path: impl AsRef<Path>) -> eyre::Result<Vec<S
     let mut result = vec![Config::DEFAULT_PROFILE.to_string()];
 
     if !toml_path.as_ref().exists() {
-        return Ok(result);
+        return Ok(result)
     }
 
     let doc = read_toml(toml_path)?;
