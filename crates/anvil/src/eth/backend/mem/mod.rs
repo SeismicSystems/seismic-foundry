@@ -89,7 +89,7 @@ use parking_lot::{Mutex, RwLock};
 use revm::{
     db::WrapDatabaseRef,
     primitives::{
-        calc_blob_gasprice, BlobExcessGasAndPrice, HashMap, OptimismFields, ResultAndState,
+        calc_blob_gasprice, BlobExcessGasAndPrice, FlaggedStorage, HashMap, OptimismFields, ResultAndState
     },
 };
 use std::{
@@ -562,7 +562,7 @@ impl Backend {
         slot: U256,
         val: B256,
     ) -> DatabaseResult<()> {
-        self.db.write().await.set_storage_at(address, slot, U256::from_be_bytes(val.0))
+        self.db.write().await.set_storage_at(address, slot, U256::from_be_bytes(val.0).into())
     }
 
     /// Returns the configured specid
@@ -1301,6 +1301,7 @@ impl Backend {
                         GethDebugBuiltInTracerType::MuxTracer => {
                             Err(RpcError::invalid_params("unsupported tracer type").into())
                         }
+                        GethDebugBuiltInTracerType::FlatCallTracer => todo!(),
                     },
 
                     GethDebugTracerType::JsTracer(_code) => {
@@ -2426,7 +2427,7 @@ impl Backend {
                     .map(|(key, proof)| {
                         let storage_key: U256 = key.into();
                         let value = account.storage.get(&storage_key).cloned().unwrap_or_default();
-                        StorageProof { key: JsonStorageKey(key), value, proof }
+                        StorageProof { key: JsonStorageKey(key), value: value.into(), proof }
                     })
                     .collect(),
             };
@@ -2767,7 +2768,7 @@ pub fn transaction_build(
 /// `storage_key` is the hash of the desired storage key, meaning
 /// this will only work correctly under a secure trie.
 /// `storage_key` == keccak(key)
-pub fn prove_storage(storage: &HashMap<U256, U256>, keys: &[B256]) -> Vec<Vec<Bytes>> {
+pub fn prove_storage(storage: &HashMap<U256, FlaggedStorage>, keys: &[B256]) -> Vec<Vec<Bytes>> {
     let keys: Vec<_> = keys.iter().map(|key| Nibbles::unpack(keccak256(key))).collect();
 
     let mut builder = HashBuilder::default().with_proof_retainer(ProofRetainer::new(keys.clone()));

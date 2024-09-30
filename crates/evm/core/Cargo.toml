@@ -46,6 +46,7 @@ revm = { workspace = true, features = [
     "optimism",
     "c-kzg",
 ] }
+revm-primitives.workspace = true
 revm-inspectors.workspace = true
 
 auto_impl.workspace = true

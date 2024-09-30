@@ -632,12 +632,14 @@ fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
             values.into_iter().map(serialize_value_as_json).collect::<Result<_>>()?,
         )),
         DynSolValue::Function(_) => bail!("cannot serialize function pointer"),
-        DynSolValue::Saddress(SAddress(c)) |
-        DynSolValue::Sint(SInt(c), _) |
-        DynSolValue::Suint(SUInt(c), _) => {
-            // let serde handle number parsing
-            let commitment = serde_json::from_str(&c.to_string())?;
-            Ok(Value::Number(commitment))
+        DynSolValue::Saddress(SAddress(a)) => Ok(Value::String(a.to_string())),
+        DynSolValue::Sint(SInt(i), _) => {
+            let suint = serde_json::from_str(&i.to_string())?;
+            Ok(Value::Number(suint))
+        }
+        DynSolValue::Suint(SUInt(u), _) => {
+            let suint = serde_json::from_str(&u.to_string())?;
+            Ok(Value::Number(suint))
         }
     }
 }

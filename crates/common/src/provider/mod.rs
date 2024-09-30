@@ -273,7 +273,7 @@ impl ProviderBuilder {
     }
 
     /// Constructs the `RetryProvider` with a wallet.
-    pub fn build_with_wallet(self, wallet: EthereumWallet) -> Result<RetryProviderWithSigner> {
+    pub fn build_with_wallet(self, _wallet: EthereumWallet) -> Result<RetryProvider> {
         let Self {
             url,
             chain,
@@ -307,9 +307,11 @@ impl ProviderBuilder {
             );
         }
 
+        // let provider = AlloyProviderBuilder::<_, _, AnyNetwork>::default()
+        //     .with_recommended_fillers()
+        //     .wallet(wallet)
+        //     .on_provider(RootProvider::new(client));
         let provider = AlloyProviderBuilder::<_, _, AnyNetwork>::default()
-            .with_recommended_fillers()
-            .wallet(wallet)
             .on_provider(RootProvider::new(client));
 
         Ok(provider)

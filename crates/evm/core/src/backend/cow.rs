@@ -16,8 +16,7 @@ use foundry_fork_db::DatabaseError;
 use revm::{
     db::DatabaseRef,
     primitives::{
-        Account, AccountInfo, Bytecode, Env, EnvWithHandlerCfg, HashMap as Map, ResultAndState,
-        SpecId,
+        Account, AccountInfo, Bytecode, Env, EnvWithHandlerCfg, FlaggedStorage, HashMap as Map, ResultAndState, SpecId
     },
     Database, DatabaseCommit, JournaledState,
 };
@@ -273,7 +272,7 @@ impl<'a> DatabaseRef for CowBackend<'a> {
         DatabaseRef::code_by_hash_ref(self.backend.as_ref(), code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(self.backend.as_ref(), address, index)
     }
 
@@ -293,7 +292,7 @@ impl<'a> Database for CowBackend<'a> {
         DatabaseRef::code_by_hash_ref(self, code_hash)
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage(&mut self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(self, address, index)
     }
 

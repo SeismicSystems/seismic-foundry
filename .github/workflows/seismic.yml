@@ -43,9 +43,15 @@ jobs:
               ${{ secrets.ACTIONS_SALLOYCORE_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SREVM_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SREVMINSPECTORS_SSH_ED25519 }}
-      - name: cargo build
-        run: cargo build
-      - name: cargo check warnings
-        run: RUSTFLAGS="-D warnings" cargo check
-      - name: cargo test
-        run: cargo test
+      - name: sforge build
+        run: cargo build --bin sforge
+      - name: sforge warnings
+        run: RUSTFLAGS="-D warnings" cargo check --bin sforge
+      - name: sforge tests
+        run: cargo test --bin sforge
+      - name: sanvil build
+        run: cargo build --bin sanvil
+      - name: sanvil warnings
+        run: RUSTFLAGS="-D warnings" cargo check --bin sanvil
+      - name: sforge tests
+        run: cargo test --bin sanvil

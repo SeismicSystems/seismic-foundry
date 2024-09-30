@@ -5,6 +5,7 @@ use crate::{
     },
     revm::primitives::AccountInfo,
 };
+use revm::primitives::FlaggedStorage;
 use alloy_primitives::{Address, B256, U256, U64};
 use alloy_rpc_types::BlockId;
 use foundry_evm::{
@@ -22,7 +23,7 @@ impl Db for ForkedDatabase {
         self.database_mut().insert_account(address, account)
     }
 
-    fn set_storage_at(&mut self, address: Address, slot: U256, val: U256) -> DatabaseResult<()> {
+    fn set_storage_at(&mut self, address: Address, slot: U256, val: FlaggedStorage) -> DatabaseResult<()> {
         // this ensures the account is loaded first
         let _ = Database::basic(self, address)?;
         self.database_mut().set_storage_at(address, slot, val)
@@ -57,7 +58,7 @@ impl Db for ForkedDatabase {
                         nonce: v.info.nonce,
                         balance: v.info.balance,
                         code: code.original_bytes(),
-                        storage: v.storage.into_iter().collect(),
+                        storage: v.storage.into_iter().collect()
                     },
                 ))
             })
