@@ -581,7 +581,7 @@ impl<'a, W: Write> Formatter<'a, W> {
                 line.chars().next().map(|ch| ch.is_whitespace()).unwrap_or_default();
             if !self.is_beginning_of_line() || !start_with_ws {
                 write!(self.buf(), "{line}")?;
-                return Ok(false);
+                return Ok(false)
             }
 
             // if this is the beginning of the line,
@@ -593,7 +593,7 @@ impl<'a, W: Write> Formatter<'a, W> {
                 .map(|(_, ch)| ch);
             let padded = format!("{}{}", " ".repeat(indent), chars.join(""));
             self.write_raw(padded)?;
-            return Ok(false);
+            return Ok(false)
         }
 
         let mut words = line.split(' ').peekable();
@@ -1246,7 +1246,7 @@ impl<'a, W: Write> Formatter<'a, W> {
             })?;
 
             write_chunk!(self, "}}")?;
-            return Ok(false);
+            return Ok(false)
         }
 
         // Determine writable statements by excluding statements from disabled start / end lines.
