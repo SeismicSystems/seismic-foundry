@@ -1,6 +1,6 @@
 use super::state::EvmFuzzState;
 use alloy_dyn_abi::{DynSolType, DynSolValue};
-use alloy_primitives::{Address, B256, I256, U256};
+use alloy_primitives::{Address, B256, I256, U256, aliases::{SUInt, SInt}};
 use proptest::prelude::*;
 
 /// The max length of arrays we fuzz for is 256.
@@ -72,6 +72,13 @@ fn fuzz_param_inner(
             .boxed(),
         DynSolType::Uint(n @ 8..=256) => super::UintStrategy::new(n, fuzz_fixtures)
             .prop_map(move |x| DynSolValue::Uint(x, n))
+            .boxed(),
+        // DynSolType::Saddress => value(),     // TODO: also implement in `fuzz_param_from_state`
+        DynSolType::Sint(n @ 8..=256) => super::IntStrategy::new(n, fuzz_fixtures)
+            .prop_map(move |x| DynSolValue::Sint(SInt(x), n))
+            .boxed(),
+        DynSolType::Suint(n @ 8..=256) => super::UintStrategy::new(n, fuzz_fixtures)
+            .prop_map(move |x| DynSolValue::Suint(SUInt(x), n))
             .boxed(),
         DynSolType::Function | DynSolType::Bool => DynSolValue::type_strategy(param).boxed(),
         DynSolType::Bytes => value(),
@@ -170,6 +177,22 @@ pub fn fuzz_param_from_state(
                 .boxed(),
             _ => unreachable!(),
         },
+        DynSolType::Sint(n @ 8..=256) => match n / 8 {
+            32 => value()
+                .prop_map(move |value| DynSolValue::Sint(SInt(I256::from_raw(value.into())), 256))
+                .boxed(),
+            1..=31 => value()
+                .prop_map(move |value| {
+                    // Generate a uintN in the correct range, then shift it to the range of intN
+                    // by subtracting 2^(N-1)
+                    let uint = U256::from_be_bytes(value.0) % U256::from(1).wrapping_shl(n);
+                    let max_int_plus1 = U256::from(1).wrapping_shl(n - 1);
+                    let num = I256::from_raw(uint.wrapping_sub(max_int_plus1));
+                    DynSolValue::Sint(SInt(num), n)
+                })
+                .boxed(),
+            _ => unreachable!(),
+        },
         DynSolType::Uint(n @ 8..=256) => match n / 8 {
             32 => value()
                 .prop_map(move |value| DynSolValue::Uint(U256::from_be_bytes(value.0), 256))
@@ -178,6 +201,18 @@ pub fn fuzz_param_from_state(
                 .prop_map(move |value| {
                     let uint = U256::from_be_bytes(value.0) % U256::from(1).wrapping_shl(n);
                     DynSolValue::Uint(uint, n)
+                })
+                .boxed(),
+            _ => unreachable!(),
+        },
+        DynSolType::Suint(n @ 8..=256) => match n / 8 {
+            32 => value()
+                .prop_map(move |value| DynSolValue::Suint(SUInt(U256::from_be_bytes(value.0)), 256))
+                .boxed(),
+            1..=31 => value()
+                .prop_map(move |value| {
+                    let uint = U256::from_be_bytes(value.0) % U256::from(1).wrapping_shl(n);
+                    DynSolValue::Suint(SUInt(uint), n)
                 })
                 .boxed(),
             _ => unreachable!(),
