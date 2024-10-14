@@ -1,5 +1,5 @@
 use super::UIfmt;
-use alloy_primitives::{Address, Bytes, FixedBytes, I256, U256};
+use alloy_primitives::{Address, Bytes, FixedBytes, SAddress, I256, SI256, SU256, U256};
 use std::iter::Peekable;
 
 /// A format specifier.
@@ -184,6 +184,24 @@ impl ConsoleFmt for Address {
                 String::from("NaN")
             }
         }
+    }
+}
+
+impl ConsoleFmt for SAddress {
+    fn fmt(&self, spec: FormatSpec) -> String {
+        Address::from(self.0).fmt(spec)
+    }
+}
+
+impl ConsoleFmt for SU256 {
+    fn fmt(&self, spec: FormatSpec) -> String {
+        U256::from(self.0).fmt(spec)
+    }
+}
+
+impl ConsoleFmt for SI256 {
+    fn fmt(&self, spec: FormatSpec) -> String {
+        I256::from(self.0).fmt(spec)
     }
 }
 
