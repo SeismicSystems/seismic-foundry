@@ -27,15 +27,31 @@ use revm::{
 };
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, Mul};
-use seismic_transaction::transaction::SeismicTransactionRequest;
+use seismic_transaction::{encoding_decoding::{encode_2718_len, encode_2718_seismic_transaction}, seismic_util::Encryptable, transaction::{SeismicTransaction, SeismicTransactionRequest}, types::SeismicInput};
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 pub mod optimism;
 
+pub trait SeismicCompatible: Encryptable
+    + Debug
+    + Clone
+    + PartialEq
+    + Eq
+    + Send
+    + Sync
+    + 'static
+    + Serialize
+    + for<'de> Deserialize<'de>
+{
+}
+
 /// Converts a [TransactionRequest] into a [TypedTransactionRequest].
 /// Should be removed once the call builder abstraction for providers is in place.
-pub fn transaction_request_to_typed(
+pub fn transaction_request_to_typed<T>(
     tx: WithOtherFields<TransactionRequest>,
-) -> Option<TypedTransactionRequest> {
+) -> Option<TypedTransactionRequest<T>> 
+where T: SeismicCompatible {
     let WithOtherFields::<TransactionRequest> {
         inner:
             TransactionRequest {
@@ -73,14 +89,13 @@ pub fn transaction_request_to_typed(
     }
     else if transaction_type == Some(0x4A) || has_seismic_fields(&other) {
         return Some(TypedTransactionRequest::Seismic(SeismicTransactionRequest {
-            from: from.unwrap_or_default(),
             nonce: nonce.unwrap_or_default(),
-            gas_price: gas_price.unwrap_or_default(),
-            gas_limit: gas.unwrap_or_default(),
+            gas_price: U256::from(gas_price.unwrap_or_default()),
+            gas_limit: U256::from(gas.unwrap_or_default()),
             kind: to.unwrap_or_default(),
             value: value.unwrap_or_default(),
-            input: other.get_deserialized::<Bytes>("seismicInput")?.ok()?,
-            chain_id: 0,
+            chain_id: other.get_deserialized::<u64>("chainId")?.unwrap_or_default(),
+            input: other.get_deserialized::<SeismicInput<T>>("seismicInput")?.ok()?,
         }));
     }
     match (
@@ -190,19 +205,19 @@ pub enum TypedTransactionRequest<T> {
 /// This is a helper that carries the `impersonated` sender so that the right hash
 /// [TypedTransaction::impersonated_hash] can be created.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct MaybeImpersonatedTransaction {
-    pub transaction: TypedTransaction,
+pub struct MaybeImpersonatedTransaction<T> {
+    pub transaction: TypedTransaction<T>,
     pub impersonated_sender: Option<Address>,
 }
 
-impl MaybeImpersonatedTransaction {
+impl<T> MaybeImpersonatedTransaction<T> {
     /// Creates a new wrapper for the given transaction
-    pub fn new(transaction: TypedTransaction) -> Self {
+    pub fn new(transaction: TypedTransaction<T>) -> Self {
         Self { transaction, impersonated_sender: None }
     }
 
     /// Creates a new impersonated transaction wrapper using the given sender
-    pub fn impersonated(transaction: TypedTransaction, impersonated_sender: Address) -> Self {
+    pub fn impersonated(transaction: TypedTransaction<T>, impersonated_sender: Address) -> Self {
         Self { transaction, impersonated_sender: Some(impersonated_sender) }
     }
 
@@ -240,14 +255,18 @@ impl MaybeImpersonatedTransaction {
     }
 }
 
-impl Encodable for MaybeImpersonatedTransaction {
+impl<T> Encodable for MaybeImpersonatedTransaction<T> 
+where T: SeismicCompatible
+{
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         self.transaction.encode(out)
     }
 }
 
-impl From<MaybeImpersonatedTransaction> for TypedTransaction {
-    fn from(value: MaybeImpersonatedTransaction) -> Self {
+impl<T> From<MaybeImpersonatedTransaction<T>> for TypedTransaction<T> 
+where T: Encryptable
+{
+    fn from(value: MaybeImpersonatedTransaction<T>) -> Self {
         value.transaction
     }
 }
@@ -453,20 +472,22 @@ pub fn to_alloy_transaction_with_hash_and_sender(
 
 /// Queued transaction
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PendingTransaction {
+pub struct PendingTransaction<T> {
     /// The actual transaction
-    pub transaction: MaybeImpersonatedTransaction,
+    pub transaction: MaybeImpersonatedTransaction<T>,
     /// the recovered sender of this transaction
     sender: Address,
     /// hash of `transaction`, so it can easily be reused with encoding and hashing agan
     hash: TxHash,
+    /// Phantom marker for the generic type T
+    _phantom: std::marker::PhantomData<T>,
 }
 
-impl PendingTransaction {
-    pub fn new(transaction: TypedTransaction) -> Result<Self, alloy_primitives::SignatureError> {
+impl<T> PendingTransaction<T> {
+    pub fn new(transaction: TypedTransaction<T>) -> Result<Self, alloy_primitives::SignatureError> {
         let sender = transaction.recover()?;
         let hash = transaction.hash();
-        Ok(Self { transaction: MaybeImpersonatedTransaction::new(transaction), sender, hash })
+        Ok(Self { transaction: MaybeImpersonatedTransaction::new(transaction), sender, hash, _phantom: PhantomData::<T> })
     }
 
     #[cfg(feature = "impersonated-tx")]
@@ -671,7 +692,7 @@ impl PendingTransaction {
 
 /// Container type for signed, typed transactions.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum TypedTransaction {
+pub enum TypedTransaction<T> {
     /// Legacy transaction type
     Legacy(Signed<TxLegacy>),
     /// EIP-2930 transaction
@@ -684,6 +705,8 @@ pub enum TypedTransaction {
     EIP7702(Signed<TxEip7702>),
     /// op-stack deposit transaction
     Deposit(DepositTransaction),
+    /// Seismic transaction
+    Seismic(Signed<SeismicTransaction<T>>),
 }
 
 /// This is a function that demotes TypedTransaction to TransactionRequest for greater flexibility
@@ -691,10 +714,12 @@ pub enum TypedTransaction {
 ///
 /// This function is purely for convience and specific use cases, e.g. RLP encoded transactions
 /// decode to TypedTransactions where the API over TypedTransctions is quite strict.
-impl TryFrom<TypedTransaction> for TransactionRequest {
+impl<T> TryFrom<TypedTransaction<T>> for TransactionRequest
+where T: SeismicCompatible
+{
     type Error = ConversionError;
 
-    fn try_from(value: TypedTransaction) -> Result<Self, Self::Error> {
+    fn try_from(value: TypedTransaction<T>) -> Result<Self, Self::Error> {
         let from = value.recover().map_err(|_| ConversionError::InvalidSignature)?;
         let essentials = value.essentials();
         let tx_type = value.r#type();
@@ -716,7 +741,9 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
     }
 }
 
-impl TypedTransaction {
+impl<T> TypedTransaction<T>
+where T: SeismicCompatible
+{
     /// Returns true if the transaction uses dynamic fees: EIP1559 or EIP4844
     pub fn is_dynamic_fee(&self) -> bool {
         matches!(self, Self::EIP1559(_) | Self::EIP4844(_) | Self::EIP7702(_))
@@ -730,6 +757,7 @@ impl TypedTransaction {
             Self::EIP4844(tx) => tx.tx().tx().max_fee_per_gas,
             Self::EIP7702(tx) => tx.tx().max_fee_per_gas,
             Self::Deposit(_) => 0,
+            Self::Seismic(req) => u128::try_from(req.tx().tx.gas_price).unwrap(),
         }
     }
 
@@ -752,6 +780,7 @@ impl TypedTransaction {
             Self::EIP4844(tx) => tx.tx().tx().value,
             Self::EIP7702(tx) => tx.tx().value,
             Self::Deposit(tx) => tx.value,
+            Self::Seismic(tx) => tx.tx().tx.value,
         })
     }
 
@@ -763,6 +792,7 @@ impl TypedTransaction {
             Self::EIP4844(tx) => &tx.tx().tx().input,
             Self::EIP7702(tx) => &tx.tx().input,
             Self::Deposit(tx) => &tx.input,
+            Self::Seismic(tx) => &tx.tx().tx.input,
         }
     }
 
@@ -775,6 +805,7 @@ impl TypedTransaction {
             Self::EIP4844(_) => Some(3),
             Self::EIP7702(_) => Some(4),
             Self::Deposit(_) => Some(0x7E),
+            Self::Seismic(_) => Some(0x4A),
         }
     }
 
@@ -1139,7 +1170,7 @@ impl TryFrom<RpcTransaction> for TypedTransaction {
     }
 }
 
-impl Encodable for TypedTransaction {
+impl <T> Encodable for TypedTransaction<T> where T: SeismicCompatible {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         if !self.is_legacy() {
             Header { list: false, payload_length: self.encode_2718_len() }.encode(out);
@@ -1170,7 +1201,9 @@ impl Decodable for TypedTransaction {
     }
 }
 
-impl Encodable2718 for TypedTransaction {
+impl<T> Encodable2718 for TypedTransaction<T>
+where T: SeismicCompatible
+{
     fn type_flag(&self) -> Option<u8> {
         self.r#type()
     }
@@ -1185,6 +1218,8 @@ impl Encodable2718 for TypedTransaction {
                 let payload_length = tx.tx().fields_len() + tx.signature().rlp_vrs_len();
                 Header { list: true, payload_length }.length() + payload_length + 1
             }
+             // under the hood, encode_2718_len(), if not a legacy transaction, is r.length()+1
+            Self::Seismic(tx) => encode_2718_len(tx),
             Self::Deposit(tx) => 1 + tx.length(),
         }
     }
@@ -1199,15 +1234,19 @@ impl Encodable2718 for TypedTransaction {
             Self::Deposit(tx) => {
                 tx.encode_2718(out);
             }
+            Self::Seismic(tx) => encode_2718_seismic_transaction(tx, out),
         }
     }
 }
 
-impl Decodable2718 for TypedTransaction {
+impl<T> Decodable2718 for TypedTransaction<T>
+where T: SeismicCompatible
+{
     fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, Eip2718Error> {
         match ty {
             0x04 => return Ok(Self::EIP7702(TxEip7702::decode_signed_fields(buf)?)),
             0x7E => return Ok(Self::Deposit(DepositTransaction::decode(buf)?)),
+            0x4A => return Ok(Self::Seismic(decode_signed_seismic_fields(buf)?)),
             _ => {}
         }
         match TxEnvelope::typed_decode(ty, buf)? {
@@ -1226,7 +1265,9 @@ impl Decodable2718 for TypedTransaction {
     }
 }
 
-impl From<TxEnvelope> for TypedTransaction {
+impl<T> From<TxEnvelope> for TypedTransaction<T>
+where T: SeismicCompatible
+{
     fn from(value: TxEnvelope) -> Self {
         match value {
             TxEnvelope::Legacy(tx) => Self::Legacy(tx),

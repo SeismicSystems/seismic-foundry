@@ -2879,8 +2879,8 @@ fn ensure_return_ok(exit: InstructionResult, out: &Option<Output>) -> Result<Byt
 }
 
 /// Determines the minimum gas needed for a transaction depending on the transaction kind.
-fn determine_base_gas_by_kind(request: &WithOtherFields<TransactionRequest>) -> u128 {
-    match transaction_request_to_typed(request.clone()) {
+fn determine_base_gas_by_kind<T>(request: &WithOtherFields<TransactionRequest>) -> u128 {
+    match transaction_request_to_typed::<T>(request.clone()) {
         Some(request) => match request {
             TypedTransactionRequest::Legacy(req) => match req.to {
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,
@@ -2896,6 +2896,10 @@ fn determine_base_gas_by_kind(request: &WithOtherFields<TransactionRequest>) -> 
             },
             TypedTransactionRequest::EIP4844(_) => MIN_TRANSACTION_GAS,
             TypedTransactionRequest::Deposit(req) => match req.kind {
+                TxKind::Call(_) => MIN_TRANSACTION_GAS,
+                TxKind::Create => MIN_CREATE_GAS,
+            },
+            TypedTransactionRequest::Seismic(req) => match req.kind {
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,
                 TxKind::Create => MIN_CREATE_GAS,
             },

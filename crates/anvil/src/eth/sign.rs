@@ -37,9 +37,9 @@ pub trait Signer: Send + Sync {
     async fn sign_hash(&self, address: Address, hash: B256) -> Result<Signature, BlockchainError>;
 
     /// signs a transaction request using the given account in request
-    fn sign_transaction(
+    fn sign_transaction<T>(
         &self,
-        request: TypedTransactionRequest,
+        request: TypedTransactionRequest<T>,
         address: &Address,
     ) -> Result<Signature, BlockchainError>;
 }
@@ -116,8 +116,8 @@ impl Signer for DevSigner {
 /// # Errors
 ///
 /// This will fail if the `signature` contains an erroneous recovery id.
-pub fn build_typed_transaction(
-    request: TypedTransactionRequest,
+pub fn build_typed_transaction<T>(
+    request: TypedTransactionRequest<T>,
     signature: Signature,
 ) -> Result<TypedTransaction, BlockchainError> {
     let tx = match request {
@@ -154,6 +154,9 @@ pub fn build_typed_transaction(
                 is_system_tx,
                 nonce: 0,
             })
+        }
+        TypedTransactionRequest::Seismic(tx) => {
+            TypedTransaction::Seismic(tx.into_signed(signature))
         }
     };
 
