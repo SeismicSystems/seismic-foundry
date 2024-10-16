@@ -195,13 +195,16 @@ alloy-transport-ipc = { version = "0.3.6", default-features = false }
 alloy-transport-ws = { version = "0.3.6", default-features = false }
 
 ## alloy-core
-alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143",  features = ["seismic", "std"] }
-alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143",  features = ["seismic"] }
-alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143", features = ["getrandom", "rand", "seismic"] }
-alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143", features = ["seismic"] }
-alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143", features = ["seismic"] }
-alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143", features = ["seismic"] }
-syn-solidity = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143", features = ["seismic"] }
+alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34",  features = ["seismic", "std"] }
+alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34",  features = ["seismic"] }
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34", features = ["getrandom", "rand", "seismic"] }
+alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34", features = ["seismic"] }
+alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34", features = ["seismic"] }
+alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34", features = ["seismic"] }
+syn-solidity = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34", features = ["seismic"] }
+
+# seismic-transaction
+seismic-transaction = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34"}
 
 alloy-chains = "0.1"
 alloy-rlp = "0.3"
@@ -276,14 +279,16 @@ comfy-table = "7"
 revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "647e76f4" }
 revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "647e76f4" }
 
+
 foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "0d2a25e" }
 
+
 # seismic-alloy-core
-alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143" }
-alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143" }
-alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143" }
-alloy-sol-macro = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143" }
-alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143" }
-alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143" }
-alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143" }
-alloy-sol-type-parser = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "819f143" }
+alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34" }
+alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34" }
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34" }
+alloy-sol-macro = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34" }
+alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34" }
+alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34" }
+alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34" }
+alloy-sol-type-parser = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "cd48f34" }

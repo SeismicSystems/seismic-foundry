@@ -27,6 +27,7 @@ use revm::{
 };
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, Mul};
+use seismic_transaction::transaction::SeismicTransactionRequest;
 
 pub mod optimism;
 
@@ -70,7 +71,18 @@ pub fn transaction_request_to_typed(
             input: input.into_input().unwrap_or_default(),
         }));
     }
-
+    else if transaction_type == Some(0x4A) || has_seismic_fields(&other) {
+        return Some(TypedTransactionRequest::Seismic(SeismicTransactionRequest {
+            from: from.unwrap_or_default(),
+            nonce: nonce.unwrap_or_default(),
+            gas_price: gas_price.unwrap_or_default(),
+            gas_limit: gas.unwrap_or_default(),
+            kind: to.unwrap_or_default(),
+            value: value.unwrap_or_default(),
+            input: other.get_deserialized::<Bytes>("seismicInput")?.ok()?,
+            chain_id: 0,
+        }));
+    }
     match (
         transaction_type,
         gas_price,
@@ -159,13 +171,18 @@ fn has_optimism_fields(other: &OtherFields) -> bool {
         other.contains_key("isSystemTx")
 }
 
+fn has_seismic_fields(other: &OtherFields) -> bool {
+    other.contains_key("seismicInput")
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TypedTransactionRequest {
+pub enum TypedTransactionRequest<T> {
     Legacy(TxLegacy),
     EIP2930(TxEip2930),
     EIP1559(TxEip1559),
     EIP4844(TxEip4844Variant),
     Deposit(DepositTransactionRequest),
+    Seismic(SeismicTransactionRequest<T>),
 }
 
 /// A wrapper for [TypedTransaction] that allows impersonating accounts.
