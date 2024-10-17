@@ -2744,6 +2744,10 @@ impl EthApi {
                 m.gas_limit = gas_limit;
                 TypedTransactionRequest::Deposit(m)
             }
+            Some(TypedTransactionRequest::Seismic(mut m)) => {
+                m.gas_limit = U256::from(gas_limit);
+                TypedTransactionRequest::Seismic(m)
+            }
             None => return Err(BlockchainError::FailedToDecodeTransaction),
         };
         Ok(request)
@@ -2767,7 +2771,8 @@ impl EthApi {
             TypedTransactionRequest::EIP2930(_) |
             TypedTransactionRequest::EIP1559(_) |
             TypedTransactionRequest::EIP4844(_) |
-            TypedTransactionRequest::Deposit(_) => Signature::from_scalars_and_parity(
+            TypedTransactionRequest::Deposit(_) |
+            TypedTransactionRequest::Seismic(_) => Signature::from_scalars_and_parity(
                 B256::with_last_byte(1),
                 B256::with_last_byte(1),
                 Parity::Parity(false),
@@ -2844,6 +2849,7 @@ impl EthApi {
             TypedTransaction::EIP7702(_) => self.backend.ensure_eip7702_active(),
             TypedTransaction::Deposit(_) => self.backend.ensure_op_deposits_active(),
             TypedTransaction::Legacy(_) => Ok(()),
+            TypedTransaction::Seismic(_) => Ok(()),
         }
     }
 }
@@ -2879,8 +2885,8 @@ fn ensure_return_ok(exit: InstructionResult, out: &Option<Output>) -> Result<Byt
 }
 
 /// Determines the minimum gas needed for a transaction depending on the transaction kind.
-fn determine_base_gas_by_kind<T>(request: &WithOtherFields<TransactionRequest>) -> u128 {
-    match transaction_request_to_typed::<T>(request.clone()) {
+fn determine_base_gas_by_kind(request: &WithOtherFields<TransactionRequest>) -> u128 {
+    match transaction_request_to_typed(request.clone()) {
         Some(request) => match request {
             TypedTransactionRequest::Legacy(req) => match req.to {
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,

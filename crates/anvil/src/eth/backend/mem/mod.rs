@@ -2208,6 +2208,7 @@ impl Backend {
                 .unwrap_or_else(|| self.base_fee())
                 .saturating_add(t.tx().max_priority_fee_per_gas),
             TypedTransaction::Deposit(_) => 0_u128,
+            TypedTransaction::Seismic(_) => 0_u128,
         };
 
         let receipts = self.get_receipts(block.transactions.iter().map(|tx| tx.hash()));
@@ -2247,6 +2248,7 @@ impl Backend {
                 deposit_nonce: r.deposit_nonce,
                 deposit_receipt_version: r.deposit_receipt_version,
             }),
+            TypedReceipt::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         };
 
         let inner = TransactionReceipt {

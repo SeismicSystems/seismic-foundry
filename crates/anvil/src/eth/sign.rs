@@ -9,6 +9,7 @@ use anvil_core::eth::transaction::{
     optimism::{DepositTransaction, DepositTransactionRequest},
     TypedTransaction, TypedTransactionRequest,
 };
+use seismic_transaction::transaction::{SeismicTransaction, SeismicTransactionRequest};
 use std::collections::HashMap;
 
 /// A transaction signer
@@ -37,9 +38,9 @@ pub trait Signer: Send + Sync {
     async fn sign_hash(&self, address: Address, hash: B256) -> Result<Signature, BlockchainError>;
 
     /// signs a transaction request using the given account in request
-    fn sign_transaction<T>(
+    fn sign_transaction(
         &self,
-        request: TypedTransactionRequest<T>,
+        request: TypedTransactionRequest,
         address: &Address,
     ) -> Result<Signature, BlockchainError>;
 }
@@ -107,6 +108,7 @@ impl Signer for DevSigner {
             TypedTransactionRequest::EIP1559(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
             TypedTransactionRequest::EIP4844(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
             TypedTransactionRequest::Deposit(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
+            TypedTransactionRequest::Seismic(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
         }
     }
 }
@@ -116,8 +118,8 @@ impl Signer for DevSigner {
 /// # Errors
 ///
 /// This will fail if the `signature` contains an erroneous recovery id.
-pub fn build_typed_transaction<T>(
-    request: TypedTransactionRequest<T>,
+pub fn build_typed_transaction(
+    request: TypedTransactionRequest,
     signature: Signature,
 ) -> Result<TypedTransaction, BlockchainError> {
     let tx = match request {
@@ -156,7 +158,18 @@ pub fn build_typed_transaction<T>(
             })
         }
         TypedTransactionRequest::Seismic(tx) => {
-            TypedTransaction::Seismic(tx.into_signed(signature))
+            let SeismicTransactionRequest {
+                nonce,
+                chain_id,
+                gas_price,
+                gas_limit,
+                kind,
+                value,
+                seismic_input,
+                ..
+            } = &tx;
+            let seismic_tx = SeismicTransaction { tx: tx.clone() };
+            TypedTransaction::Seismic(seismic_tx.into_signed(signature))
         }
     };
 
