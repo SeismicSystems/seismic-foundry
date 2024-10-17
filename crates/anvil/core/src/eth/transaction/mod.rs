@@ -26,7 +26,7 @@ use revm::{
     primitives::{OptimismFields, TxEnv},
 };
 use serde::{Deserialize, Serialize};
-use std::ops::{Deref, Mul};
+use std::{hash::Hash, ops::{Deref, Mul}};
 use seismic_transaction::{encoding_decoding::{encode_2718_len, encode_2718_seismic_transaction}, seismic_util::Encryptable, transaction::{SeismicTransaction, SeismicTransactionRequest}, types::SeismicInput};
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -43,6 +43,7 @@ pub trait SeismicCompatible: Encryptable
     + 'static
     + Serialize
     + for<'de> Deserialize<'de>
+    + Hash
 {
 }
 
@@ -94,8 +95,9 @@ where T: SeismicCompatible {
             gas_limit: U256::from(gas.unwrap_or_default()),
             kind: to.unwrap_or_default(),
             value: value.unwrap_or_default(),
-            chain_id: other.get_deserialized::<u64>("chainId")?.unwrap_or_default(),
-            input: other.get_deserialized::<SeismicInput<T>>("seismicInput")?.ok()?,
+            chain_id: 0,
+            input: input.into_input().unwrap_or_default(),
+            seismic_input: other.get_deserialized::<SeismicInput<T>>("seismicInput")?.ok()?,
         }));
     }
     match (
@@ -191,13 +193,13 @@ fn has_seismic_fields(other: &OtherFields) -> bool {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TypedTransactionRequest<T> {
+pub enum TypedTransactionRequest {
     Legacy(TxLegacy),
     EIP2930(TxEip2930),
     EIP1559(TxEip1559),
     EIP4844(TxEip4844Variant),
     Deposit(DepositTransactionRequest),
-    Seismic(SeismicTransactionRequest<T>),
+    Seismic(SeismicTransactionRequest),
 }
 
 /// A wrapper for [TypedTransaction] that allows impersonating accounts.
@@ -271,42 +273,52 @@ where T: Encryptable
     }
 }
 
-impl From<TypedTransaction> for MaybeImpersonatedTransaction {
-    fn from(value: TypedTransaction) -> Self {
+impl<T> From<TypedTransaction<T>> for MaybeImpersonatedTransaction<T>
+where T: SeismicCompatible
+{
+    fn from(value: TypedTransaction<T>) -> Self {
         Self::new(value)
     }
 }
 
-impl Decodable for MaybeImpersonatedTransaction {
+impl<T> Decodable for MaybeImpersonatedTransaction<T>
+where T: SeismicCompatible
+{
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         TypedTransaction::decode(buf).map(Self::new)
     }
 }
 
-impl AsRef<TypedTransaction> for MaybeImpersonatedTransaction {
-    fn as_ref(&self) -> &TypedTransaction {
+impl<T> AsRef<TypedTransaction<T>> for MaybeImpersonatedTransaction<T>
+where T: SeismicCompatible
+{
+    fn as_ref(&self) -> &TypedTransaction<T> {
         &self.transaction
     }
 }
 
-impl Deref for MaybeImpersonatedTransaction {
-    type Target = TypedTransaction;
+impl<T> Deref for MaybeImpersonatedTransaction<T>
+where T: SeismicCompatible
+{
+    type Target = TypedTransaction<T>;
 
     fn deref(&self) -> &Self::Target {
         &self.transaction
     }
 }
 
-impl From<MaybeImpersonatedTransaction> for RpcTransaction {
-    fn from(value: MaybeImpersonatedTransaction) -> Self {
+impl<T> From<MaybeImpersonatedTransaction<T>> for RpcTransaction
+where T: SeismicCompatible
+{
+    fn from(value: MaybeImpersonatedTransaction<T>) -> Self {
         let hash = value.hash();
         let sender = value.recover().unwrap_or_default();
         to_alloy_transaction_with_hash_and_sender(value.transaction, hash, sender)
     }
 }
 
-pub fn to_alloy_transaction_with_hash_and_sender(
-    transaction: TypedTransaction,
+pub fn to_alloy_transaction_with_hash_and_sender<T>(
+    transaction: TypedTransaction<T>,
     hash: B256,
     from: Address,
 ) -> RpcTransaction {
@@ -769,6 +781,7 @@ where T: SeismicCompatible
             Self::EIP4844(tx) => tx.tx().tx().gas_limit,
             Self::EIP7702(tx) => tx.tx().gas_limit,
             Self::Deposit(tx) => tx.gas_limit,
+            Self::Seismic(tx) => u128::try_from(tx.tx().tx.gas_limit).unwrap(),
         }
     }
 
@@ -926,6 +939,7 @@ where T: SeismicCompatible
                 chain_id: t.chain_id(),
                 access_list: Default::default(),
             },
+            Self::Seismic
         }
     }
 
