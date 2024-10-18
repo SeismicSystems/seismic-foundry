@@ -40,6 +40,7 @@ use std::{
 };
 
 pub mod optimism;
+pub mod seismic;
 
 pub trait SeismicCompatible:
     Encryptable
