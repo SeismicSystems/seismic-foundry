@@ -14,6 +14,7 @@ mod otterscan;
 mod proof;
 mod pubsub;
 mod revert;
+mod seismic;
 mod sign;
 mod state;
 mod traces;
@@ -21,7 +22,6 @@ mod transaction;
 mod txpool;
 pub mod utils;
 mod wsapi;
-mod seismic;
 
 #[allow(unused)]
 pub(crate) fn init_tracing() {

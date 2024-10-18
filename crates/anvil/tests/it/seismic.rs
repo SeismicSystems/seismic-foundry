@@ -1,10 +1,14 @@
-use seismic_transaction::{seismic_util::{decrypt, encrypt}, types::SeismicTransactionFields};
+use crate::utils::http_provider_with_signer;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{hex, keccak256, Address, Bytes, B256, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::{OtherFields, WithOtherFields};
 use anvil::{spawn, NodeConfig};
+use seismic_transaction::{
+    seismic_util::{decrypt, encrypt},
+    types::SeismicTransactionFields,
+};
 use std::fs;
 
 // common utils
@@ -35,12 +39,14 @@ pub fn get_input_data(selector: &str, value: B256) -> Bytes {
     input_data.into()
 }
 
-
-
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_transaction() {
     let (api, handle) = spawn(NodeConfig::test()).await;
-    let provider = handle.http_provider();
+    let provider = http_provider_with_signer(
+        &handle.http_endpoint(),
+        handle.dev_wallets().next().unwrap().into(),
+    );
+
     let deployer = handle.dev_accounts().next().unwrap();
     let bytecode = load_bytecode_from_file(TEST_BYTECODE_PATH);
 
@@ -53,7 +59,7 @@ async fn test_seismic_transaction() {
     api.evm_mine(None).await.unwrap();
 
     let receipt =
-    provider.get_transaction_receipt(pending.tx_hash().to_owned()).await.unwrap().unwrap();
+        provider.get_transaction_receipt(pending.tx_hash().to_owned()).await.unwrap().unwrap();
     assert!(receipt.contract_address.is_some());
 
     let accounts: Vec<_> = handle.dev_wallets().collect();
@@ -62,66 +68,71 @@ async fn test_seismic_transaction() {
 
     let to = receipt.contract_address.unwrap();
 
-    let set_data = encrypt::<Bytes>(&get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))), 0).unwrap();
+    let set_data =
+        encrypt::<Bytes>(&get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))), 0)
+            .unwrap();
 
     let tx = TransactionRequest::default()
-    .with_from(from)
-    .with_to(to)
-    .with_nonce(0)
-    .with_gas_limit(210000);
+        .with_from(from)
+        .with_to(to)
+        .with_nonce(1)
+        .with_gas_limit(210000)
+        .with_chain_id(31337);
 
     let seismic_tx = WithOtherFields {
         inner: tx,
-        other:SeismicTransactionFields {
-            seismic_input: set_data,
-        }
-        .into()
+        other: SeismicTransactionFields { seismic_input: set_data.into() }.into(),
     };
 
     let pending_set = provider.send_transaction(seismic_tx).await.unwrap();
 
     api.evm_mine(None).await.unwrap();
 
-    let receipt = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
+    let receipt: Option<
+        WithOtherFields<
+            alloy_rpc_types::TransactionReceipt<
+                alloy_consensus::AnyReceiptEnvelope<alloy_rpc_types::Log>,
+            >,
+        >,
+    > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
-    let increment_data = encrypt::<Bytes>(&get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))), 0).unwrap();
+    let increment_data =
+        encrypt::<Bytes>(&get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))), 0)
+            .unwrap();
 
     let tx = TransactionRequest::default()
-    .with_from(from)
-    .with_to(to)
-    .with_nonce(1)
-    .with_gas_limit(210000);
+        .with_from(from)
+        .with_to(to)
+        .with_nonce(2)
+        .with_gas_limit(210000)
+        .with_chain_id(31337);
 
     let seismic_tx = WithOtherFields {
         inner: tx,
-        other: SeismicTransactionFields {
-            seismic_input: increment_data,
-        }
-        .into()
+        other: SeismicTransactionFields { seismic_input: increment_data.into() }.into(),
     };
 
     let pending_increment = provider.send_transaction(seismic_tx).await.unwrap();
 
     api.evm_mine(None).await.unwrap();
 
-    let receipt = provider.get_transaction_receipt(pending_increment.tx_hash().to_owned()).await.unwrap();
+    let receipt =
+        provider.get_transaction_receipt(pending_increment.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
     let get_data = encrypt::<Bytes>(&hex::decode(GET_NUMBER_SELECTOR).unwrap().into(), 0).unwrap();
 
     let tx = TransactionRequest::default()
-    .with_from(from)
-    .with_to(to)
-    .with_nonce(2)
-    .with_gas_limit(210000);
+        .with_from(from)
+        .with_to(to)
+        .with_nonce(3)
+        .with_gas_limit(210000)
+        .with_chain_id(31337);
 
     let seismic_tx = WithOtherFields {
         inner: tx,
-        other: SeismicTransactionFields {
-            seismic_input: get_data,
-        }
-        .into()
+        other: SeismicTransactionFields { seismic_input: get_data.into() }.into(),
     };
 
     let pending_get = provider.send_transaction(seismic_tx).await.unwrap();
@@ -130,7 +141,4 @@ async fn test_seismic_transaction() {
 
     let receipt = provider.get_transaction_receipt(pending_get.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
-
-    
-    
 }

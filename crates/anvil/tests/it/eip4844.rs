@@ -1,7 +1,7 @@
 use crate::utils::http_provider;
 use alloy_consensus::{SidecarBuilder, SimpleCoder};
 use alloy_eips::eip4844::{DATA_GAS_PER_BLOB, MAX_DATA_GAS_PER_BLOCK};
-use alloy_network::TransactionBuilder;
+use alloy_network::{TransactionBuilder, TransactionBuilder4844};
 use alloy_primitives::U256;
 use alloy_provider::Provider;
 use alloy_rpc_types::{BlockId, TransactionRequest};
@@ -72,6 +72,7 @@ async fn can_send_multiple_blobs_in_one_tx() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar);
+
     let mut tx = WithOtherFields::new(tx);
 
     tx.populate_blob_hashes();

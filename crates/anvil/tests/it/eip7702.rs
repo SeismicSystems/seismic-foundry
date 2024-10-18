@@ -57,7 +57,7 @@ async fn can_send_eip7702_tx() {
         max_priority_fee_per_gas: eip1559_est.max_priority_fee_per_gas,
         gas_limit: 100000,
         chain_id: 31337,
-        to: TxKind::Call(from),
+        to: from,
         input: bytes!("11112222"),
         authorization_list: vec![authorization],
         ..Default::default()

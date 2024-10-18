@@ -40,7 +40,6 @@ use std::{
 };
 
 pub mod optimism;
-pub mod seismic;
 
 pub trait SeismicCompatible:
     Encryptable
@@ -79,6 +78,7 @@ pub fn transaction_request_to_typed(
                 access_list,
                 sidecar,
                 transaction_type,
+                chain_id,
                 ..
             },
         other,
