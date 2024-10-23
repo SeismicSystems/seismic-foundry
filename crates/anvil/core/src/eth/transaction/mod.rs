@@ -11,7 +11,7 @@ use alloy_consensus::{
 };
 use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Encodable2718};
 use alloy_primitives::{
-    Address, Bloom, Bytes, Log, Parity, Signature, TxHash, TxKind, B256, U256, U64,
+    Address, Bloom, Bytes, Log, Parity, Signature, TxHash, TxKind, B256, U256, U64, hex,
 };
 use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
 use alloy_rpc_types::{
@@ -61,6 +61,7 @@ pub trait SeismicCompatible:
 pub fn transaction_request_to_typed(
     tx: WithOtherFields<TransactionRequest>,
 ) -> Option<TypedTransactionRequest> {
+    println!("yo reached here");
     let WithOtherFields::<TransactionRequest> {
         inner:
             TransactionRequest {
@@ -83,6 +84,7 @@ pub fn transaction_request_to_typed(
             },
         other,
     } = tx;
+    println!("other: {:?}", other);
 
     // Special case: OP-stack deposit tx
     if transaction_type == Some(0x7E) || has_optimism_fields(&other) {
@@ -729,6 +731,7 @@ impl PendingTransaction {
                 // decrypt seismic input
                 let seismic_input_decrypted =
                     decrypt::<Bytes>(&seismic_input.to_vec().clone(), *nonce).unwrap();
+                println!("seismic_input_decrypted: 0x{}", hex::encode(&seismic_input_decrypted));
                 TxEnv {
                     caller,
                     transact_to: transact_to(&kind),

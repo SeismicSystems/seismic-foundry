@@ -974,6 +974,7 @@ impl EthApi {
         }
         // until this point, the backend isn't aware of what type the request
         let request = self.build_typed_tx_request(request, nonce)?;
+        println!("request: {:?}", request);
 
         // if the sender is currently impersonated we need to "bypass" signing
         let pending_transaction = if self.is_impersonated(from) {
@@ -2746,6 +2747,10 @@ impl EthApi {
             }
             Some(TypedTransactionRequest::Seismic(mut m)) => {
                 m.gas_limit = U256::from(gas_limit);
+                if gas_price.is_none() {
+                    m.gas_price = U256::from(self.gas_price());
+                }
+                m.chain_id = chain_id;
                 TypedTransactionRequest::Seismic(m)
             }
             None => return Err(BlockchainError::FailedToDecodeTransaction),

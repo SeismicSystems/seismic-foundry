@@ -938,7 +938,7 @@ impl Backend {
     ) -> MinedBlockOutcome {
         let _mining_guard = self.mining.lock().await;
         trace!(target: "backend", "creating new block with {} transactions", pool_transactions.len());
-
+        println!("pool_transactions: {:?}", pool_transactions);
         let (outcome, header, block_hash) = {
             let current_base_fee = self.base_fee();
             let current_excess_blob_gas_and_price = self.excess_blob_gas_and_price();
@@ -990,6 +990,8 @@ impl Backend {
                     precompile_factory: self.precompile_factory.clone(),
                 };
                 let executed_tx = executor.execute();
+
+                println!("executed_tx: {:?}", executed_tx);
 
                 // we also need to update the new blockhash in the db itself
                 let block_hash = executed_tx.block.block.header.hash_slow();

@@ -115,6 +115,7 @@ pub struct TransactionExecutor<'a, Db: ?Sized, Validator: TransactionValidator> 
 impl<'a, DB: Db + ?Sized, Validator: TransactionValidator> TransactionExecutor<'a, DB, Validator> {
     /// Executes all transactions and puts them in a new block with the provided `timestamp`
     pub fn execute(mut self) -> ExecutedTransactions {
+        println!("executing transactions");
         let mut transactions = Vec::new();
         let mut transaction_infos = Vec::new();
         let mut receipts = Vec::new();
@@ -238,6 +239,7 @@ impl<'a, DB: Db + ?Sized, Validator: TransactionValidator> TransactionExecutor<'
     }
 
     fn env_for(&self, tx: &PendingTransaction) -> EnvWithHandlerCfg {
+        println!("env_for: {:?}", tx);
         let mut tx_env = tx.to_revm_tx_env();
         if self.cfg_env.handler_cfg.is_optimism {
             tx_env.optimism.enveloped_tx =

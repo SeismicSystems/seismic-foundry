@@ -42,12 +42,9 @@ pub fn get_input_data(selector: &str, value: B256) -> Bytes {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_transaction() {
     let (api, handle) = spawn(NodeConfig::test()).await;
-    let provider = http_provider_with_signer(
-        &handle.http_endpoint(),
-        handle.dev_wallets().next().unwrap().into(),
-    );
-
+    let provider = handle.http_provider();
     let deployer = handle.dev_accounts().next().unwrap();
+
     let bytecode = load_bytecode_from_file(TEST_BYTECODE_PATH);
 
     let deploy_tx = TransactionRequest::default().from(deployer).with_deploy_code(bytecode.clone());
@@ -69,7 +66,7 @@ async fn test_seismic_transaction() {
     let to = receipt.contract_address.unwrap();
 
     let set_data =
-        encrypt::<Bytes>(&get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))), 0)
+        encrypt::<Bytes>(&get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))), 1)
             .unwrap();
 
     let tx = TransactionRequest::default()
@@ -98,7 +95,7 @@ async fn test_seismic_transaction() {
     assert!(receipt.is_some());
 
     let increment_data =
-        encrypt::<Bytes>(&get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))), 0)
+        encrypt::<Bytes>(&get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))), 2)
             .unwrap();
 
     let tx = TransactionRequest::default()
@@ -121,7 +118,7 @@ async fn test_seismic_transaction() {
         provider.get_transaction_receipt(pending_increment.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
-    let get_data = encrypt::<Bytes>(&hex::decode(GET_NUMBER_SELECTOR).unwrap().into(), 0).unwrap();
+    let get_data = encrypt::<Bytes>(&hex::decode(GET_NUMBER_SELECTOR).unwrap().into(), 3).unwrap();
 
     let tx = TransactionRequest::default()
         .with_from(from)
