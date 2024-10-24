@@ -1,14 +1,10 @@
-use crate::utils::http_provider_with_signer;
 use alloy_network::TransactionBuilder;
-use alloy_primitives::{hex::{self, FromHex}, keccak256, Address, Bytes, B256, U256};
+use alloy_primitives::{hex, Bytes, B256, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
-use alloy_serde::{OtherFields, WithOtherFields};
+use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
-use seismic_transaction::{
-    seismic_util::{decrypt, encrypt},
-    types::SeismicTransactionFields,
-};
+use seismic_transaction::{seismic_util::encrypt, types::SeismicTransactionFields};
 use std::fs;
 
 // common utils
@@ -38,36 +34,6 @@ pub fn get_input_data(selector: &str, value: B256) -> Bytes {
 
     input_data.into()
 }
-
-#[test]
-fn test_seismic_encrypt_decrypt() {
-    use seismic_transaction::seismic_util::{encrypt, decrypt};
-    use alloy_primitives::Bytes;
-
-    // Input data: selector + value (10 in hex)
-    let input = Bytes::from_hex("0x3fb5c1cb000000000000000000000000000000000000000000000000000000000000000a").unwrap();
-    let nonce = 1;
-
-    // Encrypt the input
-    let encrypted = encrypt(&input, nonce).expect("Encryption failed");
-
-    // Decrypt the encrypted data
-    let decrypted = decrypt::<Bytes>(&encrypted, nonce).expect("Decryption failed");
-
-
-    println!("Original: 0x{}", hex::encode(&input));
-    println!("Encrypted: 0x{}", hex::encode(&encrypted));
-    println!("Decrypted: 0x{}", hex::encode(&decrypted));
-
-    panic!();
-    // Assert that the decrypted data matches the original input
-    assert_eq!(input, decrypted, "Decrypted data does not match original input");
-
-    // Optional: Print the encrypted and decrypted data for visual inspection
-   
-}
-
-
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_transaction() {

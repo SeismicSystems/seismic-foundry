@@ -974,7 +974,6 @@ impl EthApi {
         }
         // until this point, the backend isn't aware of what type the request
         let request = self.build_typed_tx_request(request, nonce)?;
-        println!("request: {:?}", request);
 
         // if the sender is currently impersonated we need to "bypass" signing
         let pending_transaction = if self.is_impersonated(from) {
@@ -2681,8 +2680,6 @@ impl EthApi {
         request: WithOtherFields<TransactionRequest>,
         nonce: u64,
     ) -> Result<TypedTransactionRequest> {
-        println!("reached here 1");
-        println!("request in here: {:?}", request);
         let chain_id = request.chain_id.unwrap_or_else(|| self.chain_id());
         let max_fee_per_gas = request.max_fee_per_gas;
         let max_fee_per_blob_gas = request.max_fee_per_blob_gas;

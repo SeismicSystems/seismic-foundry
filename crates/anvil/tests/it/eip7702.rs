@@ -1,7 +1,7 @@
 use crate::utils::http_provider;
 use alloy_consensus::{transaction::TxEip7702, SignableTransaction};
 use alloy_network::{ReceiptResponse, TransactionBuilder, TxSignerSync};
-use alloy_primitives::{bytes, TxKind, U256};
+use alloy_primitives::{bytes, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::{Authorization, TransactionRequest};
 use alloy_serde::WithOtherFields;

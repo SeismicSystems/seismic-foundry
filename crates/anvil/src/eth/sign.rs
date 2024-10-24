@@ -9,7 +9,7 @@ use anvil_core::eth::transaction::{
     optimism::{DepositTransaction, DepositTransactionRequest},
     TypedTransaction, TypedTransactionRequest,
 };
-use seismic_transaction::transaction::{SeismicTransaction, SeismicTransactionRequest};
+use seismic_transaction::transaction::SeismicTransaction;
 use std::collections::HashMap;
 
 /// A transaction signer
@@ -158,16 +158,6 @@ pub fn build_typed_transaction(
             })
         }
         TypedTransactionRequest::Seismic(tx) => {
-            let SeismicTransactionRequest {
-                nonce,
-                chain_id,
-                gas_price,
-                gas_limit,
-                kind,
-                value,
-                seismic_input,
-                ..
-            } = &tx;
             let seismic_tx = SeismicTransaction { tx: tx.clone() };
             TypedTransaction::Seismic(seismic_tx.into_signed(signature))
         }
