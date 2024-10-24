@@ -61,7 +61,7 @@ pub trait SeismicCompatible:
 pub fn transaction_request_to_typed(
     tx: WithOtherFields<TransactionRequest>,
 ) -> Option<TypedTransactionRequest> {
-    println!("yo reached here");
+    println!("eached here 2");
     let WithOtherFields::<TransactionRequest> {
         inner:
             TransactionRequest {
@@ -84,7 +84,7 @@ pub fn transaction_request_to_typed(
             },
         other,
     } = tx;
-    println!("other: {:?}", other);
+    
 
     // Special case: OP-stack deposit tx
     if transaction_type == Some(0x7E) || has_optimism_fields(&other) {
