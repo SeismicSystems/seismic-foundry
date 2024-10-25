@@ -44,6 +44,7 @@ jobs:
               ${{ secrets.ACTIONS_SREVM_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SREVMINSPECTORS_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SFOUNDRYFDB_SSH_ED25519 }}
+              ${{ secrets.ACTIONS_SRETH_SSH_ED25519 }}
       - name: sforge build
         run: cargo build --bin sforge
       - name: sanvil build
