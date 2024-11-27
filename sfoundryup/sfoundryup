@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
+SEISMIC_DIR=${SEISMIC_DIR:-"$BASE_DIR/.seismic"}
+SEISMIC_BIN_DIR="$SEISMIC_DIR/bin"
+SEISMIC_MAN_DIR="$SEISMIC_DIR/share/man/man1"
+
+SEISMICUP_JOBS=""
+BINS=(sforge scast sanvil schisel)
+
+export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
+
+main() {
+  need_cmd git
+  need_cmd curl
+  need_cmd jq
+
+  while [[ -n $1 ]]; do
+    case $1 in
+      --)               shift; break;;
+      -v|--version)     shift; SEISMICUP_VERSION=$1;;
+      -p|--path)        shift; SEISMICUP_LOCAL_REPO=$1;;
+      -j|--jobs)        shift; SEISMICUP_JOBS=$1;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        warn "unknown option: $1"
+        usage
+        exit 1
+    esac; shift
+  done
+
+  CARGO_BUILD_ARGS=(--release)
+
+  if [ -n "$SEISMICUP_JOBS" ]; then
+    CARGO_BUILD_ARGS+=(--jobs "$SEISMICUP_JOBS")
+  fi
+
+  # Print the banner after successfully parsing args
+  banner
+
+  install_ssolc
+
+  if [[ -n "$SEISMICUP_LOCAL_REPO" ]]; then
+    install_from_local_repo
+  else
+    install_from_remote_repo
+  fi
+}
+
+install_ssolc() {
+  say "Detecting system for ssolc installation..."
+
+  # Detect operating system
+  case "$(uname -s)" in
+    Darwin)
+      os="mac"
+      ;;
+    Linux)
+      os="linux"
+      ;;
+    *)
+      err "Unsupported OS: $(uname -s)"
+      ;;
+  esac
+
+  # Detect architecture
+  arch=$(uname -m)
+  case "$arch" in
+    x86_64)
+      arch="amd64"
+      ;;
+    arm64|aarch64)
+      arch="arm64"
+      ;;
+    *)
+      err "Unsupported architecture: $arch"
+      ;;
+  esac
+
+  # Fetch the latest release information from GitHub
+  say "Fetching the latest ssolc release for ${os}-${arch}..."
+  ssolc_url=$(curl -s https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/latest | \
+              jq -r --arg os "$os" --arg arch "$arch" \
+              '.assets[] | select(.name | test($os + ".*" + $arch)) | .browser_download_url')
+
+  if [[ -z "$ssolc_url" ]]; then
+    err "Failed to find a matching ssolc release for ${os}-${arch}."
+  fi
+
+  # Download and install ssolc
+  say "Downloading ssolc from $ssolc_url..."
+  ensure curl -L "$ssolc_url" -o /usr/local/bin/ssolc
+  chmod +x /usr/local/bin/ssolc
+
+  say "ssolc installed at /usr/local/bin/ssolc"
+}
+
+install_from_local_repo() {
+  need_cmd cargo
+  say "Installing from local repository at $SEISMICUP_LOCAL_REPO"
+
+  cd "$SEISMICUP_LOCAL_REPO"
+  ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
+
+  for bin in "${BINS[@]}"; do
+    rm -f "$SEISMIC_BIN_DIR/$bin"
+    ensure ln -s "$PWD/target/release/$bin" "$SEISMIC_BIN_DIR/$bin"
+  done
+
+  say "Done installing from local repository."
+  exit 0
+}
+
+install_from_remote_repo() {
+  SEISMICUP_REPO="SeismicSystems/seismic-foundry"
+  SEISMICUP_BRANCH="seismic"
+
+  need_cmd cargo
+  say "Installing Seismic Foundry from $SEISMICUP_REPO (branch: $SEISMICUP_BRANCH)..."
+
+  REPO_PATH="$SEISMIC_DIR/$SEISMICUP_REPO"
+
+  if [ ! -d "$REPO_PATH" ]; then
+    ensure mkdir -p "$(dirname "$REPO_PATH")"
+    cd "$(dirname "$REPO_PATH")"
+    say "Cloning the repository over SSH..."
+    ensure git clone "git@github.com:$SEISMICUP_REPO.git"
+  fi
+
+  cd "$REPO_PATH"
+  ensure git fetch origin "$SEISMICUP_BRANCH:remotes/origin/$SEISMICUP_BRANCH"
+  ensure git checkout "origin/$SEISMICUP_BRANCH"
+
+  ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
+  for bin in "${BINS[@]}"; do
+    for try_path in target/release/$bin target/release/$bin.exe; do
+      if [ -f "$try_path" ]; then
+        [ -e "$SEISMIC_BIN_DIR/$bin" ] && warn "Overwriting existing $bin in $SEISMIC_BIN_DIR"
+        mv -f "$try_path" "$SEISMIC_BIN_DIR"
+      fi
+    done
+  done
+
+  say "Seismic Foundry installation complete."
+}
+
+usage() {
+  cat 1>&2 <<EOF
+The installer for Seismic Foundry.
+
+Installs or updates ssolc, sforge, scast, sanvil, and schisel for Ethereum development.
+
+USAGE:
+    sfoundryup <OPTIONS>
+
+OPTIONS:
+    -h, --help      Print help information
+    -v, --version   Install a specific version from built binaries
+    -p, --path      Build and install a local repository
+    -j, --jobs      Number of CPUs to use for building (default: all CPUs)
+EOF
+}
+
+say() {
+  printf "sfoundryup: %s\n" "$1"
+}
+
+warn() {
+  say "warning: $1" >&2
+}
+
+err() {
+  say "$1" >&2
+  exit 1
+}
+
+need_cmd() {
+  if ! command -v "$1" &>/dev/null; then
+    err "Need '$1' (command not found)"
+  fi
+}
+
+ensure() {
+  if ! "$@"; then err "Command failed: $*"; fi
+}
+
+banner() {
+
+ #####   #######   ######   #####   ##   ##   ######   #####            #######   #####   ### ###  ##  ###  ######   ######   ### ###  
+###  ##  ### ###     ##    ###  ##  ### ###     ##    ### ###           ###  ##  ### ###  ### ###  ### ###  ### ###  ### ###  ### ###  
+###      ###         ##    ###      #######     ##    ###               ###      ### ###  ### ###  #######  ### ###  ### ###  ### ###  
+ #####   #####       ##     #####   #######     ##    ###       ######  #####    ### ###  ### ###  #######  ### ###  ######    #####   
+     ##  ###         ##         ##  ### ###     ##    ###               ###      ### ###  ### ###  ### ###  ### ###  ### ##     ###    
+###  ##  ### ###     ##    ###  ##  ### ###     ##    ### ###           ###      ### ###  ### ###  ### ###  ### ###  ### ###    ###    
+ #####   #######   ######   #####   ### ###   ######   #####            ###       #####    #####   ### ###  ######   ### ###    ###    
+                                                                                                                                       
+
+}
+
+main "$@"
