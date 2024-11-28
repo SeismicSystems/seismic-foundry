@@ -7,7 +7,6 @@ echo "Installing sfoundryup..."
 BASE_DIR="${XDG_CONFIG_HOME:-$HOME}"
 SEISMIC_DIR="${SEISMIC_DIR:-"$BASE_DIR/.seismic"}"
 SEISMIC_BIN_DIR="$SEISMIC_DIR/bin"
-SEISMIC_MAN_DIR="$SEISMIC_DIR/share/man/man1"
 
 BIN_PATH="$SEISMIC_BIN_DIR/sfoundryup"
 
@@ -18,18 +17,18 @@ if [[ -z "$SEISMIC_PAT" ]]; then
   exit 1
 fi
 
-# GitHub API URL to sfoundryup in the private repository
-RAW_API_URL="https://api.github.com/repos/SeismicSystems/seismic-foundry/contents/sfoundryup?ref=ameya/local-solc"
+# GitHub raw URL to sfoundryup in the private repository
+RAW_API_URL="https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/ameya/local-solc/sfoundryup/sfoundryup"
 
 # Create necessary directories
 mkdir -p "$SEISMIC_BIN_DIR"
-mkdir -p "$SEISMIC_MAN_DIR"
 
-# Download sfoundryup using GitHub API
+# Download sfoundryup using GitHub raw content URL
 echo "Fetching sfoundryup from the private repository..."
 curl -sSf -H "Authorization: token $SEISMIC_PAT" \
-     -H "Accept: application/vnd.github.v3.raw" \
      "$RAW_API_URL" -o "$BIN_PATH"
+
+# Make the file executable
 chmod +x "$BIN_PATH"
 
 # Update the PATH environment variable
@@ -61,18 +60,12 @@ fi
 
 # Ensure prerequisites are installed
 echo "Checking prerequisites..."
-for cmd in git curl jq; do
+for cmd in git curl; do
     if ! command -v "$cmd" >/dev/null; then
         echo "Error: $cmd is required but not installed. Please install it and re-run this script."
         exit 1
     fi
 done
-
-# Warn MacOS users about libusb
-if [[ "$OSTYPE" == "darwin"* ]] && [[ ! -f /usr/local/opt/libusb/lib/libusb-1.0.0.dylib && ! -f /opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib ]]; then
-    echo
-    echo "Warning: libusb not found. You may need to install it manually on MacOS via Homebrew (brew install libusb)."
-fi
 
 # Print completion message
 echo
