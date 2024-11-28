@@ -19,7 +19,7 @@ if [[ -z "$SEISMIC_PAT" ]]; then
 fi
 
 # URL to sfoundryup in the private repository
-BIN_URL="https://$SEISMIC_PAT@raw.githubusercontent.com/SeismicSystems/seismic-foundry/main/sfoundryup"
+BIN_URL="https://$SEISMIC_PAT@raw.githubusercontent.com/SeismicSystems/seismic-foundry/ameya/solc/sfoundryup/sfoundryup"
 
 # Create necessary directories
 mkdir -p "$SEISMIC_BIN_DIR"

@@ -12,6 +12,13 @@ BINS=(sforge scast sanvil schisel)
 export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
 
 main() {
+  # Ensure SEISMIC_PAT is set
+  if [[ -z "$SEISMIC_PAT" ]]; then
+    echo "Error: SEISMIC_PAT environment variable is not set. Please export it with your GitHub Personal Access Token."
+    echo "Example: export SEISMIC_PAT=your_personal_access_token"
+    exit 1
+  fi
+
   need_cmd git
   need_cmd curl
   need_cmd jq
@@ -54,72 +61,70 @@ main() {
 }
 
 install_ssolc() {
-  say "Detecting system for ssolc installation..."
+  echo "Starting ssolc installation..."
 
-  # Detect operating system
-  case "$(uname -s)" in
-    Darwin)
-      os="mac"
-      ;;
-    Linux)
-      os="linux"
-      ;;
-    *)
-      err "Unsupported OS: $(uname -s)"
-      ;;
-  esac
-
-  # Detect architecture
-  arch=$(uname -m)
-  case "$arch" in
-    x86_64)
-      arch="amd64"
-      ;;
-    arm64|aarch64)
-      arch="arm64"
-      ;;
-    *)
-      err "Unsupported architecture: $arch"
-      ;;
-  esac
-
-  # Fetch the latest release information from GitHub
-  say "Fetching the latest ssolc release for ${os}-${arch}..."
-  ssolc_url=$(curl -s https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/latest | \
-              jq -r --arg os "$os" --arg arch "$arch" \
-              '.assets[] | select(.name | test($os + ".*" + $arch)) | .browser_download_url')
-
-  if [[ -z "$ssolc_url" ]]; then
-    err "Failed to find a matching ssolc release for ${os}-${arch}."
+  # Ensure SEISMIC_PAT is set
+  if [[ -z "$SEISMIC_PAT" ]]; then
+      echo "Error: SEISMIC_PAT environment variable is not set. Please provide a valid GitHub Personal Access Token."
+      exit 1
   fi
 
-  # Download and install ssolc
-  say "Downloading ssolc from $ssolc_url..."
-  ensure curl -L "$ssolc_url" -o /usr/local/bin/ssolc
-  chmod +x /usr/local/bin/ssolc
+  GITHUB_API_URL="https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/latest"
+  TARGET_NAME="ssolc-macos-arm64.tar.gz"
+  INSTALL_DIR="/usr/local/bin"
+  SSOLC_BIN="$INSTALL_DIR/ssolc"
+  TEMP_DIR=$(mktemp -d)
 
-  say "ssolc installed at /usr/local/bin/ssolc"
-}
+  # Fetch the asset ID for the target file
+  echo "Fetching asset ID for $TARGET_NAME..."
+  ASSET_ID=$(curl -s -H "Authorization: token $SEISMIC_PAT" "$GITHUB_API_URL" | \
+      jq -r --arg name "$TARGET_NAME" '.assets[] | select(.name == $name) | .id')
 
-install_from_local_repo() {
-  need_cmd cargo
-  say "Installing from local repository at $SEISMICUP_LOCAL_REPO"
+  if [[ -z "$ASSET_ID" ]]; then
+      echo "Error: Asset $TARGET_NAME not found in the latest release."
+      exit 1
+  fi
 
-  cd "$SEISMICUP_LOCAL_REPO"
-  ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
+  echo "Found asset ID: $ASSET_ID"
 
-  for bin in "${BINS[@]}"; do
-    rm -f "$SEISMIC_BIN_DIR/$bin"
-    ensure ln -s "$PWD/target/release/$bin" "$SEISMIC_BIN_DIR/$bin"
-  done
+  # Download the file using the asset ID
+  echo "Downloading $TARGET_NAME..."
+  curl -L -H "Authorization: token $SEISMIC_PAT" \
+       -H "Accept: application/octet-stream" \
+       -o "$TEMP_DIR/$TARGET_NAME" \
+       "https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/assets/$ASSET_ID"
 
-  say "Done installing from local repository."
-  exit 0
+  # Verify the downloaded file is a valid gzip archive
+  echo "Verifying the downloaded file..."
+  if file "$TEMP_DIR/$TARGET_NAME" | grep -q 'gzip compressed data'; then
+      echo "File verified as a valid gzip archive."
+  else
+      echo "Error: Downloaded file is not a valid gzip archive."
+      exit 1
+  fi
+
+  # Extract the gzip archive
+  echo "Extracting $TARGET_NAME..."
+  tar -xzf "$TEMP_DIR/$TARGET_NAME" -C "$TEMP_DIR"
+
+  # Ensure the extracted folder exists
+  EXTRACTED_DIR="$TEMP_DIR/solc"
+  if [[ ! -d "$EXTRACTED_DIR" ]]; then
+      echo "Error: Expected directory 'solc' not found in the extracted archive."
+      exit 1
+  fi
+
+  # Move the binary to /usr/local/bin and set permissions
+  echo "Installing solc binary..."
+  sudo mv "$EXTRACTED_DIR/solc" "$SSOLC_BIN"
+  sudo chmod +x "$SSOLC_BIN"
+
+  echo "Installation complete! sscolc installed at $SSOLC_BIN."
 }
 
 install_from_remote_repo() {
   SEISMICUP_REPO="SeismicSystems/seismic-foundry"
-  SEISMICUP_BRANCH="seismic"
+  SEISMICUP_BRANCH="ameya/local-solc"
 
   need_cmd cargo
   say "Installing Seismic Foundry from $SEISMICUP_REPO (branch: $SEISMICUP_BRANCH)..."
