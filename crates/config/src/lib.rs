@@ -456,6 +456,11 @@ pub struct Config {
     /// Timeout for transactions in seconds.
     pub transaction_timeout: u64,
 
+    /// Seismic field (default: true)
+    /// 
+    /// Used for purposes of specifying Seismic-Solidity (solc)
+    pub seismic: bool,
+
     /// Warnings gathered when loading the Config. See [`WarningsProvider`] for more information
     #[serde(rename = "__warnings", default, skip_serializing)]
     pub warnings: Vec<Warning>,
@@ -519,6 +524,10 @@ impl Config {
 
     /// Default salt for create2 library deployments
     pub const DEFAULT_CREATE2_LIBRARY_SALT: FixedBytes<32> = FixedBytes::<32>::ZERO;
+
+    /// Default solc path for Seismic-Solidity (solc)
+    pub const DEFAULT_SSOLC_PATH: &str = "/usr/local/bin/ssolc";
+
 
     /// Returns the current `Config`
     ///
@@ -888,6 +897,17 @@ impl Config {
     /// If `solc` is [`SolcReq::Local`] then this will ensure that the path exists.
     fn ensure_solc(&self) -> Result<Option<Solc>, SolcError> {
         println!("this is being called!!!");
+        if self.seismic {
+            // Define the default solc path when seismic is true
+            let default_solc_path = PathBuf::from("/usr/local/bin/ssolc");
+            if !default_solc_path.is_file() {
+                return Err(SolcError::msg(format!(
+                    "`solc` {} does not exist",
+                    default_solc_path.display()
+                )));
+            }
+            return Ok(Some(Solc::new(default_solc_path)?));
+        }
         if let Some(ref solc) = self.solc {
             let solc = match solc {
                 SolcReq::Version(version) => {
@@ -2174,6 +2194,7 @@ impl Default for Config {
             eof_version: None,
             alphanet: false,
             transaction_timeout: 120,
+            seismic: true,
             _non_exhaustive: (),
         }
     }
