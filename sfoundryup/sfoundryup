@@ -124,24 +124,26 @@ install_ssolc() {
 
 install_from_remote_repo() {
   SEISMICUP_REPO="SeismicSystems/seismic-foundry"
-  SEISMICUP_BRANCH="ameya/local-solc"
+  SEISMICUP_BRANCH="ameya/local-solc" # TODO: change this after merge
 
   need_cmd cargo
   say "Installing Seismic Foundry from $SEISMICUP_REPO (branch: $SEISMICUP_BRANCH)..."
 
-  REPO_PATH="$SEISMIC_DIR/$SEISMICUP_REPO"
+  REPO_PATH="$SEISMIC_DIR/$(basename "$SEISMICUP_REPO")"
 
+  # Clone the repository if it doesn't already exist
   if [ ! -d "$REPO_PATH" ]; then
-    ensure mkdir -p "$(dirname "$REPO_PATH")"
-    cd "$(dirname "$REPO_PATH")"
-    say "Cloning the repository over SSH..."
-    ensure git clone "git@github.com:$SEISMICUP_REPO.git"
+    ensure mkdir -p "$SEISMIC_DIR"
+    say "Cloning the repository using PAT..."
+    ensure git clone "https://$SEISMIC_PAT@github.com/$SEISMICUP_REPO.git" "$REPO_PATH"
   fi
 
+  # Fetch and checkout the branch
   cd "$REPO_PATH"
-  ensure git fetch origin "$SEISMICUP_BRANCH:remotes/origin/$SEISMICUP_BRANCH"
-  ensure git checkout "origin/$SEISMICUP_BRANCH"
+  ensure git fetch origin "$SEISMICUP_BRANCH"
+  ensure git checkout "$SEISMICUP_BRANCH"
 
+  # Build the binaries
   ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
   for bin in "${BINS[@]}"; do
     for try_path in target/release/$bin target/release/$bin.exe; do
