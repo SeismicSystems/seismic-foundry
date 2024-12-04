@@ -26,7 +26,7 @@ Run the following command to download and execute the install script from the Se
 ```bash
 curl -L -H "Authorization: token $SEISMIC_PAT" \
      -H "Accept: application/vnd.github.v3.raw" \
-     "https://api.github.com/repos/SeismicSystems/seismic-foundry/contents/sfoundryup/install?ref=ameya/local-solc" | bash
+     "https://api.github.com/repos/SeismicSystems/seismic-foundry/contents/sfoundryup/install?ref=seismic" | bash
 ```
 This will install `sfoundryup` on your system.
 
@@ -49,7 +49,9 @@ Run the following command to ensure `seismic-foundry` tools are set up correctly
 sfoundryup
 ```
 
-## 6. Test the Setup
+## 6. Refresh your environment again
+
+## 7. Test the Setup
 Clone the early-builds repository:
 ```bash
 git clone https://github.com/SeismicSystems/early-builds

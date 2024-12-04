@@ -18,7 +18,7 @@ if [[ -z "$SEISMIC_PAT" ]]; then
 fi
 
 # GitHub raw URL to sfoundryup in the private repository
-RAW_API_URL="https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/ameya/local-solc/sfoundryup/sfoundryup"
+RAW_API_URL="https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/sfoundryup/sfoundryup"
 
 # Create necessary directories
 mkdir -p "$SEISMIC_BIN_DIR"

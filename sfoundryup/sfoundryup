@@ -124,7 +124,7 @@ install_ssolc() {
 
 install_from_remote_repo() {
   SEISMICUP_REPO="SeismicSystems/seismic-foundry"
-  SEISMICUP_BRANCH="ameya/local-solc"
+  SEISMICUP_BRANCH="seismic"
 
   need_cmd cargo
   say "Installing Seismic Foundry from $SEISMICUP_REPO (branch: $SEISMICUP_BRANCH)..."

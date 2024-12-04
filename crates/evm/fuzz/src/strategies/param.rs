@@ -1,6 +1,9 @@
 use super::state::EvmFuzzState;
 use alloy_dyn_abi::{DynSolType, DynSolValue};
-use alloy_primitives::{Address, B256, I256, U256, aliases::{SUInt, SInt}};
+use alloy_primitives::{
+    aliases::{SInt, SUInt},
+    Address, B256, I256, U256,
+};
 use proptest::prelude::*;
 
 /// The max length of arrays we fuzz for is 256.

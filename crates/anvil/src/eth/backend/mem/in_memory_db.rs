@@ -182,7 +182,10 @@ mod tests {
         assert_eq!(loaded_account.balance, U256::from(123456));
         assert_eq!(load_db.code_by_hash_ref(loaded_account.code_hash).unwrap(), contract_code);
         assert_eq!(loaded_account.nonce, 1234);
-        assert_eq!(load_db.storage_ref(test_addr, U256::from(1234567)).unwrap(), U256::from(1).into());
+        assert_eq!(
+            load_db.storage_ref(test_addr, U256::from(1234567)).unwrap(),
+            U256::from(1).into()
+        );
     }
 
     // verifies that multiple accounts can be loaded at a time, and storage is merged within those

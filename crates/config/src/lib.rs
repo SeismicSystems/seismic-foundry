@@ -457,7 +457,7 @@ pub struct Config {
     pub transaction_timeout: u64,
 
     /// Seismic field (default: true)
-    /// 
+    ///
     /// Used for purposes of specifying Seismic-Solidity (solc)
     pub seismic: bool,
 
@@ -527,7 +527,6 @@ impl Config {
 
     /// Default solc path for Seismic-Solidity (solc)
     pub const DEFAULT_SSOLC_PATH: &str = "/usr/local/bin/ssolc";
-
 
     /// Returns the current `Config`
     ///
@@ -896,7 +895,6 @@ impl Config {
     ///
     /// If `solc` is [`SolcReq::Local`] then this will ensure that the path exists.
     fn ensure_solc(&self) -> Result<Option<Solc>, SolcError> {
-        println!("this is being called!!!");
         if self.seismic {
             // Define the default solc path when seismic is true
             let default_solc_path = PathBuf::from("/usr/local/bin/ssolc");
