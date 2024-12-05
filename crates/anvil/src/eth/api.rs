@@ -2980,6 +2980,8 @@ impl TryFrom<Result<(InstructionResult, Option<Output>, u128, State)>> for GasEs
                 InstructionResult::InvalidEOFInitCode |
                 InstructionResult::EofAuxDataOverflow |
                 InstructionResult::EofAuxDataTooSmall => Ok(Self::EvmError(exit)),
+                InstructionResult::InvalidPrivateStorageAccess |
+                InstructionResult::InvalidPublicStorageAccess => todo!(),
             },
         }
     }
