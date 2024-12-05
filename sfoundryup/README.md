@@ -14,32 +14,3 @@ To install the **nightly** version of Seismic Foundry tools:
 ```bash
 sfoundryup
 ```
-### Install a specific **version** (in this case the nightly version):
-```bash
-sfoundryup --version nightly
-```
-### Install a specific **branch** (in this case the seismic branch):
-```bash
-sfoundryup --branch seismic
-```
-### Install a **fork's main branch** (in this case YourUser/seismic-foundry's main branch):
-```bash
-sfoundryup --repo YourUser/seismic-foundry
-```
-### Install a **specific branch in a fork** (in this case the custom-branch branch's latest commit in YourUser/seismic-foundry):
-```bash
-sfoundryup --repo YourUser/seismic-foundry --branch custom-branch
-```
-### Install a **specific Pull Request**:
-```bash
-sfoundryup --pr 123
-```
-### Install from a **specific commit**:
-```bash
-sfoundryup -C abcdef1234567890
-```
-### Install from a **local directory or repository** (e.g., one located at ~/git/seismic-foundry, assuming you're in the home directory):
-```bash
-sfoundryup --path ./git/seismic-foundry
-```
-**Tip**: All flags have a single-character shorthand equivalent! You can use -v instead of --version, etc.
