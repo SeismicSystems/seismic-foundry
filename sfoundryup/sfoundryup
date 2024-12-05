@@ -140,8 +140,8 @@ install_from_remote_repo() {
 
   # Fetch and checkout the branch
   cd "$REPO_PATH"
-  ensure git fetch origin "$SEISMICUP_BRANCH"
-  ensure git checkout "$SEISMICUP_BRANCH"
+  ensure git fetch origin "${SEISMICUP_BRANCH}:remotes/origin/${SEISMICUP_BRANCH}"
+  ensure git checkout "origin/${SEISMICUP_BRANCH}"
 
   # Build the binaries
   ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
