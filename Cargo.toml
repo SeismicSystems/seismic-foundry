@@ -280,7 +280,7 @@ revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7f
 revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7f8d4e6" }
 
 
-foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "0d2a25e" }
+foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "58ee49a" }
 
 # seismic-alloy-core
 alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "4683d23" }
