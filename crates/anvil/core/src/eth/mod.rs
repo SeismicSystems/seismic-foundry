@@ -44,6 +44,12 @@ pub struct Params<T: Default> {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "method", content = "params"))]
 pub enum EthRequest {
+    #[cfg_attr(
+        feature = "serde",
+        serde(rename = "seismic_getTeePublicKey", with = "empty_params")
+    )]
+    SeismicGetTeePublicKey(()),
+
     #[cfg_attr(feature = "serde", serde(rename = "web3_clientVersion", with = "empty_params"))]
     Web3ClientVersion(()),
 

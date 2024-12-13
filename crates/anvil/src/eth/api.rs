@@ -35,7 +35,7 @@ use alloy_consensus::{transaction::eip4844::TxEip4844Variant, Account, TxEnvelop
 use alloy_dyn_abi::TypedData;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_network::{eip2718::Decodable2718, BlockResponse};
-use alloy_primitives::{Address, Bytes, Parity, TxHash, TxKind, B256, B64, U256, U64};
+use alloy_primitives::{hex, Address, Bytes, Parity, TxHash, TxKind, B256, B64, U256, U64};
 use alloy_rpc_types::{
     anvil::{
         ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
@@ -158,6 +158,10 @@ impl EthApi {
     pub async fn execute(&self, request: EthRequest) -> ResponseResult {
         trace!(target: "rpc::api", "executing eth request");
         match request {
+            EthRequest::SeismicGetTeePublicKey(()) => Ok(Bytes::from(hex!(
+                "0000000000000000000000000000000000000000000000000000000000000000"
+            )))
+            .to_rpc_result(),
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),
             EthRequest::Web3Sha3(content) => self.sha3(content).to_rpc_result(),
             EthRequest::EthGetAccount(addr, block) => {
