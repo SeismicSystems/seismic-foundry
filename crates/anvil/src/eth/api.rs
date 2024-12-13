@@ -158,6 +158,10 @@ impl EthApi {
     pub async fn execute(&self, request: EthRequest) -> ResponseResult {
         trace!(target: "rpc::api", "executing eth request");
         match request {
+            EthRequest::SeismicGetTeePublicKey(()) => Ok(Bytes::from(alloy_primitives::hex!(
+                "0000000000000000000000000000000000000000000000000000000000000000"
+            )))
+            .to_rpc_result(),
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),
             EthRequest::Web3Sha3(content) => self.sha3(content).to_rpc_result(),
             EthRequest::EthGetAccount(addr, block) => {
