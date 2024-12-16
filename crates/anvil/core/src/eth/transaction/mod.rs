@@ -29,7 +29,6 @@ use seismic_transaction::{
     encoding_decoding::{
         decode_signed_seismic_fields, encode_2718_len, encode_2718_seismic_transaction,
     },
-    seismic_util::{decrypt, Encryptable},
     transaction::{SeismicTransaction, SeismicTransactionRequest},
 };
 use serde::{Deserialize, Serialize};
@@ -40,9 +39,11 @@ use std::{
 };
 
 pub mod optimism;
+pub mod seismic;
 
 pub trait SeismicCompatible:
-    Encryptable
+    Encodable
+    + Decodable
     + Debug
     + Clone
     + PartialEq
@@ -725,13 +726,26 @@ impl PendingTransaction {
                     seismic_input,
                     ..
                 } = &tx.tx().tx;
-                // decrypt seismic input
-                let seismic_input_decrypted =
-                    decrypt::<Bytes>(&seismic_input.to_vec().clone(), *nonce).unwrap();
+
+                let public_key = {
+                    let sighash = tx.signature_hash();
+                    let verifying_key = tx
+                        .signature()
+                        .recover_from_prehash(&sighash)
+                        .expect("Failed to recover public key from signature");
+                    let pk_bytes = verifying_key.to_sec1_bytes();
+                    secp256k1::PublicKey::from_slice(&pk_bytes).unwrap()
+                };
+
+                let decrypted_input =
+                    seismic::decrypt(&public_key, &seismic_input.as_ref(), *nonce)
+                        .expect("Failed to decrypt seismic tx");
+                let data = Bytes::decode(&mut decrypted_input.as_slice())
+                    .expect("Failed to RLP decode decrypted input");
                 TxEnv {
                     caller,
                     transact_to: transact_to(&kind),
-                    data: seismic_input_decrypted,
+                    data,
                     chain_id: Some(*chain_id),
                     nonce: Some(*nonce),
                     value: *value,
