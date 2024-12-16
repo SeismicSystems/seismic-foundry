@@ -63,7 +63,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache"
+          shared-key: "warnings-cache"
       - name: Install SSH Keys
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -89,7 +89,7 @@ jobs:
   #     - uses: dtolnay/rust-toolchain@stable
   #     - uses: Swatinem/rust-cache@v2
   #       with:
-  #         shared-key: "build-cache"
+  #         shared-key: "test-cache"
   #     - name: Install SSH Keys
   #       uses: webfactory/ssh-agent@v0.9.0
   #       with:
