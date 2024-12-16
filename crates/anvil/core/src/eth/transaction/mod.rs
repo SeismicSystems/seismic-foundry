@@ -729,12 +729,17 @@ impl PendingTransaction {
 
                 let public_key = {
                     let sighash = tx.signature_hash();
-                    let verifying_key = tx.signature().recover_from_prehash(&sighash).expect("Failed to recover public key from signature");
+                    let verifying_key = tx
+                        .signature()
+                        .recover_from_prehash(&sighash)
+                        .expect("Failed to recover public key from signature");
                     let pk_bytes = verifying_key.to_sec1_bytes();
                     secp256k1::PublicKey::from_slice(&pk_bytes).unwrap()
                 };
 
-                let decrypted_input = seismic::decrypt(&public_key, &seismic_input.as_ref(), *nonce).expect("Failed to decrypt seismic tx");
+                let decrypted_input =
+                    seismic::decrypt(&public_key, &seismic_input.as_ref(), *nonce)
+                        .expect("Failed to decrypt seismic tx");
                 let data = Bytes::decode(&mut decrypted_input.as_slice())
                     .expect("Failed to RLP decode decrypted input");
                 TxEnv {
