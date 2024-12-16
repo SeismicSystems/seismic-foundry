@@ -25,12 +25,11 @@ use revm::{
     interpreter::InstructionResult,
     primitives::{OptimismFields, TxEnv},
 };
-use secp256k1::{ecdsa::RecoverableSignature, PublicKey};
 use seismic_transaction::{
     encoding_decoding::{
         decode_signed_seismic_fields, encode_2718_len, encode_2718_seismic_transaction,
     },
-    seismic_util::{self, decrypt, Encryptable},
+    seismic_util::Encryptable,
     transaction::{SeismicTransaction, SeismicTransactionRequest},
 };
 use serde::{Deserialize, Serialize};
@@ -732,7 +731,7 @@ impl PendingTransaction {
                     let sighash = tx.signature_hash();
                     let verifying_key = tx.signature().recover_from_prehash(&sighash).expect("Failed to recover public key from signature");
                     let pk_bytes = verifying_key.to_sec1_bytes();
-                    PublicKey::from_slice(&pk_bytes).unwrap()
+                    secp256k1::PublicKey::from_slice(&pk_bytes).unwrap()
                 };
 
                 let mut ciphertext = Vec::new();
