@@ -12,3 +12,5 @@ pub(crate) mod macros;
 pub mod miner;
 pub mod pool;
 pub mod util;
+
+pub mod seismic;
