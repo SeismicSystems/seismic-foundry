@@ -734,10 +734,7 @@ impl PendingTransaction {
                     secp256k1::PublicKey::from_slice(&pk_bytes).unwrap()
                 };
 
-                let mut ciphertext = Vec::new();
-                seismic_input.encode(&mut ciphertext);
-
-                let decrypted_input = seismic::decrypt(&public_key, &ciphertext, *nonce).expect("Failed to decrypt seismic tx");
+                let decrypted_input = seismic::decrypt(&public_key, &seismic_input.as_ref(), *nonce).expect("Failed to decrypt seismic tx");
                 let data = Bytes::decode(&mut decrypted_input.as_slice())
                     .expect("Failed to RLP decode decrypted input");
                 TxEnv {
