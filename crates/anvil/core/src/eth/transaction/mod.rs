@@ -29,7 +29,6 @@ use seismic_transaction::{
     encoding_decoding::{
         decode_signed_seismic_fields, encode_2718_len, encode_2718_seismic_transaction,
     },
-    seismic_util::Encryptable,
     transaction::{SeismicTransaction, SeismicTransactionRequest},
 };
 use serde::{Deserialize, Serialize};
@@ -43,7 +42,8 @@ pub mod optimism;
 pub mod seismic;
 
 pub trait SeismicCompatible:
-    Encryptable
+    Encodable
+    + Decodable
     + Debug
     + Clone
     + PartialEq
