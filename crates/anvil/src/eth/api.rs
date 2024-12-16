@@ -159,7 +159,7 @@ impl EthApi {
         trace!(target: "rpc::api", "executing eth request");
         match request {
             EthRequest::SeismicGetTeePublicKey(()) => Ok(Bytes::from(alloy_primitives::hex!(
-                "0000000000000000000000000000000000000000000000000000000000000000"
+                "028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0"
             )))
             .to_rpc_result(),
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),
