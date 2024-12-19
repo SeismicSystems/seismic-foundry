@@ -977,7 +977,6 @@ impl EthApi {
             }
         }
 
-        // until this point, the backend isn't aware of what type the request
         let request = self.build_typed_tx_request(request, nonce)?;
 
         // if the sender is currently impersonated we need to "bypass" signing
