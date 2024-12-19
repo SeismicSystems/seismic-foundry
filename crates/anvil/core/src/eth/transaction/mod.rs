@@ -40,7 +40,7 @@ use std::{
 };
 
 pub mod optimism;
-pub mod seismic;
+pub mod crypto;
 
 pub trait SeismicCompatible:
     Encodable
@@ -728,9 +728,9 @@ impl PendingTransaction {
                     ..
                 } = &tx.tx().tx;
 
-                let public_key = seismic::recover_public_key(tx).expect("Failed to recover public key");
+                let public_key = crypto::recover_public_key(tx).expect("Failed to recover public key");
                 let decrypted_input =
-                    seismic::server_decrypt(&public_key, &seismic_input.as_ref(), *nonce)
+                    crypto::server_decrypt(&public_key, &seismic_input.as_ref(), *nonce)
                         .expect("Failed to decrypt seismic tx");
                 let data = Bytes::decode(&mut decrypted_input.as_slice())
                     .expect("Failed to RLP decode decrypted input");

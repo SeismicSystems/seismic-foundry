@@ -4,7 +4,7 @@ use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
-use anvil_core::eth::transaction::seismic;
+use anvil_core::eth::transaction::crypto;
 use seismic_transaction::types::SeismicTransactionFields;
 use std::fs;
 
@@ -59,12 +59,12 @@ async fn test_seismic_transaction() {
     let accounts: Vec<_> = handle.dev_wallets().collect();
 
     let from = accounts[0].address();
-    let secret_key = seismic::secret_key(accounts[0].to_bytes());
+    let secret_key = crypto::secret_key(accounts[0].to_bytes());
 
     let to = receipt.contract_address.unwrap();
 
     let set_data =
-        seismic::client_encrypt(&secret_key, &get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))), 1)
+        crypto::client_encrypt(&secret_key, &get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))), 1)
             .unwrap();
 
     let tx = TransactionRequest::default()
@@ -93,7 +93,7 @@ async fn test_seismic_transaction() {
     assert!(receipt.is_some());
 
     let increment_data =
-        seismic::client_encrypt(&secret_key, &get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))), 2)
+        crypto::client_encrypt(&secret_key, &get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))), 2)
             .unwrap();
 
     let tx = TransactionRequest::default()
@@ -117,7 +117,7 @@ async fn test_seismic_transaction() {
     assert!(receipt.is_some());
 
     let plaintext = hex::decode(GET_NUMBER_SELECTOR).unwrap().to_vec();
-    let get_data = seismic::client_encrypt(&secret_key, &plaintext, 3).unwrap();
+    let get_data = crypto::client_encrypt(&secret_key, &plaintext, 3).unwrap();
 
     let tx = TransactionRequest::default()
         .with_from(from)
