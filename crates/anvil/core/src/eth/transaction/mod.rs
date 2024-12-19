@@ -30,7 +30,7 @@ use seismic_transaction::{
         decode_signed_seismic_fields, encode_2718_len, encode_2718_seismic_transaction,
     },
     transaction::SeismicTransaction,
-    transaction_request::SeismicTransactionRequest
+    transaction_request::SeismicTransactionRequest,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -39,8 +39,8 @@ use std::{
     ops::{Deref, Mul},
 };
 
-pub mod optimism;
 pub mod crypto;
+pub mod optimism;
 
 pub trait SeismicCompatible:
     Encodable
@@ -728,7 +728,8 @@ impl PendingTransaction {
                     ..
                 } = &tx.tx().tx;
 
-                let public_key = crypto::recover_public_key(tx).expect("Failed to recover public key");
+                let public_key =
+                    crypto::recover_public_key(tx).expect("Failed to recover public key");
                 let decrypted_input =
                     crypto::server_decrypt(&public_key, &seismic_input.as_ref(), *nonce)
                         .expect("Failed to decrypt seismic tx");
@@ -1786,9 +1787,9 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 
 #[cfg(test)]
 mod tests {
+    use alloy_consensus::SignableTransaction;
     use alloy_primitives::{b256, hex, FixedBytes, LogData};
     use std::str::FromStr;
-    use alloy_consensus::SignableTransaction;
 
     use super::*;
 
@@ -2043,12 +2044,16 @@ mod tests {
         let decoded_tx = TypedTransaction::decode_2718(&mut buf).unwrap();
         let sighash = match &decoded_tx {
             TypedTransaction::Seismic(tx) => tx.signature_hash(),
-            _ => unreachable!()
+            _ => unreachable!(),
         };
-        let expected_sighash = FixedBytes::<32>::from_str("cb3b67b55eea90d2970fc853d63d2ffb0867da325e94f66f75cddc8b2ce4de0b").unwrap();
+        let expected_sighash = FixedBytes::<32>::from_str(
+            "cb3b67b55eea90d2970fc853d63d2ffb0867da325e94f66f75cddc8b2ce4de0b",
+        )
+        .unwrap();
         assert_eq!(sighash, expected_sighash);
         let sender = decoded_tx.recover().unwrap();
-        let expected_sender = Address::from_str("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap();
+        let expected_sender =
+            Address::from_str("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap();
         assert_eq!(sender, expected_sender);
     }
 }

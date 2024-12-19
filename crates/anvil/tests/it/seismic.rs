@@ -63,9 +63,12 @@ async fn test_seismic_transaction() {
 
     let to = receipt.contract_address.unwrap();
 
-    let set_data =
-        crypto::client_encrypt(&secret_key, &get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))), 1)
-            .unwrap();
+    let set_data = crypto::client_encrypt(
+        &secret_key,
+        &get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))),
+        1,
+    )
+    .unwrap();
 
     let tx = TransactionRequest::default()
         .with_from(from)
@@ -92,9 +95,12 @@ async fn test_seismic_transaction() {
     > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
-    let increment_data =
-        crypto::client_encrypt(&secret_key, &get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))), 2)
-            .unwrap();
+    let increment_data = crypto::client_encrypt(
+        &secret_key,
+        &get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))),
+        2,
+    )
+    .unwrap();
 
     let tx = TransactionRequest::default()
         .with_from(from)
