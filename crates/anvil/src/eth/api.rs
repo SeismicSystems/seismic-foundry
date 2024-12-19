@@ -124,6 +124,25 @@ pub struct EthApi {
     instance_id: Arc<RwLock<B256>>,
 }
 
+// fn seismic_decode_2718(buf: &mut &[u8]) -> Eip2718Result<TypedTransaction> {
+//     TypedTransaction::extract_type_byte(buf)
+//         .map(|ty| {
+//             match ty {
+//                 0x4A => {
+
+//                 },
+//                 _ => TypedTransaction::typed_decode(ty, &mut &buf[1..])
+//             }
+//         })
+//         .unwrap_or_else(|| TypedTransaction::fallback_decode(buf))
+// }
+
+// fn decode_2718(buf: &mut &[u8]) -> Eip2718Result<Self> {
+//     Self::extract_type_byte(buf)
+//         .map(|ty| Self::typed_decode(ty, &mut &buf[1..]))
+//         .unwrap_or_else(|| Self::fallback_decode(buf))
+// }
+
 impl EthApi {
     /// Creates a new instance
     #[allow(clippy::too_many_arguments)]
@@ -2749,9 +2768,9 @@ impl EthApi {
                 TypedTransactionRequest::Deposit(m)
             }
             Some(TypedTransactionRequest::Seismic(mut m)) => {
-                m.gas_limit = U256::from(gas_limit);
+                m.gas_limit = gas_limit as u64;
                 if gas_price.is_none() {
-                    m.gas_price = U256::from(self.gas_price());
+                    m.gas_price = self.gas_price();
                 }
                 m.chain_id = chain_id;
                 TypedTransactionRequest::Seismic(m)

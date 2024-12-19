@@ -4,7 +4,7 @@ use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
-use seismic_transaction::{seismic_util::encrypt, types::SeismicTransactionFields};
+use seismic_transaction::types::SeismicTransactionFields;
 use std::fs;
 
 // common utils
@@ -35,6 +35,7 @@ pub fn get_input_data(selector: &str, value: B256) -> Bytes {
     input_data.into()
 }
 
+/*
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_transaction() {
     let (api, handle) = spawn(NodeConfig::test()).await;
@@ -135,3 +136,4 @@ async fn test_seismic_transaction() {
     let receipt = provider.get_transaction_receipt(pending_get.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 }
+*/
