@@ -195,16 +195,16 @@ alloy-transport-ipc = { version = "0.3.6", default-features = false }
 alloy-transport-ws = { version = "0.3.6", default-features = false }
 
 ## alloy-core
-alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode",  features = ["seismic", "std"] }
-alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode",  features = ["seismic"] }
-alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode", features = ["getrandom", "rand", "seismic"] }
-alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode", features = ["seismic"] }
-alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode", features = ["seismic"] }
-alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode", features = ["seismic"] }
-syn-solidity = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode", features = ["seismic"] }
+alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request",  features = ["seismic", "std"] }
+alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request",  features = ["seismic"] }
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request", features = ["getrandom", "rand", "seismic"] }
+alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request", features = ["seismic"] }
+alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request", features = ["seismic"] }
+alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request", features = ["seismic"] }
+syn-solidity = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request", features = ["seismic"] }
 
 # seismic-transaction
-seismic-transaction = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode"}
+seismic-transaction = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request"}
 
 alloy-chains = "0.1"
 alloy-rlp = "0.3"
@@ -283,11 +283,11 @@ revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git"
 foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "58ee49a" }
 
 # seismic-alloy-core
-alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode" }
-alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode" }
-alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode" }
-alloy-sol-macro = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode" }
-alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode" }
-alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode" }
-alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode" }
-alloy-sol-type-parser = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "fix-tx-encode-decode" }
+alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request" }
+alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request" }
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request" }
+alloy-sol-macro = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request" }
+alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request" }
+alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request" }
+alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request" }
+alloy-sol-type-parser = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", branch = "refactor-tx-request" }

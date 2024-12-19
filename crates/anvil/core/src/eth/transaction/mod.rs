@@ -29,7 +29,8 @@ use seismic_transaction::{
     encoding_decoding::{
         decode_signed_seismic_fields, encode_2718_len, encode_2718_seismic_transaction,
     },
-    transaction::{SeismicTransaction, SeismicTransactionRequest},
+    transaction::SeismicTransaction,
+    transaction_request::SeismicTransactionRequest
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -727,18 +728,9 @@ impl PendingTransaction {
                     ..
                 } = &tx.tx().tx;
 
-                let public_key = {
-                    let sighash = tx.signature_hash();
-                    let verifying_key = tx
-                        .signature()
-                        .recover_from_prehash(&sighash)
-                        .expect("Failed to recover public key from signature");
-                    let pk_bytes = verifying_key.to_sec1_bytes();
-                    secp256k1::PublicKey::from_slice(&pk_bytes).unwrap()
-                };
-
+                let public_key = seismic::recover_public_key(tx).expect("Failed to recover public key");
                 let decrypted_input =
-                    seismic::decrypt(&public_key, &seismic_input.as_ref(), *nonce)
+                    seismic::server_decrypt(&public_key, &seismic_input.as_ref(), *nonce)
                         .expect("Failed to decrypt seismic tx");
                 let data = Bytes::decode(&mut decrypted_input.as_slice())
                     .expect("Failed to RLP decode decrypted input");
