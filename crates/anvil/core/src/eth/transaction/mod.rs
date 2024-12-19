@@ -97,7 +97,9 @@ pub fn transaction_request_to_typed(
             is_system_tx: other.get_deserialized::<bool>("isSystemTx")?.ok()?,
             input: input.into_input().unwrap_or_default(),
         }));
-    } else if transaction_type == Some(0x4A) || has_seismic_fields(&other) {
+    } else if transaction_type == Some(SeismicTransaction::TRANSACTION_TYPE) ||
+        has_seismic_fields(&other)
+    {
         return Some(TypedTransactionRequest::Seismic(SeismicTransactionRequest {
             nonce: nonce.unwrap_or_default(),
             gas_price: gas_price.unwrap_or_default(),
@@ -865,7 +867,7 @@ impl TypedTransaction {
             Self::EIP4844(_) => Some(3),
             Self::EIP7702(_) => Some(4),
             Self::Deposit(_) => Some(0x7E),
-            Self::Seismic(_) => Some(0x4A),
+            Self::Seismic(_) => Some(SeismicTransaction::TRANSACTION_TYPE),
         }
     }
 
@@ -1322,7 +1324,9 @@ impl Decodable2718 for TypedTransaction {
         match ty {
             0x04 => return Ok(Self::EIP7702(TxEip7702::decode_signed_fields(buf)?)),
             0x7E => return Ok(Self::Deposit(DepositTransaction::decode(buf)?)),
-            0x4A => return Ok(Self::Seismic(decode_signed_seismic_fields(buf)?)),
+            SeismicTransaction::TRANSACTION_TYPE => {
+                return Ok(Self::Seismic(decode_signed_seismic_fields(buf)?))
+            }
             _ => {}
         }
         match TxEnvelope::typed_decode(ty, buf)? {
@@ -1538,7 +1542,7 @@ impl From<TypedReceipt<alloy_rpc_types::Log>> for OtsReceipt {
             TypedReceipt::EIP4844(_) => 0x03,
             TypedReceipt::EIP7702(_) => 0x04,
             TypedReceipt::Deposit(_) => 0x7E,
-            TypedReceipt::Seismic(_) => 0x4A,
+            TypedReceipt::Seismic(_) => SeismicTransaction::TRANSACTION_TYPE,
         } as u8;
         let receipt = ReceiptWithBloom::<alloy_rpc_types::Log>::from(value);
         let status = receipt.status();
@@ -1671,7 +1675,7 @@ impl Encodable2718 for TypedReceipt {
             Self::EIP4844(_) => Some(3),
             Self::EIP7702(_) => Some(4),
             Self::Deposit(_) => Some(0x7E),
-            Self::Seismic(_) => Some(0x4A),
+            Self::Seismic(_) => Some(SeismicTransaction::TRANSACTION_TYPE),
         }
     }
 
