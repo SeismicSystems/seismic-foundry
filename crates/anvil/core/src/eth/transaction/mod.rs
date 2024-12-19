@@ -29,7 +29,8 @@ use seismic_transaction::{
     encoding_decoding::{
         decode_signed_seismic_fields, encode_2718_len, encode_2718_seismic_transaction,
     },
-    transaction::{SeismicTransaction, SeismicTransactionRequest},
+    transaction::SeismicTransaction,
+    transaction_request::SeismicTransactionRequest,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -38,8 +39,8 @@ use std::{
     ops::{Deref, Mul},
 };
 
+pub mod crypto;
 pub mod optimism;
-pub mod seismic;
 
 pub trait SeismicCompatible:
     Encodable
@@ -99,8 +100,8 @@ pub fn transaction_request_to_typed(
     } else if transaction_type == Some(0x4A) || has_seismic_fields(&other) {
         return Some(TypedTransactionRequest::Seismic(SeismicTransactionRequest {
             nonce: nonce.unwrap_or_default(),
-            gas_price: U256::from(gas_price.unwrap_or_default()),
-            gas_limit: U256::from(gas.unwrap_or_default()),
+            gas_price: gas_price.unwrap_or_default(),
+            gas_limit: gas.unwrap_or_default() as u64,
             kind: to.unwrap_or_default(),
             value: value.unwrap_or_default(),
             chain_id: 0,
@@ -727,18 +728,10 @@ impl PendingTransaction {
                     ..
                 } = &tx.tx().tx;
 
-                let public_key = {
-                    let sighash = tx.signature_hash();
-                    let verifying_key = tx
-                        .signature()
-                        .recover_from_prehash(&sighash)
-                        .expect("Failed to recover public key from signature");
-                    let pk_bytes = verifying_key.to_sec1_bytes();
-                    secp256k1::PublicKey::from_slice(&pk_bytes).unwrap()
-                };
-
+                let public_key =
+                    crypto::recover_public_key(tx).expect("Failed to recover public key");
                 let decrypted_input =
-                    seismic::decrypt(&public_key, &seismic_input.as_ref(), *nonce)
+                    crypto::server_decrypt(&public_key, &seismic_input.as_ref(), *nonce)
                         .expect("Failed to decrypt seismic tx");
                 let data = Bytes::decode(&mut decrypted_input.as_slice())
                     .expect("Failed to RLP decode decrypted input");
@@ -751,7 +744,7 @@ impl PendingTransaction {
                     value: *value,
                     gas_price: U256::from(*gas_price),
                     gas_priority_fee: None,
-                    gas_limit: u64::try_from(gas_limit).unwrap(),
+                    gas_limit: *gas_limit,
                     access_list: vec![],
                     ..Default::default()
                 }
@@ -1794,7 +1787,8 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 
 #[cfg(test)]
 mod tests {
-    use alloy_primitives::{b256, hex, LogData};
+    use alloy_consensus::SignableTransaction;
+    use alloy_primitives::{b256, hex, FixedBytes, LogData};
     use std::str::FromStr;
 
     use super::*;
@@ -2006,5 +2000,60 @@ mod tests {
         let receipt = TypedReceipt::decode(&mut &data[..]).unwrap();
 
         assert_eq!(receipt, expected);
+    }
+
+    #[test]
+    fn test_seismic_tx_encoding() {
+        let decrypted_input = Bytes::from_str("0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875").unwrap();
+        let orig_decoded_tx = SeismicTransaction {
+            tx: SeismicTransactionRequest {
+                chain_id: 4u64,
+                nonce: 2,
+                gas_price: 1000000000,
+                gas_limit: 100000,
+                kind: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
+                value: U256::from(1000000000000000u64),
+                seismic_input: decrypted_input.clone(),
+            },
+        };
+
+        let r = U256::from_str("0xeb96ca19e8a77102767a41fc85a36afd5c61ccb09911cec5d3e86e193d9c5ae")
+            .unwrap();
+        let s =
+            U256::from_str("0x3a456401896b1b6055311536bf00a718568c744d8c1f9df59879e8350220ca18")
+                .unwrap();
+
+        let signature = Signature::new(r, s, Parity::Parity(false));
+        let signed_tx: Signed<SeismicTransaction> = orig_decoded_tx.into_signed(signature);
+
+        let signed_tt = TypedTransaction::Seismic(signed_tx);
+
+        let mut encoded_tx = Vec::new();
+        signed_tt.encode(&mut encoded_tx);
+
+        let encoded_bytes = Bytes::from(encoded_tx);
+        let reth_encoded = Bytes::from_str("0xb8b04af8ad0402843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb87580a00eb96ca19e8a77102767a41fc85a36afd5c61ccb09911cec5d3e86e193d9c5aea03a456401896b1b6055311536bf00a718568c744d8c1f9df59879e8350220ca18").unwrap();
+        assert_eq!(reth_encoded, encoded_bytes);
+    }
+
+    #[test]
+    fn test_seismic_tx_decoding() {
+        // from viem sendRawTransaction
+        let encoded = Bytes::from_str("0x4af89d827a69018504a817c80083033450945fbdb2315678afecb367f032d93f642f64180aa380b5cb387d170552f2fb7885ddf93294c66944d5a81e89116220f7d473ccac13a62be7763c96a24a15e40d293ac4eb2497d60737c552f101a02e74bea92f40298316cbeff63d9b9be58a1f6a84610dd873510670b9ec3d1beda07c46b32555ba225d375b0b0be549c81fca2fa86cd3e7c2530543693930fc184b").unwrap();
+        let mut buf = encoded.as_ref();
+        let decoded_tx = TypedTransaction::decode_2718(&mut buf).unwrap();
+        let sighash = match &decoded_tx {
+            TypedTransaction::Seismic(tx) => tx.signature_hash(),
+            _ => unreachable!(),
+        };
+        let expected_sighash = FixedBytes::<32>::from_str(
+            "cb3b67b55eea90d2970fc853d63d2ffb0867da325e94f66f75cddc8b2ce4de0b",
+        )
+        .unwrap();
+        assert_eq!(sighash, expected_sighash);
+        let sender = decoded_tx.recover().unwrap();
+        let expected_sender =
+            Address::from_str("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap();
+        assert_eq!(sender, expected_sender);
     }
 }

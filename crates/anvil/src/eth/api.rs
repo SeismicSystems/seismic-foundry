@@ -2749,9 +2749,9 @@ impl EthApi {
                 TypedTransactionRequest::Deposit(m)
             }
             Some(TypedTransactionRequest::Seismic(mut m)) => {
-                m.gas_limit = U256::from(gas_limit);
+                m.gas_limit = gas_limit as u64;
                 if gas_price.is_none() {
-                    m.gas_price = U256::from(self.gas_price());
+                    m.gas_price = self.gas_price();
                 }
                 m.chain_id = chain_id;
                 TypedTransactionRequest::Seismic(m)
