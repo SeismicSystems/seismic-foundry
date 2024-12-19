@@ -974,21 +974,20 @@ impl Backend {
                 // to ensure the timestamp is as close as possible to the actual execution.
                 env.block.timestamp = U256::from(self.time.next_timestamp());
 
-                let executor: TransactionExecutor<'_, Box<dyn Db>, &Backend> =
-                    TransactionExecutor {
-                        db: &mut *db,
-                        validator: self,
-                        pending: pool_transactions.into_iter(),
-                        block_env: env.block.clone(),
-                        cfg_env: CfgEnvWithHandlerCfg::new(env.cfg.clone(), env.handler_cfg),
-                        parent_hash: best_hash,
-                        gas_used: 0,
-                        blob_gas_used: 0,
-                        enable_steps_tracing: self.enable_steps_tracing,
-                        print_logs: self.print_logs,
-                        alphanet: self.alphanet,
-                        precompile_factory: self.precompile_factory.clone(),
-                    };
+                let executor = TransactionExecutor {
+                    db: &mut *db,
+                    validator: self,
+                    pending: pool_transactions.into_iter(),
+                    block_env: env.block.clone(),
+                    cfg_env: CfgEnvWithHandlerCfg::new(env.cfg.clone(), env.handler_cfg),
+                    parent_hash: best_hash,
+                    gas_used: 0,
+                    blob_gas_used: 0,
+                    enable_steps_tracing: self.enable_steps_tracing,
+                    print_logs: self.print_logs,
+                    alphanet: self.alphanet,
+                    precompile_factory: self.precompile_factory.clone(),
+                };
                 let executed_tx = executor.execute();
 
                 // we also need to update the new blockhash in the db itself

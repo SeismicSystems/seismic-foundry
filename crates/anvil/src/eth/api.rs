@@ -976,6 +976,7 @@ impl EthApi {
                 request.gas = Some(gas.to());
             }
         }
+
         // until this point, the backend isn't aware of what type the request
         let request = self.build_typed_tx_request(request, nonce)?;
 
