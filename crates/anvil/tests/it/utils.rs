@@ -31,14 +31,17 @@ pub async fn connect_pubsub(conn_str: &str) -> RootProvider<BoxTransport> {
 }
 
 use alloy_provider::{
-    fillers::{ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller},
+    fillers::{ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller, BlobGasFiller},
     Identity, RootProvider,
 };
 use alloy_transport::BoxTransport;
 
 type PubsubSigner = FillProvider<
     JoinFill<
-        JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
+        JoinFill<
+            Identity,
+            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>
+        >,
         WalletFiller<EthereumWallet>,
     >,
     RootProvider<BoxTransport>,

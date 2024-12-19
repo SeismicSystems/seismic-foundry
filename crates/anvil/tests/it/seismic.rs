@@ -1,6 +1,7 @@
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{hex, Bytes, B256, U256};
 use alloy_provider::Provider;
+use alloy_rlp::Encodable;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
@@ -36,6 +37,12 @@ pub fn get_input_data(selector: &str, value: B256) -> Bytes {
     input_data.into()
 }
 
+fn rlp_encode(plaintext: Bytes) -> Vec<u8> {        
+    let mut out = Vec::new();
+    plaintext.encode(&mut out);
+    out
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_transaction() {
     let (api, handle) = spawn(NodeConfig::test()).await;
@@ -59,13 +66,14 @@ async fn test_seismic_transaction() {
     let accounts: Vec<_> = handle.dev_wallets().collect();
 
     let from = accounts[0].address();
-    let secret_key = crypto::secret_key(accounts[0].to_bytes());
+    let secret_key = crypto::secret_key(&accounts[0].to_bytes());
 
     let to = receipt.contract_address.unwrap();
 
+    let encoded_setnumber_data = rlp_encode(get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))));
     let set_data = crypto::client_encrypt(
         &secret_key,
-        &get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))),
+        &encoded_setnumber_data,
         1,
     )
     .unwrap();
@@ -95,9 +103,10 @@ async fn test_seismic_transaction() {
     > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
+    let encoded_increment_data = rlp_encode(get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))));
     let increment_data = crypto::client_encrypt(
         &secret_key,
-        &get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))),
+        &encoded_increment_data,
         2,
     )
     .unwrap();
@@ -122,8 +131,8 @@ async fn test_seismic_transaction() {
         provider.get_transaction_receipt(pending_increment.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
-    let plaintext = hex::decode(GET_NUMBER_SELECTOR).unwrap().to_vec();
-    let get_data = crypto::client_encrypt(&secret_key, &plaintext, 3).unwrap();
+    let encoded_getnumber_data = rlp_encode(hex::decode(GET_NUMBER_SELECTOR).unwrap().into());
+    let get_data = crypto::client_encrypt(&secret_key, &encoded_getnumber_data, 3).unwrap();
 
     let tx = TransactionRequest::default()
         .with_from(from)

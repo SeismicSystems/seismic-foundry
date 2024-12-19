@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use alloy_consensus::Signed;
 use alloy_primitives::{FixedBytes, SignatureError};
 use once_cell::sync::Lazy;
@@ -68,8 +66,8 @@ pub fn client_encrypt(
     encrypt(secret_key, &PUBLIC_KEY, plaintext, nonce)
 }
 
-pub fn secret_key(fixed_bytes: FixedBytes<32>) -> SecretKey {
-    SecretKey::from_str(&fixed_bytes.to_string()).unwrap()
+pub fn secret_key(fixed_bytes: &FixedBytes<32>) -> SecretKey {
+    SecretKey::from_slice(&fixed_bytes.to_vec()[..]).unwrap()
 }
 
 #[derive(Debug)]
