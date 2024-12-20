@@ -14,6 +14,7 @@ mod otterscan;
 mod proof;
 mod pubsub;
 mod revert;
+mod seismic;
 mod sign;
 mod state;
 mod traces;

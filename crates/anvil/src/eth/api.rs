@@ -2748,6 +2748,14 @@ impl EthApi {
                 m.gas_limit = gas_limit;
                 TypedTransactionRequest::Deposit(m)
             }
+            Some(TypedTransactionRequest::Seismic(mut m)) => {
+                m.gas_limit = gas_limit as u64;
+                if gas_price.is_none() {
+                    m.gas_price = self.gas_price();
+                }
+                m.chain_id = chain_id;
+                TypedTransactionRequest::Seismic(m)
+            }
             None => return Err(BlockchainError::FailedToDecodeTransaction),
         };
         Ok(request)
@@ -2771,7 +2779,8 @@ impl EthApi {
             TypedTransactionRequest::EIP2930(_) |
             TypedTransactionRequest::EIP1559(_) |
             TypedTransactionRequest::EIP4844(_) |
-            TypedTransactionRequest::Deposit(_) => Signature::from_scalars_and_parity(
+            TypedTransactionRequest::Deposit(_) |
+            TypedTransactionRequest::Seismic(_) => Signature::from_scalars_and_parity(
                 B256::with_last_byte(1),
                 B256::with_last_byte(1),
                 Parity::Parity(false),
@@ -2848,6 +2857,7 @@ impl EthApi {
             TypedTransaction::EIP7702(_) => self.backend.ensure_eip7702_active(),
             TypedTransaction::Deposit(_) => self.backend.ensure_op_deposits_active(),
             TypedTransaction::Legacy(_) => Ok(()),
+            TypedTransaction::Seismic(_) => Ok(()),
         }
     }
 }
@@ -2900,6 +2910,10 @@ fn determine_base_gas_by_kind(request: &WithOtherFields<TransactionRequest>) -> 
             },
             TypedTransactionRequest::EIP4844(_) => MIN_TRANSACTION_GAS,
             TypedTransactionRequest::Deposit(req) => match req.kind {
+                TxKind::Call(_) => MIN_TRANSACTION_GAS,
+                TxKind::Create => MIN_CREATE_GAS,
+            },
+            TypedTransactionRequest::Seismic(req) => match req.kind {
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,
                 TxKind::Create => MIN_CREATE_GAS,
             },
@@ -2970,6 +2984,8 @@ impl TryFrom<Result<(InstructionResult, Option<Output>, u128, State)>> for GasEs
                 InstructionResult::InvalidEOFInitCode |
                 InstructionResult::EofAuxDataOverflow |
                 InstructionResult::EofAuxDataTooSmall => Ok(Self::EvmError(exit)),
+                InstructionResult::InvalidPrivateStorageAccess |
+                InstructionResult::InvalidPublicStorageAccess => todo!(),
             },
         }
     }

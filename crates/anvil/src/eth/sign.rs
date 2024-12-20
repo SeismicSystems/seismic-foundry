@@ -9,6 +9,7 @@ use anvil_core::eth::transaction::{
     optimism::{DepositTransaction, DepositTransactionRequest},
     TypedTransaction, TypedTransactionRequest,
 };
+use seismic_transaction::transaction::SeismicTransaction;
 use std::collections::HashMap;
 
 /// A transaction signer
@@ -107,6 +108,7 @@ impl Signer for DevSigner {
             TypedTransactionRequest::EIP1559(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
             TypedTransactionRequest::EIP4844(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
             TypedTransactionRequest::Deposit(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
+            TypedTransactionRequest::Seismic(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
         }
     }
 }
@@ -154,6 +156,10 @@ pub fn build_typed_transaction(
                 is_system_tx,
                 nonce: 0,
             })
+        }
+        TypedTransactionRequest::Seismic(tx) => {
+            let seismic_tx = SeismicTransaction { tx: tx.clone() };
+            TypedTransaction::Seismic(seismic_tx.into_signed(signature))
         }
     };
 
