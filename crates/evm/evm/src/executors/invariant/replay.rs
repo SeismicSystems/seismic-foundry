@@ -4,7 +4,7 @@ use super::{
 };
 use crate::executors::Executor;
 use alloy_dyn_abi::JsonAbiExt;
-use alloy_primitives::Log;
+use alloy_primitives::{map::HashMap, Log};
 use eyre::Result;
 use foundry_common::{ContractsByAddress, ContractsByArtifact};
 use foundry_evm_coverage::HitMaps;
@@ -30,6 +30,7 @@ pub fn replay_run(
     logs: &mut Vec<Log>,
     traces: &mut Traces,
     coverage: &mut Option<HitMaps>,
+    deprecated_cheatcodes: &mut HashMap<&'static str, Option<&'static str>>,
     inputs: &[BasicTxDetails],
 ) -> Result<Vec<BaseCounterExample>> {
     // We want traces for a failed case.
@@ -47,16 +48,10 @@ pub fn replay_run(
             tx.call_details.calldata.clone(),
             U256::ZERO,
         )?;
+
         logs.extend(call_result.logs);
         traces.push((TraceKind::Execution, call_result.traces.clone().unwrap()));
-
-        if let Some(new_coverage) = call_result.coverage {
-            if let Some(old_coverage) = coverage {
-                *coverage = Some(std::mem::take(old_coverage).merged(new_coverage));
-            } else {
-                *coverage = Some(new_coverage);
-            }
-        }
+        HitMaps::merge_opt(coverage, call_result.coverage);
 
         // Identify newly generated contracts, if they exist.
         ided_contracts
@@ -84,6 +79,12 @@ pub fn replay_run(
     )?;
     traces.push((TraceKind::Execution, invariant_result.traces.clone().unwrap()));
     logs.extend(invariant_result.logs);
+    deprecated_cheatcodes.extend(
+        invariant_result
+            .cheatcodes
+            .as_ref()
+            .map_or_else(Default::default, |cheats| cheats.deprecated.clone()),
+    );
 
     // Collect after invariant logs and traces.
     if invariant_contract.call_after_invariant && invariant_success {
@@ -107,6 +108,7 @@ pub fn replay_error(
     logs: &mut Vec<Log>,
     traces: &mut Traces,
     coverage: &mut Option<HitMaps>,
+    deprecated_cheatcodes: &mut HashMap<&'static str, Option<&'static str>>,
     progress: Option<&ProgressBar>,
 ) -> Result<Vec<BaseCounterExample>> {
     match failed_case.test_error {
@@ -133,6 +135,7 @@ pub fn replay_error(
                 logs,
                 traces,
                 coverage,
+                deprecated_cheatcodes,
                 &calls,
             )
         }

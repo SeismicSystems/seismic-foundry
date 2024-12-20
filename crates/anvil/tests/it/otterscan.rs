@@ -1,6 +1,7 @@
 //! Tests for otterscan endpoints.
 
 use crate::abi::Multicall;
+use alloy_network::TransactionResponse;
 use alloy_primitives::{address, Address, Bytes, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::{
@@ -144,12 +145,8 @@ async fn ots_get_internal_operations_contract_selfdestruct(hardfork: EthereumHar
 
     let receipt = contract.goodbye().send().await.unwrap().get_receipt().await.unwrap();
 
-    // TODO: This is currently not supported by revm-inspectors
-    let (expected_to, expected_value) = if hardfork < EthereumHardfork::Cancun {
-        (address!("DcDD539DA22bfFAa499dBEa4d37d086Dde196E75"), value)
-    } else {
-        (Address::ZERO, U256::ZERO)
-    };
+    let expected_to = address!("DcDD539DA22bfFAa499dBEa4d37d086Dde196E75");
+    let expected_value = value;
 
     let res = api.ots_get_internal_operations(receipt.transaction_hash).await.unwrap();
     assert_eq!(
@@ -413,7 +410,7 @@ async fn ots_search_transactions_before() {
 
         // check each individual hash
         result.txs.iter().for_each(|tx| {
-            assert_eq!(hashes.pop(), Some(tx.hash));
+            assert_eq!(hashes.pop(), Some(tx.tx_hash()));
         });
 
         block = result.txs.last().unwrap().block_number.unwrap();
@@ -448,7 +445,7 @@ async fn ots_search_transactions_after() {
 
         // check each individual hash
         result.txs.iter().rev().for_each(|tx| {
-            assert_eq!(hashes.pop_back(), Some(tx.hash));
+            assert_eq!(hashes.pop_back(), Some(tx.tx_hash()));
         });
 
         block = result.txs.first().unwrap().block_number.unwrap();

@@ -3,7 +3,7 @@ use foundry_common::compact_to_contract;
 use foundry_compilers::{
     artifacts::{
         sourcemap::{SourceElement, SourceMap},
-        Bytecode, ContractBytecodeSome, Libraries, Source,
+        Bytecode, Contract, ContractBytecodeSome, Libraries, Source,
     },
     multi::MultiCompilerLanguage,
     Artifact, Compiler, ProjectCompileOutput,
@@ -11,10 +11,13 @@ use foundry_compilers::{
 use foundry_evm_core::utils::PcIcMap;
 use foundry_linking::Linker;
 use rayon::prelude::*;
-use rustc_hash::FxHashMap;
-use solang_parser::pt::SourceUnitPart;
+use solar_parse::{
+    interface::{Pos, Session},
+    Parser,
+};
 use std::{
     collections::{BTreeMap, HashMap},
+    ops::Range,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -26,7 +29,7 @@ pub struct SourceData {
     pub path: PathBuf,
     /// Maps contract name to (start, end) of the contract definition in the source code.
     /// This is useful for determining which contract contains given function definition.
-    contract_definitions: Vec<(String, usize, usize)>,
+    contract_definitions: Vec<(String, Range<usize>)>,
 }
 
 impl SourceData {
@@ -36,26 +39,26 @@ impl SourceData {
         match language {
             MultiCompilerLanguage::Vyper(_) => {
                 // Vyper contracts have the same name as the file name.
-                if let Some(name) = path.file_name().map(|s| s.to_string_lossy().to_string()) {
-                    contract_definitions.push((name, 0, source.len()));
+                if let Some(name) = path.file_stem().map(|s| s.to_string_lossy().to_string()) {
+                    contract_definitions.push((name, 0..source.len()));
                 }
             }
             MultiCompilerLanguage::Solc(_) => {
-                if let Ok((parsed, _)) = solang_parser::parse(&source, 0) {
-                    for item in parsed.0 {
-                        let SourceUnitPart::ContractDefinition(contract) = item else {
-                            continue;
-                        };
-                        let Some(name) = contract.name else {
-                            continue;
-                        };
-                        contract_definitions.push((
-                            name.name,
-                            name.loc.start(),
-                            contract.loc.end(),
-                        ));
+                let sess = Session::builder().with_silent_emitter(None).build();
+                let _ = sess.enter(|| -> solar_parse::interface::Result<()> {
+                    let arena = solar_parse::ast::Arena::new();
+                    let filename = path.clone().into();
+                    let mut parser =
+                        Parser::from_source_code(&sess, &arena, filename, source.to_string())?;
+                    let ast = parser.parse_file().map_err(|e| e.emit())?;
+                    for item in ast.items {
+                        if let solar_parse::ast::ItemKind::Contract(contract) = &item.kind {
+                            let range = item.span.lo().to_usize()..item.span.hi().to_usize();
+                            contract_definitions.push((contract.name.to_string(), range));
+                        }
                     }
-                }
+                    Ok(())
+                });
             }
         }
 
@@ -66,8 +69,8 @@ impl SourceData {
     pub fn find_contract_name(&self, start: usize, end: usize) -> Option<&str> {
         self.contract_definitions
             .iter()
-            .find(|(_, s, e)| start >= *s && end <= *e)
-            .map(|(name, _, _)| name.as_str())
+            .find(|(_, r)| start >= r.start && end <= r.end)
+            .map(|(name, _)| name.as_str())
     }
 }
 
@@ -83,12 +86,14 @@ pub struct ArtifactData {
 
 impl ArtifactData {
     fn new(bytecode: ContractBytecodeSome, build_id: String, file_id: u32) -> Result<Self> {
-        let parse = |b: &Bytecode| {
+        let parse = |b: &Bytecode, name: &str| {
             // Only parse source map if it's not empty.
-            let source_map = if b.source_map.as_ref().map_or(true, |s| s.is_empty()) {
+            let source_map = if b.source_map.as_ref().is_none_or(|s| s.is_empty()) {
                 Ok(None)
             } else {
-                b.source_map().transpose()
+                b.source_map().transpose().wrap_err_with(|| {
+                    format!("failed to parse {name} source map of file {file_id} in {build_id}")
+                })
             };
 
             // Only parse bytecode if it's not empty.
@@ -100,11 +105,11 @@ impl ArtifactData {
 
             source_map.map(|source_map| (source_map, pc_ic_map))
         };
-        let (source_map, pc_ic_map) = parse(&bytecode.bytecode)?;
+        let (source_map, pc_ic_map) = parse(&bytecode.bytecode, "creation")?;
         let (source_map_runtime, pc_ic_map_runtime) = bytecode
             .deployed_bytecode
             .bytecode
-            .map(|b| parse(&b))
+            .map(|b| parse(&b, "runtime"))
             .unwrap_or_else(|| Ok((None, None)))?;
 
         Ok(Self { source_map, source_map_runtime, pc_ic_map, pc_ic_map_runtime, build_id, file_id })
@@ -115,7 +120,7 @@ impl ArtifactData {
 #[derive(Clone, Debug, Default)]
 pub struct ContractSources {
     /// Map over build_id -> file_id -> (source code, language)
-    pub sources_by_id: HashMap<String, FxHashMap<u32, Arc<SourceData>>>,
+    pub sources_by_id: HashMap<String, HashMap<u32, Arc<SourceData>>>,
     /// Map over contract name -> Vec<(bytecode, build_id, file_id)>
     pub artifacts_by_name: HashMap<String, Vec<ArtifactData>>,
 }
@@ -124,7 +129,7 @@ impl ContractSources {
     /// Collects the contract sources and artifacts from the project compile output.
     pub fn from_project_output(
         output: &ProjectCompileOutput,
-        root: impl AsRef<Path>,
+        root: &Path,
         libraries: Option<&Libraries>,
     ) -> Result<Self> {
         let mut sources = Self::default();
@@ -132,16 +137,15 @@ impl ContractSources {
         Ok(sources)
     }
 
-    pub fn insert<C: Compiler>(
+    pub fn insert<C: Compiler<CompilerContract = Contract>>(
         &mut self,
         output: &ProjectCompileOutput<C>,
-        root: impl AsRef<Path>,
+        root: &Path,
         libraries: Option<&Libraries>,
     ) -> Result<()>
     where
         C::Language: Into<MultiCompilerLanguage>,
     {
-        let root = root.as_ref();
         let link_data = libraries.map(|libraries| {
             let linker = Linker::new(root, output.artifact_ids().collect());
             (linker, libraries)
@@ -152,16 +156,16 @@ impl ContractSources {
             .collect::<Vec<_>>()
             .par_iter()
             .map(|(id, artifact)| {
-                let mut artifacts = Vec::new();
+                let mut new_artifact = None;
                 if let Some(file_id) = artifact.id {
                     let artifact = if let Some((linker, libraries)) = link_data.as_ref() {
-                        linker.link(id, libraries)?.into_contract_bytecode()
+                        linker.link(id, libraries)?
                     } else {
-                        (*artifact).clone().into_contract_bytecode()
+                        artifact.get_contract_bytecode()
                     };
                     let bytecode = compact_to_contract(artifact.into_contract_bytecode())?;
 
-                    artifacts.push((
+                    new_artifact = Some((
                         id.name.clone(),
                         ArtifactData::new(bytecode, id.build_id.clone(), file_id)?,
                     ));
@@ -169,14 +173,11 @@ impl ContractSources {
                     warn!(id = id.identifier(), "source not found");
                 };
 
-                Ok(artifacts)
+                Ok(new_artifact)
             })
-            .collect::<Result<Vec<_>>>()?
-            .into_iter()
-            .flatten()
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
-        for (name, artifact) in artifacts {
+        for (name, artifact) in artifacts.into_iter().flatten() {
             self.artifacts_by_name.entry(name).or_default().push(artifact);
         }
 
@@ -185,26 +186,22 @@ impl ContractSources {
         let mut files: BTreeMap<PathBuf, Arc<SourceData>> = BTreeMap::new();
         for (build_id, build) in output.builds() {
             for (source_id, path) in &build.source_id_to_path {
-                let source_data = if let Some(source_data) = files.get(path) {
-                    source_data.clone()
-                } else {
-                    let source = Source::read(path).wrap_err_with(|| {
-                        format!("failed to read artifact source file for `{}`", path.display())
-                    })?;
-
-                    let stripped = path.strip_prefix(root).unwrap_or(path).to_path_buf();
-
-                    let source_data = Arc::new(SourceData::new(
-                        source.content.clone(),
-                        build.language.into(),
-                        stripped,
-                    ));
-
-                    files.insert(path.clone(), source_data.clone());
-
-                    source_data
+                let source_data = match files.entry(path.clone()) {
+                    std::collections::btree_map::Entry::Vacant(entry) => {
+                        let source = Source::read(path).wrap_err_with(|| {
+                            format!("failed to read artifact source file for `{}`", path.display())
+                        })?;
+                        let stripped = path.strip_prefix(root).unwrap_or(path).to_path_buf();
+                        let source_data = Arc::new(SourceData::new(
+                            source.content.clone(),
+                            build.language.into(),
+                            stripped,
+                        ));
+                        entry.insert(source_data.clone());
+                        source_data
+                    }
+                    std::collections::btree_map::Entry::Occupied(entry) => entry.get().clone(),
                 };
-
                 self.sources_by_id
                     .entry(build_id.clone())
                     .or_default()
@@ -213,6 +210,14 @@ impl ContractSources {
         }
 
         Ok(())
+    }
+
+    /// Merges given contract sources.
+    pub fn merge(&mut self, sources: Self) {
+        self.sources_by_id.extend(sources.sources_by_id);
+        for (name, artifacts) in sources.artifacts_by_name {
+            self.artifacts_by_name.entry(name).or_default().extend(artifacts);
+        }
     }
 
     /// Returns all sources for a contract by name.
