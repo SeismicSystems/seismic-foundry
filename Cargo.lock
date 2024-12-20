@@ -4370,8 +4370,7 @@ dependencies = [
 [[package]]
 name = "foundry-fork-db"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "491e9f9f138086b3627a8c406730dfbb6afcdcf688e6da0eb15df52f0c8ed163"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=ad124ad2#ad124ad28c6b08ebf0ae448bf33cd3d11bcc5b19"
 dependencies = [
  "alloy-consensus 0.8.3",
  "alloy-primitives",
@@ -10944,8 +10943,3 @@ dependencies = [
  "once_cell",
  "simd-adler32",
 ]
-
-[[patch.unused]]
-name = "foundry-fork-db"
-version = "0.3.1"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=0d2a25e#0d2a25ed60758eb6a1caa897e608ec432ad338c7"

@@ -302,7 +302,7 @@ yansi = { version = "1.0", features = ["detect-tty", "detect-env"] }
 revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "659ee7f" }
 revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "659ee7f" }
 
-foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "0d2a25e" }
+foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "ad124ad2" }
 
 # seismic-alloy-core
 alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a772c2e" }
