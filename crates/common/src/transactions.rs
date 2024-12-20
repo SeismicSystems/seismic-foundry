@@ -1,9 +1,14 @@
 //! Wrappers for transactions.
 
 use alloy_consensus::{Transaction, TxEnvelope};
+use alloy_eips::eip7702::SignedAuthorization;
+use alloy_network::AnyTransactionReceipt;
 use alloy_primitives::{Address, TxKind, U256};
-use alloy_provider::{network::AnyNetwork, Provider};
-use alloy_rpc_types::{AnyTransactionReceipt, BlockId, TransactionRequest};
+use alloy_provider::{
+    network::{AnyNetwork, ReceiptResponse, TransactionBuilder},
+    Provider,
+};
+use alloy_rpc_types::{BlockId, TransactionRequest};
 use alloy_serde::WithOtherFields;
 use alloy_transport::Transport;
 use eyre::Result;
@@ -43,7 +48,7 @@ impl TransactionReceiptWithRevertReason {
         provider: &P,
     ) -> Result<Option<String>> {
         if !self.is_failure() {
-            return Ok(None)
+            return Ok(None);
         }
 
         let transaction = provider
@@ -54,7 +59,7 @@ impl TransactionReceiptWithRevertReason {
 
         if let Some(block_hash) = self.receipt.block_hash {
             match provider
-                .call(&WithOtherFields::new(transaction.inner.into()))
+                .call(&transaction.inner.inner.into())
                 .block(BlockId::Hash(block_hash.into()))
                 .await
             {
@@ -119,7 +124,7 @@ pub fn get_pretty_tx_receipt_attr(
         "gasUsed" | "gas_used" => Some(receipt.receipt.gas_used.to_string()),
         "logs" => Some(receipt.receipt.inner.inner.inner.receipt.logs.as_slice().pretty()),
         "logsBloom" | "logs_bloom" => Some(receipt.receipt.inner.inner.inner.logs_bloom.pretty()),
-        "root" | "stateRoot" | "state_root " => Some(receipt.receipt.state_root.pretty()),
+        "root" | "stateRoot" | "state_root " => Some(receipt.receipt.state_root().pretty()),
         "status" | "statusCode" | "status_code" => {
             Some(receipt.receipt.inner.inner.inner.receipt.status.pretty())
         }
@@ -175,6 +180,10 @@ impl TransactionMaybeSigned {
         Ok(Self::Signed { tx, from })
     }
 
+    pub fn is_unsigned(&self) -> bool {
+        matches!(self, Self::Unsigned(_))
+    }
+
     pub fn as_unsigned_mut(&mut self) -> Option<&mut WithOtherFields<TransactionRequest>> {
         match self {
             Self::Unsigned(tx) => Some(tx),
@@ -198,7 +207,7 @@ impl TransactionMaybeSigned {
 
     pub fn to(&self) -> Option<TxKind> {
         match self {
-            Self::Signed { tx, .. } => Some(tx.to()),
+            Self::Signed { tx, .. } => Some(tx.kind()),
             Self::Unsigned(tx) => tx.to,
         }
     }
@@ -212,9 +221,24 @@ impl TransactionMaybeSigned {
 
     pub fn gas(&self) -> Option<u128> {
         match self {
-            Self::Signed { tx, .. } => Some(tx.gas_limit()),
-            Self::Unsigned(tx) => tx.gas,
+            Self::Signed { tx, .. } => Some(tx.gas_limit() as u128),
+            Self::Unsigned(tx) => tx.gas_limit().map(|g| g as u128),
         }
+    }
+
+    pub fn nonce(&self) -> Option<u64> {
+        match self {
+            Self::Signed { tx, .. } => Some(tx.nonce()),
+            Self::Unsigned(tx) => tx.nonce,
+        }
+    }
+
+    pub fn authorization_list(&self) -> Option<Vec<SignedAuthorization>> {
+        match self {
+            Self::Signed { tx, .. } => tx.authorization_list().map(|auths| auths.to_vec()),
+            Self::Unsigned(tx) => tx.authorization_list.as_deref().map(|auths| auths.to_vec()),
+        }
+        .filter(|auths| !auths.is_empty())
     }
 }
 

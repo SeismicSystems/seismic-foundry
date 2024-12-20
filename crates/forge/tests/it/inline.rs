@@ -1,8 +1,7 @@
 //! Inline configuration tests.
 
 use crate::test_helpers::TEST_DATA_DEFAULT;
-use forge::{result::TestKind, TestOptionsBuilder};
-use foundry_config::{FuzzConfig, InvariantConfig};
+use forge::result::TestKind;
 use foundry_test_utils::Filter;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -68,32 +67,4 @@ async fn inline_config_run_invariant() {
         TestKind::Invariant { runs, .. } => assert_eq!(runs, 42),
         _ => unreachable!(),
     }
-}
-
-#[test]
-fn build_test_options() {
-    let root = &TEST_DATA_DEFAULT.project.paths.root;
-    let profiles = vec!["default".to_string(), "ci".to_string()];
-    let build_result = TestOptionsBuilder::default()
-        .fuzz(FuzzConfig::default())
-        .invariant(InvariantConfig::default())
-        .profiles(profiles)
-        .build(&TEST_DATA_DEFAULT.output, root);
-
-    assert!(build_result.is_ok());
-}
-
-#[test]
-fn build_test_options_just_one_valid_profile() {
-    let root = &TEST_DATA_DEFAULT.project.root();
-    let valid_profiles = vec!["profile-sheldon-cooper".to_string()];
-    let build_result = TestOptionsBuilder::default()
-        .fuzz(FuzzConfig::default())
-        .invariant(InvariantConfig::default())
-        .profiles(valid_profiles)
-        .build(&TEST_DATA_DEFAULT.output, root);
-
-    // We expect an error, since COMPILED contains in-line
-    // per-test configs for "default" and "ci" profiles
-    assert!(build_result.is_err());
 }

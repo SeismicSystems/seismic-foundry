@@ -64,9 +64,12 @@ impl Miner {
         matches!(*mode, MiningMode::Auto(_))
     }
 
-    pub fn is_interval(&self) -> bool {
+    pub fn get_interval(&self) -> Option<u64> {
         let mode = self.mode.read();
-        matches!(*mode, MiningMode::FixedBlockTime(_))
+        if let MiningMode::FixedBlockTime(ref mm) = *mode {
+            return Some(mm.interval.period().as_secs());
+        }
+        None
     }
 
     /// Sets the mining mode to operate in
@@ -218,7 +221,7 @@ impl FixedBlockTimeMiner {
     fn poll(&mut self, pool: &Arc<Pool>, cx: &mut Context<'_>) -> Poll<Vec<Arc<PoolTransaction>>> {
         if self.interval.poll_tick(cx).is_ready() {
             // drain the pool
-            return Poll::Ready(pool.ready_transactions().collect())
+            return Poll::Ready(pool.ready_transactions().collect());
         }
         Poll::Pending
     }
@@ -248,7 +251,7 @@ impl ReadyTransactionMiner {
         }
 
         if self.has_pending_txs == Some(false) {
-            return Poll::Pending
+            return Poll::Pending;
         }
 
         let transactions =
@@ -258,7 +261,7 @@ impl ReadyTransactionMiner {
         self.has_pending_txs = Some(transactions.len() >= self.max_transactions);
 
         if transactions.is_empty() {
-            return Poll::Pending
+            return Poll::Pending;
         }
 
         Poll::Ready(transactions)

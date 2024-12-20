@@ -5,9 +5,9 @@ use crate::{
     utils::{http_provider_with_signer, ws_provider_with_signer},
 };
 use alloy_network::EthereumWallet;
-use alloy_primitives::B256;
+use alloy_primitives::{map::B256HashSet, B256};
 use alloy_provider::Provider;
-use alloy_rpc_types::{BlockNumberOrTag, Filter};
+use alloy_rpc_types::{BlockNumberOrTag, BlockTransactionsKind, Filter};
 use anvil::{spawn, NodeConfig};
 use futures::StreamExt;
 
@@ -55,7 +55,7 @@ async fn get_past_events() {
     // and we can fetch the events at a block hash
     // let hash = provider.get_block(1).await.unwrap().unwrap().hash.unwrap();
     let hash = provider
-        .get_block_by_number(BlockNumberOrTag::from(1), false)
+        .get_block_by_number(BlockNumberOrTag::from(1), BlockTransactionsKind::Hashes)
         .await
         .unwrap()
         .unwrap()
@@ -120,7 +120,7 @@ async fn get_all_events() {
     // test that logs returned from get_logs and get_transaction_receipt have
     // the same log_index, block_number, and transaction_hash
     let mut tasks = vec![];
-    let mut seen_tx_hashes = std::collections::HashSet::new();
+    let mut seen_tx_hashes = B256HashSet::default();
     for log in &logs {
         if seen_tx_hashes.contains(&log.transaction_hash.unwrap()) {
             continue;
@@ -191,7 +191,10 @@ async fn watch_events() {
         assert_eq!(log.1.block_number.unwrap(), starting_block_number + i + 1);
 
         let hash = provider
-            .get_block_by_number(BlockNumberOrTag::from(starting_block_number + i + 1), false)
+            .get_block_by_number(
+                BlockNumberOrTag::from(starting_block_number + i + 1),
+                false.into(),
+            )
             .await
             .unwrap()
             .unwrap()

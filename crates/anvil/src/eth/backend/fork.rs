@@ -3,8 +3,11 @@
 use crate::eth::{backend::db::Db, error::BlockchainError, pool::transactions::PoolTransaction};
 use alloy_consensus::Account;
 use alloy_eips::eip2930::AccessListResult;
-use alloy_network::BlockResponse;
-use alloy_primitives::{Address, Bytes, StorageValue, B256, U256};
+use alloy_network::{AnyRpcBlock, AnyRpcTransaction, BlockResponse, TransactionResponse};
+use alloy_primitives::{
+    map::{FbHashMap, HashMap},
+    Address, Bytes, StorageValue, B256, U256,
+};
 use alloy_provider::{
     ext::{DebugApi, TraceApi},
     Provider,
@@ -15,8 +18,8 @@ use alloy_rpc_types::{
         geth::{GethDebugTracingOptions, GethTrace},
         parity::LocalizedTransactionTrace as Trace,
     },
-    AnyNetworkBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions,
-    EIP1186AccountProofResponse, FeeHistory, Filter, Log, Transaction,
+    BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions, EIP1186AccountProofResponse,
+    FeeHistory, Filter, Log,
 };
 use alloy_serde::WithOtherFields;
 use alloy_transport::TransportError;
@@ -27,7 +30,7 @@ use parking_lot::{
     RawRwLock, RwLock,
 };
 use revm::primitives::BlobExcessGasAndPrice;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock as AsyncRwLock;
 
 /// Represents a fork of a remote client
@@ -89,7 +92,13 @@ impl ClientFork {
         let total_difficulty = block.header.total_difficulty.unwrap_or_default();
 
         let number = block.header.number;
-        self.config.write().update_block(number, block_hash, timestamp, base_fee, total_difficulty);
+        self.config.write().update_block(
+            number,
+            block_hash,
+            timestamp,
+            base_fee.map(|g| g as u128),
+            total_difficulty,
+        );
 
         self.clear_cached_storage();
 
@@ -199,7 +208,7 @@ impl ClientFork {
         let block = block.unwrap_or_default();
         let res = self.provider().estimate_gas(request).block(block.into()).await?;
 
-        Ok(res)
+        Ok(res as u128)
     }
 
     /// Sends `eth_createAccessList`
@@ -282,7 +291,7 @@ impl ClientFork {
         &self,
         number: u64,
         index: usize,
-    ) -> Result<Option<WithOtherFields<Transaction>>, TransportError> {
+    ) -> Result<Option<AnyRpcTransaction>, TransportError> {
         if let Some(block) = self.block_by_number(number).await? {
             match block.transactions() {
                 BlockTransactions::Full(txs) => {
@@ -306,7 +315,7 @@ impl ClientFork {
         &self,
         hash: B256,
         index: usize,
-    ) -> Result<Option<WithOtherFields<Transaction>>, TransportError> {
+    ) -> Result<Option<AnyRpcTransaction>, TransportError> {
         if let Some(block) = self.block_by_hash(hash).await? {
             match block.transactions() {
                 BlockTransactions::Full(txs) => {
@@ -329,7 +338,7 @@ impl ClientFork {
     pub async fn transaction_by_hash(
         &self,
         hash: B256,
-    ) -> Result<Option<WithOtherFields<Transaction>>, TransportError> {
+    ) -> Result<Option<AnyRpcTransaction>, TransportError> {
         trace!(target: "backend::fork", "transaction_by_hash={:?}", hash);
         if let tx @ Some(_) = self.storage_read().transactions.get(&hash).cloned() {
             return Ok(tx);
@@ -441,10 +450,7 @@ impl ClientFork {
         Ok(None)
     }
 
-    pub async fn block_by_hash(
-        &self,
-        hash: B256,
-    ) -> Result<Option<AnyNetworkBlock>, TransportError> {
+    pub async fn block_by_hash(&self, hash: B256) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(mut block) = self.storage_read().blocks.get(&hash).cloned() {
             block.transactions.convert_to_hashes();
             return Ok(Some(block));
@@ -459,7 +465,7 @@ impl ClientFork {
     pub async fn block_by_hash_full(
         &self,
         hash: B256,
-    ) -> Result<Option<AnyNetworkBlock>, TransportError> {
+    ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(block) = self.storage_read().blocks.get(&hash).cloned() {
             return Ok(Some(self.convert_to_full_block(block)));
         }
@@ -469,7 +475,7 @@ impl ClientFork {
     pub async fn block_by_number(
         &self,
         block_number: u64,
-    ) -> Result<Option<AnyNetworkBlock>, TransportError> {
+    ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(mut block) = self
             .storage_read()
             .hashes
@@ -490,7 +496,7 @@ impl ClientFork {
     pub async fn block_by_number_full(
         &self,
         block_number: u64,
-    ) -> Result<Option<AnyNetworkBlock>, TransportError> {
+    ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(block) = self
             .storage_read()
             .hashes
@@ -507,7 +513,7 @@ impl ClientFork {
     async fn fetch_full_block(
         &self,
         block_id: impl Into<BlockId>,
-    ) -> Result<Option<AnyNetworkBlock>, TransportError> {
+    ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(block) = self.provider().get_block(block_id.into(), true.into()).await? {
             let hash = block.header.hash;
             let block_number = block.header.number;
@@ -517,7 +523,7 @@ impl ClientFork {
                 BlockTransactions::Full(txs) => txs.to_owned(),
                 _ => vec![],
             };
-            storage.transactions.extend(block_txs.iter().map(|tx| (tx.hash, tx.clone())));
+            storage.transactions.extend(block_txs.iter().map(|tx| (tx.tx_hash(), tx.clone())));
             storage.hashes.insert(block_number, hash);
             storage.blocks.insert(hash, block.clone());
             return Ok(Some(block));
@@ -530,7 +536,7 @@ impl ClientFork {
         &self,
         hash: B256,
         index: usize,
-    ) -> Result<Option<AnyNetworkBlock>, TransportError> {
+    ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(block) = self.block_by_hash(hash).await? {
             return self.uncles_by_block_and_index(block, index).await;
         }
@@ -541,7 +547,7 @@ impl ClientFork {
         &self,
         number: u64,
         index: usize,
-    ) -> Result<Option<AnyNetworkBlock>, TransportError> {
+    ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(block) = self.block_by_number(number).await? {
             return self.uncles_by_block_and_index(block, index).await;
         }
@@ -550,9 +556,9 @@ impl ClientFork {
 
     async fn uncles_by_block_and_index(
         &self,
-        block: AnyNetworkBlock,
+        block: AnyRpcBlock,
         index: usize,
-    ) -> Result<Option<AnyNetworkBlock>, TransportError> {
+    ) -> Result<Option<AnyRpcBlock>, TransportError> {
         let block_hash = block.header.hash;
         let block_number = block.header.number;
         if let Some(uncles) = self.storage_read().uncles.get(&block_hash) {
@@ -573,7 +579,7 @@ impl ClientFork {
     }
 
     /// Converts a block of hashes into a full block
-    fn convert_to_full_block(&self, mut block: AnyNetworkBlock) -> AnyNetworkBlock {
+    fn convert_to_full_block(&self, mut block: AnyRpcBlock) -> AnyRpcBlock {
         let storage = self.storage.read();
         let block_txs_len = match block.transactions {
             BlockTransactions::Full(ref txs) => txs.len(),
@@ -675,14 +681,14 @@ impl ClientForkConfig {
 /// This is used as a cache so repeated requests to the same data are not sent to the remote client
 #[derive(Clone, Debug, Default)]
 pub struct ForkedStorage {
-    pub uncles: HashMap<B256, Vec<AnyNetworkBlock>>,
-    pub blocks: HashMap<B256, AnyNetworkBlock>,
+    pub uncles: FbHashMap<32, Vec<AnyRpcBlock>>,
+    pub blocks: FbHashMap<32, AnyRpcBlock>,
     pub hashes: HashMap<u64, B256>,
-    pub transactions: HashMap<B256, WithOtherFields<Transaction>>,
-    pub transaction_receipts: HashMap<B256, ReceiptResponse>,
-    pub transaction_traces: HashMap<B256, Vec<Trace>>,
+    pub transactions: FbHashMap<32, AnyRpcTransaction>,
+    pub transaction_receipts: FbHashMap<32, ReceiptResponse>,
+    pub transaction_traces: FbHashMap<32, Vec<Trace>>,
     pub logs: HashMap<Filter, Vec<Log>>,
-    pub geth_transaction_traces: HashMap<B256, GethTrace>,
+    pub geth_transaction_traces: FbHashMap<32, GethTrace>,
     pub block_traces: HashMap<u64, Vec<Trace>>,
     pub block_receipts: HashMap<u64, Vec<ReceiptResponse>>,
     pub code_at: HashMap<(Address, u64), Bytes>,

@@ -75,7 +75,7 @@ impl CommentWithMetadata {
     fn from_comment_and_src(comment: Comment, src: &str, last_comment: Option<&Self>) -> Self {
         let src_before = &src[..comment.loc().start()];
         if src_before.is_empty() {
-            return Self::new(comment, CommentPosition::Prefix, false, 0)
+            return Self::new(comment, CommentPosition::Prefix, false, 0);
         }
 
         let mut lines_before = src_before.lines().rev();
@@ -88,9 +88,9 @@ impl CommentWithMetadata {
             return Self::new(
                 comment,
                 CommentPosition::Prefix,
-                last_line.map_or(true, str::is_empty),
+                last_line.is_none_or(str::is_empty),
                 indent_len,
-            )
+            );
         }
 
         // TODO: this loop takes almost the entirety of the time spent in parsing, which is up to
@@ -112,7 +112,7 @@ impl CommentWithMetadata {
                     // line has something
                     // check if the last comment after code was a postfix comment
                     if last_comment
-                        .map_or(false, |last| last.loc.end() > code_end && !last.is_prefix())
+                        .is_some_and(|last| last.loc.end() > code_end && !last.is_prefix())
                     {
                         // get the indent size of the next item of code
                         let next_indent_len = src[comment.loc().end()..]
@@ -241,7 +241,7 @@ impl Comments {
             .map(|(idx, _)| idx)
             .unwrap_or_else(|| comments.len());
         if pos == 0 {
-            return Vec::new()
+            return Vec::new();
         }
         comments.rotate_left(pos);
         comments.split_off(comments.len() - pos).into()
@@ -409,14 +409,14 @@ impl std::iter::FusedIterator for CommentStateCharIndices<'_> {}
 /// An Iterator over characters in a string slice which are not a apart of comments
 pub struct NonCommentChars<'a>(CommentStateCharIndices<'a>);
 
-impl<'a> Iterator for NonCommentChars<'a> {
+impl Iterator for NonCommentChars<'_> {
     type Item = char;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         for (state, _, ch) in self.0.by_ref() {
             if state == CommentState::None {
-                return Some(ch)
+                return Some(ch);
             }
         }
         None

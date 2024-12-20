@@ -65,7 +65,7 @@ impl EtherscanIdentifier {
             // filter out vyper files
             .filter(|(_, metadata)| !metadata.is_vyper())
             .map(|(address, metadata)| async move {
-                println!("Compiling: {} {address}", metadata.contract_name);
+                sh_println!("Compiling: {} {address}", metadata.contract_name)?;
                 let root = tempfile::tempdir()?;
                 let root_path = root.path();
                 let project = etherscan_project(metadata, root_path)?;
@@ -97,13 +97,13 @@ impl EtherscanIdentifier {
 impl TraceIdentifier for EtherscanIdentifier {
     fn identify_addresses<'a, A>(&mut self, addresses: A) -> Vec<AddressIdentity<'_>>
     where
-        A: Iterator<Item = (&'a Address, Option<&'a [u8]>)>,
+        A: Iterator<Item = (&'a Address, Option<&'a [u8]>, Option<&'a [u8]>)>,
     {
         trace!(target: "evm::traces", "identify {:?} addresses", addresses.size_hint().1);
 
         if self.invalid_api_key.load(Ordering::Relaxed) {
             // api key was marked as invalid
-            return Vec::new()
+            return Vec::new();
         }
 
         let mut identities = Vec::new();
@@ -114,7 +114,7 @@ impl TraceIdentifier for EtherscanIdentifier {
             Arc::clone(&self.invalid_api_key),
         );
 
-        for (addr, _) in addresses {
+        for (addr, _, _) in addresses {
             if let Some(metadata) = self.contracts.get(addr) {
                 let label = metadata.contract_name.clone();
                 let abi = metadata.abi().ok().map(Cow::Owned);
@@ -222,7 +222,7 @@ impl Stream for EtherscanFetcher {
             if let Some(mut backoff) = pin.backoff.take() {
                 if backoff.poll_tick(cx).is_pending() {
                     pin.backoff = Some(backoff);
-                    return Poll::Pending
+                    return Poll::Pending;
                 }
             }
 
@@ -237,7 +237,7 @@ impl Stream for EtherscanFetcher {
                     match res {
                         Ok(mut metadata) => {
                             if let Some(item) = metadata.items.pop() {
-                                return Poll::Ready(Some((addr, item)))
+                                return Poll::Ready(Some((addr, item)));
                             }
                         }
                         Err(EtherscanError::RateLimitExceeded) => {
@@ -249,13 +249,13 @@ impl Stream for EtherscanFetcher {
                             warn!(target: "traces::etherscan", "invalid api key");
                             // mark key as invalid
                             pin.invalid_api_key.store(true, Ordering::Relaxed);
-                            return Poll::Ready(None)
+                            return Poll::Ready(None);
                         }
                         Err(EtherscanError::BlockedByCloudflare) => {
                             warn!(target: "traces::etherscan", "blocked by cloudflare");
                             // mark key as invalid
                             pin.invalid_api_key.store(true, Ordering::Relaxed);
-                            return Poll::Ready(None)
+                            return Poll::Ready(None);
                         }
                         Err(err) => {
                             warn!(target: "traces::etherscan", "could not get etherscan info: {:?}", err);
@@ -265,7 +265,7 @@ impl Stream for EtherscanFetcher {
             }
 
             if !made_progress_this_iter {
-                return Poll::Pending
+                return Poll::Pending;
             }
         }
     }

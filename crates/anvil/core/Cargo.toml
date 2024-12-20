@@ -22,7 +22,7 @@ revm = { workspace = true, default-features = false, features = [
     "c-kzg",
 ] }
 
-alloy-primitives = { workspace = true, features = ["serde", "seismic"] }
+alloy-primitives = { workspace = true, features = ["serde", "seismic", "rlp"] }
 alloy-rpc-types = { workspace = true, features = ["anvil", "trace"] }
 alloy-serde.workspace = true
 alloy-rlp.workspace = true
@@ -30,14 +30,15 @@ alloy-eips.workspace = true
 alloy-consensus = { workspace = true, features = ["k256", "kzg"] }
 alloy-dyn-abi = { workspace = true, features = ["std", "eip712", "seismic"] }
 alloy-trie.workspace = true
-seismic-transaction.workspace = true
-
+op-alloy-consensus = { workspace = true, features = ["serde"] }
+alloy-network.workspace = true
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
-bytes = "1.4"
+bytes.workspace = true
 
 # misc
-rand = "0.8"
+rand.workspace = true
+thiserror.workspace = true
 
 anyhow = "1.0"
 once_cell = "1"
@@ -45,6 +46,8 @@ secp256k1 = { version = "0.29", default-features = false, features = [
     "global-context",
     "recovery",
 ] }
+
+seismic-transaction.workspace = true
 tee_service_api = { git = "ssh://git@github.com/SeismicSystems/TEEService.git", package = "tee_service_api", rev = "9ab28c87247b876f5875c470f39bd3a3b07b3e8b"}
 
 [features]

@@ -2,7 +2,7 @@ use clap::{Parser, ValueHint};
 use eyre::{Context, Result};
 use forge_fmt::{format_to, parse};
 use foundry_cli::utils::{FoundryPathExt, LoadConfig};
-use foundry_common::{fs, term::cli_warn};
+use foundry_common::fs;
 use foundry_compilers::{compilers::solc::SolcLanguage, solc::SOLC_EXTENSIONS};
 use foundry_config::{filter::expand_globs, impl_figment_convert_basic};
 use rayon::prelude::*;
@@ -48,7 +48,7 @@ impl FmtArgs {
         let config = self.try_load_config_emit_warnings()?;
 
         // Expand ignore globs and canonicalize from the get go
-        let ignored = expand_globs(&config.root.0, config.fmt.ignore.iter())?
+        let ignored = expand_globs(&config.root, config.fmt.ignore.iter())?
             .iter()
             .flat_map(foundry_common::fs::canonicalize_path)
             .collect::<Vec<_>>();
@@ -76,7 +76,7 @@ impl FmtArgs {
                         ((path.is_absolute() && ignored.contains(path)) ||
                             ignored.contains(&cwd.join(path)))
                     {
-                        continue
+                        continue;
                     }
 
                     if path.is_dir() {
@@ -96,9 +96,7 @@ impl FmtArgs {
 
         let format = |source: String, path: Option<&Path>| -> Result<_> {
             let name = match path {
-                Some(path) => {
-                    path.strip_prefix(&config.root.0).unwrap_or(path).display().to_string()
-                }
+                Some(path) => path.strip_prefix(&config.root).unwrap_or(path).display().to_string(),
                 None => "stdin".to_string(),
             };
 
@@ -111,7 +109,7 @@ impl FmtArgs {
                     let mut lines = source[..loc.start().min(source.len())].split('\n');
                     let col = lines.next_back().unwrap().len() + 1;
                     let row = lines.count() + 1;
-                    cli_warn!("[{}:{}:{}] {}", name, row, col, warning);
+                    sh_warn!("[{}:{}:{}] {}", name, row, col, warning)?;
                 }
             }
 
@@ -129,12 +127,12 @@ impl FmtArgs {
             let new_format = diff.ratio() < 1.0;
             if self.check || path.is_none() {
                 if self.raw {
-                    print!("{output}");
+                    sh_print!("{output}")?;
                 }
 
                 // If new format then compute diff summary.
                 if new_format {
-                    return Ok(Some(format_diff_summary(&name, &diff)))
+                    return Ok(Some(format_diff_summary(&name, &diff)));
                 }
             } else if let Some(path) = path {
                 // If new format then write it on disk.
@@ -149,12 +147,12 @@ impl FmtArgs {
             Input::Stdin(source) => format(source, None).map(|diff| vec![diff]),
             Input::Paths(paths) => {
                 if paths.is_empty() {
-                    cli_warn!(
+                    sh_warn!(
                         "Nothing to format.\n\
                          HINT: If you are working outside of the project, \
                          try providing paths to your source files: `forge fmt <paths>`"
-                    );
-                    return Ok(())
+                    )?;
+                    return Ok(());
                 }
                 paths
                     .par_iter()

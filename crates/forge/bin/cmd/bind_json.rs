@@ -11,7 +11,7 @@ use foundry_compilers::{
     multi::{MultiCompilerLanguage, MultiCompilerParsedSource},
     project::ProjectCompiler,
     solc::SolcLanguage,
-    CompilerSettings, Graph, Project,
+    Graph, Project,
 };
 use foundry_config::Config;
 use itertools::Itertools;
@@ -64,7 +64,7 @@ impl BindJsonArgs {
         let config = self.try_load_config_emit_warnings()?;
         let project = config.create_project(false, true)?;
 
-        let target_path = config.root.0.join(self.out.as_ref().unwrap_or(&config.bind_json.out));
+        let target_path = config.root.join(self.out.as_ref().unwrap_or(&config.bind_json.out));
 
         let sources = project.paths.read_input_files()?;
         let graph = Graph::<MultiCompilerParsedSource>::resolve_sources(&project.paths, sources)?;
@@ -72,7 +72,7 @@ impl BindJsonArgs {
         // We only generate bindings for a single Solidity version to avoid conflicts.
         let mut sources = graph
             // resolve graph into mapping language -> version -> sources
-            .into_sources_by_version(project.offline, &project.locked_versions, &project.compiler)?
+            .into_sources_by_version(&project)?
             .0
             .into_iter()
             // we are only interested in Solidity sources
@@ -81,7 +81,7 @@ impl BindJsonArgs {
             .1
             .into_iter()
             // For now, we are always picking the latest version.
-            .max_by(|(v1, _), (v2, _)| v1.cmp(v2))
+            .max_by(|(v1, _, _), (v2, _, _)| v1.cmp(v2))
             .unwrap()
             .1;
 
@@ -187,7 +187,7 @@ struct StructToWrite {
 }
 
 impl StructToWrite {
-    /// Returns the name of the imported item. If struct is definied at the file level, returns the
+    /// Returns the name of the imported item. If struct is defined at the file level, returns the
     /// struct name, otherwise returns the parent contract name.
     fn struct_or_contract_name(&self) -> &str {
         self.contract_name.as_deref().unwrap_or(&self.name)
@@ -229,7 +229,7 @@ impl PreprocessedState {
     fn compile(self) -> Result<CompiledState> {
         let Self { sources, target_path, mut project, config } = self;
 
-        project.settings.update_output_selection(|selection| {
+        project.update_output_selection(|selection| {
             *selection = OutputSelection::ast_output_selection();
         });
 
@@ -309,10 +309,7 @@ impl CompiledState {
         for ((path, id), (def, contract_name)) in structs {
             // For some structs there's no schema (e.g. if they contain a mapping), so we just skip
             // those.
-            let Some(schema) = resolver.resolve_struct_eip712(id, &mut Default::default(), true)?
-            else {
-                continue
-            };
+            let Some(schema) = resolver.resolve_struct_eip712(id)? else { continue };
 
             if !include.is_empty() {
                 if !include.iter().any(|matcher| matcher.is_match(path)) {
@@ -378,7 +375,7 @@ impl StructsState {
         for (name, paths) in names_to_paths {
             if paths.len() <= 1 {
                 // no alias needed
-                continue
+                continue;
             }
 
             for (i, path) in paths.into_iter().enumerate() {
@@ -442,7 +439,7 @@ impl ResolvedState {
         }
         fs::write(&self.target_path, &result)?;
 
-        println!("Bindings written to {}", self.target_path.display());
+        sh_println!("Bindings written to {}", self.target_path.display())?;
 
         Ok(result)
     }

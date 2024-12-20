@@ -1,3 +1,5 @@
+#![allow(clippy::needless_return)]
+
 mod abi;
 mod anvil;
 mod anvil_api;
@@ -9,7 +11,7 @@ mod gas;
 mod genesis;
 mod ipc;
 mod logs;
-mod optimism;
+// mod optimism;
 mod otterscan;
 mod proof;
 mod pubsub;

@@ -10,6 +10,7 @@ use alloy_signer_local::coins_bip39::{English, Mnemonic};
 use anvil_server::ServerConfig;
 use clap::Parser;
 use core::fmt;
+use foundry_common::shell;
 use foundry_config::{Chain, Config, FigmentProviders};
 use futures::FutureExt;
 use rand::{rngs::StdRng, SeedableRng};
@@ -72,13 +73,9 @@ pub struct NodeArgs {
     #[arg(long)]
     pub derivation_path: Option<String>,
 
-    /// Don't print anything on startup and don't print logs
-    #[arg(long)]
-    pub silent: bool,
-
     /// The EVM hardfork to use.
     ///
-    /// Choose the hardfork by name, e.g. `shanghai`, `paris`, `london`, etc...
+    /// Choose the hardfork by name, e.g. `cancun`, `shanghai`, `paris`, `london`, etc...
     /// [default: latest]
     #[arg(long)]
     pub hardfork: Option<String>,
@@ -92,8 +89,8 @@ pub struct NodeArgs {
     pub slots_in_an_epoch: u64,
 
     /// Writes output of `anvil` as json to user-specified file.
-    #[arg(long, value_name = "OUT_FILE")]
-    pub config_out: Option<String>,
+    #[arg(long, value_name = "FILE", value_hint = clap::ValueHint::FilePath)]
+    pub config_out: Option<PathBuf>,
 
     /// Disable auto and interval mining, and mine on demand instead.
     #[arg(long, visible_alias = "no-mine", conflicts_with = "block_time")]
@@ -149,6 +146,15 @@ pub struct NodeArgs {
     #[arg(long, value_name = "PATH", conflicts_with = "init")]
     pub dump_state: Option<PathBuf>,
 
+    /// Preserve historical state snapshots when dumping the state.
+    ///
+    /// This will save the in-memory states of the chain at particular block hashes.
+    ///
+    /// These historical states will be loaded into the memory when `--load-state` / `--state`, and
+    /// aids in RPC calls beyond the block at which state was dumped.
+    #[arg(long, conflicts_with = "init", default_value = "false")]
+    pub preserve_historical_states: bool,
+
     /// Initialize the chain from a previously saved state snapshot.
     #[arg(
         long,
@@ -171,7 +177,7 @@ pub struct NodeArgs {
     /// Max number of states to persist on disk.
     ///
     /// Note that `prune_history` will overwrite `max_persisted_states` to 0.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "prune_history")]
     pub max_persisted_states: Option<usize>,
 
     /// Number of blocks with transactions to keep in memory.
@@ -183,6 +189,10 @@ pub struct NodeArgs {
 
     #[command(flatten)]
     pub server_config: ServerConfig,
+
+    /// Path to the cache directory where states are stored.    
+    #[arg(long, value_name = "PATH")]
+    pub cache_path: Option<PathBuf>,
 }
 
 #[cfg(windows)]
@@ -245,10 +255,11 @@ impl NodeArgs {
             .fork_compute_units_per_second(compute_units_per_second)
             .with_eth_rpc_url(self.evm_opts.fork_url.map(|fork| fork.url))
             .with_base_fee(self.evm_opts.block_base_fee_per_gas)
+            .disable_min_priority_fee(self.evm_opts.disable_min_priority_fee)
             .with_storage_caching(self.evm_opts.no_storage_caching)
             .with_server_config(self.server_config)
             .with_host(self.host)
-            .set_silent(self.silent)
+            .set_silent(shell::is_quiet())
             .set_config_out(self.config_out)
             .with_chain_id(self.evm_opts.chain_id)
             .with_transaction_order(self.order)
@@ -264,10 +275,11 @@ impl NodeArgs {
             .with_transaction_block_keeper(self.transaction_block_keeper)
             .with_max_persisted_states(self.max_persisted_states)
             .with_optimism(self.evm_opts.optimism)
-            .with_alphanet(self.evm_opts.alphanet)
+            .with_odyssey(self.evm_opts.odyssey)
             .with_disable_default_create2_deployer(self.evm_opts.disable_default_create2_deployer)
             .with_slots_in_an_epoch(self.slots_in_an_epoch)
-            .with_memory_limit(self.evm_opts.memory_limit))
+            .with_memory_limit(self.evm_opts.memory_limit)
+            .with_cache_path(self.cache_path))
     }
 
     fn account_generator(&self) -> AccountGenerator {
@@ -306,6 +318,7 @@ impl NodeArgs {
         let dump_state = self.dump_state_path();
         let dump_interval =
             self.state_interval.map(Duration::from_secs).unwrap_or(DEFAULT_DUMP_INTERVAL);
+        let preserve_historical_states = self.preserve_historical_states;
 
         let (api, mut handle) = crate::try_spawn(self.into_node_config()?).await?;
 
@@ -320,7 +333,8 @@ impl NodeArgs {
         let task_manager = handle.task_manager();
         let mut on_shutdown = task_manager.on_shutdown();
 
-        let mut state_dumper = PeriodicStateDumper::new(api, dump_state, dump_interval);
+        let mut state_dumper =
+            PeriodicStateDumper::new(api, dump_state, dump_interval, preserve_historical_states);
 
         task_manager.spawn(async move {
             // wait for the SIGTERM signal on unix systems
@@ -534,7 +548,11 @@ pub struct AnvilEvmArgs {
         value_name = "FEE",
         help_heading = "Environment config"
     )]
-    pub block_base_fee_per_gas: Option<u128>,
+    pub block_base_fee_per_gas: Option<u64>,
+
+    /// Disable the enforcement of a minimum suggested priority fee.
+    #[arg(long, visible_alias = "no-priority-fee", help_heading = "Environment config")]
+    pub disable_min_priority_fee: bool,
 
     /// The chain ID.
     #[arg(long, alias = "chain", help_heading = "Environment config")]
@@ -548,8 +566,9 @@ pub struct AnvilEvmArgs {
     #[arg(long, visible_alias = "no-console-log")]
     pub disable_console_log: bool,
 
-    /// Enable autoImpersonate on startup
-    #[arg(long, visible_alias = "auto-impersonate")]
+    /// Enables automatic impersonation on startup. This allows any transaction sender to be
+    /// simulated as different accounts, which is useful for testing contract behavior.
+    #[arg(long, visible_alias = "auto-unlock")]
     pub auto_impersonate: bool,
 
     /// Run an Optimism chain
@@ -564,9 +583,9 @@ pub struct AnvilEvmArgs {
     #[arg(long)]
     pub memory_limit: Option<u64>,
 
-    /// Enable Alphanet features
-    #[arg(long, visible_alias = "alphanet")]
-    pub alphanet: bool,
+    /// Enable Odyssey features
+    #[arg(long, alias = "alphanet")]
+    pub odyssey: bool,
 }
 
 /// Resolves an alias passed as fork-url to the matching url defined in the rpc_endpoints section
@@ -588,11 +607,17 @@ struct PeriodicStateDumper {
     in_progress_dump: Option<Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>>,
     api: EthApi,
     dump_state: Option<PathBuf>,
+    preserve_historical_states: bool,
     interval: Interval,
 }
 
 impl PeriodicStateDumper {
-    fn new(api: EthApi, dump_state: Option<PathBuf>, interval: Duration) -> Self {
+    fn new(
+        api: EthApi,
+        dump_state: Option<PathBuf>,
+        interval: Duration,
+        preserve_historical_states: bool,
+    ) -> Self {
         let dump_state = dump_state.map(|mut dump_state| {
             if dump_state.is_dir() {
                 dump_state = dump_state.join("state.json");
@@ -602,19 +627,19 @@ impl PeriodicStateDumper {
 
         // periodically flush the state
         let interval = tokio::time::interval_at(Instant::now() + interval, interval);
-        Self { in_progress_dump: None, api, dump_state, interval }
+        Self { in_progress_dump: None, api, dump_state, preserve_historical_states, interval }
     }
 
     async fn dump(&self) {
         if let Some(state) = self.dump_state.clone() {
-            Self::dump_state(self.api.clone(), state).await
+            Self::dump_state(self.api.clone(), state, self.preserve_historical_states).await
         }
     }
 
     /// Infallible state dump
-    async fn dump_state(api: EthApi, dump_state: PathBuf) {
+    async fn dump_state(api: EthApi, dump_state: PathBuf, preserve_historical_states: bool) {
         trace!(path=?dump_state, "Dumping state on shutdown");
-        match api.serialized_state().await {
+        match api.serialized_state(preserve_historical_states).await {
             Ok(state) => {
                 if let Err(err) = foundry_common::fs::write_json_file(&dump_state, &state) {
                     error!(?err, "Failed to dump state");
@@ -636,7 +661,7 @@ impl Future for PeriodicStateDumper {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
         if this.dump_state.is_none() {
-            return Poll::Pending
+            return Poll::Pending;
         }
 
         loop {
@@ -647,7 +672,7 @@ impl Future for PeriodicStateDumper {
                     }
                     Poll::Pending => {
                         this.in_progress_dump = Some(flush);
-                        return Poll::Pending
+                        return Poll::Pending;
                     }
                 }
             }
@@ -655,9 +680,10 @@ impl Future for PeriodicStateDumper {
             if this.interval.poll_tick(cx).is_ready() {
                 let api = this.api.clone();
                 let path = this.dump_state.clone().expect("exists; see above");
-                this.in_progress_dump = Some(Box::pin(Self::dump_state(api, path)));
+                this.in_progress_dump =
+                    Some(Box::pin(Self::dump_state(api, path, this.preserve_historical_states)));
             } else {
-                break
+                break;
             }
         }
 
@@ -687,7 +713,7 @@ impl StateFile {
         }
         let mut state = Self { path, state: None };
         if !state.path.exists() {
-            return Ok(state)
+            return Ok(state);
         }
 
         state.state = Some(SerializableState::load(&state.path).map_err(|err| err.to_string())?);
@@ -722,14 +748,14 @@ impl FromStr for ForkUrl {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some((url, block)) = s.rsplit_once('@') {
             if block == "latest" {
-                return Ok(Self { url: url.to_string(), block: None })
+                return Ok(Self { url: url.to_string(), block: None });
             }
             // this will prevent false positives for auths `user:password@example.com`
             if !block.is_empty() && !block.contains(':') && !block.contains('.') {
                 let block: u64 = block
                     .parse()
                     .map_err(|_| format!("Failed to parse block number: `{block}`"))?;
-                return Ok(Self { url: url.to_string(), block: Some(block) })
+                return Ok(Self { url: url.to_string(), block: Some(block) });
             }
         }
         Ok(Self { url: s.to_string(), block: None })

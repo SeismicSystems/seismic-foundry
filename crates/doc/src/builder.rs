@@ -2,6 +2,7 @@ use crate::{
     document::DocumentContent, helpers::merge_toml_table, AsDoc, BufWriter, Document, ParseItem,
     ParseSource, Parser, Preprocessor,
 };
+use alloy_primitives::map::HashMap;
 use forge_fmt::{FormatterConfig, Visitable};
 use foundry_compilers::{compilers::solc::SOLC_EXTENSIONS, utils::source_files_iter};
 use foundry_config::{filter::expand_globs, DocConfig};
@@ -10,7 +11,6 @@ use mdbook::MDBook;
 use rayon::prelude::*;
 use std::{
     cmp::Ordering,
-    collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -105,8 +105,8 @@ impl DocBuilder {
             .collect::<Vec<_>>();
 
         if sources.is_empty() {
-            println!("No sources detected at {}", self.sources.display());
-            return Ok(())
+            sh_println!("No sources detected at {}", self.sources.display())?;
+            return Ok(());
         }
 
         let library_sources = self
@@ -385,7 +385,7 @@ impl DocBuilder {
         depth: usize,
     ) -> eyre::Result<()> {
         if files.is_empty() {
-            return Ok(())
+            return Ok(());
         }
 
         if let Some(path) = base_path {

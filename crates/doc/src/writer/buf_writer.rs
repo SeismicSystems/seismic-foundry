@@ -43,7 +43,7 @@ impl BufWriter {
     }
 
     /// Write [AsDoc] implementation to the buffer with newline.
-    pub fn writeln_doc<T: AsDoc>(&mut self, doc: T) -> fmt::Result {
+    pub fn writeln_doc<T: AsDoc>(&mut self, doc: &T) -> fmt::Result {
         writeln!(self.buf, "{}", doc.as_doc()?)
     }
 
@@ -132,7 +132,7 @@ impl BufWriter {
 
         // There is nothing to write.
         if params.is_empty() || comments.is_empty() {
-            return Ok(())
+            return Ok(());
         }
 
         self.write_bold(heading)?;

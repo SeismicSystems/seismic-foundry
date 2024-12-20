@@ -1,8 +1,7 @@
-use alloy_consensus::Signed;
+use alloy_consensus::{transaction::TxSeismic, Signed};
 use alloy_primitives::{FixedBytes, SignatureError};
 use once_cell::sync::Lazy;
 use secp256k1::{ecdh::SharedSecret, PublicKey, SecretKey};
-use seismic_transaction::transaction::SeismicTransaction;
 use tee_service_api::{
     aes_decrypt, aes_encrypt, derive_aes_key, get_sample_secp256k1_pk, get_sample_secp256k1_sk,
 };
@@ -89,9 +88,7 @@ impl From<secp256k1::Error> for RecoverPublicKeyError {
 }
 
 /// Recover the public key from a signed seismic transaction
-pub fn recover_public_key(
-    tx: &Signed<SeismicTransaction>,
-) -> Result<PublicKey, RecoverPublicKeyError> {
+pub fn recover_public_key(tx: &Signed<TxSeismic>) -> Result<PublicKey, RecoverPublicKeyError> {
     let sighash = tx.signature_hash();
     let verifying_key = tx.signature().recover_from_prehash(&sighash)?;
     let pk_bytes = verifying_key.to_sec1_bytes();

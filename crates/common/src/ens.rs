@@ -123,7 +123,9 @@ pub trait ProviderEnsExt<T: Transport + Clone, N: Network, P: Provider<T, N>> {
             .call()
             .await
             .map_err(EnsError::Resolve)
-            .inspect_err(|e| eprintln!("{e:?}"))?
+            .inspect_err(|e| {
+                let _ = sh_eprintln!("{e:?}");
+            })?
             ._0;
         Ok(addr)
     }
@@ -162,7 +164,7 @@ where
 /// Returns the ENS namehash as specified in [EIP-137](https://eips.ethereum.org/EIPS/eip-137)
 pub fn namehash(name: &str) -> B256 {
     if name.is_empty() {
-        return B256::ZERO
+        return B256::ZERO;
     }
 
     // Remove the variation selector `U+FE0F` if present.

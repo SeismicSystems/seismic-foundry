@@ -7,7 +7,7 @@ use crate::prelude::{
 };
 use alloy_dyn_abi::{DynSolType, DynSolValue};
 use alloy_json_abi::EventParam;
-use alloy_primitives::{hex, Address, U256};
+use alloy_primitives::{hex, Address, B256, U256};
 use core::fmt::Debug;
 use eyre::{Result, WrapErr};
 use foundry_compilers::Artifact;
@@ -49,6 +49,22 @@ impl SessionSource {
             // Fetch the run function's body statement
             let run_func_statements = compiled.intermediate.run_func_body()?;
 
+            // Record loc of first yul block return statement (if any).
+            // This is used to decide which is the final statement within the `run()` method.
+            // see <https://github.com/foundry-rs/foundry/issues/4617>.
+            let last_yul_return = run_func_statements.iter().find_map(|statement| {
+                if let pt::Statement::Assembly { loc: _, dialect: _, flags: _, block } = statement {
+                    if let Some(statement) = block.statements.last() {
+                        if let pt::YulStatement::FunctionCall(yul_call) = statement {
+                            if yul_call.id.name == "return" {
+                                return Some(statement.loc());
+                            }
+                        }
+                    }
+                }
+                None
+            });
+
             // Find the last statement within the "run()" method and get the program
             // counter via the source map.
             if let Some(final_statement) = run_func_statements.last() {
@@ -58,9 +74,13 @@ impl SessionSource {
                 //
                 // There is some code duplication within the arms due to the difference between
                 // the [pt::Statement] type and the [pt::YulStatement] types.
-                let source_loc = match final_statement {
+                let mut source_loc = match final_statement {
                     pt::Statement::Assembly { loc: _, dialect: _, flags: _, block } => {
-                        if let Some(statement) = block.statements.last() {
+                        // Select last non variable declaration statement, see <https://github.com/foundry-rs/foundry/issues/4938>.
+                        let last_statement = block.statements.iter().rev().find(|statement| {
+                            !matches!(statement, pt::YulStatement::VariableDeclaration(_, _, _))
+                        });
+                        if let Some(statement) = last_statement {
                             statement.loc()
                         } else {
                             // In the case where the block is empty, attempt to grab the statement
@@ -87,6 +107,13 @@ impl SessionSource {
                     }
                     _ => final_statement.loc(),
                 };
+
+                // Consider yul return statement as final statement (if it's loc is lower) .
+                if let Some(yul_return) = last_yul_return {
+                    if yul_return.end() < source_loc.start() {
+                        source_loc = yul_return;
+                    }
+                }
 
                 // Map the source location of the final statement of the `run()` function to its
                 // corresponding runtime program counter
@@ -136,7 +163,7 @@ impl SessionSource {
             Ok((source, _)) => source,
             Err(err) => {
                 debug!(%err, "failed to build new source");
-                return Ok((true, None))
+                return Ok((true, None));
             }
         };
 
@@ -152,9 +179,9 @@ impl SessionSource {
                     Ok((_, res)) => (res, Some(err)),
                     Err(_) => {
                         if self.config.foundry_config.verbosity >= 3 {
-                            eprintln!("Could not inspect: {err}");
+                            sh_err!("Could not inspect: {err}")?;
                         }
-                        return Ok((true, None))
+                        return Ok((true, None));
                     }
                 }
             }
@@ -175,16 +202,16 @@ impl SessionSource {
 
             if let Some(event_definition) = intermediate_contract.event_definitions.get(input) {
                 let formatted = format_event_definition(event_definition)?;
-                return Ok((false, Some(formatted)))
+                return Ok((false, Some(formatted)));
             }
 
             // we were unable to check the event
             if self.config.foundry_config.verbosity >= 3 {
-                eprintln!("Failed eval: {err}");
+                sh_err!("Failed eval: {err}")?;
             }
 
             debug!(%err, %input, "failed abi encode input");
-            return Ok((false, None))
+            return Ok((false, None));
         }
 
         let Some((stack, memory, _)) = &res.state else {
@@ -194,13 +221,13 @@ impl SessionSource {
             }
             let decoded_logs = decode_console_logs(&res.logs);
             if !decoded_logs.is_empty() {
-                println!("{}", "Logs:".green());
+                sh_println!("{}", "Logs:".green())?;
                 for log in decoded_logs {
-                    println!("  {log}");
+                    sh_println!("  {log}")?;
                 }
             }
 
-            return Err(eyre::eyre!("Failed to inspect expression"))
+            return Err(eyre::eyre!("Failed to inspect expression"));
         };
 
         let generated_output = source
@@ -314,7 +341,7 @@ impl SessionSource {
                 )
             })
             .gas_limit(self.config.evm_opts.gas_limit())
-            .spec(self.config.foundry_config.evm_spec_id())
+            .spec_id(self.config.foundry_config.evm_spec_id())
             .legacy_assertions(self.config.foundry_config.legacy_assertions)
             .build(env, backend);
 
@@ -352,7 +379,7 @@ fn format_token(token: DynSolValue) -> String {
                         .collect::<String>()
                 )
                 .cyan(),
-                format!("{i:#x}").cyan(),
+                hex::encode_prefixed(B256::from(i)).cyan(),
                 i.cyan()
             )
         }
@@ -370,7 +397,7 @@ fn format_token(token: DynSolValue) -> String {
                         .collect::<String>()
                 )
                 .cyan(),
-                format!("{i:#x}").cyan(),
+                hex::encode_prefixed(B256::from(i)).cyan(),
                 i.cyan()
             )
         }
@@ -477,7 +504,7 @@ fn format_event_definition(event_definition: &pt::EventDefinition) -> Result<Str
     Ok(format!(
         "Type: {}\n├ Name: {}\n├ Signature: {:?}\n└ Selector: {:?}",
         "event".red(),
-        SolidityHelper::highlight(&format!(
+        SolidityHelper::new().highlight(&format!(
             "{}({})",
             &event.name,
             &event
@@ -762,7 +789,7 @@ impl Type {
     /// See: <https://github.com/ethereum/solidity/blob/81268e336573721819e39fbb3fefbc9344ad176c/libsolidity/ast/Types.cpp#L4106>
     fn map_special(self) -> Self {
         if !matches!(self, Self::Function(_, _, _) | Self::Access(_, _) | Self::Custom(_)) {
-            return self
+            return self;
         }
 
         let mut types = Vec::with_capacity(5);
@@ -771,7 +798,7 @@ impl Type {
 
         let len = types.len();
         if len == 0 {
-            return self
+            return self;
         }
 
         // Type members, like array, bytes etc
@@ -931,7 +958,7 @@ impl Type {
             custom_type.pop();
         }
         if custom_type.is_empty() {
-            return Ok(None)
+            return Ok(None);
         }
 
         // If a contract exists with the given name, check its definitions for a match.
@@ -946,7 +973,7 @@ impl Type {
             if let Some(func) = intermediate_contract.function_definitions.get(cur_type) {
                 // Check if the custom type is a function pointer member access
                 if let res @ Some(_) = func_members(func, custom_type) {
-                    return Ok(res)
+                    return Ok(res);
                 }
 
                 // Because tuple types cannot be passed to `abi.encode`, we will only be
@@ -967,7 +994,7 @@ impl Type {
                 // struct, array, etc.
                 if let pt::Expression::Variable(ident) = return_ty {
                     custom_type.push(ident.name.clone());
-                    return Self::infer_custom_type(intermediate, custom_type, Some(contract_name))
+                    return Self::infer_custom_type(intermediate, custom_type, Some(contract_name));
                 }
 
                 // Check if our final function call alters the state. If it does, we bail so that it
@@ -1006,7 +1033,7 @@ impl Type {
             // anything. If it is, we can stop here.
             if let Ok(res) = Self::infer_custom_type(intermediate, custom_type, Some("REPL".into()))
             {
-                return Ok(res)
+                return Ok(res);
             }
 
             // Check if the first element of the custom type is a known contract. If it is, begin
@@ -1015,13 +1042,13 @@ impl Type {
             let contract = intermediate.intermediate_contracts.get(name);
             if contract.is_some() {
                 let contract_name = custom_type.pop();
-                return Self::infer_custom_type(intermediate, custom_type, contract_name)
+                return Self::infer_custom_type(intermediate, custom_type, contract_name);
             }
 
             // See [`Type::infer_var_expr`]
             let name = custom_type.last().unwrap();
             if let Some(expr) = intermediate.repl_contract_expressions.get(name) {
-                return Self::infer_var_expr(expr, Some(intermediate), custom_type)
+                return Self::infer_var_expr(expr, Some(intermediate), custom_type);
             }
 
             // The first element of our custom type was neither a variable or a function within the
@@ -1149,7 +1176,7 @@ impl Type {
         let pt::Expression::Variable(contract_name) =
             intermediate.repl_contract_expressions.get(&contract_name.name)?
         else {
-            return None
+            return None;
         };
 
         let contract = intermediate
@@ -1161,7 +1188,7 @@ impl Type {
         Self::ethabi(&return_parameter.ty, Some(intermediate)).map(|p| (contract_expr.unwrap(), p))
     }
 
-    /// Inverts Int to Uint and viceversa.
+    /// Inverts Int to Uint and vice-versa.
     fn invert_int(self) -> Self {
         match self {
             Self::Builtin(DynSolType::Uint(n)) => Self::Builtin(DynSolType::Int(n)),
@@ -1238,7 +1265,7 @@ impl Type {
 #[inline]
 fn func_members(func: &pt::FunctionDefinition, custom_type: &[String]) -> Option<DynSolType> {
     if !matches!(func.ty, pt::FunctionTy::Function) {
-        return None
+        return None;
     }
 
     let vis = func.attributes.iter().find_map(|attr| match attr {
@@ -1370,7 +1397,7 @@ impl<'a> InstructionIter<'a> {
     }
 }
 
-impl<'a> Iterator for InstructionIter<'a> {
+impl Iterator for InstructionIter<'_> {
     type Item = Instruction;
     fn next(&mut self) -> Option<Self::Item> {
         let pc = self.offset;
@@ -1682,16 +1709,16 @@ mod tests {
                 match solc {
                     Ok((v, solc)) => {
                         // successfully installed
-                        eprintln!("found installed Solc v{v} @ {}", solc.solc.display());
-                        break
+                        let _ = sh_println!("found installed Solc v{v} @ {}", solc.solc.display());
+                        break;
                     }
                     Err(e) => {
                         // try reinstalling
-                        eprintln!("error while trying to re-install Solc v{version}: {e}");
+                        let _ = sh_err!("error while trying to re-install Solc v{version}: {e}");
                         let solc = Solc::blocking_install(&version.parse().unwrap());
                         if solc.map_err(SolcError::from).is_ok() {
                             *is_preinstalled = true;
-                            break
+                            break;
                         }
                     }
                 }
@@ -1726,7 +1753,7 @@ mod tests {
 
         if let Err(e) = s.parse() {
             for err in e {
-                eprintln!("{}:{}: {}", err.loc.start(), err.loc.end(), err.message);
+                let _ = sh_eprintln!("{}:{}: {}", err.loc.start(), err.loc.end(), err.message);
             }
             let source = s.to_repl_source();
             panic!("could not parse input:\n{source}")

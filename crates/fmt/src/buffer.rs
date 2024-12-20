@@ -165,11 +165,15 @@ impl<W: Write> FormatBuffer<W> {
     /// Write a raw string to the buffer. This will ignore indents and remove the indents of the
     /// written string to match the current base indent of this buffer if it is a temp buffer
     pub fn write_raw(&mut self, s: impl AsRef<str>) -> std::fmt::Result {
-        let mut lines = s.as_ref().lines().peekable();
+        self._write_raw(s.as_ref())
+    }
+
+    fn _write_raw(&mut self, s: &str) -> std::fmt::Result {
+        let mut lines = s.lines().peekable();
         let mut comment_state = self.state.comment_state();
         while let Some(line) = lines.next() {
             // remove the whitespace that covered by the base indent length (this is normally the
-            // case with temporary buffers as this will be readded by the underlying IndentWriter
+            // case with temporary buffers as this will be re-added by the underlying IndentWriter
             // later on
             let (new_comment_state, line_start) = line
                 .comment_state_char_indices()
@@ -187,9 +191,9 @@ impl<W: Write> FormatBuffer<W> {
                 self.last_char = trimmed_line.chars().next_back();
                 self.state = WriteState::WriteTokens(comment_state);
             }
-            if lines.peek().is_some() || s.as_ref().ends_with('\n') {
+            if lines.peek().is_some() || s.ends_with('\n') {
                 if self.restrict_to_single_line {
-                    return Err(std::fmt::Error)
+                    return Err(std::fmt::Error);
                 }
                 self.w.write_char('\n')?;
                 self.handle_newline(comment_state);
@@ -202,7 +206,7 @@ impl<W: Write> FormatBuffer<W> {
 impl<W: Write> Write for FormatBuffer<W> {
     fn write_str(&mut self, mut s: &str) -> std::fmt::Result {
         if s.is_empty() {
-            return Ok(())
+            return Ok(());
         }
 
         let mut indent = " ".repeat(self.current_indent_len());
@@ -217,7 +221,7 @@ impl<W: Write> Write for FormatBuffer<W> {
                                 self.w.write_str(s)?;
                                 self.handle_newline(comment_state);
                             }
-                            break
+                            break;
                         }
 
                         // We can see the next non-empty line. Write up to the
@@ -246,7 +250,7 @@ impl<W: Write> Write for FormatBuffer<W> {
                 }
                 WriteState::WriteTokens(comment_state) => {
                     if s.is_empty() {
-                        break
+                        break;
                     }
 
                     // find the next newline or non-comment string separator (e.g. ' or ")
@@ -257,13 +261,13 @@ impl<W: Write> Write for FormatBuffer<W> {
                         len = idx;
                         if ch == '\n' {
                             if self.restrict_to_single_line {
-                                return Err(std::fmt::Error)
+                                return Err(std::fmt::Error);
                             }
                             new_state = WriteState::LineStart(state);
-                            break
+                            break;
                         } else if state == CommentState::None && (ch == '\'' || ch == '"') {
                             new_state = WriteState::WriteString(ch);
-                            break
+                            break;
                         } else {
                             new_state = WriteState::WriteTokens(state);
                         }
@@ -275,7 +279,7 @@ impl<W: Write> Write for FormatBuffer<W> {
                         self.current_line_len += s.len();
                         self.last_char = s.chars().next_back();
                         self.state = new_state;
-                        break
+                        break;
                     } else {
                         // A newline or string has been found. Write up to that character and
                         // continue on the tail
@@ -301,7 +305,7 @@ impl<W: Write> Write for FormatBuffer<W> {
                             self.w.write_str(s)?;
                             self.current_line_len += s.len();
                             self.last_char = s.chars().next_back();
-                            break
+                            break;
                         }
                         // String end found, write the string and continue to add tokens after
                         Some((_, _, len)) => {

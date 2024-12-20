@@ -38,7 +38,7 @@ impl<'a> QuoteStateCharIndices<'a> {
     }
 }
 
-impl<'a> Iterator for QuoteStateCharIndices<'a> {
+impl Iterator for QuoteStateCharIndices<'_> {
     type Item = (QuoteState, usize, char);
     fn next(&mut self) -> Option<Self::Item> {
         let (idx, ch) = self.iter.next()?;
@@ -68,14 +68,14 @@ impl<'a> Iterator for QuoteStateCharIndices<'a> {
 /// An iterator over the indices of quoted string locations
 pub struct QuotedRanges<'a>(QuoteStateCharIndices<'a>);
 
-impl<'a> QuotedRanges<'a> {
+impl QuotedRanges<'_> {
     pub fn with_state(mut self, state: QuoteState) -> Self {
         self.0 = self.0.with_state(state);
         self
     }
 }
 
-impl<'a> Iterator for QuotedRanges<'a> {
+impl Iterator for QuotedRanges<'_> {
     type Item = (char, usize, usize);
     fn next(&mut self) -> Option<Self::Item> {
         let (quote, start) = loop {
@@ -91,7 +91,7 @@ impl<'a> Iterator for QuotedRanges<'a> {
         };
         for (state, idx, _) in self.0.by_ref() {
             if matches!(state, QuoteState::Closing(_)) {
-                return Some((quote, start, idx))
+                return Some((quote, start, idx));
             }
         }
         None
@@ -113,11 +113,11 @@ pub trait QuotedStringExt {
     fn is_quoted(&self) -> bool {
         let mut iter = self.quote_state_char_indices();
         if !matches!(iter.next(), Some((QuoteState::Opening(_), _, _))) {
-            return false
+            return false;
         }
         while let Some((state, _, _)) = iter.next() {
             if matches!(state, QuoteState::Closing(_)) {
-                return iter.next().is_none()
+                return iter.next().is_none();
             }
         }
         false

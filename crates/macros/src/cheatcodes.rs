@@ -1,5 +1,5 @@
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{quote, quote_spanned};
+use quote::quote;
 use syn::{Attribute, Data, DataStruct, DeriveInput, Error, Result};
 
 pub fn derive_cheatcode(input: &DeriveInput) -> Result<TokenStream> {
@@ -20,7 +20,7 @@ pub fn derive_cheatcode(input: &DeriveInput) -> Result<TokenStream> {
 /// Implements `CheatcodeDef` for a function call struct.
 fn derive_call(name: &Ident, data: &DataStruct, attrs: &[Attribute]) -> Result<TokenStream> {
     let mut group = None::<Ident>;
-    let mut status = None::<Ident>;
+    let mut status = None::<TokenStream>;
     let mut safety = None::<Ident>;
     for attr in attrs.iter().filter(|a| a.path().is_ident("cheatcode")) {
         attr.meta.require_list()?.parse_nested_meta(|meta| {
@@ -38,17 +38,14 @@ fn derive_call(name: &Ident, data: &DataStruct, attrs: &[Attribute]) -> Result<T
     let group = group.ok_or_else(|| {
         syn::Error::new(name.span(), "missing #[cheatcode(group = ...)] attribute")
     })?;
-    let status = status.unwrap_or_else(|| Ident::new("Stable", Span::call_site()));
+    let status = status.unwrap_or_else(|| quote!(Stable));
     let safety = if let Some(safety) = safety {
         quote!(Safety::#safety)
     } else {
-        let panic = quote_spanned! {name.span()=>
-            panic!("cannot determine safety from the group, add a `#[cheatcode(safety = ...)]` attribute")
-        };
         quote! {
             match Group::#group.safety() {
                 Some(s) => s,
-                None => #panic,
+                None => panic_unknown_safety(),
             }
         }
     };
@@ -60,6 +57,17 @@ fn derive_call(name: &Ident, data: &DataStruct, attrs: &[Attribute]) -> Result<T
 
     let doc = get_docstring(attrs);
     let (signature, selector, declaration, description) = func_docstring(&doc);
+
+    let mut params = declaration;
+    if let Some(ret) = params.find(" returns ") {
+        params = &params[..ret];
+    }
+    if params.contains(" memory ") {
+        emit_warning!(
+            name.span(),
+            "parameter data locations must be `calldata` instead of `memory`"
+        );
+    }
 
     let (visibility, mutability) = parse_function_attrs(declaration, name.span())?;
     let visibility = Ident::new(visibility, Span::call_site());
@@ -94,7 +102,7 @@ fn derive_call(name: &Ident, data: &DataStruct, attrs: &[Attribute]) -> Result<T
 /// Generates the `CHEATCODES` constant and implements `CheatcodeImpl` dispatch for an enum.
 fn derive_calls_enum(name: &Ident, input: &syn::DataEnum) -> Result<TokenStream> {
     if input.variants.iter().any(|v| v.fields.len() != 1) {
-        return Err(syn::Error::new(name.span(), "expected all variants to have a single field"))
+        return Err(syn::Error::new(name.span(), "expected all variants to have a single field"));
     }
 
     // keep original order for matching
@@ -127,7 +135,7 @@ fn derive_errors_events_enum(
     events: bool,
 ) -> Result<TokenStream> {
     if input.variants.iter().any(|v| v.fields.len() != 1) {
-        return Err(syn::Error::new(name.span(), "expected all variants to have a single field"))
+        return Err(syn::Error::new(name.span(), "expected all variants to have a single field"));
     }
 
     let (ident, ty_assoc_name, ty, doc) = if events {
@@ -317,14 +325,14 @@ fn get_docstring(attrs: &[Attribute]) -> String {
     let mut doc = String::new();
     for attr in attrs {
         if !attr.path().is_ident("doc") {
-            continue
+            continue;
         }
         let syn::Meta::NameValue(syn::MetaNameValue {
             value: syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }),
             ..
         }) = &attr.meta
         else {
-            continue
+            continue;
         };
 
         let value = s.value();
@@ -398,7 +406,7 @@ fn func_docstring(doc: &str) -> (&str, &str, &str, &str) {
 /// Returns `(visibility, mutability)` from a given Solidity function declaration.
 fn parse_function_attrs(f: &str, span: Span) -> Result<(&str, &str)> {
     let Some(ext_start) = f.find("external") else {
-        return Err(Error::new(span, "functions must have `external` visibility"))
+        return Err(Error::new(span, "functions must have `external` visibility"));
     };
     let visibility = "External";
 

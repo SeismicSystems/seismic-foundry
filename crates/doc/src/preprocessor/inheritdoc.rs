@@ -2,8 +2,8 @@ use super::{Preprocessor, PreprocessorId};
 use crate::{
     document::DocumentContent, Comments, Document, ParseItem, ParseSource, PreprocessorOutput,
 };
+use alloy_primitives::map::HashMap;
 use forge_fmt::solang_ext::SafeUnwrap;
-use std::collections::HashMap;
 
 /// [`Inheritdoc`] preprocessor ID.
 pub const INHERITDOC_ID: PreprocessorId = PreprocessorId("inheritdoc");
@@ -80,7 +80,7 @@ impl Inheritdoc {
                             // TODO: improve matching logic
                             if source.ident() == children.source.ident() {
                                 let key = format!("{}.{}", base, source.ident());
-                                return Some((key, children.comments.clone()))
+                                return Some((key, children.comments.clone()));
                             }
                         }
                     }

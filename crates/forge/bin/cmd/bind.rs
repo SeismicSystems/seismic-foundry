@@ -1,3 +1,4 @@
+use alloy_primitives::map::HashSet;
 use clap::{Parser, ValueHint};
 use ethers_contract_abigen::{
     Abigen, ContractFilter, ExcludeContracts, MultiAbigen, SelectContracts,
@@ -105,10 +106,9 @@ impl BindArgs {
         }
 
         if self.ethers {
-            eprintln!(
-                "Warning: `--ethers` bindings are deprecated and will be removed in the future. \
-                 Consider using `--alloy` (default) instead."
-            );
+            sh_warn!(
+                "`--ethers` bindings are deprecated and will be removed in the future. Consider using `--alloy` (default) instead."
+            )?;
         }
 
         let config = self.try_load_config_emit_warnings()?;
@@ -117,7 +117,7 @@ impl BindArgs {
 
         if bindings_root.exists() {
             if !self.overwrite {
-                println!("Bindings found. Checking for consistency.");
+                sh_println!("Bindings found. Checking for consistency.")?;
                 return self.check_existing_bindings(&artifacts, &bindings_root);
             }
 
@@ -127,17 +127,17 @@ impl BindArgs {
 
         self.generate_bindings(&artifacts, &bindings_root)?;
 
-        println!("Bindings have been generated to {}", bindings_root.display());
+        sh_println!("Bindings have been generated to {}", bindings_root.display())?;
         Ok(())
     }
 
     /// Returns the filter to use for `MultiAbigen`
     fn get_filter(&self) -> Result<ContractFilter> {
         if self.select_all {
-            return Ok(ContractFilter::All)
+            return Ok(ContractFilter::All);
         }
         if !self.select.is_empty() {
-            return Ok(SelectContracts::default().extend_regex(self.select.clone()).into())
+            return Ok(SelectContracts::default().extend_regex(self.select.clone()).into());
         }
         if let Some(skip) = self.build_args.skip.as_ref().filter(|s| !s.is_empty()) {
             return Ok(ExcludeContracts::default()
@@ -147,7 +147,7 @@ impl BindArgs {
                         .map(|s| Regex::new(s.file_pattern()))
                         .collect::<Result<Vec<_>, _>>()?,
                 )
-                .into())
+                .into());
         }
         // This excludes all Test/Script and forge-std contracts
         Ok(ExcludeContracts::default()
@@ -244,7 +244,7 @@ impl BindArgs {
     }
 
     fn get_solmacrogen(&self, artifacts: &Path) -> Result<MultiSolMacroGen> {
-        let mut dup = std::collections::HashSet::<String>::new();
+        let mut dup = HashSet::<String>::default();
         let instances = self
             .get_json_files(artifacts)?
             .filter_map(|(name, path)| {
@@ -273,7 +273,7 @@ impl BindArgs {
 
     fn check_ethers(&self, artifacts: &Path, bindings_root: &Path) -> Result<()> {
         let bindings = self.get_multi(artifacts)?.build()?;
-        println!("Checking bindings for {} contracts.", bindings.len());
+        sh_println!("Checking bindings for {} contracts.", bindings.len())?;
         if !self.module {
             bindings
                 .ensure_consistent_crate(
@@ -293,14 +293,14 @@ impl BindArgs {
         } else {
             bindings.ensure_consistent_module(bindings_root, self.single_file)?;
         }
-        println!("OK.");
+        sh_println!("OK.")?;
         Ok(())
     }
 
     fn check_alloy(&self, artifacts: &Path, bindings_root: &Path) -> Result<()> {
         let mut bindings = self.get_solmacrogen(artifacts)?;
         bindings.generate_bindings()?;
-        println!("Checking bindings for {} contracts", bindings.instances.len());
+        sh_println!("Checking bindings for {} contracts", bindings.instances.len())?;
         bindings.check_consistency(
             &self.crate_name,
             &self.crate_version,
@@ -310,7 +310,7 @@ impl BindArgs {
             self.module,
             self.alloy_version.clone(),
         )?;
-        println!("OK.");
+        sh_println!("OK.")?;
         Ok(())
     }
 
@@ -325,7 +325,7 @@ impl BindArgs {
 
     fn generate_ethers(&self, artifacts: &Path, bindings_root: &Path) -> Result<()> {
         let mut bindings = self.get_multi(artifacts)?.build()?;
-        println!("Generating bindings for {} contracts", bindings.len());
+        sh_println!("Generating bindings for {} contracts", bindings.len())?;
         if !self.module {
             trace!(single_file = self.single_file, "generating crate");
             if !self.skip_extra_derives {
@@ -345,7 +345,7 @@ impl BindArgs {
 
     fn generate_alloy(&self, artifacts: &Path, bindings_root: &Path) -> Result<()> {
         let mut solmacrogen = self.get_solmacrogen(artifacts)?;
-        println!("Generating bindings for {} contracts", solmacrogen.instances.len());
+        sh_println!("Generating bindings for {} contracts", solmacrogen.instances.len())?;
 
         if !self.module {
             trace!(single_file = self.single_file, "generating crate");

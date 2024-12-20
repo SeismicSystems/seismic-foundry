@@ -2,7 +2,7 @@ use foundry_test_utils::util::ExtTester;
 
 #[test]
 fn forge_std() {
-    ExtTester::new("foundry-rs", "forge-std", "1d0766bc5d814f117c7b1e643828f7d85024fb51")
+    ExtTester::new("foundry-rs", "forge-std", "2b59872eee0b8088ddcade39fe8c041e17bb79c0")
         // Skip fork tests.
         .args(["--nmc", "Fork"])
         .run();
@@ -71,6 +71,7 @@ fn solady() {
 
 #[test]
 #[cfg_attr(windows, ignore = "weird git fail")]
+#[cfg(not(feature = "isolate-by-default"))]
 fn geb() {
     ExtTester::new("reflexer-labs", "geb", "1a59f16a377386c49f520006ed0f7fd9d128cb09")
         .env("FOUNDRY_LEGACY_ASSERTIONS", "true")
@@ -88,6 +89,7 @@ fn stringutils() {
 fn lootloose() {
     ExtTester::new("gakonst", "lootloose", "7b639efe97836155a6a6fc626bf1018d4f8b2495")
         .install_command(&["make", "install"])
+        .args(["--evm-version", "paris"])
         .run();
 }
 
@@ -98,8 +100,9 @@ fn lil_web3() {
 
 #[test]
 #[cfg_attr(windows, ignore = "Windows cannot find installed programs")]
+#[cfg(not(feature = "isolate-by-default"))]
 fn snekmate() {
-    ExtTester::new("pcaversaccio", "snekmate", "316088761ca7605216b5bfbbecca8d694c61ed98")
+    ExtTester::new("pcaversaccio", "snekmate", "df226f4a45e86c8f8c3ff1f9fa3443d260002050")
         .install_command(&["pnpm", "install", "--prefer-offline"])
         // Try npm if pnpm fails / is not installed.
         .install_command(&["npm", "install", "--prefer-offline"])

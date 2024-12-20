@@ -85,11 +85,15 @@ impl Cheatcodes<'static> {
                 Vm::AccountAccess::STRUCT.clone(),
                 Vm::StorageAccess::STRUCT.clone(),
                 Vm::Gas::STRUCT.clone(),
+                Vm::DebugStep::STRUCT.clone(),
+                Vm::BroadcastTxSummary::STRUCT.clone(),
+                Vm::SignedDelegation::STRUCT.clone(),
             ]),
             enums: Cow::Owned(vec![
                 Vm::CallerMode::ENUM.clone(),
                 Vm::AccountAccessKind::ENUM.clone(),
                 Vm::ForgeContext::ENUM.clone(),
+                Vm::BroadcastTxType::ENUM.clone(),
             ]),
             errors: Vm::VM_ERRORS.iter().copied().cloned().collect(),
             events: Cow::Borrowed(&[]),
@@ -100,6 +104,7 @@ impl Cheatcodes<'static> {
 }
 
 #[cfg(test)]
+#[allow(clippy::disallowed_macros)]
 mod tests {
     use super::*;
     use std::{fs, path::Path};
@@ -164,7 +169,7 @@ interface Vm {{
         if let Ok(old_contents) = fs::read_to_string(file) {
             if normalize_newlines(&old_contents) == normalize_newlines(contents) {
                 // File is already up to date.
-                return
+                return;
             }
         }
 

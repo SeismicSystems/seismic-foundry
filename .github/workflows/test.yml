@@ -18,6 +18,7 @@ jobs:
     uses: ./.github/workflows/nextest.yml
     with:
       profile: default
+    secrets: inherit
 
   docs:
     runs-on: ubuntu-latest
@@ -50,6 +51,15 @@ jobs:
         with:
           cache-on-failure: true
       - run: cargo test --workspace --doc
+
+  codespell:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: codespell-project/actions-codespell@v2
+        with:
+          skip: "*.json"
 
   clippy:
     runs-on: ubuntu-latest
@@ -100,6 +110,13 @@ jobs:
           cache-on-failure: true
       - run: cargo hack check
 
+  deny:
+    uses: ithacaxyz/ci/.github/workflows/deny.yml@main
+    with:
+      # Clear out arguments to not pass `--all-features` to `cargo deny`.
+      # Many crates have an `openssl` feature which enables banned dependencies.
+      deny-flags: ""
+
   ci-success:
     runs-on: ubuntu-latest
     if: always()
@@ -107,10 +124,12 @@ jobs:
       - nextest
       - docs
       - doctest
+      - codespell
       - clippy
       - rustfmt
       - forge-fmt
       - crate-checks
+      - deny
     timeout-minutes: 30
     steps:
       - name: Decide whether the needed jobs succeeded or failed
