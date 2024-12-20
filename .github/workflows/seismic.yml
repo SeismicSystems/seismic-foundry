@@ -40,6 +40,7 @@ jobs:
             ssh-private-key: |
               ${{ secrets.ACTIONS_MANTLE_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SFORGESTD_SSH_ED25519 }}
+              ${{ secrets.ACTIONS_SALLOY_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SALLOYCORE_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SREVM_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SREVMINSPECTORS_SSH_ED25519 }}
@@ -70,6 +71,7 @@ jobs:
             ssh-private-key: |
               ${{ secrets.ACTIONS_MANTLE_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SFORGESTD_SSH_ED25519 }}
+              ${{ secrets.ACTIONS_SALLOY_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SALLOYCORE_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SREVM_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SREVMINSPECTORS_SSH_ED25519 }}
@@ -96,6 +98,7 @@ jobs:
             ssh-private-key: |
               ${{ secrets.ACTIONS_MANTLE_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SFORGESTD_SSH_ED25519 }}
+              ${{ secrets.ACTIONS_SALLOY_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SALLOYCORE_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SREVM_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SREVMINSPECTORS_SSH_ED25519 }}
