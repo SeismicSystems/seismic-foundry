@@ -73,6 +73,7 @@ impl ExecutedTransaction {
                 deposit_nonce: Some(tx.nonce),
                 deposit_receipt_version: Some(1),
             }),
+            TypedTransaction::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         }
     }
 }

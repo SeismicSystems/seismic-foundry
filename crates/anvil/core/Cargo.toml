@@ -40,6 +40,16 @@ bytes.workspace = true
 rand.workspace = true
 thiserror.workspace = true
 
+anyhow = "1.0"
+once_cell = "1"
+secp256k1 = { version = "0.29", default-features = false, features = [
+    "global-context",
+    "recovery",
+] }
+
+seismic-transaction.workspace = true
+tee_service_api = { git = "ssh://git@github.com/SeismicSystems/TEEService.git", package = "tee_service_api", rev = "9ab28c87247b876f5875c470f39bd3a3b07b3e8b"}
+
 [features]
 default = ["serde"]
 impersonated-tx = []
