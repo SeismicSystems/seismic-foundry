@@ -2589,11 +2589,7 @@ impl Backend {
                     .map(|(key, proof)| {
                         let storage_key: U256 = key.into();
                         let value = account.storage.get(&storage_key).cloned().unwrap_or_default();
-<<<<<<< HEAD
                         StorageProof { key: JsonStorageKey(key), value: value.into(), proof }
-=======
-                        StorageProof { key: JsonStorageKey::Hash(key), value, proof }
->>>>>>> 5a8bd893eeeeb9489ea66dd52a02eeaa580e3af0
                     })
                     .collect(),
             };
