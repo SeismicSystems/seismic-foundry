@@ -294,7 +294,7 @@ impl<'a> ContractRunner<'a> {
                 [("setUp()".to_string(), TestResult::fail("multiple setUp functions".to_string()))]
                     .into(),
                 warnings,
-            )
+            );
         }
 
         // Check if `afterInvariant` function with valid signature declared.
@@ -310,7 +310,7 @@ impl<'a> ContractRunner<'a> {
                 )]
                 .into(),
                 warnings,
-            )
+            );
         }
         let call_after_invariant = after_invariant_fns.first().is_some_and(|after_invariant_fn| {
             let match_sig = after_invariant_fn.name == "afterInvariant";
@@ -344,7 +344,7 @@ impl<'a> ContractRunner<'a> {
                 start.elapsed(),
                 [("setUp()".to_string(), TestResult::setup_result(setup))].into(),
                 warnings,
-            )
+            );
         }
 
         // Filter out functions sequentially since it's very fast and there is no need to do it

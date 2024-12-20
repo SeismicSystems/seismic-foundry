@@ -230,7 +230,7 @@ pub fn create2_handler_register<I: InspectorExt>(
                         gas: Gas::new(gas_limit),
                     },
                     memory_offset: 0..0,
-                })))
+                })));
             } else if code_hash != DEFAULT_CREATE2_DEPLOYER_CODEHASH {
                 return Ok(FrameOrResult::Result(FrameResult::Call(CallOutcome {
                     result: InterpreterResult {
@@ -239,7 +239,7 @@ pub fn create2_handler_register<I: InspectorExt>(
                         gas: Gas::new(gas_limit),
                     },
                     memory_offset: 0..0,
-                })))
+                })));
             }
 
             // Handle potential inspector override.

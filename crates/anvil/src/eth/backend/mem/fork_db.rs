@@ -14,8 +14,7 @@ use foundry_evm::{
     fork::database::ForkDbStateSnapshot,
     revm::{primitives::BlockEnv, Database},
 };
-use revm::primitives::FlaggedStorage;
-use revm::{db::DbAccount, DatabaseRef};
+use revm::{db::DbAccount, primitives::FlaggedStorage, DatabaseRef};
 
 pub use foundry_evm::fork::database::ForkedDatabase;
 

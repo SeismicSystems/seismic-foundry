@@ -1730,7 +1730,7 @@ impl Cheatcodes {
         let (key, target_address) = if interpreter.current_opcode() == op::SLOAD {
             (try_or_return!(interpreter.stack().peek(0)), interpreter.contract().target_address)
         } else {
-            return
+            return;
         };
 
         let Ok(value) = ecx.sload(target_address, key) else {
