@@ -11,7 +11,7 @@ mod gas;
 mod genesis;
 mod ipc;
 mod logs;
-mod optimism;
+// mod optimism;
 mod otterscan;
 mod proof;
 mod pubsub;

@@ -1183,7 +1183,6 @@ dependencies = [
  "itertools 0.13.0",
  "k256",
  "op-alloy-consensus 0.8.3",
- "op-alloy-rpc-types 0.8.3",
  "parking_lot",
  "rand",
  "revm",
@@ -6729,24 +6728,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "op-alloy-rpc-types"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a555dd1bd39cbcdd60b92f03a21871767a16e3a2ce2f82a26cff9aade56d35f"
-dependencies = [
- "alloy-consensus 0.8.0",
- "alloy-eips 0.8.0",
- "alloy-network-primitives 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=e6f5a60)",
- "alloy-rpc-types-eth 0.8.0",
- "alloy-serde 0.8.0",
- "derive_more",
- "op-alloy-consensus 0.8.3",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "op-alloy-rpc-types-engine"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7882,7 +7863,7 @@ dependencies = [
  "alloy-rpc-types-txpool 0.3.6",
  "alloy-serde 0.3.6",
  "jsonrpsee-types",
- "op-alloy-rpc-types 0.2.12",
+ "op-alloy-rpc-types",
  "op-alloy-rpc-types-engine",
 ]
 

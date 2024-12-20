@@ -93,7 +93,7 @@ async fn test_seismic_transaction() {
     let receipt: Option<
         WithOtherFields<
             alloy_rpc_types::TransactionReceipt<
-                alloy_consensus::AnyReceiptEnvelope<alloy_rpc_types::Log>,
+                alloy_network::AnyReceiptEnvelope<alloy_rpc_types::Log>,
             >,
         >,
     > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
