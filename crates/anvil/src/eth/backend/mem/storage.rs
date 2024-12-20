@@ -564,7 +564,6 @@ impl MinedTransaction {
                             Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
                         };
                     }
-                    GethDebugBuiltInTracerType::FlatCallTracer => todo!(),
                     GethDebugBuiltInTracerType::PreStateTracer |
                     GethDebugBuiltInTracerType::NoopTracer |
                     GethDebugBuiltInTracerType::MuxTracer |

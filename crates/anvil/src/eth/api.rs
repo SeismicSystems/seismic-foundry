@@ -3082,6 +3082,8 @@ impl TryFrom<Result<(InstructionResult, Option<Output>, u128, State)>> for GasEs
 
                 InstructionResult::Revert => Ok(Self::Revert(output.map(|o| o.into_data()))),
 
+                InstructionResult::InvalidPublicStorageAccess |
+                InstructionResult::InvalidPrivateStorageAccess |
                 InstructionResult::OutOfGas |
                 InstructionResult::MemoryOOG |
                 InstructionResult::MemoryLimitOOG |

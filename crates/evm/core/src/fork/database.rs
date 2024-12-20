@@ -10,7 +10,7 @@ use foundry_fork_db::{BlockchainDb, DatabaseError, SharedBackend};
 use parking_lot::Mutex;
 use revm::{
     db::{CacheDB, DatabaseRef},
-    primitives::{Account, AccountInfo, Bytecode, FlaggedStorage, HashMap as Map},
+    primitives::{Account, AccountInfo, Bytecode, FlaggedStorage},
     Database, DatabaseCommit,
 };
 use std::sync::Arc;
@@ -96,7 +96,7 @@ impl ForkedDatabase {
         let db = self.db.db();
         let state_snapshot = StateSnapshot {
             accounts: db.accounts.read().clone(),
-            storage: db.storage.read().clone(),
+            storage: db.storage.read().clone().into(),
             block_hashes: db.block_hashes.read().clone(),
         };
         ForkDbStateSnapshot { local: self.cache_db.clone(), state_snapshot }
@@ -207,7 +207,7 @@ pub struct ForkDbStateSnapshot {
     pub state_snapshot: StateSnapshot,
 }
 
-impl ForkDbSnapshot {
+impl ForkDbStateSnapshot {
     fn get_storage(&self, address: Address, index: U256) -> Option<FlaggedStorage> {
         self.local
             .accounts

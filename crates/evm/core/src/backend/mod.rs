@@ -1417,7 +1417,7 @@ impl DatabaseExt for Backend {
                                 .get(&slot)
                                 .map(|s| s.present_value)
                                 .unwrap_or_default(),
-                            U256::from_be_bytes(value.0),
+                            U256::from_be_bytes(value.0).into(),
                         ),
                     )
                 })

@@ -682,7 +682,8 @@ impl Backend {
         slot: U256,
         val: B256,
     ) -> DatabaseResult<()> {
-        self.db.write().await.set_storage_at(address, slot.into(), val)
+        let val_u256: U256 = val.into();
+        self.db.write().await.set_storage_at(address, slot.into(), val_u256.into())
     }
 
     /// Returns the configured specid
@@ -1518,7 +1519,6 @@ impl Backend {
                         GethDebugBuiltInTracerType::FlatCallTracer => {
                             Err(RpcError::invalid_params("unsupported tracer type").into())
                         }
-                        GethDebugBuiltInTracerType::FlatCallTracer => todo!(),
                     },
 
                     GethDebugTracerType::JsTracer(_code) => {
@@ -2589,7 +2589,7 @@ impl Backend {
                     .map(|(key, proof)| {
                         let storage_key: U256 = key.into();
                         let value = account.storage.get(&storage_key).cloned().unwrap_or_default();
-                        StorageProof { key: JsonStorageKey(key), value: value.into(), proof }
+                        StorageProof { key: JsonStorageKey::Hash(key), value: value.into(), proof }
                     })
                     .collect(),
             };

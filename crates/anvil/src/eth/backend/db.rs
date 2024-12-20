@@ -21,10 +21,7 @@ use foundry_evm::{
     },
 };
 use revm::primitives::FlaggedStorage;
-use serde::{
-    de::{MapAccess, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt, path::Path};
 
 /// Helper trait get access to the full state data of the database
