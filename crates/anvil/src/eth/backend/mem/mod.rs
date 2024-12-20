@@ -682,11 +682,7 @@ impl Backend {
         slot: U256,
         val: B256,
     ) -> DatabaseResult<()> {
-<<<<<<< HEAD
-        self.db.write().await.set_storage_at(address, slot, U256::from_be_bytes(val.0).into())
-=======
         self.db.write().await.set_storage_at(address, slot.into(), val)
->>>>>>> 5a8bd893eeeeb9489ea66dd52a02eeaa580e3af0
     }
 
     /// Returns the configured specid
