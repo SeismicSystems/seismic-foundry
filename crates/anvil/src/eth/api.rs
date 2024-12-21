@@ -1066,24 +1066,8 @@ impl EthApi {
         // construct concrete request
         let constructed_request: WithOtherFields<TransactionRequest> = match request {
             SeismicCallRequest::Bytes(bytes) => {
-                let tx = TransactionRequest {
-                    from: None,
-                    to: None,
-                    input: bytes.into(),
-                    gas: None,
-                    gas_price: None,
-                    max_fee_per_gas: None,
-                    max_priority_fee_per_gas: None,
-                    max_fee_per_blob_gas: None,
-                    access_list: None,
-                    authorization_list: None,
-                    blob_versioned_hashes: None,
-                    chain_id: None,
-                    nonce: None,
-                    transaction_type: None,
-                    value: None,
-                    sidecar: None,
-                };
+                let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref()).map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
+                let tx = TransactionRequest::try_from(typed_tx).map_err(|_| BlockchainError::Message("Failed to decode bytes to transaction request".to_string()))?;
                 WithOtherFields::new(tx)
             }
             SeismicCallRequest::TransactionRequest(mut tx) => {

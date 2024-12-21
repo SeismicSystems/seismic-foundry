@@ -29,9 +29,7 @@ use revm::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    fmt::Debug,
-    hash::Hash,
-    ops::{Deref, Mul},
+    any::Any, fmt::Debug, hash::Hash, ops::{Deref, Mul}
 };
 
 use seismic_transaction::transaction::SeismicTransaction;
@@ -1610,6 +1608,33 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
         },
     })
 }
+
+// pub fn construct_eth_call_request(tx: Bytes) -> Result<TransactionRequest, alloy_primitives::SignatureError> {
+//     let typed_tx = TypedTransaction::decode_2718(&mut &tx[..]).unwrap();
+//     let sender = typed_tx.recover();
+//     let constructed_request = 
+//             TransactionRequest {
+//                 from: Some(sender),
+//                 to: Some(typed_tx.tx().to),  
+//                 gas_price: Some(typed_tx.tx().gas_price),
+//                 max_fee_per_gas: Some(typed_tx.tx().max_fee_per_gas),
+//                 max_priority_fee_per_gas: typed_tx.tx().max_priority_fee_per_gas,
+//                 max_fee_per_blob_gas: typed_tx.tx().max_fee_per_blob_gas,
+//                 gas: Some(typed_tx.tx().gas_limit),
+//                 value: Some(typed_tx.tx().value),
+//                 input: typed_tx.tx().input,
+//                 nonce: Some(typed_tx.tx().nonce),
+//                 chain_id: Some(typed_tx.tx().chain_id),
+//                 access_list: typed_tx.tx().access_list,
+//                 transaction_type: typed_tx.r#type(),
+//                 blob_versioned_hashes: typed_tx.tx().blob_versioned_hashes,
+//                 sidecar: typed_tx.tx().sidecar,
+//                 authorization_list: typed_tx.tx().authorization_list,
+//             };
+
+//     Ok(constructed_request)
+// }
+
 
 #[cfg(test)]
 mod tests {
