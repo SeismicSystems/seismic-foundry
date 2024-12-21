@@ -111,6 +111,9 @@ use std::{
 };
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
+
+use seismic_transaction::transaction::SeismicTransaction;
+
 pub mod cache;
 pub mod fork_db;
 pub mod in_memory_db;
@@ -1357,7 +1360,7 @@ impl Backend {
                     .. // Rest of the gas fees related fields are taken from `fee_details`
                 },
             ..
-        } = request;
+        } = request.clone();
 
         let FeeDetails {
             gas_price,
@@ -1386,7 +1389,19 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-        env.tx =
+        match request.transaction_type {
+            Some(SeismicTransaction::TRANSACTION_TYPE) => {
+                println!("Seismic transaction type");
+                let public_key =
+                    anvil_core::crypto::recover_public_key(&from).expect("Failed to recover public key");
+                let decrypted_input = crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
+                    .expect("Failed to decrypt seismic tx");
+                let data = Bytes::decode(&mut decrypted_input.as_slice())
+                    .expect("Failed to RLP decode decrypted input");
+            }
+            _ => {}
+        };
+                env.tx =
             TxEnv {
                 caller,
                 gas_limit,
