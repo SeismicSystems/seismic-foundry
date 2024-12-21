@@ -1063,16 +1063,20 @@ impl EthApi {
         overrides: Option<StateOverride>,
     ) -> Result<Bytes> {
         node_info!("eth_call");
-        // construct concrete request
-        let constructed_request: WithOtherFields<TransactionRequest> = match request {
+
+        let (constructed_request, seismic_pub_key): (WithOtherFields<TransactionRequest>, Option<PublicKey>) = match request {
             SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref()).map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
                 let tx = TransactionRequest::try_from(typed_tx).map_err(|_| BlockchainError::Message("Failed to decode bytes to transaction request".to_string()))?;
-                WithOtherFields::new(tx)
+                if let TypedTransaction::Seismic(seismic_tx) = typed_tx {
+                    let public_key = anvil_core::eth::transaction::crypto::recover_public_key(&seismic_tx).map_err(|_| BlockchainError::Message("Failed to get public key from seismic transaction".to_string()))?;
+                    (WithOtherFields::new(tx), Some(public_key))
+                }
+                (WithOtherFields::new(tx), None)
             }
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 tx.from = None;
-                tx
+                (tx, None)
             },
         };
 
@@ -1111,7 +1115,7 @@ impl EthApi {
         // <https://github.com/foundry-rs/foundry/issues/6036>
         self.on_blocking_task(|this| async move {
             let (exit, out, gas, _) =
-                this.backend.call(constructed_request, fees, Some(block_request), overrides).await?;
+                this.backend.seismic_call(constructed_request, seismic_pub_key, fees, Some(block_request), overrides).await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })
