@@ -89,6 +89,7 @@ use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
 use revm::primitives::Bytecode;
 use seismic_transaction::types::SeismicCallRequest;
+use yansi::Paint;
 use std::{future::Future, sync::Arc, time::Duration};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -1057,11 +1058,40 @@ impl EthApi {
     /// Handler for ETH RPC call: `eth_call`
     pub async fn call(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        request: SeismicCallRequest,
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<Bytes> {
         node_info!("eth_call");
+        // construct concrete request
+        let constructed_request: WithOtherFields<TransactionRequest> = match request {
+            SeismicCallRequest::Bytes(bytes) => {
+                let tx = TransactionRequest {
+                    from: None,
+                    to: None,
+                    input: bytes.into(),
+                    gas: None,
+                    gas_price: None,
+                    max_fee_per_gas: None,
+                    max_priority_fee_per_gas: None,
+                    max_fee_per_blob_gas: None,
+                    access_list: None,
+                    authorization_list: None,
+                    blob_versioned_hashes: None,
+                    chain_id: None,
+                    nonce: None,
+                    transaction_type: None,
+                    value: None,
+                    sidecar: None,
+                };
+                WithOtherFields::new(tx)
+            }
+            SeismicCallRequest::TransactionRequest(mut tx) => {
+                tx.from = None;
+                tx
+            },
+        };
+
         let block_request = self.block_request(block_number).await?;
         // check if the number predates the fork, if in fork mode
         if let BlockRequest::Number(number) = block_request {
@@ -1072,42 +1102,32 @@ impl EthApi {
                             "not available on past forked blocks".to_string(),
                         ));
                     }
-                    return Ok(fork.call(&request, Some(number.into())).await?);
+                    return Ok(fork.call(&constructed_request, Some(number.into())).await?);
                 }
             }
         }
-        // let constructed_request: WithOtherFields<TransactionRequest> = match request {
-        //     SeismicCallRequest::Bytes(bytes) => {
-        //         let tx = recover_transaction_from_bytes(bytes)?;
-        //         tx
-        //     }
-        //     SeismicCallRequest::TransactionRequest(tx) => {
-        //         tx.from = None;
-        //         tx
-        //     },
-        // };
-
-        // let fees = FeeDetails::new(
-        //     constructed_request.gas_price,
-        //     constructed_request.max_fee_per_gas,
-        //     constructed_request.max_priority_fee_per_gas,
-        //    constructed_request.max_fee_per_blob_gas,
-        // )?
-        // .or_zero_fees();
-
+        
         let fees = FeeDetails::new(
-            request.gas_price,
-            request.max_fee_per_gas,
-            request.max_priority_fee_per_gas,
-           request.max_fee_per_blob_gas,
+            constructed_request.gas_price,
+            constructed_request.max_fee_per_gas,
+            constructed_request.max_priority_fee_per_gas,
+           constructed_request.max_fee_per_blob_gas,
         )?
         .or_zero_fees();
+
+        // let fees = FeeDetails::new(
+        //     request.gas_price,
+        //     request.max_fee_per_gas,
+        //     request.max_priority_fee_per_gas,
+        //    request.max_fee_per_blob_gas,
+        // )?
+        // .or_zero_fees();
 
         // this can be blocking for a bit, especially in forking mode
         // <https://github.com/foundry-rs/foundry/issues/6036>
         self.on_blocking_task(|this| async move {
             let (exit, out, gas, _) =
-                this.backend.call(request, fees, Some(block_request), overrides).await?;
+                this.backend.call(constructed_request, fees, Some(block_request), overrides).await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })

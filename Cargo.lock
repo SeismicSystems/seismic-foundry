@@ -102,7 +102,7 @@ version = "0.1.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830045a4421ee38d3ab570d36d4d2b5152c066e72797139224da8de5d5981fd0"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "num_enum",
  "serde",
  "strum 0.26.3",
@@ -115,7 +115,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "629b62e38d471cc15fea534eb7283d2f8a4e8bdb1811bcc5d66dda6cfce6fae1"
 dependencies = [
  "alloy-eips 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.3.6",
  "c-kzg",
@@ -128,7 +128,7 @@ version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
  "alloy-eips 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.8.0",
  "alloy-trie",
@@ -146,7 +146,7 @@ source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#
 dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-eips 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.8.0",
  "serde",
@@ -161,7 +161,7 @@ dependencies = [
  "alloy-json-abi",
  "alloy-network",
  "alloy-network-primitives 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-pubsub",
  "alloy-rpc-types-eth 0.8.0",
@@ -175,10 +175,10 @@ dependencies = [
 [[package]]
 name = "alloy-dyn-abi"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-sol-type-parser",
  "alloy-sol-types",
  "arbitrary",
@@ -198,7 +198,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0069cf0642457f87a01a014f6dc29d5d893cd4fd8fddf0c3cdfad1bb3ebafc41"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "arbitrary",
  "rand",
@@ -211,7 +211,7 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea59dc42102bc9a1905dc57901edc6dd48b9f38115df86c7d252acba70d71d04"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "serde",
 ]
@@ -222,7 +222,7 @@ version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c986539255fb839d1533c128e190e557e52ff652c9ef62939e233a81dd93f7e"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "arbitrary",
  "derive_more",
@@ -239,7 +239,7 @@ checksum = "f923dd5fca5f67a43d81ed3ebad0880bd41f6dd0ada930030353ac356c54cd0f"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702 0.1.1",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.3.6",
  "c-kzg",
@@ -256,7 +256,7 @@ source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702 0.4.2",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.8.0",
  "c-kzg",
@@ -272,7 +272,7 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a7a18afb0b318616b6b2b0e2e7ac5529d32a966c673b48091c9919e284e6aca"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-serde 0.3.6",
  "serde",
 ]
@@ -282,7 +282,7 @@ name = "alloy-genesis"
 version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-serde 0.8.0",
  "alloy-trie",
  "serde",
@@ -291,9 +291,9 @@ dependencies = [
 [[package]]
 name = "alloy-json-abi"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-sol-type-parser",
  "serde",
  "serde_json",
@@ -304,7 +304,7 @@ name = "alloy-json-rpc"
 version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-sol-types",
  "serde",
  "serde_json",
@@ -322,7 +322,7 @@ dependencies = [
  "alloy-eips 0.8.0",
  "alloy-json-rpc",
  "alloy-network-primitives 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-any",
  "alloy-rpc-types-eth 0.8.0",
  "alloy-serde 0.8.0",
@@ -343,7 +343,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94ad40869867ed2d9cd3842b1e800889e5b49e6b92da346e93862b4a741bedf3"
 dependencies = [
  "alloy-eips 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-serde 0.3.6",
  "serde",
 ]
@@ -355,7 +355,7 @@ source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#
 dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-eips 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-serde 0.8.0",
  "serde",
 ]
@@ -366,7 +366,7 @@ version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
  "alloy-genesis 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "k256",
  "rand",
  "serde_json",
@@ -379,7 +379,30 @@ dependencies = [
 [[package]]
 name = "alloy-primitives"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a772c2e#a772c2edde6bedd31a29c9ff28ffc3d83860b9f2"
+dependencies = [
+ "alloy-rlp",
+ "bytes",
+ "cfg-if",
+ "const-hex",
+ "derive_more",
+ "getrandom",
+ "hashbrown 0.15.2",
+ "hex-literal",
+ "indexmap 2.7.0",
+ "itoa",
+ "paste",
+ "rand",
+ "ruint",
+ "rustc-hash",
+ "serde",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "alloy-primitives"
+version = "0.8.15"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
  "alloy-rlp",
  "arbitrary",
@@ -408,29 +431,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alloy-primitives"
-version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a772c2e#a772c2edde6bedd31a29c9ff28ffc3d83860b9f2"
-dependencies = [
- "alloy-rlp",
- "bytes",
- "cfg-if",
- "const-hex",
- "derive_more",
- "getrandom",
- "hashbrown 0.15.2",
- "hex-literal",
- "indexmap 2.7.0",
- "itoa",
- "paste",
- "rand",
- "ruint",
- "rustc-hash",
- "serde",
- "tiny-keccak",
-]
-
-[[package]]
 name = "alloy-provider"
 version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
@@ -441,7 +441,7 @@ dependencies = [
  "alloy-json-rpc",
  "alloy-network",
  "alloy-network-primitives 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-pubsub",
  "alloy-rpc-client",
  "alloy-rpc-types-debug",
@@ -478,7 +478,7 @@ version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
  "alloy-json-rpc",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-transport",
  "bimap",
  "futures",
@@ -518,7 +518,7 @@ version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
  "alloy-json-rpc",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-pubsub",
  "alloy-transport",
  "alloy-transport-http",
@@ -554,7 +554,7 @@ name = "alloy-rpc-types"
 version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-anvil 0.8.0",
  "alloy-rpc-types-engine 0.8.0",
  "alloy-rpc-types-eth 0.8.0",
@@ -571,7 +571,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fefd12e99dd6b7de387ed13ad047ce2c90d8950ca62fc48b8a457ebb8f936c61"
 dependencies = [
  "alloy-genesis 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "serde",
  "serde_json",
 ]
@@ -582,7 +582,7 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d25cb45ad7c0930dd62eecf164d2afe4c3d2dd2c82af85680ad1f118e1e5cb83"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-serde 0.3.6",
  "serde",
 ]
@@ -592,7 +592,7 @@ name = "alloy-rpc-types-anvil"
 version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-eth 0.8.0",
  "alloy-serde 0.8.0",
  "serde",
@@ -615,7 +615,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e7081d2206dca51ce23a06338d78d9b536931cc3f15134fc1c6535eb2b77f18"
 dependencies = [
  "alloy-eips 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-engine 0.3.6",
  "serde",
  "serde_with",
@@ -627,7 +627,7 @@ name = "alloy-rpc-types-debug"
 version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "serde",
 ]
 
@@ -639,7 +639,7 @@ checksum = "1464c4dd646e1bdfde86ae65ce5ba168dbb29180b478011fe87117ae46b1629b"
 dependencies = [
  "alloy-consensus 0.3.6",
  "alloy-eips 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.3.6",
  "derive_more",
@@ -654,7 +654,7 @@ source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#
 dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-eips 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.8.0",
  "derive_more",
@@ -673,7 +673,7 @@ dependencies = [
  "alloy-consensus 0.3.6",
  "alloy-eips 0.3.6",
  "alloy-network-primitives 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.3.6",
  "alloy-sol-types",
@@ -695,7 +695,7 @@ dependencies = [
  "alloy-consensus-any",
  "alloy-eips 0.8.0",
  "alloy-network-primitives 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.8.0",
  "alloy-sol-types",
@@ -712,7 +712,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "922d92389e5022650c4c60ffd2f9b2467c3f853764f0f74ff16a23106f9017d5"
 dependencies = [
  "alloy-eips 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-serde 0.3.6",
  "serde",
  "serde_json",
@@ -724,7 +724,7 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98db35cd42c90b484377e6bc44d95377a7a38a5ebee996e67754ac0446d542ab"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-eth 0.3.6",
  "alloy-serde 0.3.6",
  "serde",
@@ -737,7 +737,7 @@ name = "alloy-rpc-types-trace"
 version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-eth 0.8.0",
  "alloy-serde 0.8.0",
  "serde",
@@ -751,7 +751,7 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bac37082c3b21283b3faf5cc0e08974272aee2f756ce1adeb26db56a5fce0d5"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-eth 0.3.6",
  "alloy-serde 0.3.6",
  "serde",
@@ -762,7 +762,7 @@ name = "alloy-rpc-types-txpool"
 version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-eth 0.8.0",
  "alloy-serde 0.8.0",
  "serde",
@@ -774,7 +774,7 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "731f75ec5d383107fd745d781619bd9cedf145836c51ecb991623d41278e71fa"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "serde",
  "serde_json",
 ]
@@ -784,7 +784,7 @@ name = "alloy-serde"
 version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "serde",
  "serde_json",
 ]
@@ -795,7 +795,7 @@ version = "0.8.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#97710dc2e220a50e453e2beabbc13556f6201afc"
 dependencies = [
  "alloy-dyn-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-sol-types",
  "async-trait",
  "auto_impl",
@@ -811,7 +811,7 @@ source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#
 dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-signer",
  "async-trait",
  "aws-sdk-kms",
@@ -828,7 +828,7 @@ source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#
 dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-signer",
  "async-trait",
  "gcloud-sdk",
@@ -846,7 +846,7 @@ dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-dyn-abi",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-signer",
  "alloy-sol-types",
  "async-trait",
@@ -864,7 +864,7 @@ source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#
 dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-signer",
  "async-trait",
  "coins-bip32",
@@ -882,7 +882,7 @@ source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=97710dc#
 dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-signer",
  "async-trait",
  "semver 1.0.24",
@@ -894,7 +894,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-macro"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
  "alloy-sol-macro-expander",
  "alloy-sol-macro-input",
@@ -907,7 +907,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-macro-expander"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
  "alloy-json-abi",
  "alloy-sol-macro-input",
@@ -925,7 +925,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-macro-input"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
  "alloy-json-abi",
  "const-hex",
@@ -941,7 +941,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-type-parser"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
  "serde",
  "winnow",
@@ -950,10 +950,10 @@ dependencies = [
 [[package]]
 name = "alloy-sol-types"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-sol-macro",
  "const-hex",
  "serde",
@@ -1035,7 +1035,7 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a5fd8fea044cc9a8c8a50bb6f28e31f0385d820f116c5b98f6f4e55d6e5590b"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "arrayvec",
  "derive_more",
@@ -1145,7 +1145,7 @@ dependencies = [
  "alloy-json-abi",
  "alloy-json-rpc",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-pubsub",
  "alloy-rlp",
@@ -1211,7 +1211,7 @@ dependencies = [
  "alloy-dyn-abi",
  "alloy-eips 0.8.0",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-rpc-types 0.8.0",
  "alloy-serde 0.8.0",
@@ -2246,7 +2246,7 @@ dependencies = [
  "alloy-json-rpc",
  "alloy-network",
  "alloy-node-bindings",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-rlp",
  "alloy-rpc-types 0.8.0",
@@ -2335,7 +2335,7 @@ version = "0.3.0"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types 0.8.0",
  "clap",
  "dirs 5.0.1",
@@ -3487,7 +3487,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c19906a94bb5656904a6c9c0f36d492cb1da96f284d59bb56f555bd472d96e51"
 dependencies = [
  "alloy-dyn-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
 ]
 
 [[package]]
@@ -3657,7 +3657,7 @@ dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-rpc-types 0.8.0",
  "alloy-serde 0.8.0",
@@ -3745,7 +3745,7 @@ dependencies = [
 name = "forge-doc"
 version = "0.3.0"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "derive_more",
  "eyre",
  "forge-fmt",
@@ -3768,7 +3768,7 @@ dependencies = [
 name = "forge-fmt"
 version = "0.3.0"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "ariadne",
  "foundry-config",
  "itertools 0.13.0",
@@ -3790,7 +3790,7 @@ dependencies = [
  "alloy-eips 0.8.0",
  "alloy-json-abi",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-rpc-types 0.8.0",
  "alloy-serde 0.8.0",
@@ -3830,7 +3830,7 @@ name = "forge-script-sequence"
 version = "0.3.0"
 dependencies = [
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types 0.8.0",
  "eyre",
  "foundry-common",
@@ -3865,7 +3865,7 @@ version = "0.3.0"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-rpc-types 0.8.0",
  "async-trait",
@@ -3910,7 +3910,7 @@ checksum = "0faa449506113b4969029da2ac1df3a1b3201bf10c99a4a8e6d684977b80c938"
 dependencies = [
  "alloy-chains",
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "foundry-compilers",
  "reqwest",
  "semver 1.0.24",
@@ -3929,7 +3929,7 @@ dependencies = [
  "alloy-genesis 0.8.0",
  "alloy-json-abi",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-rlp",
  "alloy-rpc-types 0.8.0",
@@ -3988,7 +3988,7 @@ dependencies = [
  "alloy-dyn-abi",
  "alloy-eips 0.8.0",
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-rlp",
  "alloy-transport",
@@ -4030,7 +4030,7 @@ dependencies = [
  "alloy-json-abi",
  "alloy-json-rpc",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-pubsub",
  "alloy-rpc-client",
@@ -4077,7 +4077,7 @@ dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-dyn-abi",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types 0.8.0",
  "alloy-serde 0.8.0",
  "chrono",
@@ -4097,7 +4097,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d817beee8c566a99f4267f25ff63d0de46c442948496ecef91ead56e3383090c"
 dependencies = [
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "auto_impl",
  "derive_more",
  "dirs 5.0.1",
@@ -4144,7 +4144,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "44549c33e5a03408c8d40c36d764b7e84d261258ef481c19e4a612e609fdf8a4"
 dependencies = [
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "foundry-compilers-core",
  "futures-util",
  "md-5",
@@ -4168,7 +4168,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a438605ae74689752b2f717165daac15766f1b2a166d2095715d5f9407084b52"
 dependencies = [
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "foundry-compilers-artifacts-solc",
  "foundry-compilers-core",
  "path-slash",
@@ -4182,7 +4182,7 @@ version = "0.12.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04ac6d85c3e2d12585f8e698b12ed4880b02716ec7fde5d62de9a194e62f4e36"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "cfg-if",
  "dunce",
  "fs_extra",
@@ -4204,7 +4204,7 @@ version = "0.3.0"
 dependencies = [
  "Inflector",
  "alloy-chains",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "dirs-next",
  "dunce",
  "eyre",
@@ -4239,7 +4239,7 @@ dependencies = [
 name = "foundry-debugger"
 version = "0.3.0"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "crossterm",
  "eyre",
  "foundry-common",
@@ -4259,7 +4259,7 @@ version = "0.3.0"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-sol-types",
  "eyre",
  "foundry-cheatcodes",
@@ -4284,7 +4284,7 @@ dependencies = [
 name = "foundry-evm-abi"
 version = "0.3.0"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-sol-types",
  "derive_more",
  "foundry-common-fmt",
@@ -4302,7 +4302,7 @@ dependencies = [
  "alloy-genesis 0.8.0",
  "alloy-json-abi",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-rpc-types 0.8.0",
  "alloy-sol-types",
@@ -4333,7 +4333,7 @@ dependencies = [
 name = "foundry-evm-coverage"
 version = "0.3.0"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "eyre",
  "foundry-common",
  "foundry-compilers",
@@ -4351,7 +4351,7 @@ dependencies = [
  "ahash",
  "alloy-dyn-abi",
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "eyre",
  "foundry-common",
  "foundry-compilers",
@@ -4376,7 +4376,7 @@ version = "0.3.0"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-sol-types",
  "eyre",
  "foundry-block-explorers",
@@ -4404,7 +4404,7 @@ version = "0.9.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=835f3a3#835f3a3173330e0fa8746ed3d08de63a64c59440"
 dependencies = [
  "alloy-consensus 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "alloy-rpc-types 0.8.0",
  "alloy-serde 0.8.0",
@@ -4425,7 +4425,7 @@ dependencies = [
 name = "foundry-linking"
 version = "0.3.0"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "foundry-compilers",
  "semver 1.0.24",
  "thiserror 2.0.8",
@@ -4445,7 +4445,7 @@ dependencies = [
 name = "foundry-test-utils"
 version = "0.3.0"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-provider",
  "eyre",
  "fd-lock",
@@ -4471,7 +4471,7 @@ dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-dyn-abi",
  "alloy-network",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-signer",
  "alloy-signer-aws",
  "alloy-signer-gcp",
@@ -6654,7 +6654,7 @@ checksum = "21aad1fbf80d2bcd7406880efc7ba109365f44bbb72896758ddcbfa46bf1592c"
 dependencies = [
  "alloy-consensus 0.3.6",
  "alloy-eips 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.3.6",
  "derive_more",
@@ -6670,7 +6670,7 @@ checksum = "848b3567a9a469ab0c9c712fca0fd6bbce13a9a0b723c94cb81214f53507cf07"
 dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-eips 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.8.0",
  "derive_more",
@@ -6686,7 +6686,7 @@ checksum = "6e1b8a9b70da0e027242ec1762f0f3a386278b6291d00d12ff5a64929dc19f68"
 dependencies = [
  "alloy-consensus 0.3.6",
  "alloy-eips 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-sol-types",
  "serde",
  "serde_repr",
@@ -6700,7 +6700,7 @@ checksum = "bf300a82ae2d30e2255bfea87a2259da49f63a25a44db561ae64cc9e3084139f"
 dependencies = [
  "alloy-consensus 0.3.6",
  "alloy-eips 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
  "alloy-serde 0.3.6",
  "hashbrown 0.14.5",
@@ -6717,7 +6717,7 @@ checksum = "e281fbfc2198b7c0c16457d6524f83d192662bc9f3df70f24c3038d4521616df"
 dependencies = [
  "alloy-eips 0.3.6",
  "alloy-network-primitives 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-eth 0.3.6",
  "alloy-serde 0.3.6",
  "cfg-if",
@@ -6734,7 +6734,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2947272a81ebf988f4804b6f0f6a7c0b2f6f89a908cb410e36f8f3828f81c778"
 dependencies = [
  "alloy-eips 0.3.6",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-engine 0.3.6",
  "alloy-serde 0.3.6",
  "derive_more",
@@ -7886,7 +7886,7 @@ name = "revm-inspectors"
 version = "0.13.0"
 source = "git+ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git?rev=37ce994#37ce994d25d159d1d74c8f7d46940b5ba8d8b297"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rpc-types-eth 0.8.0",
  "alloy-rpc-types-trace 0.8.0",
  "alloy-sol-types",
@@ -7934,7 +7934,7 @@ source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=caf5496f#
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702 0.4.2",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "auto_impl",
  "bitflags 2.6.0",
  "bitvec",
@@ -8505,13 +8505,14 @@ dependencies = [
 [[package]]
 name = "seismic-transaction"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
  "aes-gcm",
  "alloy-consensus 0.8.0",
  "alloy-eips 0.8.0",
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "alloy-rlp",
+ "alloy-rpc-types-eth 0.8.0",
  "alloy-serde 0.8.0",
  "lazy_static",
  "once_cell",
@@ -8527,7 +8528,7 @@ name = "seismic-types"
 version = "0.1.0"
 source = "git+ssh://git@github.com/SeismicSystems/mantle.git?rev=90277e21#90277e21888c166b24966c7f27e5b269f42172f6"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "lazy_static",
  "once_cell",
  "rand",
@@ -8951,7 +8952,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5aeaf7a4bd326242c909bd287291226a540b62b36fa5824880248f4b1d4d6af"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "bumpalo",
  "either",
  "num-bigint",
@@ -9033,7 +9034,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b82c3659c15975cd80e5e1c44591278c230c59ad89082d797837499a4784e1b"
 dependencies = [
- "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672)",
+ "alloy-primitives 0.8.15 (git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce)",
  "bitflags 2.6.0",
  "bumpalo",
  "itertools 0.13.0",
@@ -9293,7 +9294,7 @@ dependencies = [
 [[package]]
 name = "syn-solidity"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=185d672#185d6723262d3180954887f6d62e2ecc7c30a0fd"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=bb03cce#bb03cce6fa5d815ab4a0744092da0c11f7cdd2bd"
 dependencies = [
  "paste",
  "proc-macro2",

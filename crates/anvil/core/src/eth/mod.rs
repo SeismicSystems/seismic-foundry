@@ -12,7 +12,7 @@ use alloy_rpc_types::{
     BlockId, BlockNumberOrTag as BlockNumber, Filter, Index,
 };
 use alloy_serde::WithOtherFields;
-
+use seismic_transaction::types::SeismicCallRequest;
 pub mod block;
 pub mod proof;
 pub mod subscription;
@@ -184,7 +184,7 @@ pub enum EthRequest {
 
     #[cfg_attr(feature = "serde", serde(rename = "eth_call"))]
     EthCall(
-        WithOtherFields<TransactionRequest>,
+        SeismicCallRequest,
         #[cfg_attr(feature = "serde", serde(default))] Option<BlockId>,
         #[cfg_attr(feature = "serde", serde(default))] Option<StateOverride>,
     ),
