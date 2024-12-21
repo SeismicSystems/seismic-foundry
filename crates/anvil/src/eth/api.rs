@@ -88,9 +88,10 @@ use foundry_evm::{
 use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
 use revm::primitives::Bytecode;
+use secp256k1::PublicKey;
 use seismic_transaction::types::SeismicCallRequest;
-use yansi::Paint;
 use std::{future::Future, sync::Arc, time::Duration};
+use yansi::Paint;
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -1064,20 +1065,35 @@ impl EthApi {
     ) -> Result<Bytes> {
         node_info!("eth_call");
 
-        let (constructed_request, seismic_pub_key): (WithOtherFields<TransactionRequest>, Option<PublicKey>) = match request {
+        let (constructed_request, seismic_pub_key): (
+            WithOtherFields<TransactionRequest>,
+            Option<PublicKey>,
+        ) = match request {
             SeismicCallRequest::Bytes(bytes) => {
-                let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref()).map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
-                let tx = TransactionRequest::try_from(typed_tx).map_err(|_| BlockchainError::Message("Failed to decode bytes to transaction request".to_string()))?;
+                let mut pub_key = None;
+                let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
+                    .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
+                let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
+                    BlockchainError::Message(
+                        "Failed to decode bytes to transaction request".to_string(),
+                    )
+                })?;
                 if let TypedTransaction::Seismic(seismic_tx) = typed_tx {
-                    let public_key = anvil_core::eth::transaction::crypto::recover_public_key(&seismic_tx).map_err(|_| BlockchainError::Message("Failed to get public key from seismic transaction".to_string()))?;
-                    (WithOtherFields::new(tx), Some(public_key))
+                    let public_key =
+                        anvil_core::eth::transaction::crypto::recover_public_key(&seismic_tx)
+                            .map_err(|_| {
+                                BlockchainError::Message(
+                                    "Failed to get public key from seismic transaction".to_string(),
+                                )
+                            })?;
+                    pub_key = Some(public_key);
                 }
-                (WithOtherFields::new(tx), None)
+                (WithOtherFields::new(tx), pub_key)
             }
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 tx.from = None;
                 (tx, None)
-            },
+            }
         };
 
         let block_request = self.block_request(block_number).await?;
@@ -1094,12 +1110,12 @@ impl EthApi {
                 }
             }
         }
-        
+
         let fees = FeeDetails::new(
             constructed_request.gas_price,
             constructed_request.max_fee_per_gas,
             constructed_request.max_priority_fee_per_gas,
-           constructed_request.max_fee_per_blob_gas,
+            constructed_request.max_fee_per_blob_gas,
         )?
         .or_zero_fees();
 
@@ -1114,8 +1130,16 @@ impl EthApi {
         // this can be blocking for a bit, especially in forking mode
         // <https://github.com/foundry-rs/foundry/issues/6036>
         self.on_blocking_task(|this| async move {
-            let (exit, out, gas, _) =
-                this.backend.seismic_call(constructed_request, seismic_pub_key, fees, Some(block_request), overrides).await?;
+            let (exit, out, gas, _) = this
+                .backend
+                .seismic_call(
+                    constructed_request,
+                    seismic_pub_key,
+                    fees,
+                    Some(block_request),
+                    overrides,
+                )
+                .await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })
@@ -1767,7 +1791,7 @@ impl EthApi {
     /// Handler for RPC call: `anvil_dropAllTransactions`
     pub async fn anvil_drop_all_transactions(&self) -> Result<()> {
         node_info!("anvil_dropAllTransactions");
-        self.pool.clear();
+        self.pool.resetting();
         Ok(())
     }
 

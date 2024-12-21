@@ -1186,6 +1186,7 @@ dependencies = [
  "parking_lot",
  "rand",
  "revm",
+ "secp256k1",
  "seismic-transaction",
  "serde",
  "serde_json",

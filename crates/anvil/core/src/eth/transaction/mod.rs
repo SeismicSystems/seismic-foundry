@@ -29,7 +29,9 @@ use revm::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    any::Any, fmt::Debug, hash::Hash, ops::{Deref, Mul}
+    fmt::Debug,
+    hash::Hash,
+    ops::{Deref, Mul},
 };
 
 use seismic_transaction::transaction::SeismicTransaction;
@@ -1609,13 +1611,13 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
     })
 }
 
-// pub fn construct_eth_call_request(tx: Bytes) -> Result<TransactionRequest, alloy_primitives::SignatureError> {
-//     let typed_tx = TypedTransaction::decode_2718(&mut &tx[..]).unwrap();
-//     let sender = typed_tx.recover();
-//     let constructed_request = 
+// pub fn construct_eth_call_request(tx: Bytes) -> Result<TransactionRequest,
+// alloy_primitives::SignatureError> {     let typed_tx = TypedTransaction::decode_2718(&mut
+// &tx[..]).unwrap();     let sender = typed_tx.recover();
+//     let constructed_request =
 //             TransactionRequest {
 //                 from: Some(sender),
-//                 to: Some(typed_tx.tx().to),  
+//                 to: Some(typed_tx.tx().to),
 //                 gas_price: Some(typed_tx.tx().gas_price),
 //                 max_fee_per_gas: Some(typed_tx.tx().max_fee_per_gas),
 //                 max_priority_fee_per_gas: typed_tx.tx().max_priority_fee_per_gas,
@@ -1634,7 +1636,6 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 
 //     Ok(constructed_request)
 // }
-
 
 #[cfg(test)]
 mod tests {

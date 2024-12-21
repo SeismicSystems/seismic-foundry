@@ -113,6 +113,7 @@ use std::{
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
 
+use secp256k1::PublicKey;
 use seismic_transaction::transaction::SeismicTransaction;
 
 pub mod cache;
@@ -1356,7 +1357,6 @@ impl Backend {
         }).await?
     }
 
-
     /// ## EVM settings
     ///
     /// This modifies certain EVM settings to mirror geth's `SkipAccountChecks` when transacting requests, see also: <https://github.com/ethereum/go-ethereum/blob/380688c636a654becc8f114438c2a5d93d2db032/core/state_transition.go#L145-L148>:
@@ -1418,7 +1418,7 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-            env.tx =
+        env.tx =
             TxEnv {
                 caller,
                 gas_limit,
@@ -1457,14 +1457,14 @@ impl Backend {
         env
     }
 
-     /// ## EVM settings
+    /// ## EVM settings
     ///
     /// This modifies certain EVM settings to mirror geth's `SkipAccountChecks` when transacting requests, see also: <https://github.com/ethereum/go-ethereum/blob/380688c636a654becc8f114438c2a5d93d2db032/core/state_transition.go#L145-L148>:
     ///
     ///  - `disable_eip3607` is set to `true`
     ///  - `disable_base_fee` is set to `true`
     ///  - `nonce` is set to `None`
-    fn build_seismic_call_env(
+    fn seismic_build_call_env(
         &self,
         request: WithOtherFields<TransactionRequest>,
         seismic_pub_key: Option<PublicKey>,
@@ -1519,16 +1519,21 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-        if Some(SeismicTransaction::TRANSACTION_TYPE) == request.transaction_type && seismic_pub_key.is_some() {
+        if Some(SeismicTransaction::TRANSACTION_TYPE) == request.transaction_type &&
+            seismic_pub_key.is_some()
+        {
             let public_key = seismic_pub_key.unwrap();
-            let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
-                    .expect("Failed to decrypt seismic tx");
+            let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
+                &public_key,
+                input.input().unwrap_or_default().as_ref(),
+                request.clone().nonce.unwrap_or_default(),
+            )
+            .expect("Failed to decrypt seismic tx");
             let data = Bytes::decode(&mut decrypted_input.as_slice())
-                    .expect("Failed to RLP decode decrypted input");
+                .expect("Failed to RLP decode decrypted input");
             input = data.into();
-            
         };
-            env.tx =
+        env.tx =
             TxEnv {
                 caller,
                 gas_limit,
@@ -1614,7 +1619,7 @@ impl Backend {
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let mut inspector = self.build_inspector();
 
-        let env = self.build_call_env(request, fee_details, block_env);
+        let env = self.seismic_build_call_env(request, seismic_pub_key, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;
         let (exit_reason, gas_used, out) = match result {
@@ -1630,7 +1635,6 @@ impl Backend {
         inspector.print_logs();
         Ok((exit_reason, out, gas_used as u128, state))
     }
-
 
     pub async fn call_with_tracing(
         &self,
