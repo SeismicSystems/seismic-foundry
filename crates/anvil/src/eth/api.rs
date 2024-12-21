@@ -1057,7 +1057,7 @@ impl EthApi {
     /// Handler for ETH RPC call: `eth_call`
     pub async fn call(
         &self,
-        request: SeismicCallRequest,
+        request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<Bytes> {
@@ -1076,29 +1076,38 @@ impl EthApi {
                 }
             }
         }
+        // let constructed_request: WithOtherFields<TransactionRequest> = match request {
+        //     SeismicCallRequest::Bytes(bytes) => {
+        //         let tx = recover_transaction_from_bytes(bytes)?;
+        //         tx
+        //     }
+        //     SeismicCallRequest::TransactionRequest(tx) => {
+        //         tx.from = None;
+        //         tx
+        //     },
+        // };
 
-        let constructed_request: WithOtherFields<TransactionRequest> = match request {
-            SeismicCallRequest::Bytes(bytes) => {
-                let tx = recover_transaction_from_bytes(bytes)?;
-            }
-            SeismicCallRequest::TransactionRequest(tx) => {
-                tx.from = None;
-                tx
-            },
-        };
+        // let fees = FeeDetails::new(
+        //     constructed_request.gas_price,
+        //     constructed_request.max_fee_per_gas,
+        //     constructed_request.max_priority_fee_per_gas,
+        //    constructed_request.max_fee_per_blob_gas,
+        // )?
+        // .or_zero_fees();
 
         let fees = FeeDetails::new(
-            constructed_request.gas_price,
-            constructed_request.max_fee_per_gas,
-            constructed_request.max_priority_fee_per_gas,
-           constructed_request.max_fee_per_blob_gas,
+            request.gas_price,
+            request.max_fee_per_gas,
+            request.max_priority_fee_per_gas,
+           request.max_fee_per_blob_gas,
         )?
         .or_zero_fees();
+
         // this can be blocking for a bit, especially in forking mode
         // <https://github.com/foundry-rs/foundry/issues/6036>
         self.on_blocking_task(|this| async move {
             let (exit, out, gas, _) =
-                this.backend.call(constructed_request, fees, Some(block_request), overrides).await?;
+                this.backend.call(request, fees, Some(block_request), overrides).await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })
