@@ -1077,30 +1077,33 @@ impl EthApi {
             }
         }
 
+        let constructed_request: WithOtherFields<TransactionRequest> = match request {
+            SeismicCallRequest::Bytes(bytes) => {
+                let tx = recover_transaction_from_bytes(bytes)?;
+            }
+            SeismicCallRequest::TransactionRequest(tx) => {
+                tx.from = None;
+                tx
+            },
+        };
+
         let fees = FeeDetails::new(
-            request.gas_price,
-            request.max_fee_per_gas,
-            request.max_priority_fee_per_gas,
-            request.max_fee_per_blob_gas,
+            constructed_request.gas_price,
+            constructed_request.max_fee_per_gas,
+            constructed_request.max_priority_fee_per_gas,
+           constructed_request.max_fee_per_blob_gas,
         )?
         .or_zero_fees();
         // this can be blocking for a bit, especially in forking mode
         // <https://github.com/foundry-rs/foundry/issues/6036>
         self.on_blocking_task(|this| async move {
-            let (exit, out, gas, _) = match request {
-                SeismicCallRequest::Bytes(bytes) => {
-                    this.backend.signed_call_with_state(bytes, fees, Some(block_request), overrides).await?
-                }
-                SeismicCallRequest::TransactionRequest(tx) => {
-                    this.backend.call(tx, fees, Some(block_request), overrides).await?
-                }
-            };
+            let (exit, out, gas, _) =
+                this.backend.call(constructed_request, fees, Some(block_request), overrides).await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })
         .await
     }
-
     /// This method creates an EIP2930 type accessList based on a given Transaction. The accessList
     /// contains all storage slots and addresses read and written by the transaction, except for the
     /// sender account and the precompiles.
