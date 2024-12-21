@@ -88,6 +88,7 @@ use foundry_evm::{
 use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
 use revm::primitives::Bytecode;
+use seismic_transaction::types::SeismicCallRequest;
 use std::{future::Future, sync::Arc, time::Duration};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -1056,7 +1057,7 @@ impl EthApi {
     /// Handler for ETH RPC call: `eth_call`
     pub async fn call(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        request: SeismicCallRequest,
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<Bytes> {
@@ -1086,10 +1087,15 @@ impl EthApi {
         // this can be blocking for a bit, especially in forking mode
         // <https://github.com/foundry-rs/foundry/issues/6036>
         self.on_blocking_task(|this| async move {
-            let (exit, out, gas, _) =
-                this.backend.call(request, fees, Some(block_request), overrides).await?;
+            let (exit, out, gas, _) = match request {
+                SeismicCallRequest::Bytes(bytes) => {
+                    this.backend.signed_call_with_state(bytes, fees, Some(block_request), overrides).await?
+                }
+                SeismicCallRequest::TransactionRequest(tx) => {
+                    this.backend.call(tx, fees, Some(block_request), overrides).await?
+                }
+            };
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
-
             ensure_return_ok(exit, &out)
         })
         .await

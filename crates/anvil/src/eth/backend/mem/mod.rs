@@ -1462,6 +1462,34 @@ impl Backend {
         Ok((exit_reason, out, gas_used as u128, state))
     }
 
+    pub fn signed_call_with_state(
+        &self,
+        state: &dyn DatabaseRef<Error = DatabaseError>,
+        request: Bytes,
+        fee_details: FeeDetails,
+        block_env: BlockEnv,
+    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
+        let mut inspector = self.build_inspector();
+
+        let tx = recover_raw_transaction(request)?;
+
+        let env = self.build_call_env(request, fee_details, block_env);
+        let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
+        let ResultAndState { result, state } = evm.transact()?;
+        let (exit_reason, gas_used, out) = match result {
+            ExecutionResult::Success { reason, gas_used, output, .. } => {
+                (reason.into(), gas_used, Some(output))
+            }
+            ExecutionResult::Revert { gas_used, output } => {
+                (InstructionResult::Revert, gas_used, Some(Output::Call(output)))
+            }
+            ExecutionResult::Halt { reason, gas_used } => (reason.into(), gas_used, None),
+        };
+        drop(evm);
+        inspector.print_logs();
+        Ok((exit_reason, out, gas_used as u128, state))
+    }
+
     pub async fn call_with_tracing(
         &self,
         request: WithOtherFields<TransactionRequest>,
