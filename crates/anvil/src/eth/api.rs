@@ -66,8 +66,8 @@ use anvil_core::{
     eth::{
         block::BlockInfo,
         transaction::{
-            transaction_request_to_typed, PendingTransaction, ReceiptResponse, TypedTransaction,
-            TypedTransactionRequest,
+            transaction_request_to_typed, PendingTransaction, ReceiptResponse, SeismicCallRequest,
+            TypedTransaction, TypedTransactionRequest,
         },
         wallet::{WalletCapabilities, WalletError},
         EthRequest,
@@ -89,7 +89,6 @@ use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
 use revm::primitives::Bytecode;
 use secp256k1::PublicKey;
-use anvil_core::eth::transaction::SeismicCallRequest;
 use std::{future::Future, sync::Arc, time::Duration};
 use yansi::Paint;
 
