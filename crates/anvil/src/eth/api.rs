@@ -89,7 +89,7 @@ use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
 use revm::primitives::Bytecode;
 use secp256k1::PublicKey;
-use seismic_transaction::types::SeismicCallRequest;
+use anvil_core::eth::transaction::SeismicCallRequest;
 use std::{future::Future, sync::Arc, time::Duration};
 use yansi::Paint;
 

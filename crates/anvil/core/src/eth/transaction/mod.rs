@@ -17,7 +17,7 @@ use alloy_primitives::{
 use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
 use alloy_rpc_types::{
     request::TransactionRequest, trace::otterscan::OtsReceipt, AccessList, ConversionError,
-    Transaction as RpcTransaction, TransactionReceipt,
+    Transaction as RpcTransaction, TransactionReceipt, 
 };
 use alloy_serde::{OtherFields, WithOtherFields};
 use bytes::BufMut;
@@ -1610,6 +1610,17 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
         },
     })
 }
+
+/// Either a normal ETH call or a signed/serialized one
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
+pub enum SeismicCallRequest {
+    /// signed call request
+    Bytes(Bytes),
+    /// normal call request
+    TransactionRequest(WithOtherFields<TransactionRequest>),
+}
+
 
 // pub fn construct_eth_call_request(tx: Bytes) -> Result<TransactionRequest,
 // alloy_primitives::SignatureError> {     let typed_tx = TypedTransaction::decode_2718(&mut

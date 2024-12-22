@@ -12,7 +12,7 @@ use alloy_rpc_types::{
     BlockId, BlockNumberOrTag as BlockNumber, Filter, Index,
 };
 use alloy_serde::WithOtherFields;
-use seismic_transaction::types::SeismicCallRequest;
+use crate::eth::transaction::SeismicCallRequest;
 pub mod block;
 pub mod proof;
 pub mod subscription;

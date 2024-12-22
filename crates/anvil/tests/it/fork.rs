@@ -22,7 +22,7 @@ use foundry_test_utils::rpc::{self, next_http_rpc_endpoint, next_rpc_endpoint};
 use futures::StreamExt;
 use std::{sync::Arc, thread::sleep, time::Duration};
 
-use seismic_transaction::types::SeismicCallRequest;
+use anvil_core::eth::transaction::SeismicCallRequest;
 
 const BLOCK_NUMBER: u64 = 14_608_400u64;
 const DEAD_BALANCE_AT_BLOCK_NUMBER: u128 = 12_556_069_338_441_120_059_867u128;
