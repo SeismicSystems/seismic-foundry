@@ -1,4 +1,7 @@
-use crate::{eth::subscription::SubscriptionId, types::ReorgOptions};
+use crate::{
+    eth::{subscription::SubscriptionId, transaction::SeismicCallRequest},
+    types::ReorgOptions,
+};
 use alloy_primitives::{Address, Bytes, TxHash, B256, B64, U256};
 use alloy_rpc_types::{
     anvil::{Forking, MineOptions},
@@ -12,7 +15,6 @@ use alloy_rpc_types::{
     BlockId, BlockNumberOrTag as BlockNumber, Filter, Index,
 };
 use alloy_serde::WithOtherFields;
-
 pub mod block;
 pub mod proof;
 pub mod subscription;
@@ -184,7 +186,7 @@ pub enum EthRequest {
 
     #[cfg_attr(feature = "serde", serde(rename = "eth_call"))]
     EthCall(
-        WithOtherFields<TransactionRequest>,
+        SeismicCallRequest,
         #[cfg_attr(feature = "serde", serde(default))] Option<BlockId>,
         #[cfg_attr(feature = "serde", serde(default))] Option<StateOverride>,
     ),

@@ -1611,6 +1611,16 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
     })
 }
 
+/// Either a normal ETH call or a signed/serialized one
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
+pub enum SeismicCallRequest {
+    /// signed call request
+    Bytes(Bytes),
+    /// normal call request
+    TransactionRequest(WithOtherFields<TransactionRequest>),
+}
+
 #[cfg(test)]
 mod tests {
     use alloy_consensus::SignableTransaction;

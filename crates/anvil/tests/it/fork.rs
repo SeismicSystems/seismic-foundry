@@ -22,6 +22,8 @@ use foundry_test_utils::rpc::{self, next_http_rpc_endpoint, next_rpc_endpoint};
 use futures::StreamExt;
 use std::{sync::Arc, thread::sleep, time::Duration};
 
+use anvil_core::eth::transaction::SeismicCallRequest;
+
 const BLOCK_NUMBER: u64 = 14_608_400u64;
 const DEAD_BALANCE_AT_BLOCK_NUMBER: u128 = 12_556_069_338_441_120_059_867u128;
 
@@ -872,11 +874,11 @@ async fn test_fork_call() {
 
     let res1 = api
         .call(
-            WithOtherFields::new(TransactionRequest {
+            SeismicCallRequest::TransactionRequest(WithOtherFields::new(TransactionRequest {
                 to: Some(TxKind::from(to)),
                 input: input.into(),
                 ..Default::default()
-            }),
+            })),
             None,
             None,
         )
@@ -1318,11 +1320,11 @@ async fn test_fork_execution_reverted() {
 
     let resp = api
         .call(
-            WithOtherFields::new(TransactionRequest {
+            SeismicCallRequest::TransactionRequest(WithOtherFields::new(TransactionRequest {
                 to: Some(TxKind::from(address!("Fd6CC4F251eaE6d02f9F7B41D1e80464D3d2F377"))),
                 input: TransactionInput::new(bytes!("8f283b3c")),
                 ..Default::default()
-            }),
+            })),
             Some(target.into()),
             None,
         )
