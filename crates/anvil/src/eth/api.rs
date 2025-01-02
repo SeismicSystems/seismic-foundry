@@ -1118,14 +1118,6 @@ impl EthApi {
         )?
         .or_zero_fees();
 
-        // let fees = FeeDetails::new(
-        //     request.gas_price,
-        //     request.max_fee_per_gas,
-        //     request.max_priority_fee_per_gas,
-        //    request.max_fee_per_blob_gas,
-        // )?
-        // .or_zero_fees();
-
         // this can be blocking for a bit, especially in forking mode
         // <https://github.com/foundry-rs/foundry/issues/6036>
         self.on_blocking_task(|this| async move {
