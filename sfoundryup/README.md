@@ -7,7 +7,7 @@ export SEISMIC_PAT=your_personal_access_token
 ```
 Then, run the following command to install sfoundryup:
 ```bash
-curl -s https://$SEISMIC_PAT@raw.githubusercontent.com/SeismicSystems/seismic-foundry/main/sfoundryup | bash
+curl -s https://$SEISMIC_PAT@raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/sfoundryup/sfoundryup | bash
 ```
 ## Usage
 To install the **nightly** version of Seismic Foundry tools:
