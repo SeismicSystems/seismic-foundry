@@ -17,7 +17,7 @@ To build `sforge` from source, run this from the root of this repository:
 
 ```sh
 git checkout seismic
-cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge
+cargo install --locked --root=$HOME/.seismic --profile dev --path ./crates/forge
 ```
 
 ### Seismic Anvil
@@ -25,7 +25,7 @@ To build `sanvil` from source, run this from the root of this repository:
 
 ```sh
 git checkout seismic
-cargo install --root=$HOME/.seismic --profile dev --path ./crates/anvil
+cargo install --locked --root=$HOME/.seismic --profile dev --path ./crates/anvil
 ```
 
 ### Merging in upstream foundry-rs/main
