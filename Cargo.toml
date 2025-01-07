@@ -177,9 +177,10 @@ solar-parse = { version = "=0.1.0", default-features = false }
 
 ## revm
 # no default features to avoid c-kzg
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "caf5496f", default-features = false }
-revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "caf5496f", default-features = false }
-revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "37ce994", features = ["serde"] }
+# b006548
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7b6128a6", default-features = false }
+revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7b6128a6", default-features = false }
+revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "d86adbb", features = ["serde"] }
 
 ## ethers
 ethers-contract-abigen = { version = "2.0.14", default-features = false }
@@ -302,8 +303,10 @@ seismic-transaction = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy
 # and instead use our local version
 
 # seismic-revm
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "caf5496f" }
-revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "caf5496f" }
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7b6128a6" }
+revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7b6128a6" }
+revm-interpreter = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7b6128a6" }
+revm-precompile = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "7b6128a6" }
 
 foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "835f3a3" }
 
