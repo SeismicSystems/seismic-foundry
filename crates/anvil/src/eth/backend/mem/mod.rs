@@ -35,7 +35,7 @@ use crate::{
 };
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    Account, Header, Receipt, ReceiptWithBloom, Signed, Transaction as TransactionTrait, TxEnvelope,
+    transaction::TxSeismic, Account, Header, Receipt, ReceiptWithBloom, Signed, Transaction as TransactionTrait, TxEnvelope
 };
 use alloy_eips::eip4844::MAX_BLOBS_PER_BLOCK;
 use alloy_network::{
@@ -114,7 +114,6 @@ use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
 
 use secp256k1::PublicKey;
-use seismic_transaction::transaction::SeismicTransaction;
 
 pub mod cache;
 pub mod fork_db;
@@ -1519,7 +1518,7 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-        if Some(SeismicTransaction::TRANSACTION_TYPE) == request.transaction_type &&
+        if Some(TxSeismic::TX_TYPE) == request.transaction_type &&
             seismic_pub_key.is_some()
         {
             let public_key = seismic_pub_key.unwrap();

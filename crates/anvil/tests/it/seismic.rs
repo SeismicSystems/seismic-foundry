@@ -3,11 +3,25 @@ use alloy_primitives::{hex, Bytes, B256, U256};
 use alloy_provider::Provider;
 use alloy_rlp::Encodable;
 use alloy_rpc_types::TransactionRequest;
-use alloy_serde::WithOtherFields;
+use alloy_serde::{OtherFields, WithOtherFields};
 use anvil::{spawn, NodeConfig};
 use anvil_core::eth::transaction::crypto;
-use seismic_transaction::types::SeismicTransactionFields;
+use serde::{Deserialize, Serialize};
 use std::fs;
+
+/// Seismic specific transaction field(s)
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+struct SeismicTransactionFields {
+    /// The secret data for the transaction
+    #[serde(rename = "seismicInput")]
+    pub seismic_input: Bytes,
+}
+
+impl From<SeismicTransactionFields> for OtherFields {
+    fn from(value: SeismicTransactionFields) -> Self {
+        serde_json::to_value(value).unwrap().try_into().unwrap()
+    }
+}
 
 // common utils
 pub const TEST_BYTECODE_PATH: &str = "/tests/it/seismic_test_bytecode.txt";
