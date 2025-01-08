@@ -35,7 +35,8 @@ use crate::{
 };
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    transaction::TxSeismic, Account, Header, Receipt, ReceiptWithBloom, Signed, Transaction as TransactionTrait, TxEnvelope
+    transaction::TxSeismic, Account, Header, Receipt, ReceiptWithBloom, Signed,
+    Transaction as TransactionTrait, TxEnvelope,
 };
 use alloy_eips::eip4844::MAX_BLOBS_PER_BLOCK;
 use alloy_network::{
@@ -1518,9 +1519,7 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-        if Some(TxSeismic::TX_TYPE) == request.transaction_type &&
-            seismic_pub_key.is_some()
-        {
+        if Some(TxSeismic::TX_TYPE) == request.transaction_type && seismic_pub_key.is_some() {
             let public_key = seismic_pub_key.unwrap();
             let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
                 &public_key,

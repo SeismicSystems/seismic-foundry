@@ -94,9 +94,7 @@ pub fn transaction_request_to_typed(
             is_system_transaction: other.get_deserialized::<bool>("isSystemTx")?.ok()?,
             input: input.into_input().unwrap_or_default(),
         }));
-    } else if transaction_type == Some(TxSeismic::TX_TYPE) ||
-        has_seismic_fields(&other)
-    {
+    } else if transaction_type == Some(TxSeismic::TX_TYPE) || has_seismic_fields(&other) {
         return Some(TypedTransactionRequest::Seismic(TxSeismic {
             nonce: nonce.unwrap_or_default(),
             gas_price: gas_price.unwrap_or_default(),
