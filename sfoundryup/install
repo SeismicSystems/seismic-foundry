@@ -3,25 +3,6 @@ set -eo pipefail
 
 echo "Installing sfoundryup..."
 
-# Default to devs mode
-SEISMIC_MODE="devs"
-
-# Parse command-line arguments
-while [[ -n $1 ]]; do
-  case $1 in
-    --seismic-core)  SEISMIC_MODE="core";;
-    --seismic-devs)  SEISMIC_MODE="devs";;
-  esac
-  shift
-done
-
-# Ensure SEISMIC_PAT is set if not using seismic-core
-if [[ -z "$SEISMIC_PAT" && "$SEISMIC_MODE" != "core" ]]; then
-  echo "Error: SEISMIC_PAT environment variable is not set. Please export it with your GitHub Personal Access Token."
-  echo "Example: export SEISMIC_PAT=your_personal_access_token"
-  exit 1
-fi
-
 # Define paths consistent with sfoundryup
 BASE_DIR="${XDG_CONFIG_HOME:-$HOME}"
 SEISMIC_DIR="${SEISMIC_DIR:-"$BASE_DIR/.seismic"}"
@@ -29,19 +10,23 @@ SEISMIC_BIN_DIR="$SEISMIC_DIR/bin"
 
 BIN_PATH="$SEISMIC_BIN_DIR/sfoundryup"
 
+# Ensure SEISMIC_PAT is set
+if [[ -z "$SEISMIC_PAT" ]]; then
+  echo "Error: SEISMIC_PAT environment variable is not set. Please export it with your GitHub Personal Access Token."
+  echo "Example: export SEISMIC_PAT=your_personal_access_token"
+  exit 1
+fi
+
+# GitHub raw URL to sfoundryup in the private repository
+RAW_API_URL="https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/sfoundryup/sfoundryup"
+
 # Create necessary directories
 mkdir -p "$SEISMIC_BIN_DIR"
 
-# Download sfoundryup using the appropriate method
+# Download sfoundryup using GitHub raw content URL
 echo "Fetching sfoundryup from the private repository..."
-if [[ "$SEISMIC_MODE" == "core" ]]; then
-  # Use SSH for core
-  scp git@github.com:SeismicSystems/seismic-foundry/sfoundryup/sfoundryup "$BIN_PATH"
-else
-  # Use PAT for devs
-  curl -sSf -H "Authorization: token $SEISMIC_PAT" \
-       "https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/ameya/conditional-sfoundryup/sfoundryup/sfoundryup" -o "$BIN_PATH"
-fi
+curl -sSf -H "Authorization: token $SEISMIC_PAT" \
+     "$RAW_API_URL" -o "$BIN_PATH"
 
 # Make the file executable
 chmod +x "$BIN_PATH"
