@@ -170,16 +170,16 @@ foundry-linking = { path = "crates/linking" }
 # solc & compilation utilities
 foundry-block-explorers = { version = "0.9.0", default-features = false }
 foundry-compilers = { version = "0.12.8", default-features = false }
-foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "fe0e531" }
+foundry-fork-db = "0.9.0"
 solang-parser = "=0.3.3"
 solar-ast = { version = "=0.1.0", default-features = false }
 solar-parse = { version = "=0.1.0", default-features = false }
 
 ## revm
 # no default features to avoid c-kzg
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083", default-features = false }
-revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083", default-features = false }
-revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "c5afa19", features = ["serde"] }
+revm = { version = "18.0.0", default-features = false }
+revm-primitives = { version = "14.0.0", default-features = false }
+revm-inspectors = { version = "0.13.0", features = ["serde"] }
 
 ## ethers
 ethers-contract-abigen = { version = "2.0.14", default-features = false }
@@ -210,13 +210,13 @@ alloy-node-bindings = { version = "0.8.0", default-features = false }
 alloy-network-primitives = { version = "0.8.0", default-features = false }
 
 ## alloy-core
-alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22",  features = ["seismic", "std"] }
-alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22",  features = ["seismic"] }
-alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22", features = ["getrandom", "rand", "seismic"] }
-alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22", features = ["seismic"] }
-alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22", features = ["seismic"] }
-alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22", features = ["seismic"] }
-syn-solidity = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22", features = ["seismic"] }
+alloy-dyn-abi = { version = "0.8.15", features = ["seismic", "std"] }
+alloy-json-abi = { version = "0.8.15", features = ["seismic"] }
+alloy-primitives = { version = "0.8.15", features = ["getrandom", "rand", "seismic"] }
+alloy-sol-macro-expander = { version = "0.8.15", features = ["seismic"] }
+alloy-sol-macro-input = { version = "0.8.15", features = ["seismic"] }
+alloy-sol-types = { version = "0.8.15", features = ["seismic"] }
+syn-solidity = { version = "0.8.15", features = ["seismic"] }
 
 alloy-chains = "0.1"
 alloy-rlp = "0.3"
@@ -297,20 +297,23 @@ yansi = { version = "1.0", features = ["detect-tty", "detect-env"] }
 # If our dependencies depend on these things,
 # then this will override whatever versions they point to
 # and instead use our local version
+foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "cd54596" }
 
 # seismic-revm
 revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
 revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
+revm-interpreter = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
+revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "19828b8" }
 
 # seismic-alloy-core
-alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22" }
-alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22" }
-alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22" }
-alloy-sol-macro = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22" }
-alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22" }
-alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22" }
-alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22" }
-alloy-sol-type-parser = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "397aa22" }
+alloy-dyn-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a273736" }
+alloy-json-abi = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a273736" }
+alloy-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a273736" }
+alloy-sol-macro = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a273736" }
+alloy-sol-macro-expander = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a273736" }
+alloy-sol-macro-input = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a273736" }
+alloy-sol-types = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a273736" }
+alloy-sol-type-parser = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy-core.git", rev = "a273736" }
 
 alloy-consensus = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy.git", rev = "3206d90" }
 alloy-contract = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy.git", rev = "3206d90" }
