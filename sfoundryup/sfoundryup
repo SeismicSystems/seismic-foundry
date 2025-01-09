@@ -14,16 +14,30 @@ export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
 main() {
   # Default to devs mode
   SEISMIC_MODE="devs"
-
+# --seismic-core)  SEISMIC_MODE="core";;
+      # --seismic-devs)  SEISMIC_MODE="devs";;
   # Parse command-line arguments
   while [[ -n $1 ]]; do
     case $1 in
-      --seismic-core)  SEISMIC_MODE="core";;
-      --seismic-devs)  SEISMIC_MODE="devs";;
-      # ... existing options ...
+      --)               shift; break;;
+      -v|--version)     shift; SEISMICUP_VERSION=$1;;
+      -p|--path)        shift; SEISMICUP_LOCAL_REPO=$1;;
+      -j|--jobs)        shift; SEISMICUP_JOBS=$1;;
+      --seismic-core)   SEISMIC_MODE="core";;
+      --seismic-devs)   SEISMIC_MODE="devs";;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        warn "unknown option: $1"
+        usage
+        exit 1
+        ;;
     esac
     shift
   done
+
 
   # Ensure SEISMIC_PAT is set if not using seismic-core
   if [[ -z "$SEISMIC_PAT" && "$SEISMIC_MODE" != "core" ]]; then
