@@ -4173,7 +4173,7 @@ dependencies = [
 [[package]]
 name = "foundry-fork-db"
 version = "0.9.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=3afb7fa#3afb7fac1aba5b2fb0f38d85dd8a877abd8a477b"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=fe0e531#fe0e531f56441613d96695f2b2be0605818ab495"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
@@ -7540,7 +7540,7 @@ dependencies = [
 [[package]]
 name = "revm-inspectors"
 version = "0.13.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git?rev=5d2952e#5d2952e43cc75d4e94e8679d95d4f1f671239df9"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git?rev=c5afa19#c5afa19a5ac405cb5cb761fe1af13cac4128a781"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
