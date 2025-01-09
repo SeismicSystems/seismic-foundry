@@ -161,7 +161,7 @@ dependencies = [
 [[package]]
 name = "alloy-dyn-abi"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=397aa22#397aa2228658d502f7033336cead6811e03a8f6e"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a273736#a273736b8410f1ec81cfd45ca4c080a72143a43c"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -237,7 +237,7 @@ dependencies = [
 [[package]]
 name = "alloy-json-abi"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=397aa22#397aa2228658d502f7033336cead6811e03a8f6e"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a273736#a273736b8410f1ec81cfd45ca4c080a72143a43c"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-type-parser",
@@ -313,7 +313,7 @@ dependencies = [
 [[package]]
 name = "alloy-primitives"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=397aa22#397aa2228658d502f7033336cead6811e03a8f6e"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a273736#a273736b8410f1ec81cfd45ca4c080a72143a43c"
 dependencies = [
  "alloy-rlp",
  "arbitrary",
@@ -668,7 +668,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-macro"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=397aa22#397aa2228658d502f7033336cead6811e03a8f6e"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a273736#a273736b8410f1ec81cfd45ca4c080a72143a43c"
 dependencies = [
  "alloy-sol-macro-expander",
  "alloy-sol-macro-input",
@@ -681,7 +681,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-macro-expander"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=397aa22#397aa2228658d502f7033336cead6811e03a8f6e"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a273736#a273736b8410f1ec81cfd45ca4c080a72143a43c"
 dependencies = [
  "alloy-json-abi",
  "alloy-sol-macro-input",
@@ -699,7 +699,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-macro-input"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=397aa22#397aa2228658d502f7033336cead6811e03a8f6e"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a273736#a273736b8410f1ec81cfd45ca4c080a72143a43c"
 dependencies = [
  "alloy-json-abi",
  "const-hex",
@@ -715,7 +715,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-type-parser"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=397aa22#397aa2228658d502f7033336cead6811e03a8f6e"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a273736#a273736b8410f1ec81cfd45ca4c080a72143a43c"
 dependencies = [
  "serde",
  "winnow",
@@ -724,7 +724,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-types"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=397aa22#397aa2228658d502f7033336cead6811e03a8f6e"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a273736#a273736b8410f1ec81cfd45ca4c080a72143a43c"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4173,7 +4173,7 @@ dependencies = [
 [[package]]
 name = "foundry-fork-db"
 version = "0.9.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=fe0e531#fe0e531f56441613d96695f2b2be0605818ab495"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=cd54596#cd54596038b5bb3ad86c28c293fc5e4c5e1ddf52"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
@@ -7540,7 +7540,7 @@ dependencies = [
 [[package]]
 name = "revm-inspectors"
 version = "0.13.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git?rev=c5afa19#c5afa19a5ac405cb5cb761fe1af13cac4128a781"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git?rev=19828b8#19828b8cf93a3b918324f8ef70e8f3411f516846"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -8883,7 +8883,7 @@ dependencies = [
 [[package]]
 name = "syn-solidity"
 version = "0.8.15"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=397aa22#397aa2228658d502f7033336cead6811e03a8f6e"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy-core.git?rev=a273736#a273736b8410f1ec81cfd45ca4c080a72143a43c"
 dependencies = [
  "paste",
  "proc-macro2",
