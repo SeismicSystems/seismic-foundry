@@ -34,8 +34,6 @@ use std::{
     ops::{Deref, Mul},
 };
 
-use seismic_transaction::transaction::SeismicTransaction;
-
 pub mod crypto;
 pub mod optimism;
 
@@ -96,9 +94,7 @@ pub fn transaction_request_to_typed(
             is_system_transaction: other.get_deserialized::<bool>("isSystemTx")?.ok()?,
             input: input.into_input().unwrap_or_default(),
         }));
-    } else if transaction_type == Some(SeismicTransaction::TRANSACTION_TYPE) ||
-        has_seismic_fields(&other)
-    {
+    } else if transaction_type == Some(TxSeismic::TX_TYPE) || has_seismic_fields(&other) {
         return Some(TypedTransactionRequest::Seismic(TxSeismic {
             nonce: nonce.unwrap_or_default(),
             gas_price: gas_price.unwrap_or_default(),
@@ -814,7 +810,7 @@ impl TypedTransaction {
             Self::EIP4844(_) => Some(3),
             Self::EIP7702(_) => Some(4),
             Self::Deposit(_) => Some(0x7E),
-            Self::Seismic(_) => Some(SeismicTransaction::TRANSACTION_TYPE),
+            Self::Seismic(_) => Some(TxSeismic::TX_TYPE),
         }
     }
 
@@ -1365,7 +1361,7 @@ impl From<TypedReceipt<Receipt<alloy_rpc_types::Log>>> for OtsReceipt {
             TypedReceipt::EIP4844(_) => 0x03,
             TypedReceipt::EIP7702(_) => 0x04,
             TypedReceipt::Deposit(_) => 0x7E,
-            TypedReceipt::Seismic(_) => SeismicTransaction::TRANSACTION_TYPE,
+            TypedReceipt::Seismic(_) => TxSeismic::TX_TYPE,
         } as u8;
         let receipt = ReceiptWithBloom::<Receipt<alloy_rpc_types::Log>>::from(value);
         let status = receipt.status();
@@ -1498,7 +1494,7 @@ impl Encodable2718 for TypedReceipt {
             Self::EIP4844(_) => Some(3),
             Self::EIP7702(_) => Some(4),
             Self::Deposit(_) => Some(0x7E),
-            Self::Seismic(_) => Some(SeismicTransaction::TRANSACTION_TYPE),
+            Self::Seismic(_) => Some(TxSeismic::TX_TYPE),
         }
     }
 
@@ -1605,7 +1601,7 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
                     .ok()?
                     .map(|v| v.to()),
             }),
-            SeismicTransaction::TRANSACTION_TYPE => TypedReceipt::Seismic(receipt_with_bloom),
+            TxSeismic::TX_TYPE => TypedReceipt::Seismic(receipt_with_bloom),
             _ => return None,
         },
     })
