@@ -55,4 +55,4 @@ Reload Your Shell Configuration or start another terminal instance:
 ```bash
 sfoundryup --core
 ```
-**Tip**: All flags have a single-character shorthand equivalent! You can use -v instead of --version, etc.
+**Tip**: All flags except `--core` have a single-character shorthand equivalent! You can use -v instead of --version, etc.
