@@ -25,7 +25,7 @@ Add `~/.seismic/bin` to your shell (`~/.bashrc`, `~/.zshrc`, etc.)
 ```bash
 echo 'export PATH="$PATH:$HOME/.seismic/bin"' >> ~/.bashrc ## Replace this with your shell configuration file
 ```
-Clone the Seismic Foundry Repository
+Clone the Seismic Foundry Repository if not already cloned to your local machine
 ```bash
 git clone git@github.com:SeismicSystems/seismic-foundry.git
 ```
