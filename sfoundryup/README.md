@@ -13,7 +13,7 @@ curl -s https://$SEISMIC_PAT@raw.githubusercontent.com/SeismicSystems/seismic-fo
 ## Usage
 ### Install Seismic Foundry as a developer building on top of Seismic:
 ```bash
-sfoundryup --seismic-devs
+sfoundryup
 ```
 
 ## For Seismic core team members
@@ -53,6 +53,6 @@ Reload Your Shell Configuration or start another terminal instance:
 ## Usage
 ### Install Seismic Foundry as a Seismic core team member:
 ```bash
-sfoundryup --seismic-core
+sfoundryup --core
 ```
 **Tip**: All flags have a single-character shorthand equivalent! You can use -v instead of --version, etc.

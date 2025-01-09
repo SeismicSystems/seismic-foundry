@@ -14,17 +14,13 @@ export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
 main() {
   # Default to devs mode
   SEISMIC_MODE="devs"
-# --seismic-core)  SEISMIC_MODE="core";;
-      # --seismic-devs)  SEISMIC_MODE="devs";;
-  # Parse command-line arguments
   while [[ -n $1 ]]; do
     case $1 in
       --)               shift; break;;
+      --core)           SEISMIC_MODE="core";;
       -v|--version)     shift; SEISMICUP_VERSION=$1;;
       -p|--path)        shift; SEISMICUP_LOCAL_REPO=$1;;
       -j|--jobs)        shift; SEISMICUP_JOBS=$1;;
-      --seismic-core)   SEISMIC_MODE="core";;
-      --seismic-devs)   SEISMIC_MODE="devs";;
       -h|--help)
         usage
         exit 0
@@ -38,6 +34,7 @@ main() {
     shift
   done
 
+  echo "SEISMIC_MODE: $SEISMIC_MODE"
 
   # Ensure SEISMIC_PAT is set if not using seismic-core
   if [[ -z "$SEISMIC_PAT" && "$SEISMIC_MODE" != "core" ]]; then
@@ -200,8 +197,7 @@ USAGE:
     sfoundryup <OPTIONS>
 
 OPTIONS:
-    --seismic-core  Install Seismic Foundry for core Seismic team members (SSH dependencies)
-    --seismic-devs  Install Seismic Foundry for Seismic developers (HTTPS dependencies)
+    --core  Install Seismic Foundry for core Seismic team members (SSH dependencies)
     -h, --help      Print help information
     -v, --version   Install a specific version from built binaries
     -p, --path      Build and install a local repository
