@@ -303,6 +303,8 @@ foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-f
 revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
 revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
 revm-interpreter = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "b504083" }
+
+# seismic-revm-inspectors
 revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "19828b8" }
 
 # seismic-alloy-core
