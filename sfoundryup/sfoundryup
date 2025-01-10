@@ -12,20 +12,12 @@ BINS=(sforge scast sanvil schisel)
 export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
 
 main() {
-  # Ensure SEISMIC_PAT is set
-  if [[ -z "$SEISMIC_PAT" ]]; then
-    echo "Error: SEISMIC_PAT environment variable is not set. Please export it with your GitHub Personal Access Token."
-    echo "Example: export SEISMIC_PAT=your_personal_access_token"
-    exit 1
-  fi
-
-  need_cmd git
-  need_cmd curl
-  need_cmd jq
-
+  # Default to devs mode
+  SEISMIC_MODE="devs"
   while [[ -n $1 ]]; do
     case $1 in
       --)               shift; break;;
+      --core)           SEISMIC_MODE="core";;
       -v|--version)     shift; SEISMICUP_VERSION=$1;;
       -p|--path)        shift; SEISMICUP_LOCAL_REPO=$1;;
       -j|--jobs)        shift; SEISMICUP_JOBS=$1;;
@@ -41,6 +33,19 @@ main() {
     esac
     shift
   done
+
+  echo "SEISMIC_MODE: $SEISMIC_MODE"
+
+  # Ensure SEISMIC_PAT is set if not using seismic-core
+  if [[ -z "$SEISMIC_PAT" && "$SEISMIC_MODE" != "core" ]]; then
+    echo "Error: SEISMIC_PAT environment variable is not set. Please export it with your GitHub Personal Access Token."
+    echo "Example: export SEISMIC_PAT=your_personal_access_token"
+    exit 1
+  fi
+
+  need_cmd git
+  need_cmd curl
+  need_cmd jq
 
   CARGO_BUILD_ARGS=(--release)
 
@@ -62,6 +67,11 @@ main() {
 
 install_ssolc() {
   echo "Starting ssolc installation..."
+
+  if [[ "$SEISMIC_MODE" == "core" ]]; then
+    echo "Please ensure you have 'ssolc' installed in /usr/local/bin."
+    return
+  fi
 
   # Ensure SEISMIC_PAT is set
   if [[ -z "$SEISMIC_PAT" ]]; then
@@ -135,7 +145,13 @@ install_from_remote_repo() {
   if [ ! -d "$REPO_PATH" ]; then
     ensure mkdir -p "$SEISMIC_DIR"
     say "Cloning the repository using PAT..."
+    if [[ "$SEISMIC_MODE" == "core" ]]; then
+    # Use SSH for core
+    ensure git clone "git@github.com:$SEISMICUP_REPO.git" "$REPO_PATH"
+    else
+    # Use HTTPS for devs
     ensure git clone "https://$SEISMIC_PAT@github.com/$SEISMICUP_REPO.git" "$REPO_PATH"
+    fi
   fi
 
   # Fetch and checkout the branch
@@ -146,11 +162,16 @@ install_from_remote_repo() {
   # Use the git CLI to fetch dependencies
   export CARGO_NET_GIT_FETCH_WITH_CLI=true
 
-  # For Seismic dependencies, remap the use of SSH to use HTTPS + access token
-  # First remove any previous remapping with old access token
-  ensure git config --global --get-regexp '^url\.https://.*@github\.com/SeismicSystems\.insteadOf' | cut -d' ' -f1 | while read -r key; do git config --global --unset "$key"; done || true
-  # Then add URL remapping
-  ensure git config --global url."https://$SEISMIC_PAT@github.com/SeismicSystems".insteadOf "ssh://git@github.com/SeismicSystems"
+  if [[ "$SEISMIC_MODE" == "core" ]]; then
+   echo "Using SSH dependencies for Seismic core team members"
+  else
+   echo "Using HTTPS dependencies for Seismic developers"
+   # For Seismic dependencies, remap the use of SSH to use HTTPS + access token
+   # First remove any previous remapping with old access token
+   ensure git config --global --get-regexp '^url\.https://.*@github\.com/SeismicSystems\.insteadOf' | cut -d' ' -f1 | while read -r key; do git config --global --unset "$key"; done || true
+   # Then add URL remapping
+   ensure git config --global url."https://$SEISMIC_PAT@github.com/SeismicSystems".insteadOf "ssh://git@github.com/SeismicSystems"
+  fi
 
   # Build the binaries
   ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
@@ -176,6 +197,7 @@ USAGE:
     sfoundryup <OPTIONS>
 
 OPTIONS:
+    --core  Install Seismic Foundry for core Seismic team members (SSH dependencies)
     -h, --help      Print help information
     -v, --version   Install a specific version from built binaries
     -p, --path      Build and install a local repository
