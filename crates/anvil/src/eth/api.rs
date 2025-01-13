@@ -2946,10 +2946,7 @@ impl EthApi {
                 m.chain_id = chain_id;
                 TypedTransactionRequest::Seismic(m)
             }
-            None => {
-                println!("not seismic");
-                return Err(BlockchainError::FailedToDecodeTransaction)
-            },
+            None => return Err(BlockchainError::FailedToDecodeTransaction),
         };
         Ok(request)
     }
