@@ -606,8 +606,10 @@ impl PendingTransaction {
 
                 let public_key =
                     crypto::recover_public_key(tx).expect("Failed to recover public key");
-                let data = Bytes::from(crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
-                    .expect("Failed to decrypt seismic tx"));
+                let data = Bytes::from(
+                    crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
+                        .expect("Failed to decrypt seismic tx"),
+                );
                 TxEnv {
                     caller,
                     transact_to: transact_to(&to),
