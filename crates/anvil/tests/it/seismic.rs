@@ -51,12 +51,6 @@ pub fn get_input_data(selector: &str, value: B256) -> Bytes {
     input_data.into()
 }
 
-fn rlp_encode(plaintext: Bytes) -> Vec<u8> {
-    let mut out = Vec::new();
-    plaintext.encode(&mut out);
-    out
-}
-
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_transaction() {
     let (api, handle) = spawn(NodeConfig::test()).await;
@@ -84,8 +78,7 @@ async fn test_seismic_transaction() {
 
     let to = receipt.contract_address.unwrap();
 
-    let encoded_setnumber_data =
-        rlp_encode(get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))));
+    let encoded_setnumber_data = get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10)));
     let set_data = crypto::client_encrypt(&secret_key, &encoded_setnumber_data, 1).unwrap();
 
     let tx = TransactionRequest::default()
@@ -113,8 +106,7 @@ async fn test_seismic_transaction() {
     > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
-    let encoded_increment_data =
-        rlp_encode(get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))));
+    let encoded_increment_data = get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10)));
     let increment_data = crypto::client_encrypt(&secret_key, &encoded_increment_data, 2).unwrap();
 
     let tx = TransactionRequest::default()
@@ -137,7 +129,7 @@ async fn test_seismic_transaction() {
         provider.get_transaction_receipt(pending_increment.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
-    let encoded_getnumber_data = rlp_encode(hex::decode(GET_NUMBER_SELECTOR).unwrap().into());
+    let encoded_getnumber_data = hex::decode(GET_NUMBER_SELECTOR).unwrap();
     let get_data = crypto::client_encrypt(&secret_key, &encoded_getnumber_data, 3).unwrap();
 
     let tx = TransactionRequest::default()
