@@ -1624,6 +1624,7 @@ pub enum SeismicCallRequest {
 mod tests {
     use alloy_consensus::SignableTransaction;
     use alloy_primitives::{b256, hex, FixedBytes, LogData};
+    use tee_service_api::get_sample_secp256k1_pk;
     use std::str::FromStr;
 
     use super::*;
@@ -1861,6 +1862,10 @@ mod tests {
         let _typed_tx: TypedTransaction = serde_json::from_str(tx).unwrap();
     }
 
+    fn test_pubkey() -> Bytes {
+        Bytes::from(get_sample_secp256k1_pk().serialize())
+    }
+
     #[test]
     fn test_seismic_tx_encoding() {
         let decrypted_input = Bytes::from_str("0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875").unwrap();
@@ -1872,7 +1877,7 @@ mod tests {
             to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
             value: U256::from(1000000000000000u64),
             input: decrypted_input.clone(),
-            encryption_pubkey: Bytes::new(),
+            encryption_pubkey: test_pubkey(),
         };
 
         let r = U256::from_str("0xeb96ca19e8a77102767a41fc85a36afd5c61ccb09911cec5d3e86e193d9c5ae")
@@ -1890,7 +1895,7 @@ mod tests {
         signed_tt.encode(&mut encoded_tx);
 
         let encoded_bytes = Bytes::from(encoded_tx);
-        let reth_encoded = Bytes::from_str("0xb8b04af8ad0402843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb87580a00eb96ca19e8a77102767a41fc85a36afd5c61ccb09911cec5d3e86e193d9c5aea03a456401896b1b6055311536bf00a718568c744d8c1f9df59879e8350220ca18").unwrap();
+        let reth_encoded = Bytes::from_str("0xb8d24af8cf0402843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a080a00eb96ca19e8a77102767a41fc85a36afd5c61ccb09911cec5d3e86e193d9c5aea03a456401896b1b6055311536bf00a718568c744d8c1f9df59879e8350220ca18").unwrap();
         assert_eq!(reth_encoded, encoded_bytes);
     }
 
