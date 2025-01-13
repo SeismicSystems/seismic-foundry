@@ -31,6 +31,7 @@ impl RpcHandler for HttpEthRpcHandler {
     type Request = EthRequest;
 
     async fn on_request(&self, request: Self::Request) -> ResponseResult {
+        println!("on request: {:?}", request);
         self.api.execute(request).await
     }
 }

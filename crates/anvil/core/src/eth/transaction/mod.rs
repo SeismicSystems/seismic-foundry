@@ -27,6 +27,7 @@ use revm::{
     interpreter::InstructionResult,
     primitives::{OptimismFields, TxEnv},
 };
+use secp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Debug,
@@ -75,6 +76,7 @@ pub fn transaction_request_to_typed(
                 access_list,
                 sidecar,
                 transaction_type,
+                encryption_pubkey,
                 ..
             },
         other,
@@ -94,7 +96,11 @@ pub fn transaction_request_to_typed(
             is_system_transaction: other.get_deserialized::<bool>("isSystemTx")?.ok()?,
             input: input.into_input().unwrap_or_default(),
         }));
-    } else if transaction_type == Some(TxSeismic::TX_TYPE) || has_seismic_fields(&other) {
+    } else if transaction_type == Some(TxSeismic::TX_TYPE) {
+        let encryption_pubkey = match encryption_pubkey {
+            Some(epk) => epk,
+            None => panic!("Seismic transaction is missing 'encryption_pubkey' field"),
+        };
         return Some(TypedTransactionRequest::Seismic(TxSeismic {
             nonce: nonce.unwrap_or_default(),
             gas_price: gas_price.unwrap_or_default(),
@@ -102,7 +108,8 @@ pub fn transaction_request_to_typed(
             to: to.unwrap_or_default(),
             value: value.unwrap_or_default(),
             chain_id: 0,
-            input: other.get_deserialized::<Bytes>("seismicInput")?.ok()?,
+            input: input.input.unwrap_or_default(),
+            encryption_pubkey,
         }));
     }
     match (
@@ -191,10 +198,6 @@ fn has_optimism_fields(other: &OtherFields) -> bool {
     other.contains_key("sourceHash") &&
         other.contains_key("mint") &&
         other.contains_key("isSystemTx")
-}
-
-fn has_seismic_fields(other: &OtherFields) -> bool {
-    other.contains_key("seismicInput")
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -601,11 +604,12 @@ impl PendingTransaction {
                 }
             }
             TypedTransaction::Seismic(tx) => {
-                let TxSeismic { nonce, gas_price, gas_limit, to, value, chain_id, input, .. } =
+                let TxSeismic { nonce, gas_price, gas_limit, to, value, chain_id, input, encryption_pubkey } =
                     &tx.tx();
 
-                let public_key =
-                    crypto::recover_public_key(tx).expect("Failed to recover public key");
+                let public_key = PublicKey::from_slice(&encryption_pubkey)
+                    .expect("failed to parse public key from bytes");
+                println!("Pubkey = {:0x}", public_key);
                 let data = Bytes::from(
                     crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
                         .expect("Failed to decrypt seismic tx"),
@@ -1869,6 +1873,7 @@ mod tests {
             to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
             value: U256::from(1000000000000000u64),
             input: decrypted_input.clone(),
+            encryption_pubkey: Bytes::new(),
         };
 
         let r = U256::from_str("0xeb96ca19e8a77102767a41fc85a36afd5c61ccb09911cec5d3e86e193d9c5ae")
