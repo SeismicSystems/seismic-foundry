@@ -296,9 +296,13 @@ impl TestRunnerConfig {
     /// Reconfigures all fields using the given `config`.
     pub fn reconfigure_with(&mut self, config: Arc<Config>) {
         debug_assert!(!Arc::ptr_eq(&self.config, &config));
-
+        println!("Reconfiguring TestRunnerConfig");
         // TODO: self.evm_opts
         // TODO: self.env
+        if config.seismic {
+            println!("Reconfiguring with seismic version");
+            self.spec_id = config.seismic_version;
+        }
         self.spec_id = config.evm_spec_id();
         self.sender = config.sender;
         // self.coverage = N/A;
@@ -339,6 +343,8 @@ impl TestRunnerConfig {
         artifact_id: &ArtifactId,
         db: Backend,
     ) -> Executor {
+        println!("Creating executor with config: {:?}", self.config);
+        println!("Creating executor self.spec_id: {:?}", self.spec_id);
         let cheats_config = Arc::new(CheatsConfig::new(
             &self.config,
             self.evm_opts.clone(),
@@ -513,6 +519,8 @@ impl MultiContractRunnerBuilder {
 
         let known_contracts = ContractsByArtifact::new(linked_contracts);
 
+        
+
         Ok(MultiContractRunner {
             contracts: deployable_contracts,
             revert_decoder,
@@ -525,7 +533,11 @@ impl MultiContractRunnerBuilder {
             tcfg: TestRunnerConfig {
                 evm_opts,
                 env,
-                spec_id: self.evm_spec.unwrap_or_else(|| self.config.evm_spec_id()),
+                spec_id: if self.config.seismic {
+                    self.config.seismic_version
+                } else {
+                    self.evm_spec.unwrap_or_else(|| self.config.evm_spec_id())
+                },
                 sender: self.sender.unwrap_or(self.config.sender),
 
                 coverage: self.coverage,
