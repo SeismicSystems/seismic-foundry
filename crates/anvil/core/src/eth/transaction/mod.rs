@@ -616,7 +616,7 @@ impl PendingTransaction {
                     encryption_pubkey,
                 } = &tx.tx();
 
-                let public_key = PublicKey::from_slice(&encryption_pubkey)
+                let public_key = PublicKey::from_slice(encryption_pubkey.as_slice())
                     .expect("failed to parse public key from bytes");
                 let data = Bytes::from(
                     crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
@@ -1871,8 +1871,8 @@ mod tests {
         let _typed_tx: TypedTransaction = serde_json::from_str(tx).unwrap();
     }
 
-    fn test_pubkey() -> Bytes {
-        Bytes::from(get_sample_secp256k1_pk().serialize())
+    fn test_pubkey() -> alloy_consensus::transaction::EncryptionPublicKey {
+        get_sample_secp256k1_pk().serialize().into()
     }
 
     #[test]
@@ -1925,7 +1925,7 @@ mod tests {
                 assert_eq!(tx.signature_hash(), expected_sighash);
                 assert_eq!(
                     tx.tx().encryption_pubkey,
-                    Bytes::from_str(
+                    alloy_consensus::transaction::EncryptionPublicKey::from_str(
                         "0x028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0"
                     )
                     .unwrap()
