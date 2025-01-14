@@ -95,3 +95,54 @@ pub fn recover_public_key(tx: &Signed<TxSeismic>) -> Result<PublicKey, RecoverPu
     let public_key = secp256k1::PublicKey::from_slice(&pk_bytes)?;
     Ok(public_key)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+    use alloy_primitives::Bytes;
+    use secp256k1::ecdh::shared_secret_point;
+
+    use super::*;
+
+    #[test]
+    fn test_aes_keygen() {
+        let pk1 = secp256k1::PublicKey::from_str(
+            // network pk
+            "028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0",
+        )
+        .unwrap();
+        let sk1 = secp256k1::SecretKey::from_str(
+            // user sk
+            "a30363336e1bb949185292a2a302de86e447d98f3a43d823c8c234d9e3e5ad77",
+        )
+        .unwrap();
+        let pt1 = shared_secret_point(&pk1, &sk1);
+        let ss1 = SharedSecret::new(&pk1, &sk1);
+        let aes1 = derive_aes_key(&ss1).unwrap();
+        println!("Point 1 = {:0x}", Bytes::from(pt1));
+        println!("Shared 1 = {:0x}", Bytes::from(ss1.secret_bytes()));
+        println!("Aes key 1 = {:0x}", aes1);
+        
+        let pk2 = secp256k1::PublicKey::from_str(
+            // user pk
+            "025f210a5daaca346fa1fd8d6ea36e813e756ea34659fe42c757de4e6ed1d0903c",
+        )
+        .unwrap();
+        let sk2 = secp256k1::SecretKey::from_str(
+            // network sk
+            "311d54d3bf8359c70827122a44a7b4458733adce3c51c6b59d9acfce85e07505",
+        )
+        .unwrap();
+    let pt2 = shared_secret_point(&pk2, &sk2);
+    let ss2 = SharedSecret::new(&pk2, &sk2);
+        let aes2 = derive_aes_key(&ss2).unwrap();
+        println!("Point 2 = {:0x}", Bytes::from(pt2));
+        println!("Shared 2 = {:0x}", Bytes::from(ss2.secret_bytes()));
+        println!("Aes key 2 = {:0x}", aes2);
+
+    println!("{}", pt1[63]);
+    let version = (pt1[63] & 0x01) | 0x02;
+    println!("version = {}", version);
+    }
+}
+
