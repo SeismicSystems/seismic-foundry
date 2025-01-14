@@ -605,8 +605,16 @@ impl PendingTransaction {
                 }
             }
             TypedTransaction::Seismic(tx) => {
-                let TxSeismic { nonce, gas_price, gas_limit, to, value, chain_id, input, encryption_pubkey } =
-                    &tx.tx();
+                let TxSeismic {
+                    nonce,
+                    gas_price,
+                    gas_limit,
+                    to,
+                    value,
+                    chain_id,
+                    input,
+                    encryption_pubkey,
+                } = &tx.tx();
 
                 let public_key = PublicKey::from_slice(&encryption_pubkey)
                     .expect("failed to parse public key from bytes");
@@ -1625,8 +1633,8 @@ pub enum SeismicCallRequest {
 mod tests {
     use alloy_consensus::SignableTransaction;
     use alloy_primitives::{b256, hex, FixedBytes, LogData};
-    use tee_service_api::get_sample_secp256k1_pk;
     use std::str::FromStr;
+    use tee_service_api::get_sample_secp256k1_pk;
 
     use super::*;
 
@@ -1881,8 +1889,9 @@ mod tests {
             encryption_pubkey: test_pubkey(),
         };
 
-        let r = U256::from_str("0x1e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04")
-            .unwrap();
+        let r =
+            U256::from_str("0x1e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04")
+                .unwrap();
         let s =
             U256::from_str("0x779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3")
                 .unwrap();
@@ -1914,8 +1923,14 @@ mod tests {
         match &decoded_tx {
             TypedTransaction::Seismic(tx) => {
                 assert_eq!(tx.signature_hash(), expected_sighash);
-                assert_eq!(tx.tx().encryption_pubkey, Bytes::from_str("0x028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0").unwrap());
-            },
+                assert_eq!(
+                    tx.tx().encryption_pubkey,
+                    Bytes::from_str(
+                        "0x028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0"
+                    )
+                    .unwrap()
+                );
+            }
             _ => unreachable!(),
         };
 

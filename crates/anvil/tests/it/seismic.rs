@@ -7,15 +7,15 @@ use alloy_serde::{OtherFields, WithOtherFields};
 use anvil::{spawn, NodeConfig};
 use anvil_core::eth::transaction::crypto;
 use serde::{Deserialize, Serialize};
-use tee_service_api::{get_sample_secp256k1_pk, get_sample_secp256k1_sk};
 use std::fs;
+use tee_service_api::{get_sample_secp256k1_pk, get_sample_secp256k1_sk};
 
 /// Seismic specific transaction field(s)
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct SeismicTransactionFields {
     /// Encryption public key
     #[serde(rename = "encryptionPubkey")]
-    pub encryption_pubkey: Bytes
+    pub encryption_pubkey: Bytes,
 }
 
 impl From<SeismicTransactionFields> for OtherFields {
@@ -111,7 +111,8 @@ async fn test_seismic_transaction() {
     assert!(receipt.is_some());
 
     let encoded_increment_data = get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10)));
-    let increment_data = crypto::client_encrypt(&encryption_sk, &encoded_increment_data, 2).unwrap();
+    let increment_data =
+        crypto::client_encrypt(&encryption_sk, &encoded_increment_data, 2).unwrap();
 
     let tx = TransactionRequest::default()
         .transaction_type(TxSeismic::TX_TYPE)
