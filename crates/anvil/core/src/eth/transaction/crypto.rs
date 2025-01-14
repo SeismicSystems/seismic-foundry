@@ -98,11 +98,9 @@ pub fn recover_public_key(tx: &Signed<TxSeismic>) -> Result<PublicKey, RecoverPu
 
 #[cfg(test)]
 mod tests {
-    use alloy_primitives::Bytes;
+    use super::*;
     use secp256k1::ecdh::shared_secret_point;
     use std::str::FromStr;
-
-    use super::*;
 
     #[test]
     fn test_aes_keygen() {
@@ -119,9 +117,6 @@ mod tests {
         let pt1 = shared_secret_point(&pk1, &sk1);
         let ss1 = SharedSecret::new(&pk1, &sk1);
         let aes1 = derive_aes_key(&ss1).unwrap();
-        println!("Point 1 = {:0x}", Bytes::from(pt1));
-        println!("Shared 1 = {:0x}", Bytes::from(ss1.secret_bytes()));
-        println!("Aes key 1 = {:0x}", aes1);
 
         let pk2 = secp256k1::PublicKey::from_str(
             // user pk
@@ -136,12 +131,11 @@ mod tests {
         let pt2 = shared_secret_point(&pk2, &sk2);
         let ss2 = SharedSecret::new(&pk2, &sk2);
         let aes2 = derive_aes_key(&ss2).unwrap();
-        println!("Point 2 = {:0x}", Bytes::from(pt2));
-        println!("Shared 2 = {:0x}", Bytes::from(ss2.secret_bytes()));
-        println!("Aes key 2 = {:0x}", aes2);
 
-        println!("{}", pt1[63]);
-        let version = (pt1[63] & 0x01) | 0x02;
-        println!("version = {}", version);
+        assert_eq!(pt1, pt2);
+        assert_eq!(ss1, ss2);
+        assert_eq!(aes1, aes2);
+        // let version = (pt1[63] & 0x01) | 0x02;
+        // println!("version = {}", version);
     }
 }
