@@ -296,7 +296,6 @@ impl TestRunnerConfig {
     /// Reconfigures all fields using the given `config`.
     pub fn reconfigure_with(&mut self, config: Arc<Config>) {
         debug_assert!(!Arc::ptr_eq(&self.config, &config));
-        println!("Reconfiguring TestRunnerConfig");
         // TODO: self.evm_opts
         // TODO: self.env
         if config.seismic {
@@ -516,8 +515,6 @@ impl MultiContractRunnerBuilder {
         }
 
         let known_contracts = ContractsByArtifact::new(linked_contracts);
-
-        
 
         Ok(MultiContractRunner {
             contracts: deployable_contracts,
