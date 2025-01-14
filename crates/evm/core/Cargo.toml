@@ -45,6 +45,7 @@ revm = { workspace = true, features = [
     "optional_no_base_fee",
     "arbitrary",
     "optimism",
+    "seismic",
     "c-kzg",
     "blst",
 ] }

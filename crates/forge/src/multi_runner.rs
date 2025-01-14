@@ -343,8 +343,6 @@ impl TestRunnerConfig {
         artifact_id: &ArtifactId,
         db: Backend,
     ) -> Executor {
-        println!("Creating executor with config: {:?}", self.config);
-        println!("Creating executor self.spec_id: {:?}", self.spec_id);
         let cheats_config = Arc::new(CheatsConfig::new(
             &self.config,
             self.evm_opts.clone(),

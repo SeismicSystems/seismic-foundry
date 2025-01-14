@@ -7587,7 +7587,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "18.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=7b6128a6#7b6128a6cd9040d25e8bb78b3f2352620ac3bc59"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=a01a6a07#a01a6a079a95491115b62e46c9a6c994d4ec6ebf"
 dependencies = [
  "aes-gcm",
  "alloy-primitives",
@@ -7597,6 +7597,7 @@ dependencies = [
  "bincode",
  "cfg-if",
  "dyn-clone",
+ "hkdf",
  "merlin",
  "rand_core",
  "revm-interpreter",
@@ -7605,6 +7606,7 @@ dependencies = [
  "secp256k1",
  "serde",
  "serde_json",
+ "sha2",
  "tee_service_api 0.1.0 (git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=544b83711c53c8d72cd339718097f324add7adfc)",
  "tiny-keccak",
 ]
@@ -7630,7 +7632,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "14.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=7b6128a6#7b6128a6cd9040d25e8bb78b3f2352620ac3bc59"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=a01a6a07#a01a6a079a95491115b62e46c9a6c994d4ec6ebf"
 dependencies = [
  "revm-primitives",
  "serde",
@@ -7639,7 +7641,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "15.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=7b6128a6#7b6128a6cd9040d25e8bb78b3f2352620ac3bc59"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=a01a6a07#a01a6a079a95491115b62e46c9a6c994d4ec6ebf"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -7658,7 +7660,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "14.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=7b6128a6#7b6128a6cd9040d25e8bb78b3f2352620ac3bc59"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=a01a6a07#a01a6a079a95491115b62e46c9a6c994d4ec6ebf"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",

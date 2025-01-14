@@ -14,6 +14,7 @@ use foundry_config::NamedChain;
 use foundry_fork_db::DatabaseError;
 use revm::{
     handler::register::EvmHandler,
+    seismic::seismic_handle_register,
     interpreter::{
         return_ok, CallInputs, CallOutcome, CallScheme, CallValue, CreateInputs, CreateOutcome,
         Gas, InstructionResult, InterpreterResult,
@@ -333,6 +334,9 @@ pub fn new_evm_with_inspector<'evm, 'i, 'db, I: InspectorExt + ?Sized>(
     if inspector.is_odyssey() {
         handler.append_handler_register_plain(odyssey_handler_register);
     }
+    else if handler.is_seismic() {
+        handler.append_handler_register_plain(seismic_handle_register);
+    }
     handler.append_handler_register_plain(create2_handler_register);
 
     let context = revm::Context::new(revm::EvmContext::new_with_env(db, env), inspector);
@@ -350,6 +354,9 @@ pub fn new_evm_with_existing_context<'a>(
     handler.append_handler_register_plain(revm::inspector_handle_register);
     if inspector.is_odyssey() {
         handler.append_handler_register_plain(odyssey_handler_register);
+    }
+    else if handler.is_seismic() {
+        handler.append_handler_register_plain(seismic_handle_register);
     }
     handler.append_handler_register_plain(create2_handler_register);
 
