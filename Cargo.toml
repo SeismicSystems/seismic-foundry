@@ -300,9 +300,9 @@ yansi = { version = "1.0", features = ["detect-tty", "detect-env"] }
 foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "cd54596" }
 
 # seismic-revm
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "162e3d0" }
-revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "162e3d0" }
-revm-interpreter = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "162e3d0" }
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "aa0401a85447eae1bea40f44e1f1cfd832fbe61f" }
+revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "aa0401a85447eae1bea40f44e1f1cfd832fbe61f" }
+revm-interpreter = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "aa0401a85447eae1bea40f44e1f1cfd832fbe61f" }
 
 # seismic-revm-inspectors
 revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "19828b8" }
