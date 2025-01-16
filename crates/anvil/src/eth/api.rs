@@ -1077,8 +1077,9 @@ impl EthApi {
                     )
                 })?;
                 match typed_tx {
-                    TypedTransaction::Seismic(seismic_tx) => {
-                        let encryption_pubkey_bytes = seismic_tx.tx().encryption_pubkey;
+                    TypedTransaction::Seismic(signed_seismic_tx) => {
+                        let seismic_tx = signed_seismic_tx.tx();
+                        let encryption_pubkey_bytes = seismic_tx.encryption_pubkey;
                         let public_key = PublicKey::from_slice(encryption_pubkey_bytes.as_slice())
                             .map_err(|_| {
                                 BlockchainError::Message(
@@ -1086,6 +1087,7 @@ impl EthApi {
                                         .to_string(),
                                 )
                             })?;
+                        // let calldata = seismic_tx.input;
                         (WithOtherFields::new(tx), Some(public_key))
                     }
                     _ => (WithOtherFields::new(tx), None),

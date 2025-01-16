@@ -1352,7 +1352,7 @@ impl Backend {
                     self.seismic_call_with_state(state.as_dyn(), request, seismic_pub_key, fee_details, block)
                 },
             }?;
-            trace!(target: "backend", "call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
+            trace!(target: "backend", "seismic call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
             Ok((exit, out, gas, state))
         }).await?
     }
@@ -1530,6 +1530,7 @@ impl Backend {
             let data = Bytes::decode(&mut decrypted_input.as_slice())
                 .expect("Failed to RLP decode decrypted input");
             input = data.into();
+            println!("Decrypted input: {:?}", decrypted_input);
         };
         env.tx =
             TxEnv {
@@ -1617,9 +1618,12 @@ impl Backend {
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let mut inspector = self.build_inspector();
 
+        println!("Seismic call with state");
+        println!("Request: {:?}", request);
         let env = self.seismic_build_call_env(request, seismic_pub_key, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;
+        println!("exec Result: {:?}", result);
         let (exit_reason, gas_used, out) = match result {
             ExecutionResult::Success { reason, gas_used, output, .. } => {
                 (reason.into(), gas_used, Some(output))
