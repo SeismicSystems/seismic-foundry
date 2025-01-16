@@ -1618,7 +1618,6 @@ impl Backend {
         let env = self.seismic_build_call_env(request, fee_details, block_env, encryption_pubkey);
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;
-        println!("exec Result: {:?}", result);
         let (exit_reason, gas_used, out) = match result {
             ExecutionResult::Success { reason, gas_used, output, .. } => {
                 (reason.into(), gas_used, Some(output))
