@@ -1053,6 +1053,74 @@ impl EthApi {
         Ok(*tx.hash())
     }
 
+    async fn unsigned_call(
+        &self,
+        request: WithOtherFields<TransactionRequest>,
+        block_number: Option<BlockId>,
+        overrides: Option<StateOverride>,
+    ) -> Result<Bytes> {
+        node_info!("eth_call");
+        let block_request = self.block_request(block_number).await?;
+        // check if the number predates the fork, if in fork mode
+        if let BlockRequest::Number(number) = block_request {
+            if let Some(fork) = self.get_fork() {
+                if fork.predates_fork(number) {
+                    if overrides.is_some() {
+                        return Err(BlockchainError::StateOverrideError(
+                            "not available on past forked blocks".to_string(),
+                        ));
+                    }
+                    return Ok(fork.call(&request, Some(number.into())).await?)
+                }
+            }
+        }
+
+        let fees = FeeDetails::new(
+            request.gas_price,
+            request.max_fee_per_gas,
+            request.max_priority_fee_per_gas,
+            request.max_fee_per_blob_gas,
+        )?
+        .or_zero_fees();
+        // this can be blocking for a bit, especially in forking mode
+        // <https://github.com/foundry-rs/foundry/issues/6036>
+        self.on_blocking_task(|this| async move {
+            let (exit, out, gas, _) =
+                this.backend.call(request, fees, Some(block_request), overrides).await?;
+            trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
+
+            ensure_return_ok(exit, &out)
+        })
+        .await
+    }
+
+    async fn seismic_call(
+        &self,
+        request: WithOtherFields<TransactionRequest>,
+        block_number: Option<BlockId>,
+        overrides: Option<StateOverride>,
+        encryption_pubkey: PublicKey,
+    ) -> Result<Bytes> {
+        let fees = FeeDetails::new(
+            request.gas_price,
+            request.max_fee_per_gas,
+            request.max_priority_fee_per_gas,
+            request.max_fee_per_blob_gas,
+        )?
+        .or_zero_fees();
+
+        let block_request = self.block_request(block_number).await?;
+        self.on_blocking_task(|this| async move {
+            let (exit, out, gas, _) = this
+                .backend
+                .seismic_call(request, fees, Some(block_request), overrides, encryption_pubkey)
+                .await?;
+            trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
+            ensure_return_ok(exit, &out)
+        })
+        .await
+    }
+
     /// Call contract, returning the output data.
     ///
     /// Handler for ETH RPC call: `eth_call`
@@ -1064,10 +1132,7 @@ impl EthApi {
     ) -> Result<Bytes> {
         node_info!("eth_call");
 
-        let (constructed_request, seismic_pub_key): (
-            WithOtherFields<TransactionRequest>,
-            Option<PublicKey>,
-        ) = match request {
+        match request {
             SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
                     .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
@@ -1080,81 +1145,33 @@ impl EthApi {
                     TypedTransaction::Seismic(signed_seismic_tx) => {
                         let seismic_tx = signed_seismic_tx.tx();
                         let encryption_pubkey_bytes = seismic_tx.encryption_pubkey;
-                        let public_key = PublicKey::from_slice(encryption_pubkey_bytes.as_slice())
-                            .map_err(|_| {
-                                BlockchainError::Message(
-                                    "Failed to parse public key from seismic transaction"
-                                        .to_string(),
-                                )
-                            })?;
-                        // let calldata = seismic_tx.input;
-                        (WithOtherFields::new(tx), Some(public_key))
+                        let encryption_pubkey = PublicKey::from_slice(
+                            encryption_pubkey_bytes.as_slice(),
+                        )
+                        .map_err(|_| {
+                            BlockchainError::Message(
+                                "Failed to parse public key from seismic transaction".to_string(),
+                            )
+                        })?;
+                        let request = WithOtherFields::new(tx);
+                        return self
+                            .seismic_call(request, block_number, overrides, encryption_pubkey)
+                            .await
                     }
-                    _ => (WithOtherFields::new(tx), None),
+                    _ => {
+                        return Err(BlockchainError::Message(
+                            "Can only make signedCall with Seismic Transaction".into(),
+                        ));
+                    }
                 }
             }
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 tx.from = None;
-                (tx, None)
-            }
-        };
-
-        let block_request = self.block_request(block_number).await?;
-        // check if the number predates the fork, if in fork mode
-        if let BlockRequest::Number(number) = block_request {
-            if let Some(fork) = self.get_fork() {
-                if fork.predates_fork(number) {
-                    if overrides.is_some() {
-                        return Err(BlockchainError::StateOverrideError(
-                            "not available on past forked blocks".to_string(),
-                        ));
-                    }
-                    return Ok(fork.call(&constructed_request, Some(number.into())).await?);
-                }
+                return self.unsigned_call(tx, block_number, overrides).await
             }
         }
-
-        let fees = FeeDetails::new(
-            constructed_request.gas_price,
-            constructed_request.max_fee_per_gas,
-            constructed_request.max_priority_fee_per_gas,
-            constructed_request.max_fee_per_blob_gas,
-        )?
-        .or_zero_fees();
-
-        if let Some(encryption_pubkey) = seismic_pub_key {
-            return self
-                .on_blocking_task(|this| async move {
-                    let (exit, out, gas, _) = this
-                        .backend
-                        .seismic_call(
-                            constructed_request,
-                            fees,
-                            Some(block_request),
-                            overrides,
-                            encryption_pubkey,
-                        )
-                        .await?;
-                    trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
-                    ensure_return_ok(exit, &out)
-                })
-                .await
-        }
-
-        return self
-            .on_blocking_task(|this| async move {
-                let (exit, out, gas, _) = this
-                    .backend
-                    .call(constructed_request, fees, Some(block_request), overrides)
-                    .await?;
-                trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
-                ensure_return_ok(exit, &out)
-            })
-            .await
-
-        // this can be blocking for a bit, especially in forking mode
-        // <https://github.com/foundry-rs/foundry/issues/6036>
     }
+
     /// This method creates an EIP2930 type accessList based on a given Transaction. The accessList
     /// contains all storage slots and addresses read and written by the transaction, except for the
     /// sender account and the precompiles.
