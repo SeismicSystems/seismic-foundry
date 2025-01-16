@@ -69,7 +69,7 @@ use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
-        crypto::server_encrypt, optimism::DepositTransaction, DepositReceipt,
+        optimism::DepositTransaction, DepositReceipt,
         MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse, TransactionInfo,
         TypedReceipt, TypedTransaction,
     },
@@ -1633,7 +1633,7 @@ impl Backend {
 
         let encrypted_out = match out {
             Some(output) => {
-                let encrypted = server_encrypt(&encryption_pubkey, output.data().as_ref(), nonce)
+                let encrypted = anvil_core::eth::transaction::crypto::server_encrypt(&encryption_pubkey, output.data().as_ref(), nonce)
                     .map_err(|e| {
                     BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                 })?;
