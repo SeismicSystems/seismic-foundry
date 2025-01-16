@@ -1079,14 +1079,13 @@ impl EthApi {
                 match typed_tx {
                     TypedTransaction::Seismic(seismic_tx) => {
                         let encryption_pubkey_bytes = seismic_tx.tx().encryption_pubkey;
-                        let public_key =
-                            PublicKey::from_slice(encryption_pubkey_bytes.as_slice())
-                                .map_err(|_| {
-                                    BlockchainError::Message(
-                                        "Failed to parse public key from seismic transaction"
-                                            .to_string(),
-                                    )
-                                })?;
+                        let public_key = PublicKey::from_slice(encryption_pubkey_bytes.as_slice())
+                            .map_err(|_| {
+                                BlockchainError::Message(
+                                    "Failed to parse public key from seismic transaction"
+                                        .to_string(),
+                                )
+                            })?;
                         (WithOtherFields::new(tx), Some(public_key))
                     }
                     _ => (WithOtherFields::new(tx), None),
