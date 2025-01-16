@@ -1088,6 +1088,14 @@ impl TypedTransaction {
             Self::Seismic(tx) => *tx.signature(),
         }
     }
+
+    /// If this is a seismic transaction, return it
+    pub fn seismic(self) -> Option<Signed<TxSeismic>> {
+        match self {
+            Self::Seismic(tx) => Some(tx),
+            _ => None,
+        }
+    }
 }
 
 impl Encodable for TypedTransaction {
