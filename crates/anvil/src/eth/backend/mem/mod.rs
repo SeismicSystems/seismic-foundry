@@ -1340,15 +1340,15 @@ impl Backend {
         fee_details: FeeDetails,
         block_request: Option<BlockRequest>,
         overrides: Option<StateOverride>,
-        seismic_pub_key: PublicKey,
+        encryption_pubkey: PublicKey,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         self.with_database_at(block_request, |state, block| {
             let block_number = block.number.to::<u64>();
             let (exit, out, gas, state) = match overrides {
-                None => self.seismic_call_with_state(state.as_dyn(), request, fee_details, block, seismic_pub_key),
+                None => self.seismic_call_with_state(state.as_dyn(), request, fee_details, block, encryption_pubkey),
                 Some(overrides) => {
                     let state = state::apply_state_override(overrides.into_iter().collect(), state)?;
-                    self.seismic_call_with_state(state.as_dyn(), request, fee_details, block, seismic_pub_key)
+                    self.seismic_call_with_state(state.as_dyn(), request, fee_details, block, encryption_pubkey)
                 },
             }?;
             trace!(target: "backend", "seismic call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
