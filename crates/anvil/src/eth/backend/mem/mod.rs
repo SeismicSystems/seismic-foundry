@@ -1521,7 +1521,7 @@ impl Backend {
 
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;
-        let (exit_reason, gas_used, mut out) = match result {
+        let (exit_reason, gas_used, out) = match result {
             ExecutionResult::Success { reason, gas_used, output, .. } => {
                 (reason.into(), gas_used, Some(output))
             }
@@ -1533,24 +1533,17 @@ impl Backend {
         drop(evm);
         inspector.print_logs();
 
-        if is_seismic_tx {
-            // re-encrypt the output if it's a seismic transaction
-            out = match out {
-                Some(output) => {
-                    let encrypted = anvil_core::eth::transaction::crypto::server_encrypt(
-                        &encryption_pubkey,
-                        output.data().as_ref(),
-                        nonce,
-                    )
-                    .map_err(|e| {
-                        BlockchainError::Message(format!("Failed to encrypt output: {}", e))
-                    })?;
-                    Some(Output::Call(Bytes::from(encrypted)))
-                }
-                None => None,
-            };
+        if !is_seismic_tx || out.is_none() {
+            return Ok((exit_reason, out, gas_used as u128, state));
         }
-        Ok((exit_reason, out, gas_used as u128, state))
+
+        let encrypted = anvil_core::eth::transaction::crypto::server_encrypt(
+            &encryption_pubkey,
+            out.unwrap().data().as_ref(),
+            nonce,
+        )
+        .map_err(|e| BlockchainError::Message(format!("Failed to encrypt output: {}", e)))?;
+        Ok((exit_reason, Some(Output::Call(Bytes::from(encrypted))), gas_used as u128, state))
     }
 
     pub async fn call_with_tracing(
