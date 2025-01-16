@@ -1456,13 +1456,8 @@ impl Backend {
         env
     }
 
-    /// ## EVM settings
-    ///
-    /// This modifies certain EVM settings to mirror geth's `SkipAccountChecks` when transacting requests, see also: <https://github.com/ethereum/go-ethereum/blob/380688c636a654becc8f114438c2a5d93d2db032/core/state_transition.go#L145-L148>:
-    ///
-    ///  - `disable_eip3607` is set to `true`
-    ///  - `disable_base_fee` is set to `true`
-    ///  - `nonce` is set to `None`
+    /// Use build_call_env but decrypt the input if it's a seismic transaction
+    /// Note: nonce is only used for decrypting the input
     fn seismic_build_call_env(
         &self,
         request: WithOtherFields<TransactionRequest>,
@@ -1470,99 +1465,20 @@ impl Backend {
         block_env: BlockEnv,
         encryption_pubkey: PublicKey,
     ) -> EnvWithHandlerCfg {
-        let WithOtherFields::<TransactionRequest> {
-            inner:
-                TransactionRequest {
-                    from,
-                    to,
-                    gas,
-                    value,
-                    mut input,
-                    access_list,
-                    blob_versioned_hashes,
-                    authorization_list,
-                    // nonce is always ignored for calls
-                    nonce: _,
-                    sidecar: _,
-                    chain_id: _,
-                    transaction_type: _,
-                    .. // Rest of the gas fees related fields are taken from `fee_details`
-                },
-            ..
-        } = request.clone();
-
-        let FeeDetails {
-            gas_price,
-            max_fee_per_gas,
-            max_priority_fee_per_gas,
-            max_fee_per_blob_gas,
-        } = fee_details;
-
-        let gas_limit = gas.unwrap_or(block_env.gas_limit.to());
-        let mut env = self.env.read().clone();
-        env.block = block_env;
-        // we want to disable this in eth_call, since this is common practice used by other node
-        // impls and providers <https://github.com/foundry-rs/foundry/issues/4388>
-        env.cfg.disable_block_gas_limit = true;
-
-        // The basefee should be ignored for calls against state for
-        // - eth_call
-        // - eth_estimateGas
-        // - eth_createAccessList
-        // - tracing
-        env.cfg.disable_base_fee = true;
-
-        let gas_price = gas_price.or(max_fee_per_gas).unwrap_or_else(|| {
-            self.fees().raw_gas_price().saturating_add(MIN_SUGGESTED_PRIORITY_FEE)
-        });
-        let caller = from.unwrap_or_default();
-        let to = to.as_ref().and_then(TxKind::to);
-        let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-        if Some(TxSeismic::TX_TYPE) == request.transaction_type {
-            let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
-                &encryption_pubkey,
-                input.input().unwrap_or_default().as_ref(),
-                request.clone().nonce.unwrap_or_default(),
-            )
-            .expect("Failed to decrypt seismic tx");
-            input = decrypted_input.into();
-        };
-        env.tx =
-            TxEnv {
-                caller,
-                gas_limit,
-                gas_price: U256::from(gas_price),
-                gas_priority_fee: max_priority_fee_per_gas.map(U256::from),
-                max_fee_per_blob_gas: max_fee_per_blob_gas
-                    .or_else(|| {
-                        if !blob_hashes.is_empty() {
-                            env.block.get_blob_gasprice()
-                        } else {
-                            None
-                        }
-                    })
-                    .map(U256::from),
-                transact_to: match to {
-                    Some(addr) => TxKind::Call(*addr),
-                    None => TxKind::Create,
-                },
-                value: value.unwrap_or_default(),
-                data: input.into_input().unwrap_or_default(),
-                chain_id: None,
-                // set nonce to None so that the correct nonce is chosen by the EVM
-                nonce: None,
-                access_list: access_list.unwrap_or_default().into(),
-                blob_hashes,
-                optimism: OptimismFields { enveloped_tx: Some(Bytes::new()), ..Default::default() },
-                authorization_list: authorization_list.map(Into::into),
-            };
-
-        if env.block.basefee.is_zero() {
-            // this is an edge case because the evm fails if `tx.effective_gas_price < base_fee`
-            // 0 is only possible if it's manually set
-            env.cfg.disable_base_fee = true;
+        let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
+        let nonce = request.nonce.unwrap_or_default();
+        let mut env = self.build_call_env(request, fee_details, block_env);
+        if !is_seismic_tx {
+            return env;
         }
 
+        let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
+            &encryption_pubkey,
+            &env.tx.data.as_ref(),
+            nonce,
+        )
+        .expect("Failed to decrypt seismic tx");
+        env.tx.data = decrypted_input.into();
         env
     }
 
