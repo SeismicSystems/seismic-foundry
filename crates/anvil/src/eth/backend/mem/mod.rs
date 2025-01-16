@@ -1456,32 +1456,6 @@ impl Backend {
         env
     }
 
-    /// Use build_call_env but decrypt the input if it's a seismic transaction
-    /// Note: nonce is only used for decrypting the input
-    fn seismic_build_call_env(
-        &self,
-        request: WithOtherFields<TransactionRequest>,
-        fee_details: FeeDetails,
-        block_env: BlockEnv,
-        encryption_pubkey: PublicKey,
-    ) -> EnvWithHandlerCfg {
-        let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
-        let nonce = request.nonce.unwrap_or_default();
-        let mut env = self.build_call_env(request, fee_details, block_env);
-        if !is_seismic_tx {
-            return env;
-        }
-
-        let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
-            &encryption_pubkey,
-            &env.tx.data.as_ref(),
-            nonce,
-        )
-        .expect("Failed to decrypt seismic tx");
-        env.tx.data = decrypted_input.into();
-        env
-    }
-
     /// Builds [`Inspector`] with the configured options
     fn build_inspector(&self) -> Inspector {
         let mut inspector = Inspector::default();
@@ -1527,13 +1501,27 @@ impl Backend {
         block_env: BlockEnv,
         encryption_pubkey: PublicKey,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
-        let mut inspector = self.build_inspector();
-
         let nonce = request.nonce.unwrap_or_default();
-        let env = self.seismic_build_call_env(request, fee_details, block_env, encryption_pubkey);
+        let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
+
+        let mut inspector = self.build_inspector();
+        let mut env = self.build_call_env(request, fee_details, block_env);
+        if is_seismic_tx {
+            let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
+                &encryption_pubkey,
+                &env.tx.data.as_ref(),
+                nonce,
+            )
+            .expect("Failed to decrypt seismic tx");
+            env.tx.data = decrypted_input.into();
+        } else {
+            // this should never happen
+            warn!("Non-seismic tx passed to seismic_call. Likely a bug");
+        }
+
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;
-        let (exit_reason, gas_used, out) = match result {
+        let (exit_reason, gas_used, mut out) = match result {
             ExecutionResult::Success { reason, gas_used, output, .. } => {
                 (reason.into(), gas_used, Some(output))
             }
@@ -1545,21 +1533,24 @@ impl Backend {
         drop(evm);
         inspector.print_logs();
 
-        let encrypted_out = match out {
-            Some(output) => {
-                let encrypted = anvil_core::eth::transaction::crypto::server_encrypt(
-                    &encryption_pubkey,
-                    output.data().as_ref(),
-                    nonce,
-                )
-                .map_err(|e| {
-                    BlockchainError::Message(format!("Failed to encrypt output: {}", e))
-                })?;
-                Some(Output::Call(Bytes::from(encrypted)))
-            }
-            None => None,
-        };
-        Ok((exit_reason, encrypted_out, gas_used as u128, state))
+        if is_seismic_tx {
+            // re-encrypt the output if it's a seismic transaction
+            out = match out {
+                Some(output) => {
+                    let encrypted = anvil_core::eth::transaction::crypto::server_encrypt(
+                        &encryption_pubkey,
+                        output.data().as_ref(),
+                        nonce,
+                    )
+                    .map_err(|e| {
+                        BlockchainError::Message(format!("Failed to encrypt output: {}", e))
+                    })?;
+                    Some(Output::Call(Bytes::from(encrypted)))
+                }
+                None => None,
+            };
+        }
+        Ok((exit_reason, out, gas_used as u128, state))
     }
 
     pub async fn call_with_tracing(

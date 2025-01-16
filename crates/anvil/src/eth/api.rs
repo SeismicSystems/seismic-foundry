@@ -1101,6 +1101,7 @@ impl EthApi {
         overrides: Option<StateOverride>,
         encryption_pubkey: PublicKey,
     ) -> Result<Bytes> {
+        node_info!("eth_call (signed)");
         let fees = FeeDetails::new(
             request.gas_price,
             request.max_fee_per_gas,
@@ -1130,8 +1131,6 @@ impl EthApi {
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<Bytes> {
-        node_info!("eth_call");
-
         match request {
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 // don't let them spoof msg.sender with unsigned calls
