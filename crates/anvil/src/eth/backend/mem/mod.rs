@@ -1527,10 +1527,7 @@ impl Backend {
                 request.clone().nonce.unwrap_or_default(),
             )
             .expect("Failed to decrypt seismic tx");
-            let data = Bytes::decode(&mut decrypted_input.as_slice())
-                .expect("Failed to RLP decode decrypted input");
-            input = data.into();
-            println!("Decrypted input: {:?}", decrypted_input);
+            input = decrypted_input.into();
         };
         env.tx =
             TxEnv {
