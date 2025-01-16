@@ -1122,23 +1122,38 @@ impl EthApi {
         )?
         .or_zero_fees();
 
+        if let Some(encryption_pubkey) = seismic_pub_key {
+            return self
+                .on_blocking_task(|this| async move {
+                    let (exit, out, gas, _) = this
+                        .backend
+                        .seismic_call(
+                            constructed_request,
+                            fees,
+                            Some(block_request),
+                            overrides,
+                            encryption_pubkey,
+                        )
+                        .await?;
+                    trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
+                    ensure_return_ok(exit, &out)
+                })
+                .await
+        }
+
+        return self
+            .on_blocking_task(|this| async move {
+                let (exit, out, gas, _) = this
+                    .backend
+                    .call(constructed_request, fees, Some(block_request), overrides)
+                    .await?;
+                trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
+                ensure_return_ok(exit, &out)
+            })
+            .await
+
         // this can be blocking for a bit, especially in forking mode
         // <https://github.com/foundry-rs/foundry/issues/6036>
-        self.on_blocking_task(|this| async move {
-            let (exit, out, gas, _) = this
-                .backend
-                .seismic_call(
-                    constructed_request,
-                    seismic_pub_key,
-                    fees,
-                    Some(block_request),
-                    overrides,
-                )
-                .await?;
-            trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
-            ensure_return_ok(exit, &out)
-        })
-        .await
     }
     /// This method creates an EIP2930 type accessList based on a given Transaction. The accessList
     /// contains all storage slots and addresses read and written by the transaction, except for the

@@ -46,7 +46,6 @@ use alloy_network::{
 use alloy_primitives::{
     address, hex, keccak256, utils::Unit, Address, Bytes, TxHash, TxKind, B256, U256, U64,
 };
-use alloy_rlp::Decodable;
 use alloy_rpc_types::{
     anvil::Forking,
     request::TransactionRequest,
@@ -70,8 +69,9 @@ use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
-        optimism::DepositTransaction, DepositReceipt, MaybeImpersonatedTransaction,
-        PendingTransaction, ReceiptResponse, TransactionInfo, TypedReceipt, TypedTransaction,
+        crypto::server_encrypt, optimism::DepositTransaction, DepositReceipt,
+        MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse, TransactionInfo,
+        TypedReceipt, TypedTransaction,
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
 };
@@ -1338,18 +1338,18 @@ impl Backend {
     pub async fn seismic_call(
         &self,
         request: WithOtherFields<TransactionRequest>,
-        seismic_pub_key: Option<PublicKey>,
         fee_details: FeeDetails,
         block_request: Option<BlockRequest>,
         overrides: Option<StateOverride>,
+        seismic_pub_key: PublicKey,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         self.with_database_at(block_request, |state, block| {
             let block_number = block.number.to::<u64>();
             let (exit, out, gas, state) = match overrides {
-                None => self.seismic_call_with_state(state.as_dyn(), request, seismic_pub_key, fee_details, block),
+                None => self.seismic_call_with_state(state.as_dyn(), request, fee_details, block, seismic_pub_key),
                 Some(overrides) => {
                     let state = state::apply_state_override(overrides.into_iter().collect(), state)?;
-                    self.seismic_call_with_state(state.as_dyn(), request, seismic_pub_key, fee_details, block)
+                    self.seismic_call_with_state(state.as_dyn(), request, fee_details, block, seismic_pub_key)
                 },
             }?;
             trace!(target: "backend", "seismic call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
@@ -1467,9 +1467,9 @@ impl Backend {
     fn seismic_build_call_env(
         &self,
         request: WithOtherFields<TransactionRequest>,
-        seismic_pub_key: Option<PublicKey>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
+        encryption_pubkey: PublicKey,
     ) -> EnvWithHandlerCfg {
         let WithOtherFields::<TransactionRequest> {
             inner:
@@ -1519,10 +1519,9 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-        if Some(TxSeismic::TX_TYPE) == request.transaction_type && seismic_pub_key.is_some() {
-            let public_key = seismic_pub_key.unwrap();
+        if Some(TxSeismic::TX_TYPE) == request.transaction_type {
             let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
-                &public_key,
+                &encryption_pubkey,
                 input.input().unwrap_or_default().as_ref(),
                 request.clone().nonce.unwrap_or_default(),
             )
@@ -1609,15 +1608,14 @@ impl Backend {
         &self,
         state: &dyn DatabaseRef<Error = DatabaseError>,
         request: WithOtherFields<TransactionRequest>,
-        seismic_pub_key: Option<PublicKey>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
+        encryption_pubkey: PublicKey,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let mut inspector = self.build_inspector();
 
-        println!("Seismic call with state");
-        println!("Request: {:?}", request);
-        let env = self.seismic_build_call_env(request, seismic_pub_key, fee_details, block_env);
+        let nonce = request.nonce.unwrap_or_default();
+        let env = self.seismic_build_call_env(request, fee_details, block_env, encryption_pubkey);
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;
         println!("exec Result: {:?}", result);
@@ -1632,7 +1630,18 @@ impl Backend {
         };
         drop(evm);
         inspector.print_logs();
-        Ok((exit_reason, out, gas_used as u128, state))
+
+        let encrypted_out = match out {
+            Some(output) => {
+                let encrypted = server_encrypt(&encryption_pubkey, output.data().as_ref(), nonce)
+                    .map_err(|e| {
+                    BlockchainError::Message(format!("Failed to encrypt output: {}", e))
+                })?;
+                Some(Output::Call(Bytes::from(encrypted)))
+            }
+            None => None,
+        };
+        Ok((exit_reason, encrypted_out, gas_used as u128, state))
     }
 
     pub async fn call_with_tracing(
