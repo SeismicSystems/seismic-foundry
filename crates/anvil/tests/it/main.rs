@@ -16,6 +16,7 @@ mod otterscan;
 mod proof;
 mod pubsub;
 mod revert;
+#[cfg(feature = "seismic")]
 mod seismic;
 mod sign;
 mod state;
