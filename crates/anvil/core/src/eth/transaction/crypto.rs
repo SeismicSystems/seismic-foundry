@@ -3,7 +3,8 @@ use alloy_primitives::{FixedBytes, SignatureError};
 use once_cell::sync::Lazy;
 use secp256k1::{ecdh::SharedSecret, PublicKey, SecretKey};
 use tee_service_api::{
-    aes_decrypt, aes_encrypt, derive_aes_key, get_sample_secp256k1_pk, get_sample_secp256k1_sk, nonce::Nonce,
+    aes_decrypt, aes_encrypt, derive_aes_key, get_sample_secp256k1_pk, get_sample_secp256k1_sk,
+    nonce::Nonce,
 };
 
 static ENCRYPTION_KEY: Lazy<SecretKey> = Lazy::new(|| get_sample_secp256k1_sk());

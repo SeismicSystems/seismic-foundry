@@ -81,8 +81,7 @@ async fn test_seismic_transaction() {
     let to = receipt.contract_address.unwrap();
 
     let encoded_setnumber_data = get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10)));
-    let set_data =
-        crypto::client_encrypt(&encryption_sk, &encoded_setnumber_data, vec![1]).unwrap();
+    let set_data = crypto::client_encrypt(&encryption_sk, &encoded_setnumber_data, 1).unwrap();
 
     let tx = TransactionRequest::default()
         .transaction_type(TxSeismic::TX_TYPE)
@@ -113,7 +112,7 @@ async fn test_seismic_transaction() {
 
     let encoded_increment_data = get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10)));
     let increment_data =
-        crypto::client_encrypt(&encryption_sk, &encoded_increment_data, vec![2]).unwrap();
+        crypto::client_encrypt(&encryption_sk, &encoded_increment_data, 2).unwrap();
 
     let tx = TransactionRequest::default()
         .transaction_type(TxSeismic::TX_TYPE)
@@ -138,8 +137,7 @@ async fn test_seismic_transaction() {
     assert!(receipt.is_some());
 
     let encoded_getnumber_data = hex::decode(GET_NUMBER_SELECTOR).unwrap();
-    let get_data =
-        crypto::client_encrypt(&encryption_sk, &encoded_getnumber_data, vec![3]).unwrap();
+    let get_data = crypto::client_encrypt(&encryption_sk, &encoded_getnumber_data, 3).unwrap();
 
     let tx = TransactionRequest::default()
         .transaction_type(TxSeismic::TX_TYPE)
