@@ -1510,7 +1510,7 @@ impl Backend {
             let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
                 &encryption_pubkey,
                 &env.tx.data.as_ref(),
-                nonce,
+                nonce.to_be_bytes(),
             )
             .expect("Failed to decrypt seismic tx");
             env.tx.data = decrypted_input.into();
@@ -1540,7 +1540,7 @@ impl Backend {
         let encrypted = anvil_core::eth::transaction::crypto::server_encrypt(
             &encryption_pubkey,
             out.unwrap().data().as_ref(),
-            nonce,
+            nonce.to_be_bytes(),
         )
         .map_err(|e| BlockchainError::Message(format!("Failed to encrypt output: {}", e)))?;
         Ok((exit_reason, Some(Output::Call(Bytes::from(encrypted))), gas_used as u128, state))
