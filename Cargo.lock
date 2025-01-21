@@ -8920,7 +8920,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "tee_service_api"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=9ab28c87247b876f5875c470f39bd3a3b07b3e8b#9ab28c87247b876f5875c470f39bd3a3b07b3e8b"
+source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=17a0a0c#17a0a0cd3902292f37e1d8647b8a34b5b6877c4e"
 dependencies = [
  "aes-gcm",
  "anyhow",

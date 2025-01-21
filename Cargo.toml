@@ -293,6 +293,8 @@ url = "2"
 vergen = { version = "8", default-features = false }
 yansi = { version = "1.0", features = ["detect-tty", "detect-env"] }
 
+tee_service_api = { git = "ssh://git@github.com/SeismicSystems/TEEService.git", package = "tee_service_api", rev = "17a0a0c" }
+
 [patch.crates-io]
 # If our dependencies depend on these things,
 # then this will override whatever versions they point to
