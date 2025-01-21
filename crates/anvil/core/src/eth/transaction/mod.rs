@@ -619,7 +619,7 @@ impl PendingTransaction {
                 let public_key = PublicKey::from_slice(encryption_pubkey.as_slice())
                     .expect("failed to parse public key from bytes");
                 let data = Bytes::from(
-                    crypto::server_decrypt(&public_key, &input.as_ref(), nonce.to_be_bytes())
+                    crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
                         .expect("Failed to decrypt seismic tx"),
                 );
                 TxEnv {

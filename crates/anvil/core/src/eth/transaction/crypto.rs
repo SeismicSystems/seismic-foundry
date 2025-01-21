@@ -3,7 +3,7 @@ use alloy_primitives::{FixedBytes, SignatureError};
 use once_cell::sync::Lazy;
 use secp256k1::{ecdh::SharedSecret, PublicKey, SecretKey};
 use tee_service_api::{
-    aes_decrypt, aes_encrypt, derive_aes_key, get_sample_secp256k1_pk, get_sample_secp256k1_sk,
+    aes_decrypt, aes_encrypt, derive_aes_key, get_sample_secp256k1_pk, get_sample_secp256k1_sk, nonce::Nonce,
 };
 
 static ENCRYPTION_KEY: Lazy<SecretKey> = Lazy::new(|| get_sample_secp256k1_sk());
@@ -13,30 +13,30 @@ pub fn encrypt(
     secret_key: &SecretKey,
     public_key: &PublicKey,
     plaintext: &[u8],
-    nonce: impl Into<Vec<u8>>,
+    nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
     let shared_secret = SharedSecret::new(public_key, secret_key);
     let aes_key = derive_aes_key(&shared_secret)
         .map_err(|e| anyhow::anyhow!("Error deriving AES key: {:?}", e))?;
-    aes_encrypt(&aes_key, plaintext, nonce.into())
+    aes_encrypt(&aes_key, plaintext, nonce)
 }
 
 pub fn decrypt(
     secret_key: &SecretKey,
     public_key: &PublicKey,
     ciphertext: &[u8],
-    nonce: impl Into<Vec<u8>>,
+    nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
     let shared_secret = SharedSecret::new(public_key, secret_key);
     let aes_key = derive_aes_key(&shared_secret)
         .map_err(|e| anyhow::anyhow!("Error deriving AES key: {:?}", e))?;
-    aes_decrypt(&aes_key, ciphertext, nonce.into())
+    aes_decrypt(&aes_key, ciphertext, nonce)
 }
 
 pub fn server_decrypt(
     public_key: &PublicKey,
     ciphertext: &[u8],
-    nonce: impl Into<Vec<u8>>,
+    nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
     decrypt(&ENCRYPTION_KEY, public_key, ciphertext, nonce)
 }
@@ -44,7 +44,7 @@ pub fn server_decrypt(
 pub fn server_encrypt(
     public_key: &PublicKey,
     plaintext: &[u8],
-    nonce: impl Into<Vec<u8>>,
+    nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
     encrypt(&ENCRYPTION_KEY, public_key, plaintext, nonce)
 }
@@ -52,7 +52,7 @@ pub fn server_encrypt(
 pub fn client_decrypt(
     secret_key: &SecretKey,
     ciphertext: &[u8],
-    nonce: impl Into<Vec<u8>>,
+    nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
     decrypt(secret_key, &PUBLIC_KEY, ciphertext, nonce)
 }
@@ -60,7 +60,7 @@ pub fn client_decrypt(
 pub fn client_encrypt(
     secret_key: &SecretKey,
     plaintext: &[u8],
-    nonce: impl Into<Vec<u8>>,
+    nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
     encrypt(secret_key, &PUBLIC_KEY, plaintext, nonce)
 }
