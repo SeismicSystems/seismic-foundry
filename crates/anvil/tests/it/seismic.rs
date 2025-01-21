@@ -1,6 +1,6 @@
-use alloy_consensus::transaction::TxSeismic;
-use alloy_network::TransactionBuilder;
-use alloy_primitives::{hex, Bytes, B256, U256};
+use alloy_consensus::{transaction::TxSeismic, TxLegacy};
+use alloy_network::{ReceiptResponse, TransactionBuilder};
+use alloy_primitives::{hex::{self, FromHex}, Bytes, B256, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::{OtherFields, WithOtherFields};
@@ -26,9 +26,14 @@ impl From<SeismicTransactionFields> for OtherFields {
 
 // common utils
 pub const TEST_BYTECODE_PATH: &str = "/tests/it/seismic_test_bytecode.txt";
+pub const TEST_PRECOMPILES_BYTECODE_PATH: &str = "/tests/it/seismic_precompiles_test_bytecode.txt";
 pub const SET_NUMBER_SELECTOR: &str = "3fb5c1cb"; // setNumber(uint256)
 pub const INCREMENT_SELECTOR: &str = "d09de08a"; // increment()
 pub const GET_NUMBER_SELECTOR: &str = "f2c9ecd8"; // getNumber()
+pub const PRECOMPILES_TEST_END_TO_END_SELECTOR: &str = "211e458f"; // testEndToEnd(suint256) 
+pub const PRECOMPILES_TEST_END_TO_END_UPDATE_NONCE_SELECTOR: &str = "0feca68a"; // updateNonce()
+pub const PRECOMPILES_TEST_END_TO_END_SET_AES_KEY_SELECTOR: &str = "5256cc08"; // set_aes_key(suint256)
+
 
 /// Loads the bytecode from a file and returns it as a vector of bytes.
 pub fn load_bytecode_from_file(file_path: &str) -> Vec<u8> {
@@ -159,4 +164,149 @@ async fn test_seismic_transaction() {
 
     let receipt = provider.get_transaction_receipt(pending_get.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_seismic_precompiles_end_to_end() {
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    let provider = handle.http_provider();
+    let deployer = handle.dev_accounts().next().unwrap();
+
+    let bytecode = load_bytecode_from_file(TEST_PRECOMPILES_BYTECODE_PATH);
+
+    let deploy_tx = TransactionRequest::default().from(deployer).with_deploy_code(bytecode.clone());
+    let deploy_tx = WithOtherFields::new(deploy_tx);
+
+    let pending = provider.send_transaction(deploy_tx).await.unwrap();
+
+    // mine block
+    api.evm_mine(None).await.unwrap();
+
+    let receipt =
+        provider.get_transaction_receipt(pending.tx_hash().to_owned()).await;
+    let receipt_ref = receipt.as_ref().unwrap().as_ref().unwrap();
+    assert!(receipt_ref.contract_address.is_some());
+    assert!(receipt_ref.status());
+    
+    let accounts: Vec<_> = handle.dev_wallets().collect();
+
+    let from = accounts[0].address();
+    let encryption_sk = get_sample_secp256k1_sk();
+    let encryption_pk = Bytes::from(get_sample_secp256k1_pk().serialize());
+
+    let to = receipt.unwrap().unwrap().contract_address.unwrap();
+
+    let set_data = Bytes::from_hex(PRECOMPILES_TEST_END_TO_END_UPDATE_NONCE_SELECTOR).unwrap();
+    let nonce = provider.get_transaction_count(from).await.unwrap();
+
+    let tx = TransactionRequest::default()
+        .transaction_type(0 as u8)
+        .with_from(from)
+        .with_to(to)
+        .with_nonce(nonce)
+        .with_gas_limit(410000)
+        .with_chain_id(31337)
+        .with_input(set_data);
+
+    let seismic_tx = WithOtherFields {
+        inner: tx,
+        other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
+    };
+
+    let pending_set = provider.send_transaction(seismic_tx).await.unwrap();
+
+    api.evm_mine(None).await.unwrap();
+
+    let receipt: Option<
+        WithOtherFields<
+            alloy_rpc_types::TransactionReceipt<
+                alloy_network::AnyReceiptEnvelope<alloy_rpc_types::Log>,
+            >,
+        >,
+    > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
+    assert!(receipt.is_some());
+    assert!(receipt.unwrap().status());
+
+    let private_key = B256::from_hex("7e34abdcd62eade2e803e0a8123a0015ce542b380537eff288d6da420bcc2d3b").unwrap();
+
+    let encoded_input = get_input_data(PRECOMPILES_TEST_END_TO_END_SET_AES_KEY_SELECTOR, private_key);
+    println!("encoded_input = {:?}", encoded_input);
+    let set_data = crypto::client_encrypt(&encryption_sk, &encoded_input, 1).unwrap();
+    println!("set_data encrypted= {:?}", set_data);
+    let nonce = provider.get_transaction_count(from).await.unwrap();
+
+    let tx = TransactionRequest::default()
+        .transaction_type(0 as u8)
+        .with_from(from)
+        .with_to(to)
+        .with_nonce(nonce)
+        .with_gas_limit(410000)
+        .with_chain_id(31337)
+        .with_input(set_data);
+
+    println!("tx = {:?}", tx);
+
+    let seismic_tx = WithOtherFields {
+        inner: tx,
+        other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
+    };
+
+    let pending_set = provider.send_transaction(seismic_tx).await.unwrap();
+    println!("pending_set = {:?}", pending_set);
+
+    api.evm_mine(None).await.unwrap();
+
+    let receipt: Option<
+        WithOtherFields<
+            alloy_rpc_types::TransactionReceipt<
+                alloy_network::AnyReceiptEnvelope<alloy_rpc_types::Log>,
+            >,
+        >,
+    > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
+    println!("receipt = {:?}", receipt);
+    println!("receipt status = {:?}", receipt.clone().unwrap().status());
+    assert!(receipt.is_some());
+    assert!(receipt.unwrap().status());
+    
+    //let private_key = B256::from_hex("7e34abdcd62eade2e803e0a8123a0015ce542b380537eff288d6da420bcc2d3b").unwrap();
+
+    //let encoded_input = get_input_data(PRECOMPILES_TEST_END_TO_END_SELECTOR, private_key);
+    //println!("encoded_input = {:?}", encoded_input);
+    //let set_data = crypto::client_encrypt(&encryption_sk, &encoded_input, 1).unwrap();
+    //println!("set_data encrypted= {:?}", set_data);
+    //let nonce = provider.get_transaction_count(from).await.unwrap();
+
+    //let tx = TransactionRequest::default()
+    //    .transaction_type(TxSeismic::TX_TYPE)
+    //    .with_from(from)
+    //    .with_to(to)
+    //    .with_nonce(nonce)
+    //    .with_gas_limit(410000)
+    //    .with_chain_id(31337)
+    //    .with_input(set_data);
+
+    //println!("tx = {:?}", tx);
+
+    //let seismic_tx = WithOtherFields {
+    //    inner: tx,
+    //    other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
+    //};
+
+    //let pending_set = provider.send_transaction(seismic_tx).await.unwrap();
+    //println!("pending_set = {:?}", pending_set);
+
+    //api.evm_mine(None).await.unwrap();
+
+    //let receipt: Option<
+    //    WithOtherFields<
+    //        alloy_rpc_types::TransactionReceipt<
+    //            alloy_network::AnyReceiptEnvelope<alloy_rpc_types::Log>,
+    //        >,
+    //    >,
+    //> = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
+    //println!("receipt = {:?}", receipt);
+    //println!("receipt status = {:?}", receipt.clone().unwrap().status());
+    //assert!(receipt.is_some());
+    //assert!(receipt.unwrap().status());
+    
 }
