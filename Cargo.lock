@@ -7587,7 +7587,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "18.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=aa0401a85447eae1bea40f44e1f1cfd832fbe61f#aa0401a85447eae1bea40f44e1f1cfd832fbe61f"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=87afd36#87afd362cccfb7680337db65bddfcbfa322ddcd4"
 dependencies = [
  "aes-gcm",
  "alloy-primitives",
@@ -7607,7 +7607,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "tee_service_api 0.1.0 (git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=544b83711c53c8d72cd339718097f324add7adfc)",
+ "tee_service_api 0.1.0 (git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=c3243bf)",
  "tiny-keccak",
 ]
 
@@ -7632,7 +7632,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "14.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=aa0401a85447eae1bea40f44e1f1cfd832fbe61f#aa0401a85447eae1bea40f44e1f1cfd832fbe61f"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=87afd36#87afd362cccfb7680337db65bddfcbfa322ddcd4"
 dependencies = [
  "revm-primitives",
  "serde",
@@ -7641,7 +7641,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "15.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=aa0401a85447eae1bea40f44e1f1cfd832fbe61f#aa0401a85447eae1bea40f44e1f1cfd832fbe61f"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=87afd36#87afd362cccfb7680337db65bddfcbfa322ddcd4"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -7660,7 +7660,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "14.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=aa0401a85447eae1bea40f44e1f1cfd832fbe61f#aa0401a85447eae1bea40f44e1f1cfd832fbe61f"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=87afd36#87afd362cccfb7680337db65bddfcbfa322ddcd4"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
@@ -9022,7 +9022,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "tee_service_api"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=544b83711c53c8d72cd339718097f324add7adfc#544b83711c53c8d72cd339718097f324add7adfc"
+source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=9ab28c87247b876f5875c470f39bd3a3b07b3e8b#9ab28c87247b876f5875c470f39bd3a3b07b3e8b"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -9045,7 +9045,7 @@ dependencies = [
 [[package]]
 name = "tee_service_api"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=9ab28c87247b876f5875c470f39bd3a3b07b3e8b#9ab28c87247b876f5875c470f39bd3a3b07b3e8b"
+source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=c3243bf#c3243bf1df8d52e832b58a31abd81e5bb01f54af"
 dependencies = [
  "aes-gcm",
  "anyhow",
