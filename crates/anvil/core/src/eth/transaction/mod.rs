@@ -27,6 +27,7 @@ use revm::{
     interpreter::InstructionResult,
     primitives::{OptimismFields, TxEnv},
 };
+use secp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Debug,
@@ -61,6 +62,7 @@ pub fn transaction_request_to_typed(
     let WithOtherFields::<TransactionRequest> {
         inner:
             TransactionRequest {
+                chain_id,
                 from,
                 to,
                 gas_price,
@@ -75,6 +77,7 @@ pub fn transaction_request_to_typed(
                 access_list,
                 sidecar,
                 transaction_type,
+                encryption_pubkey,
                 ..
             },
         other,
@@ -94,15 +97,20 @@ pub fn transaction_request_to_typed(
             is_system_transaction: other.get_deserialized::<bool>("isSystemTx")?.ok()?,
             input: input.into_input().unwrap_or_default(),
         }));
-    } else if transaction_type == Some(TxSeismic::TX_TYPE) || has_seismic_fields(&other) {
+    } else if transaction_type == Some(TxSeismic::TX_TYPE) {
+        let encryption_pubkey = match encryption_pubkey {
+            Some(epk) => epk,
+            None => panic!("Seismic transaction is missing 'encryption_pubkey' field"),
+        };
         return Some(TypedTransactionRequest::Seismic(TxSeismic {
             nonce: nonce.unwrap_or_default(),
             gas_price: gas_price.unwrap_or_default(),
             gas_limit: gas.unwrap_or_default() as u64,
             to: to.unwrap_or_default(),
             value: value.unwrap_or_default(),
-            chain_id: 0,
-            input: other.get_deserialized::<Bytes>("seismicInput")?.ok()?,
+            chain_id: chain_id.unwrap(),
+            input: input.input.unwrap_or_default(),
+            encryption_pubkey,
         }));
     }
     match (
@@ -191,10 +199,6 @@ fn has_optimism_fields(other: &OtherFields) -> bool {
     other.contains_key("sourceHash") &&
         other.contains_key("mint") &&
         other.contains_key("isSystemTx")
-}
-
-fn has_seismic_fields(other: &OtherFields) -> bool {
-    other.contains_key("seismicInput")
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -601,15 +605,23 @@ impl PendingTransaction {
                 }
             }
             TypedTransaction::Seismic(tx) => {
-                let TxSeismic { nonce, gas_price, gas_limit, to, value, chain_id, input, .. } =
-                    &tx.tx();
+                let TxSeismic {
+                    nonce,
+                    gas_price,
+                    gas_limit,
+                    to,
+                    value,
+                    chain_id,
+                    input,
+                    encryption_pubkey,
+                } = &tx.tx();
 
-                let public_key =
-                    crypto::recover_public_key(tx).expect("Failed to recover public key");
-                let decrypted_input = crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
-                    .expect("Failed to decrypt seismic tx");
-                let data = Bytes::decode(&mut decrypted_input.as_slice())
-                    .expect("Failed to RLP decode decrypted input");
+                let public_key = PublicKey::from_slice(encryption_pubkey.as_slice())
+                    .expect("failed to parse public key from bytes");
+                let data = Bytes::from(
+                    crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
+                        .expect("Failed to decrypt seismic tx"),
+                );
                 TxEnv {
                     caller,
                     transact_to: transact_to(&to),
@@ -1074,6 +1086,14 @@ impl TypedTransaction {
                 false,
             ),
             Self::Seismic(tx) => *tx.signature(),
+        }
+    }
+
+    /// If this is a seismic transaction, return it
+    pub fn seismic(self) -> Option<Signed<TxSeismic>> {
+        match self {
+            Self::Seismic(tx) => Some(tx),
+            _ => None,
         }
     }
 }
@@ -1622,6 +1642,7 @@ mod tests {
     use alloy_consensus::SignableTransaction;
     use alloy_primitives::{b256, hex, FixedBytes, LogData};
     use std::str::FromStr;
+    use tee_service_api::get_sample_secp256k1_pk;
 
     use super::*;
 
@@ -1858,26 +1879,32 @@ mod tests {
         let _typed_tx: TypedTransaction = serde_json::from_str(tx).unwrap();
     }
 
+    fn test_pubkey() -> alloy_consensus::transaction::EncryptionPublicKey {
+        get_sample_secp256k1_pk().serialize().into()
+    }
+
     #[test]
     fn test_seismic_tx_encoding() {
         let decrypted_input = Bytes::from_str("0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875").unwrap();
         let orig_decoded_tx = TxSeismic {
-            chain_id: 4u64,
+            chain_id: 31337u64,
             nonce: 2,
             gas_price: 1000000000,
             gas_limit: 100000,
             to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
             value: U256::from(1000000000000000u64),
             input: decrypted_input.clone(),
+            encryption_pubkey: test_pubkey(),
         };
 
-        let r = U256::from_str("0xeb96ca19e8a77102767a41fc85a36afd5c61ccb09911cec5d3e86e193d9c5ae")
-            .unwrap();
+        let r =
+            U256::from_str("0x1e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04")
+                .unwrap();
         let s =
-            U256::from_str("0x3a456401896b1b6055311536bf00a718568c744d8c1f9df59879e8350220ca18")
+            U256::from_str("0x779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3")
                 .unwrap();
 
-        let signature = PrimitiveSignature::new(r, s, false);
+        let signature = PrimitiveSignature::new(r, s, true);
         let signed_tx: Signed<TxSeismic> = orig_decoded_tx.into_signed(signature);
 
         let signed_tt = TypedTransaction::Seismic(signed_tx);
@@ -1886,25 +1913,35 @@ mod tests {
         signed_tt.encode(&mut encoded_tx);
 
         let encoded_bytes = Bytes::from(encoded_tx);
-        let reth_encoded = Bytes::from_str("0xb8b04af8ad0402843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb87580a00eb96ca19e8a77102767a41fc85a36afd5c61ccb09911cec5d3e86e193d9c5aea03a456401896b1b6055311536bf00a718568c744d8c1f9df59879e8350220ca18").unwrap();
+        let reth_encoded = Bytes::from_str("0xb8d44af8d1827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a001a01e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04a0779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3").unwrap();
         assert_eq!(reth_encoded, encoded_bytes);
     }
 
     #[test]
     fn test_seismic_tx_decoding() {
         // from viem sendRawTransaction
-        let encoded = Bytes::from_str("0x4af89d827a69018504a817c80083033450945fbdb2315678afecb367f032d93f642f64180aa380b5cb387d170552f2fb7885ddf93294c66944d5a81e89116220f7d473ccac13a62be7763c96a24a15e40d293ac4eb2497d60737c552f101a02e74bea92f40298316cbeff63d9b9be58a1f6a84610dd873510670b9ec3d1beda07c46b32555ba225d375b0b0be549c81fca2fa86cd3e7c2530543693930fc184b").unwrap();
+        let encoded = Bytes::from_str("0x4af8d1827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a001a01e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04a0779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3").unwrap();
         let mut buf = encoded.as_ref();
         let decoded_tx = TypedTransaction::decode_2718(&mut buf).unwrap();
-        let sighash = match &decoded_tx {
-            TypedTransaction::Seismic(tx) => tx.signature_hash(),
-            _ => unreachable!(),
-        };
+
         let expected_sighash = FixedBytes::<32>::from_str(
-            "cb3b67b55eea90d2970fc853d63d2ffb0867da325e94f66f75cddc8b2ce4de0b",
+            "ab1ddfbb9c83e88fae2eb3d14835d0ede2a791072d920a57bc2ffab83564c765",
         )
         .unwrap();
-        assert_eq!(sighash, expected_sighash);
+        match &decoded_tx {
+            TypedTransaction::Seismic(tx) => {
+                assert_eq!(tx.signature_hash(), expected_sighash);
+                assert_eq!(
+                    tx.tx().encryption_pubkey,
+                    alloy_consensus::transaction::EncryptionPublicKey::from_str(
+                        "0x028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0"
+                    )
+                    .unwrap()
+                );
+            }
+            _ => unreachable!(),
+        };
+
         let sender = decoded_tx.recover().unwrap();
         let expected_sender =
             Address::from_str("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap();

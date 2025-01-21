@@ -1,20 +1,21 @@
+use alloy_consensus::transaction::TxSeismic;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{hex, Bytes, B256, U256};
 use alloy_provider::Provider;
-use alloy_rlp::Encodable;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::{OtherFields, WithOtherFields};
 use anvil::{spawn, NodeConfig};
 use anvil_core::eth::transaction::crypto;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use tee_service_api::{get_sample_secp256k1_pk, get_sample_secp256k1_sk};
 
 /// Seismic specific transaction field(s)
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct SeismicTransactionFields {
-    /// The secret data for the transaction
-    #[serde(rename = "seismicInput")]
-    pub seismic_input: Bytes,
+    /// Encryption public key
+    #[serde(rename = "encryptionPubkey")]
+    pub encryption_pubkey: Bytes,
 }
 
 impl From<SeismicTransactionFields> for OtherFields {
@@ -51,12 +52,6 @@ pub fn get_input_data(selector: &str, value: B256) -> Bytes {
     input_data.into()
 }
 
-fn rlp_encode(plaintext: Bytes) -> Vec<u8> {
-    let mut out = Vec::new();
-    plaintext.encode(&mut out);
-    out
-}
-
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_transaction() {
     let (api, handle) = spawn(NodeConfig::test()).await;
@@ -80,24 +75,26 @@ async fn test_seismic_transaction() {
     let accounts: Vec<_> = handle.dev_wallets().collect();
 
     let from = accounts[0].address();
-    let secret_key = crypto::secret_key(&accounts[0].to_bytes());
+    let encryption_sk = get_sample_secp256k1_sk();
+    let encryption_pk = Bytes::from(get_sample_secp256k1_pk().serialize());
 
     let to = receipt.contract_address.unwrap();
 
-    let encoded_setnumber_data =
-        rlp_encode(get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10))));
-    let set_data = crypto::client_encrypt(&secret_key, &encoded_setnumber_data, 1).unwrap();
+    let encoded_setnumber_data = get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10)));
+    let set_data = crypto::client_encrypt(&encryption_sk, &encoded_setnumber_data, 1).unwrap();
 
     let tx = TransactionRequest::default()
+        .transaction_type(TxSeismic::TX_TYPE)
         .with_from(from)
         .with_to(to)
         .with_nonce(1)
         .with_gas_limit(210000)
-        .with_chain_id(31337);
+        .with_chain_id(31337)
+        .with_input(set_data);
 
     let seismic_tx = WithOtherFields {
         inner: tx,
-        other: SeismicTransactionFields { seismic_input: set_data.into() }.into(),
+        other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
     };
 
     let pending_set = provider.send_transaction(seismic_tx).await.unwrap();
@@ -113,20 +110,22 @@ async fn test_seismic_transaction() {
     > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
-    let encoded_increment_data =
-        rlp_encode(get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10))));
-    let increment_data = crypto::client_encrypt(&secret_key, &encoded_increment_data, 2).unwrap();
+    let encoded_increment_data = get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10)));
+    let increment_data =
+        crypto::client_encrypt(&encryption_sk, &encoded_increment_data, 2).unwrap();
 
     let tx = TransactionRequest::default()
+        .transaction_type(TxSeismic::TX_TYPE)
         .with_from(from)
         .with_to(to)
         .with_nonce(2)
         .with_gas_limit(210000)
-        .with_chain_id(31337);
+        .with_chain_id(31337)
+        .with_input(increment_data);
 
     let seismic_tx = WithOtherFields {
         inner: tx,
-        other: SeismicTransactionFields { seismic_input: increment_data.into() }.into(),
+        other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
     };
 
     let pending_increment = provider.send_transaction(seismic_tx).await.unwrap();
@@ -137,19 +136,21 @@ async fn test_seismic_transaction() {
         provider.get_transaction_receipt(pending_increment.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
 
-    let encoded_getnumber_data = rlp_encode(hex::decode(GET_NUMBER_SELECTOR).unwrap().into());
-    let get_data = crypto::client_encrypt(&secret_key, &encoded_getnumber_data, 3).unwrap();
+    let encoded_getnumber_data = hex::decode(GET_NUMBER_SELECTOR).unwrap();
+    let get_data = crypto::client_encrypt(&encryption_sk, &encoded_getnumber_data, 3).unwrap();
 
     let tx = TransactionRequest::default()
+        .transaction_type(TxSeismic::TX_TYPE)
         .with_from(from)
         .with_to(to)
         .with_nonce(3)
         .with_gas_limit(210000)
-        .with_chain_id(31337);
+        .with_chain_id(31337)
+        .with_input(get_data);
 
     let seismic_tx = WithOtherFields {
         inner: tx,
-        other: SeismicTransactionFields { seismic_input: get_data.into() }.into(),
+        other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
     };
 
     let pending_get = provider.send_transaction(seismic_tx).await.unwrap();
