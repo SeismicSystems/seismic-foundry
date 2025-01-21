@@ -20,6 +20,7 @@ revm = { workspace = true, default-features = false, features = [
     "serde",
     "memory_limit",
     "c-kzg",
+    "seismic"
 ] }
 
 alloy-primitives = { workspace = true, features = ["serde", "seismic", "rlp"] }
