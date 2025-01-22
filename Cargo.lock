@@ -965,7 +965,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "similar-asserts",
- "tee_service_api 0.1.0 (git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=9ab28c87247b876f5875c470f39bd3a3b07b3e8b)",
+ "tee_service_api 0.1.0 (git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=cb0fb08)",
  "tempfile",
  "thiserror 2.0.9",
  "tikv-jemallocator",
@@ -1001,7 +1001,7 @@ dependencies = [
  "secp256k1",
  "serde",
  "serde_json",
- "tee_service_api 0.1.0 (git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=9ab28c87247b876f5875c470f39bd3a3b07b3e8b)",
+ "tee_service_api 0.1.0 (git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=cb0fb08)",
  "thiserror 2.0.9",
 ]
 
@@ -9022,7 +9022,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "tee_service_api"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=cb0fb08#cb0fb08fc447f838159ae22a36dd62efa8f52653"
+source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=c3243bf#c3243bf1df8d52e832b58a31abd81e5bb01f54af"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -9045,7 +9045,7 @@ dependencies = [
 [[package]]
 name = "tee_service_api"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=c3243bf#c3243bf1df8d52e832b58a31abd81e5bb01f54af"
+source = "git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=cb0fb08#cb0fb08fc447f838159ae22a36dd62efa8f52653"
 dependencies = [
  "aes-gcm",
  "anyhow",
