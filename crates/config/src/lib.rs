@@ -2330,7 +2330,7 @@ impl Default for Config {
             include_paths: vec![],
             force: false,
             evm_version: EvmVersion::Cancun,
-            seismic_version: SpecId::CANCUN,
+            seismic_version: SpecId::MERCURY,
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,
