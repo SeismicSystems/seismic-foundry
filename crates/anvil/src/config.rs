@@ -519,7 +519,7 @@ impl NodeConfig {
         if self.enable_optimism {
             return OptimismHardfork::default().into();
         }
-        if self.enable_seismic {
+        if self.enable_seismic || cfg!(feature = "seismic") {
             return SeismicHardfork::default().into();
         }
         EthereumHardfork::default().into()
