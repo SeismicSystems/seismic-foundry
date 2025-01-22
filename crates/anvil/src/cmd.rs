@@ -579,7 +579,7 @@ pub struct AnvilEvmArgs {
     #[arg(long, visible_alias = "optimism")]
     pub optimism: bool,
     
-    /// Run an Optimism chain
+    /// Run a Seismic chain
     #[arg(long, visible_alias = "seismic")]
     pub seismic: bool,
 
