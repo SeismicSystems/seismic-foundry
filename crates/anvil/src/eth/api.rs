@@ -249,9 +249,14 @@ impl EthApi {
             EthRequest::EthSignTypedDataV4(addr, data) => {
                 self.sign_typed_data_v4(addr, &data).await.to_rpc_result()
             }
-            EthRequest::EthSendRawTransaction(tx) => {
-                self.send_raw_transaction(tx).await.to_rpc_result()
-            }
+            EthRequest::EthSendRawTransaction(req) => match req {
+                anvil_core::eth::transaction::seismic::SeismicRawTxRequest::Bytes(tx) => {
+                    self.send_raw_transaction(tx).await.to_rpc_result()
+                }
+                anvil_core::eth::transaction::seismic::SeismicRawTxRequest::TypedData(td) => {
+                    self.send_signed_typed_data_tx(td).await.to_rpc_result()
+                }
+            },
             EthRequest::EthCall(call, block, overrides) => {
                 self.call(call, block, overrides).await.to_rpc_result()
             }
@@ -1031,6 +1036,47 @@ impl EthApi {
         let transaction = TypedTransaction::decode_2718(&mut data)
             .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
 
+        self.ensure_typed_transaction_supported(&transaction)?;
+
+        let pending_transaction = PendingTransaction::new(transaction)?;
+
+        // pre-validate
+        self.backend.validate_pool_transaction(&pending_transaction).await?;
+
+        let on_chain_nonce = self.backend.current_nonce(*pending_transaction.sender()).await?;
+        let from = *pending_transaction.sender();
+        let nonce = pending_transaction.transaction.nonce();
+        let requires = required_marker(nonce, on_chain_nonce, from);
+
+        let priority = self.transaction_priority(&pending_transaction.transaction);
+        let pool_transaction = PoolTransaction {
+            requires,
+            provides: vec![to_marker(nonce, *pending_transaction.sender())],
+            pending_transaction,
+            priority,
+        };
+
+        let tx = self.pool.add_transaction(pool_transaction)?;
+        trace!(target: "node", "Added transaction: [{:?}] sender={:?}", tx.hash(), from);
+        Ok(*tx.hash())
+    }
+
+    /// Sends signed typed data transaction, returning its hash.
+    ///
+    /// Handler for ETH RPC call: `eth_sendRawTransaction`
+    pub async fn send_signed_typed_data_tx(&self, td: TypedDataRequest) -> Result<TxHash> {
+        node_info!("eth_sendRawTransaction via eth_signTypedData");
+
+        let tx: TxSeismic = td.data.try_into().map_err(|e: serde_json::Error| {
+            BlockchainError::Message(format!(
+                "Failed to decode typed data into seismic tx: {}",
+                e.to_string()
+            ))
+        })?;
+        let signed_tx = tx.into_signed(td.signature);
+        let transaction = TypedTransaction::Seismic(signed_tx);
+
+        // NOTE: rest is copy pasta from send_raw_transaction
         self.ensure_typed_transaction_supported(&transaction)?;
 
         let pending_transaction = PendingTransaction::new(transaction)?;
