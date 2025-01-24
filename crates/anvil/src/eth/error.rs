@@ -266,6 +266,9 @@ pub enum InvalidTransactionError {
     /// Forwards error from the revm
     #[error(transparent)]
     Revm(revm::primitives::InvalidTransaction),
+    /// Thrown when a seismic transaction is invalid
+    #[error("Seismic decryption failed: {0}")]
+    SeismicDecryptionFailed(String),
 }
 
 impl From<revm::primitives::InvalidTransaction> for InvalidTransactionError {
