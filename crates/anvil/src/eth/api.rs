@@ -1053,7 +1053,7 @@ impl EthApi {
         Ok(*tx.hash())
     }
 
-    async fn unsigned_call(
+    pub async fn unsigned_call(
         &self,
         request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
@@ -1133,9 +1133,31 @@ impl EthApi {
     ) -> Result<Bytes> {
         match request {
             SeismicCallRequest::TransactionRequest(mut tx) => {
+                let user_provided_from = tx.from;
+
                 // don't let them spoof msg.sender with unsigned calls
                 tx.from = None;
-                return self.unsigned_call(tx, block_number, overrides).await
+
+                match self.unsigned_call(tx, block_number, overrides).await {
+                    Ok(bytes) => Ok(bytes),
+                    Err(original_err) => {
+                        // Only attach a custom message if user tried to set `from` != zero
+                        let tried_to_spoof_from =
+                            user_provided_from.map_or(false, |addr| !addr.is_zero());
+
+                        if tried_to_spoof_from {
+                            // We’ll embed the original error’s text (which may include
+                            // revert data) plus a multiline explanation:
+                            Err(BlockchainError::Message(format!(
+"Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
+                            orig = original_err
+                        )))
+                        } else {
+                            // Otherwise bubble up the original error
+                            Err(original_err)
+                        }
+                    }
+                }
             }
             SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
