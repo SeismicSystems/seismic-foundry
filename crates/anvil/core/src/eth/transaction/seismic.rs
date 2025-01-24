@@ -5,23 +5,26 @@ use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TypedDataRequest {
+    pub data: TypedData,
+    pub signature: SeismicSignature,
+}
+
 /// Either a normal ETH call or a signed/serialized one
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(untagged)]
 pub enum SeismicCallRequest {
-    /// signed raw seismic tx
-    Bytes(Bytes),
+    /// EIP-712 signed typed message with signature
+    TypedData(TypedDataRequest),
     /// normal call request
     TransactionRequest(WithOtherFields<TransactionRequest>),
-    /// EIP-712 signed typed message with signature
-    TypedData {
-        data: TypedData,
-        #[serde(flatten)]
-        signature: SeismicSignature,
-    },
+    /// signed raw seismic tx
+    Bytes(Bytes),
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
 pub enum SeismicSignature {
     // r, s, y_parity
     Primitive(PrimitiveSignature),

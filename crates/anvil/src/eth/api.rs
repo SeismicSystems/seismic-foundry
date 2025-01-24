@@ -66,7 +66,7 @@ use anvil_core::{
     eth::{
         block::BlockInfo,
         transaction::{
-            seismic::{SeismicCallRequest, SeismicTxTypedData},
+            seismic::{SeismicCallRequest, SeismicTxTypedData, TypedDataRequest},
             transaction_request_to_typed, PendingTransaction, ReceiptResponse, TypedTransaction,
             TypedTransactionRequest,
         },
@@ -1158,7 +1158,7 @@ impl EthApi {
                 let request = WithOtherFields::new(tx);
                 self.seismic_call(request, block_number, overrides, encryption_pubkey).await
             }
-            SeismicCallRequest::TypedData { data, signature } => {
+            SeismicCallRequest::TypedData(TypedDataRequest { data, signature }) => {
                 let tx_data = SeismicTxTypedData::from_typed_data(data).map_err(|e| {
                     BlockchainError::Message(format!("Failed to decode typed data: {e:?}"))
                 })?;
