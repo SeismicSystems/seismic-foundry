@@ -1,4 +1,4 @@
-use alloy_consensus::TxSeismic;
+use alloy_consensus::{Transaction, TxSeismic, Typed2718};
 use alloy_dyn_abi::EventExt;
 use alloy_json_abi::{Event, EventParam};
 use alloy_network::{ReceiptResponse, TransactionBuilder};
@@ -338,24 +338,39 @@ async fn test_seismic_precompiles_end_to_end() {
     println!("plaintext: {:?}", message);
     println!("tx nonce: {:?}", tx_nonce);
     
-    let seismic_tx = TxSeismic {
-        chain_id: 31337,
-        nonce: tx_nonce,
-        gas_price: 1000000000,
-        gas_limit: 410000,
-        to: TxKind::Call(to),
-        value: U256::ZERO,
-        input: set_data.into(),
-        encryption_pubkey: encryption_pk_write_tx,
+    let tx = {
+        let mut tx = TransactionRequest::default()
+        .transaction_type(TxSeismic::TX_TYPE as u8)
+        .with_from(from)
+        .with_to(to)
+        .with_nonce(tx_nonce)
+        .with_gas_limit(410000)
+        .with_gas_price(1000000000)
+        .with_chain_id(31337)
+        .with_input(set_data);
+
+        tx.encryption_pubkey = Some(encryption_pk_write_tx);
+        tx
     };
-    
     // this OR
     let raw_tx1 = {
-        let seismic_tx_wof = WithOtherFields::new(seismic_tx.clone().into());
-        api.sign_transaction(seismic_tx_wof).await.unwrap()   
+        let request = WithOtherFields::new(tx.clone().into());
+        // can also do this when merging From<SeismicTx> fix into alloy
+        // let request = WithOtherFields::new(seismic_tx.clone().into());
+        api.sign_transaction(request).await.unwrap()   
     };
     
     let raw_tx2 = {
+        let seismic_tx = TxSeismic {
+            chain_id: tx.chain_id().unwrap(),
+            nonce: tx.nonce.unwrap(),
+            gas_price: tx.gas_price.unwrap(),
+            gas_limit: tx.gas.unwrap(),
+            to: tx.to.unwrap(),
+            value: U256::ZERO,
+            input: tx.input.input().unwrap().clone(),
+            encryption_pubkey: encryption_pk_write_tx,
+        };
         let typed_tx_req = TypedTransactionRequest::Seismic(seismic_tx);
         let signature = dev_signer.sign_transaction(typed_tx_req.clone(), &from).unwrap();
         let typed_tx_signed = build_typed_transaction(typed_tx_req, signature).unwrap();
