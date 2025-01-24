@@ -1184,11 +1184,8 @@ impl EthApi {
                 let tx_data = SeismicTxTypedData::from_typed_data(data).map_err(|e| {
                     BlockchainError::Message(format!("Failed to decode typed data: {e:?}"))
                 })?;
-                signature.verify(&tx_data).map_err(|e| {
-                    BlockchainError::Message(format!("Failed to verify signature: {e:?}"))
-                })?;
                 let encryption_pubkey = PublicKey::from_slice(
-                    tx_data.tx.inner.encryption_pubkey.as_slice(),
+                    tx_data.tx.encryption_pubkey.as_slice(),
                 )
                 .map_err(|e| {
                     BlockchainError::Message(format!(
