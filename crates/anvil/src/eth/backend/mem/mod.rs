@@ -2802,14 +2802,6 @@ impl TransactionValidator for Backend {
         let address = *tx.sender();
         let account = self.get_account(address).await?;
         let env = self.next_env();
-        if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction.transaction {
-            // check that decryption works before we create tx env for it
-            let inner = seismic_tx.tx();
-            let public_key = PublicKey::from_slice(inner.encryption_pubkey.as_slice())
-                .map_err(|_e| BlockchainError::Message(format!("Failed to parse encryption_pubkey")))?;
-            let _decrypted_data = anvil_core::eth::transaction::crypto::server_decrypt(&public_key, &inner.input.as_ref(), inner.nonce)
-                    .map_err(|_e| BlockchainError::Message(format!("Failed to decrypt seismic calldata")))?;
-        }
         Ok(self.validate_pool_transaction_for(tx, &account, &env)?)
     }
 
@@ -2939,6 +2931,27 @@ impl TransactionValidator for Backend {
                     return Err(InvalidTransactionError::InsufficientFunds);
                 }
             }
+        }
+
+        if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
+            // check that decryption works before we create tx env for it
+            let inner = seismic_tx.tx();
+            let public_key =
+                PublicKey::from_slice(inner.encryption_pubkey.as_slice()).map_err(|_e| {
+                    InvalidTransactionError::SeismicDecryptionFailed(format!(
+                        "Failed to parse encryption_pubkey"
+                    ))
+                })?;
+            let _decrypted_data = anvil_core::eth::transaction::crypto::server_decrypt(
+                &public_key,
+                &inner.input.as_ref(),
+                inner.nonce,
+            )
+            .map_err(|_e| {
+                InvalidTransactionError::SeismicDecryptionFailed(format!(
+                    "Failed to decrypt seismic calldata"
+                ))
+            })?;
         }
 
         Ok(())
