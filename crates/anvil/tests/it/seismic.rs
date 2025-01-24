@@ -1,20 +1,18 @@
-use alloy_consensus::{transaction::TxSeismic, SignableTransaction, Signed, TxLegacy};
+use alloy_consensus::TxSeismic;
 use alloy_dyn_abi::EventExt;
 use alloy_json_abi::{Event, EventParam};
-use alloy_network::{ReceiptResponse, TransactionBuilder, TxSigner};
+use alloy_network::{ReceiptResponse, TransactionBuilder};
 use alloy_primitives::{aliases::{B96, U96}, hex::{self, FromHex}, Bytes, FixedBytes, IntoLogData, TxKind, B256, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::{OtherFields, WithOtherFields};
-use anvil::{spawn, NodeConfig};
-use anvil_core::eth::transaction::{crypto, SeismicCallRequest, TypedTransaction};
-use axum::extract::FromRef;
+use anvil::{eth::sign::{build_typed_transaction, DevSigner, Signer}, spawn, NodeConfig};
+use anvil_core::eth::transaction::{crypto::{self, client_decrypt, client_encrypt}, SeismicCallRequest, TypedTransactionRequest};
 use serde::{Deserialize, Serialize};
-use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Encodable2718};
-use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
-use bytes::BufMut;
+use alloy_rlp::Encodable;
+use alloy_eips::eip2718::Encodable2718;
 use std::fs;
-use tee_service_api::{aes_decrypt, aes_encrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk};
+use tee_service_api::{aes_decrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk};
 use alloy_sol_types::{sol, SolValue, SolCall};
 
 /// Seismic specific transaction field(s)
@@ -209,8 +207,9 @@ async fn test_seismic_precompiles_end_to_end() {
     assert!(receipt_ref.status());
     
     let accounts: Vec<_> = handle.dev_wallets().collect();
-
     let from = accounts[0].address();
+    let dev_signer: Box<dyn Signer> = Box::new(DevSigner::new(accounts));
+
     let encryption_sk = get_sample_secp256k1_sk();
     let encryption_pk = Bytes::from(get_sample_secp256k1_pk().serialize());
     let encryption_pk_write_tx = FixedBytes::<33>::from(get_sample_secp256k1_pk().serialize());
@@ -219,7 +218,7 @@ async fn test_seismic_precompiles_end_to_end() {
     
     let private_key = B256::from_hex("7e34abdcd62eade2e803e0a8123a0015ce542b380537eff288d6da420bcc2d3b").unwrap();
     let encoded_input = get_input_data(PRECOMPILES_TEST_SET_AES_KEY_SELECTOR, private_key);
-    let set_data = crypto::client_encrypt(&encryption_sk, &encoded_input, 1).unwrap();
+    let set_data = client_encrypt(&encryption_sk, &encoded_input, 1).unwrap();
 
     let tx = TransactionRequest::default()
         .transaction_type(TxSeismic::TX_TYPE)
@@ -312,46 +311,74 @@ async fn test_seismic_precompiles_end_to_end() {
     sol! {
         #[derive(Debug, PartialEq)]
         interface Encryption {
-            function decrypt(uint96 nonce,bytes calldata ciphertext) external view onlyOwner returns (bytes memory plaintext);
+            function decrypt(uint96 nonce, bytes calldata ciphertext) external view onlyOwner returns (bytes memory plaintext);
         }
     }
     
-    let nonce: U96 = U96::from_be_bytes(B96::from_slice(&result.indexed[0].abi_encode_packed()).into());
+    let call_nonce: U96 = U96::from_be_bytes(B96::from_slice(&result.indexed[0].abi_encode_packed()).into());
     let ciphertext = Bytes::from(result.body[0].abi_encode_packed());
     let call = Encryption::decryptCall{
-        nonce, 
+        nonce: call_nonce, 
         ciphertext: ciphertext.clone(),
     };
 
+    println!("Call: {:?}", call);
     println!("result size: {:?}", result.body[0].abi_packed_encoded_size());
     println!("result: {:?}", hex::encode(call.abi_encode()));
 
+    let tx_nonce = provider.get_transaction_count(from).await.unwrap();
     let set_data = crypto::client_encrypt(&encryption_sk, &call.abi_encode(), 3).unwrap();
     let secp_private = secp256k1::SecretKey::from_slice(private_key.as_ref()).unwrap();
     let key: &[u8; 32] = &secp_private.secret_bytes()[0..32].try_into().unwrap();
     println!("ciphertext: {:?}", hex::encode(ciphertext.to_vec()));
     let decrypted = aes_decrypt(key.into(), &ciphertext, result.indexed[0].abi_encode_packed()).unwrap();
-    
+
     println!("decrypted: {:?}", hex::encode(decrypted));
     println!("plaintext: {:?}", message);
-    let nonce = provider.get_transaction_count(from).await.unwrap();
-    let tx = TransactionRequest::default()
-        .transaction_type(TxLegacy::TX_TYPE as u8)
-        .with_from(from)
-        .with_to(to)
-        .with_nonce(nonce)
-        .with_gas_limit(410000)
-        .with_chain_id(31337)
-        .with_input(set_data)
-        .encryption_pubkey(encryption_pk_write_tx);
+    println!("tx nonce: {:?}", tx_nonce);
+    
+    let seismic_tx = TxSeismic {
+        chain_id: 31337,
+        nonce: tx_nonce,
+        gas_price: 1000000000,
+        gas_limit: 410000,
+        to: TxKind::Call(to),
+        value: U256::ZERO,
+        input: set_data.into(),
+        encryption_pubkey: encryption_pk_write_tx,
+    };
 
-    let seismic_tx = WithOtherFields::new(tx); 
+    
+    // this OR
+    let raw_tx1 = {
+        let seismic_tx_wof = WithOtherFields::new(seismic_tx.clone().into());
+        api.sign_transaction(seismic_tx_wof).await.unwrap()   
+    };
+    
+    let raw_tx2 = {
+        let typed_tx_req = TypedTransactionRequest::Seismic(seismic_tx);
+        let signature = dev_signer.sign_transaction(typed_tx_req.clone(), &from).unwrap();
+        let typed_tx_signed = build_typed_transaction(typed_tx_req, signature).unwrap();
+        let typed_tx_encoded = typed_tx_signed.encoded_2718();
+        alloy_primitives::hex::encode_prefixed(typed_tx_encoded)
+    };
 
-    //let transaction = api.sign_transaction(seismic_tx).await.unwrap();
+    assert_eq!(raw_tx1, raw_tx2);
+    let raw_tx = Bytes::from_hex(raw_tx1).unwrap();
 
-    //let final_transaction = SeismicCallRequest::Bytes(transaction.into());
-    let output = api.unsigned_call(seismic_tx, None, None).await.unwrap();
-    println!("output: {:?}", output);
+    let ciphertext = match api.call(SeismicCallRequest::Bytes(raw_tx), None, None).await {
+        Ok(ciphertext) => ciphertext,
+        Err(e) => {
+            println!("error: {:?}", e);
+            return;
+        }
+    };
+
+    println!("output: {:?}", ciphertext);
+
+    let decrypted = client_decrypt(&encryption_sk, ciphertext.as_ref(), tx_nonce);
+    println!("decrypted: {:?}", decrypted);
+    //let mut seismic_tx = TxSeismic {
     //let mut seismic_tx = TxSeismic {
     //    chain_id: 31337u64,
     //    nonce,

@@ -1161,7 +1161,10 @@ impl EthApi {
         }
            SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
-                    .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
+                .map_err(|e| {
+                    println!("Eip2718Error: {:?}", e);
+                    BlockchainError::FailedToDecodeSignedTransaction
+            })?;
                 let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
                     BlockchainError::Message(
                         "Failed to decode bytes to transaction request".to_string(),
@@ -2915,7 +2918,8 @@ impl EthApi {
         Some(partial_block)
     }
 
-    fn build_typed_tx_request(
+    // TODO: remove
+    pub fn build_typed_tx_request(
         &self,
         request: WithOtherFields<TransactionRequest>,
         nonce: u64,
