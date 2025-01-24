@@ -1628,7 +1628,6 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
     })
 }
 
-
 #[cfg(test)]
 mod tests {
     use alloy_consensus::SignableTransaction;

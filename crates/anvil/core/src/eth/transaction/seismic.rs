@@ -1,10 +1,9 @@
 use alloy_consensus::TxSeismic;
-use alloy_dyn_abi::{Eip712Domain, TypedData, Resolver};
+use alloy_dyn_abi::{Eip712Domain, Resolver, TypedData};
 use alloy_primitives::{Address, Bytes, FixedBytes, PrimitiveSignature};
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use serde::{Deserialize, Serialize};
-
 
 /// Either a normal ETH call or a signed/serialized one
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -15,10 +14,10 @@ pub enum SeismicCallRequest {
     /// normal call request
     TransactionRequest(WithOtherFields<TransactionRequest>),
     /// EIP-712 signed typed message with signature
-    TypedData{ 
-        data: TypedData, 
+    TypedData {
+        data: TypedData,
         #[serde(flatten)]
-        signature: SeismicSignature
+        signature: SeismicSignature,
     },
 }
 
@@ -43,9 +42,7 @@ impl SeismicSignature {
 
     pub fn verify(&self, data: &SeismicTxTypedData) -> anyhow::Result<Address> {
         let vk = match self {
-            SeismicSignature::Primitive(sig) => {
-                sig.recover_from_prehash(&data.signing_hash)?
-            }
+            SeismicSignature::Primitive(sig) => sig.recover_from_prehash(&data.signing_hash)?,
         };
         let address = alloy_signer::utils::public_key_to_address(&vk);
         if data.tx.from != address {
@@ -72,7 +69,6 @@ pub struct SeismicTxTypedData {
 }
 
 impl SeismicTxTypedData {
-
     pub fn from_typed_data(data: TypedData) -> anyhow::Result<Self> {
         let signing_hash = data.eip712_signing_hash()?;
         let tx = serde_json::from_value(data.message)?;

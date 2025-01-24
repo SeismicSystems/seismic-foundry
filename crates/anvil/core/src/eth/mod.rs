@@ -1,7 +1,4 @@
-use crate::{
-    eth::{subscription::SubscriptionId},
-    types::ReorgOptions,
-};
+use crate::{eth::subscription::SubscriptionId, types::ReorgOptions};
 use alloy_primitives::{Address, Bytes, TxHash, B256, B64, U256};
 use alloy_rpc_types::{
     anvil::{Forking, MineOptions},
