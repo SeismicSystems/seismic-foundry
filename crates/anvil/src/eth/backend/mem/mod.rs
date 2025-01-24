@@ -1512,7 +1512,11 @@ impl Backend {
                 &env.tx.data.as_ref(),
                 nonce,
             )
-            .map_err(|_e| InvalidTransactionError::SeismicDecryptionFailed(format!("Failed to decrypt seismic calldata")))?;
+            .map_err(|_e| {
+                InvalidTransactionError::SeismicDecryptionFailed(format!(
+                    "Failed to decrypt seismic calldata"
+                ))
+            })?;
             env.tx.data = decrypted_input.into();
         } else {
             // this should never happen
