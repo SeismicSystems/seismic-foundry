@@ -1887,7 +1887,7 @@ mod tests {
             value: U256::from(1000000000000000u64),
             encryption_pubkey: test_pubkey(),
             message_version: 0,
-            input: decrypted_input.clone()
+            input: decrypted_input.clone(),
         };
 
         let r =

@@ -42,7 +42,6 @@ impl Into<SeismicCallRequest> for Bytes {
     }
 }
 
-
 /*
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SeismicTxTypedData {
@@ -59,7 +58,7 @@ impl SeismicTxTypedData {
         let address = alloy_signer::utils::public_key_to_address(&vk);
         Ok(address)
     }
-    
+
     pub fn from_typed_data(data: TypedData) -> anyhow::Result<Self> {
         let signing_hash = data.eip712_signing_hash()?;
         let tx = serde_json::from_value(data.message)?;
