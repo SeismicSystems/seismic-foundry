@@ -209,14 +209,15 @@ async fn test_seismic_precompiles_end_to_end() {
     assert!(receipt_ref.status());
     
     let accounts: Vec<_> = handle.dev_wallets().collect();
-
+    //Generate Parameters
     let from = accounts[0].address();
     let encryption_sk = get_sample_secp256k1_sk();
     let encryption_pk = Bytes::from(get_sample_secp256k1_pk().serialize());
     let encryption_pk_write_tx = FixedBytes::<33>::from(get_sample_secp256k1_pk().serialize());
     let to = receipt.unwrap().unwrap().contract_address.unwrap();
-    let nonce = provider.get_transaction_count(from).await.unwrap();
     
+    //Tx 1: Set AES key in the contract
+    let nonce = provider.get_transaction_count(from).await.unwrap();
     let private_key = B256::from_hex("7e34abdcd62eade2e803e0a8123a0015ce542b380537eff288d6da420bcc2d3b").unwrap();
     let encoded_input = get_input_data(PRECOMPILES_TEST_SET_AES_KEY_SELECTOR, private_key);
     let set_data = crypto::client_encrypt(&encryption_sk, &encoded_input, 1).unwrap();
@@ -249,6 +250,7 @@ async fn test_seismic_precompiles_end_to_end() {
     assert!(receipt.is_some());
     assert!(receipt.unwrap().status());
     
+    //Tx 2: encrypt a message 
     let nonce = provider.get_transaction_count(from).await.unwrap();
     let message = Bytes::from("hello world".as_bytes());
     type PlaintextType = Bytes;
@@ -256,7 +258,6 @@ async fn test_seismic_precompiles_end_to_end() {
     let encoded: Vec<u8> = PlaintextType::abi_encode(&message);
 
     let encoded_input = concat_input_data(PRECOMPILES_TEST_ENCRYPTED_LOG_SELECTOR, encoded.into());
-    println!("encoded_input: {:?}", encoded_input);
     let set_data = crypto::client_encrypt(&encryption_sk, &encoded_input, 2).unwrap();
 
     let tx = TransactionRequest::default()
@@ -273,8 +274,6 @@ async fn test_seismic_precompiles_end_to_end() {
         other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
     };
 
-    println!("should be signed seismic_tx: {:?}", seismic_tx);
-
     let pending_set = provider.send_transaction(seismic_tx).await.unwrap();
 
     api.mine_one().await;
@@ -288,15 +287,12 @@ async fn test_seismic_precompiles_end_to_end() {
     > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
     let receipt_ref = receipt.as_ref().unwrap();
     assert!(receipt_ref.status());
-    
+
+    // Tx 3: decrypt a message
     let logs = receipt_ref.inner.inner.logs();
     assert_eq!(logs.len(), 1);
     assert_eq!(logs[0].inner.address, to);
     let log = logs[0].inner.data.clone();
-    println!("log_topic: {:?}", log.topics());
-    println!("log_data: {:?}", log.to_log_data());
-    let raw_nonce: B256 = log.topics()[1].into();
-    println!("nonce: {:?}", raw_nonce);
    
     let event = Event {
             name: "EncryptedMessage".into(),
@@ -323,17 +319,7 @@ async fn test_seismic_precompiles_end_to_end() {
         ciphertext: ciphertext.clone(),
     };
 
-    println!("result size: {:?}", result.body[0].abi_packed_encoded_size());
-    println!("result: {:?}", hex::encode(call.abi_encode()));
-
     let set_data = crypto::client_encrypt(&encryption_sk, &call.abi_encode(), 3).unwrap();
-    let secp_private = secp256k1::SecretKey::from_slice(private_key.as_ref()).unwrap();
-    let key: &[u8; 32] = &secp_private.secret_bytes()[0..32].try_into().unwrap();
-    println!("ciphertext: {:?}", hex::encode(ciphertext.to_vec()));
-    let decrypted = aes_decrypt(key.into(), &ciphertext, result.indexed[0].abi_encode_packed()).unwrap();
-    
-    println!("decrypted: {:?}", hex::encode(decrypted));
-    println!("plaintext: {:?}", message);
     let nonce = provider.get_transaction_count(from).await.unwrap();
     let tx = TransactionRequest::default()
         .transaction_type(TxSeismic::TX_TYPE as u8)
@@ -350,8 +336,12 @@ async fn test_seismic_precompiles_end_to_end() {
     let transaction = api.sign_transaction(seismic_tx).await.unwrap();
     let final_transaction = SeismicCallRequest::Bytes(Bytes::from_hex(transaction).unwrap());
     let output = api.call(final_transaction, None, None).await.unwrap();
-    println!("output: {:?}", output);
 
+    //4: Decrypt Locally
+    let secp_private = secp256k1::SecretKey::from_slice(private_key.as_ref()).unwrap();
+    let key: &[u8; 32] = &secp_private.secret_bytes()[0..32].try_into().unwrap();
+    let decrypted_locally = aes_decrypt(key.into(), &ciphertext, result.indexed[0].abi_encode_packed()).unwrap();
+    assert_eq!(decrypted_locally, message);
     let decrypted_output = crypto::client_decrypt(&encryption_sk, output.as_ref(), nonce).unwrap();
     let decrypted_string = {
         let decrypted_bytes = Bytes::from(decrypted_output);
@@ -360,34 +350,4 @@ async fn test_seismic_precompiles_end_to_end() {
     };
 
     assert_eq!(decrypted_string, "hello world");
-    //let mut seismic_tx = TxSeismic {
-    //    chain_id: 31337u64,
-    //    nonce,
-    //    gas_price: 1000000000,
-    //    gas_limit: 410000,
-    //    to: TxKind::Call(to),
-    //    value: U256::ZERO,
-    //    input: set_data.into(),
-    //    encryption_pubkey: encryption_pk_write_tx,
-    //};
-    //
-    //let signature = accounts[0].sign_transaction(&mut seismic_tx).await.unwrap();
-    //println!("account private key: {:?}", hex::encode(accounts[0].credential().to_bytes()));
-    //let signed_tx: Signed<TxSeismic> = seismic_tx.into_signed(signature);
-    //let typed_tx = TypedTransaction::Seismic(signed_tx);
-    //println!("typed_tx: {:?}", typed_tx);
-
-    ////    Or if you want to encode the signed version:
-    //let mut encoded_tx = Vec::new();
-    //typed_tx.encode(&mut encoded_tx);
-
-    //let encoded_bytes = Bytes::from(encoded_tx.clone());
-
-    //println!("encoded_bytes: {:?}", encoded_bytes);
-    //let encoded_prefixed = alloy_primitives::hex::encode_prefixed(encoded_bytes.as_ref());
-    //let final_request = SeismicCallRequest::Bytes(encoded_prefixed.into());
-
-    //let actual_plaintext = api.call(final_request, None, None).await.unwrap();
-    //
-    //println!("actual_plaintext: {:?}", actual_plaintext);
 }
