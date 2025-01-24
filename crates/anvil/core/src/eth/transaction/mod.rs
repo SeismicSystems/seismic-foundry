@@ -617,16 +617,14 @@ impl PendingTransaction {
                     encryption_pubkey,
                 } = &tx.tx();
 
-                let public_key = PublicKey::from_slice(encryption_pubkey.as_slice())
-                    .expect("failed to parse public key from bytes");
-                let data = Bytes::from(
-                    crypto::server_decrypt(&public_key, &input.as_ref(), *nonce)
-                        .expect("Failed to decrypt seismic tx"),
-                );
+                // these two have already been validated in TransactionValidator,
+                // so we simply unwrap here
+                let public_key = PublicKey::from_slice(encryption_pubkey.as_slice()).unwrap();
+                let data = crypto::server_decrypt(&public_key, &input.as_ref(), *nonce).unwrap();
                 TxEnv {
                     caller,
                     transact_to: transact_to(&to),
-                    data,
+                    data: Bytes::from(data),
                     chain_id: Some(*chain_id),
                     nonce: Some(*nonce),
                     value: *value,

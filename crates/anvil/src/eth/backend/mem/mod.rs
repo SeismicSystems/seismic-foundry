@@ -1512,7 +1512,11 @@ impl Backend {
                 &env.tx.data.as_ref(),
                 nonce,
             )
-            .expect("Failed to decrypt seismic tx");
+            .map_err(|_e| {
+                InvalidTransactionError::SeismicDecryptionFailed(format!(
+                    "Failed to decrypt seismic calldata"
+                ))
+            })?;
             env.tx.data = decrypted_input.into();
         } else {
             // this should never happen
@@ -2931,6 +2935,27 @@ impl TransactionValidator for Backend {
                     return Err(InvalidTransactionError::InsufficientFunds);
                 }
             }
+        }
+
+        if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
+            // check that decryption works before we create tx env for it
+            let inner = seismic_tx.tx();
+            let public_key =
+                PublicKey::from_slice(inner.encryption_pubkey.as_slice()).map_err(|_e| {
+                    InvalidTransactionError::SeismicDecryptionFailed(format!(
+                        "Failed to parse encryption_pubkey"
+                    ))
+                })?;
+            let _decrypted_data = anvil_core::eth::transaction::crypto::server_decrypt(
+                &public_key,
+                &inner.input.as_ref(),
+                inner.nonce,
+            )
+            .map_err(|_e| {
+                InvalidTransactionError::SeismicDecryptionFailed(format!(
+                    "Failed to decrypt seismic calldata"
+                ))
+            })?;
         }
 
         Ok(())
