@@ -56,6 +56,7 @@ git checkout master -- Cargo.lock
 For the rest, resolve them manually. This might be a pain. When you are done, make sure our Seismic-specific tests pass:
 ```sh
 cargo test -- test_seismic_transaction
+cargo test -- test_seismic_precompiles_end_to_end
 ```
 
 And then push your branch to GitHub & merge in the pull request with a squash commit

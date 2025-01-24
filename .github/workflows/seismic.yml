@@ -107,6 +107,8 @@ jobs:
               ${{ secrets.ACTIONS_TEESERVICE_SSH_ED25519 }}
       - name: seismic transaction
         run: cargo test test_seismic_transaction
+      - name: seismic precompiles
+        run: cargo test test_seismic_precompiles_end_to_end
       # - name: sforge tests
       #   run: cargo test --bin sforge
       # - name: sanvil tests
