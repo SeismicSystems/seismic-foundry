@@ -1512,7 +1512,7 @@ impl Backend {
                 &env.tx.data.as_ref(),
                 nonce,
             )
-            .expect("Failed to decrypt seismic tx");
+            .map_err(|_e| InvalidTransactionError::SeismicDecryptionFailed(format!("Failed to decrypt seismic calldata")))?;
             env.tx.data = decrypted_input.into();
         } else {
             // this should never happen
