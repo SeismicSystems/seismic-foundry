@@ -1,5 +1,5 @@
 use crate::{
-    eth::{subscription::SubscriptionId, transaction::SeismicCallRequest},
+    eth::{subscription::SubscriptionId},
     types::ReorgOptions,
 };
 use alloy_primitives::{Address, Bytes, TxHash, B256, B64, U256};
@@ -186,7 +186,7 @@ pub enum EthRequest {
 
     #[cfg_attr(feature = "serde", serde(rename = "eth_call"))]
     EthCall(
-        SeismicCallRequest,
+        crate::eth::transaction::seismic::SeismicCallRequest,
         #[cfg_attr(feature = "serde", serde(default))] Option<BlockId>,
         #[cfg_attr(feature = "serde", serde(default))] Option<StateOverride>,
     ),

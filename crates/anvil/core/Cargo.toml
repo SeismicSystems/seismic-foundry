@@ -35,6 +35,7 @@ alloy-network.workspace = true
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
 bytes.workspace = true
+alloy-signer.workspace = true
 
 # misc
 rand.workspace = true

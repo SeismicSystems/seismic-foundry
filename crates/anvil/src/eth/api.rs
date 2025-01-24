@@ -66,8 +66,7 @@ use anvil_core::{
     eth::{
         block::BlockInfo,
         transaction::{
-            transaction_request_to_typed, PendingTransaction, ReceiptResponse, SeismicCallRequest,
-            TypedTransaction, TypedTransactionRequest,
+            seismic::{SeismicCallRequest, SeismicTxTypedData}, transaction_request_to_typed, PendingTransaction, ReceiptResponse, TypedTransaction, TypedTransactionRequest
         },
         wallet::{WalletCapabilities, WalletError},
         EthRequest,
@@ -1155,6 +1154,13 @@ impl EthApi {
                     BlockchainError::Message("Failed to parse encryption public key".to_string())
                 })?;
                 let request = WithOtherFields::new(tx);
+                self.seismic_call(request, block_number, overrides, encryption_pubkey).await
+            }
+            SeismicCallRequest::TypedData{ data, signature  } => {
+                let tx_data = SeismicTxTypedData::from_typed_data(data).map_err(|e| BlockchainError::Message(format!("Failed to decode typed data: {e:?}")))?;
+                signature.verify(&tx_data).map_err(|e| BlockchainError::Message(format!("Failed to verify signature: {e:?}")))?;
+                let encryption_pubkey = PublicKey::from_slice(tx_data.tx.inner.encryption_pubkey.as_slice()).map_err(|e| BlockchainError::Message(format!("Failed to parse encryption public key: {e:?}")))?;
+                let request = WithOtherFields::new(tx_data.tx.into());
                 self.seismic_call(request, block_number, overrides, encryption_pubkey).await
             }
         }
