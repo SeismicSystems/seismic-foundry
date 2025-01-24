@@ -989,6 +989,7 @@ dependencies = [
  "alloy-rlp",
  "alloy-rpc-types",
  "alloy-serde",
+ "alloy-signer",
  "alloy-trie",
  "anyhow",
  "bytes",
