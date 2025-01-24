@@ -219,7 +219,6 @@ async fn deploy_contract(
 }
 
 // 2. Sends an encrypted transaction, mines a block, and returns the receipt.
-//    You pass in the raw unencrypted data plus a nonce for the encryption step.
 async fn send_encrypted_tx(
     api: &EthApi,
     provider: &RetryProvider,
@@ -261,7 +260,6 @@ async fn send_encrypted_tx(
 }
 
 // 3. Helper to build the final “call” with encryption for read-only methods (e.g. your decrypt).
-//    This is optional if you prefer to keep the lines inline in the test.
 async fn seismic_read_call(
     api: &EthApi,
     provider: &RetryProvider,
