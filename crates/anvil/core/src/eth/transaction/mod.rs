@@ -4,7 +4,7 @@ use crate::eth::transaction::optimism::DepositTransaction;
 use alloy_consensus::{
     transaction::{
         eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
-        TxEip7702, TxSeismic,
+        EncryptionPublicKey, TxEip7702, TxSeismic,
     },
     Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559, TxEip2930,
     TxEnvelope, TxLegacy, TxReceipt, Typed2718,
@@ -683,6 +683,7 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
             nonce: Some(essentials.nonce),
             chain_id: essentials.chain_id,
             transaction_type: tx_type,
+            encryption_pubkey: essentials.encryption_pubkey,
             ..Default::default()
         })
     }
@@ -873,6 +874,7 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: t.tx().chain_id,
                 access_list: Default::default(),
+                encryption_pubkey: None,
             },
             Self::EIP2930(t) => TransactionEssentials {
                 kind: t.tx().to,
@@ -887,6 +889,7 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: t.tx().access_list.clone(),
+                encryption_pubkey: None,
             },
             Self::EIP1559(t) => TransactionEssentials {
                 kind: t.tx().to,
@@ -901,6 +904,7 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: t.tx().access_list.clone(),
+                encryption_pubkey: None,
             },
             Self::EIP4844(t) => TransactionEssentials {
                 kind: TxKind::Call(t.tx().tx().to),
@@ -915,6 +919,7 @@ impl TypedTransaction {
                 value: t.tx().tx().value,
                 chain_id: Some(t.tx().tx().chain_id),
                 access_list: t.tx().tx().access_list.clone(),
+                encryption_pubkey: None,
             },
             Self::EIP7702(t) => TransactionEssentials {
                 kind: TxKind::Call(t.tx().to),
@@ -929,6 +934,7 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: t.tx().access_list.clone(),
+                encryption_pubkey: None,
             },
             Self::Deposit(t) => TransactionEssentials {
                 kind: t.kind,
@@ -943,6 +949,7 @@ impl TypedTransaction {
                 value: t.value,
                 chain_id: t.chain_id(),
                 access_list: Default::default(),
+                encryption_pubkey: None,
             },
             Self::Seismic(t) => TransactionEssentials {
                 kind: t.tx().kind(),
@@ -957,6 +964,7 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: Default::default(),
+                encryption_pubkey: Some(t.tx().encryption_pubkey),
             },
         }
     }
@@ -1189,6 +1197,7 @@ impl From<TxEnvelope> for TypedTransaction {
             TxEnvelope::Eip2930(tx) => Self::EIP2930(tx),
             TxEnvelope::Eip1559(tx) => Self::EIP1559(tx),
             TxEnvelope::Eip4844(tx) => Self::EIP4844(tx),
+            TxEnvelope::Seismic(tx) => Self::Seismic(tx),
             _ => unreachable!(),
         }
     }
@@ -1208,6 +1217,7 @@ pub struct TransactionEssentials {
     pub value: U256,
     pub chain_id: Option<u64>,
     pub access_list: AccessList,
+    pub encryption_pubkey: Option<EncryptionPublicKey>,
 }
 
 /// Represents all relevant information of an executed transaction

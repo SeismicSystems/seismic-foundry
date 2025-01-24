@@ -1521,23 +1521,7 @@ impl Backend {
         let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
 
         let mut inspector = self.build_inspector();
-        let mut env = self.build_call_env(request, fee_details, block_env);
-        if is_seismic_tx {
-            let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
-                &encryption_pubkey,
-                &env.tx.data.as_ref(),
-                nonce,
-            )
-            .map_err(|_e| {
-                InvalidTransactionError::SeismicDecryptionFailed(format!(
-                    "Failed to decrypt seismic calldata"
-                ))
-            })?;
-            env.tx.data = decrypted_input.into();
-        } else {
-            // this should never happen
-            warn!("Non-seismic tx passed to seismic_call. Likely a bug");
-        }
+        let env = self.build_call_env(request, fee_details, block_env);
 
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;

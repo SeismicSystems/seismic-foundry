@@ -1162,11 +1162,14 @@ impl EthApi {
             SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
                     .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
+                node_info!("eth_call bytes (signed) typed_tx {:?}", typed_tx);
                 let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
                     BlockchainError::Message(
                         "Failed to decode bytes to transaction request".to_string(),
                     )
                 })?;
+                node_info!("eth_call bytes (signed) tx request {:?}", tx);
+
                 let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
                     "Can only make signedCall with Seismic Transactions".to_string(),
                 ))?;
