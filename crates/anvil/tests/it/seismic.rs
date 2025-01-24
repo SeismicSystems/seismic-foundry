@@ -349,10 +349,10 @@ async fn test_seismic_precompiles_end_to_end() {
     let seismic_tx = WithOtherFields::new(tx); 
     let transaction = api.sign_transaction(seismic_tx).await.unwrap();
     let raw_tx = Bytes::from_hex(transaction).unwrap();
-    let ciphertext = api.call(SeismicCallRequest::Bytes(raw_tx), None, None).await.unwrap();
-    println!("ciphertext: {:0x}", ciphertext);
+    let output = api.call(SeismicCallRequest::Bytes(raw_tx), None, None).await.unwrap();
+    println!("output: {:0x}", output);
 
-    let decrypted_output = crypto::client_decrypt(&encryption_sk, ciphertext.as_ref(), nonce).unwrap();
+    let decrypted_output = crypto::client_decrypt(&encryption_sk, output.as_ref(), nonce).unwrap();
     let decrypted_string = {
         let decrypted_bytes = Bytes::from(decrypted_output);
         let decoded_bytes = PlaintextType::abi_decode(&decrypted_bytes, false).unwrap();
