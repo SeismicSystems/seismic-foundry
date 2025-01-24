@@ -1167,6 +1167,7 @@ impl EthApi {
                         "Failed to decode bytes to transaction request".to_string(),
                     )
                 })?;
+
                 let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
                     "Can only make signedCall with Seismic Transactions".to_string(),
                 ))?;
