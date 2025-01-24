@@ -1101,9 +1101,9 @@ impl TypedTransaction {
 impl Encodable for TypedTransaction {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         if !self.is_legacy() {
-            println!("Not legacy");
             Header { list: false, payload_length: self.encode_2718_len() }.encode(out);
         }
+
         self.encode_2718(out);
     }
 }

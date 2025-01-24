@@ -366,14 +366,7 @@ async fn test_seismic_precompiles_end_to_end() {
     assert_eq!(raw_tx1, raw_tx2);
     let raw_tx = Bytes::from_hex(raw_tx1).unwrap();
 
-    let ciphertext = match api.call(SeismicCallRequest::Bytes(raw_tx), None, None).await {
-        Ok(ciphertext) => ciphertext,
-        Err(e) => {
-            println!("error: {:?}", e);
-            return;
-        }
-    };
-
+    let ciphertext = match api.call(SeismicCallRequest::Bytes(raw_tx), None, None).unwrap();
     println!("output: {:?}", ciphertext);
 
     let decrypted = client_decrypt(&encryption_sk, ciphertext.as_ref(), tx_nonce);
