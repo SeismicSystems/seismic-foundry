@@ -2633,12 +2633,6 @@ impl EthApi {
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<u128> {
-        node_info!(
-            "do_estimate_gas request: {:?}, block_number: {:?}, overrides: {:?}",
-            request,
-            block_number,
-            overrides
-        );
         let block_request = self.block_request(block_number).await?;
         // check if the number predates the fork, if in fork mode
         if let BlockRequest::Number(number) = block_request {
@@ -2733,8 +2727,6 @@ impl EthApi {
         // execute the call without writing to db
         let ethres =
             self.backend.call_with_state(&state, call_to_estimate, fees.clone(), block_env.clone());
-
-        node_info!("do_estimate_gas_with_state result: {:?}", ethres);
 
         let gas_used = match ethres.try_into()? {
             GasEstimationCallResult::Success(gas) => Ok(gas),
