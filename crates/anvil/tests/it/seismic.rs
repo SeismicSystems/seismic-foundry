@@ -214,7 +214,7 @@ async fn test_seismic_precompiles_end_to_end() {
     let encryption_pk = Bytes::from(get_sample_secp256k1_pk().serialize());
     let encryption_pk_write_tx = FixedBytes::<33>::from(get_sample_secp256k1_pk().serialize());
     let to = receipt.unwrap().unwrap().contract_address.unwrap();
-    let nonce = provider.get_transaction_count(from).await.unwrap();
+    let tx_nonce = provider.get_transaction_count(from).await.unwrap();
     
     let private_key = B256::from_hex("7e34abdcd62eade2e803e0a8123a0015ce542b380537eff288d6da420bcc2d3b").unwrap();
     let encoded_input = get_input_data(PRECOMPILES_TEST_SET_AES_KEY_SELECTOR, private_key);
@@ -224,7 +224,7 @@ async fn test_seismic_precompiles_end_to_end() {
         .transaction_type(TxSeismic::TX_TYPE)
         .with_from(from)
         .with_to(to)
-        .with_nonce(nonce)
+        .with_nonce(tx_nonce)
         .with_gas_limit(410000)
         .with_chain_id(31337)
         .with_input(set_data);
@@ -248,8 +248,9 @@ async fn test_seismic_precompiles_end_to_end() {
     assert!(receipt.is_some());
     assert!(receipt.unwrap().status());
     
-    let nonce = provider.get_transaction_count(from).await.unwrap();
-    let message = Bytes::from("hello world".as_bytes());
+    let tx_nonce = provider.get_transaction_count(from).await.unwrap();
+    let message_string = "hello world";
+    let message = Bytes::from(message_string.as_bytes());
     type PlaintextType = Bytes;
 
     let encoded: Vec<u8> = PlaintextType::abi_encode(&message);
@@ -262,7 +263,7 @@ async fn test_seismic_precompiles_end_to_end() {
         .transaction_type(TxSeismic::TX_TYPE)
         .with_from(from)
         .with_to(to)
-        .with_nonce(nonce)
+        .with_nonce(tx_nonce)
         .with_gas_limit(410000)
         .with_chain_id(31337)
         .with_input(set_data);
@@ -347,7 +348,6 @@ async fn test_seismic_precompiles_end_to_end() {
         input: set_data.into(),
         encryption_pubkey: encryption_pk_write_tx,
     };
-
     
     // this OR
     let raw_tx1 = {
@@ -366,11 +366,18 @@ async fn test_seismic_precompiles_end_to_end() {
     assert_eq!(raw_tx1, raw_tx2);
     let raw_tx = Bytes::from_hex(raw_tx1).unwrap();
 
-    let ciphertext = match api.call(SeismicCallRequest::Bytes(raw_tx), None, None).unwrap();
+    let ciphertext = api.call(SeismicCallRequest::Bytes(raw_tx), None, None).await.unwrap();
     println!("output: {:?}", ciphertext);
 
-    let decrypted = client_decrypt(&encryption_sk, ciphertext.as_ref(), tx_nonce);
-    println!("decrypted: {:?}", decrypted);
+    let decrypted_output = client_decrypt(&encryption_sk, ciphertext.as_ref(), tx_nonce).unwrap();
+    let decrypted_string = {
+        let decrypted_bytes = Bytes::from(decrypted_output);
+        let decoded_bytes = PlaintextType::abi_decode(&decrypted_bytes, false).unwrap();
+        String::from_utf8(decoded_bytes.to_vec()).unwrap()    
+    };
+
+    assert_eq!(decrypted_string, message_string);
+
     //let mut seismic_tx = TxSeismic {
     //let mut seismic_tx = TxSeismic {
     //    chain_id: 31337u64,
