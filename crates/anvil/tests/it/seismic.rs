@@ -336,7 +336,7 @@ async fn test_seismic_precompiles_end_to_end() {
     println!("plaintext: {:?}", message);
     let nonce = provider.get_transaction_count(from).await.unwrap();
     let tx = TransactionRequest::default()
-        .transaction_type(TxLegacy::TX_TYPE as u8)
+        .transaction_type(TxSeismic::TX_TYPE as u8)
         .with_from(from)
         .with_to(to)
         .with_nonce(nonce)
@@ -347,11 +347,19 @@ async fn test_seismic_precompiles_end_to_end() {
 
     let seismic_tx = WithOtherFields::new(tx); 
 
-    //let transaction = api.sign_transaction(seismic_tx).await.unwrap();
-
-    //let final_transaction = SeismicCallRequest::Bytes(transaction.into());
-    let output = api.unsigned_call(seismic_tx, None, None).await.unwrap();
+    let transaction = api.sign_transaction(seismic_tx).await.unwrap();
+    let final_transaction = SeismicCallRequest::Bytes(Bytes::from_hex(transaction).unwrap());
+    let output = api.call(final_transaction, None, None).await.unwrap();
     println!("output: {:?}", output);
+
+    let decrypted_output = crypto::client_decrypt(&encryption_sk, output.as_ref(), nonce).unwrap();
+    let decrypted_string = {
+        let decrypted_bytes = Bytes::from(decrypted_output);
+        let decoded_bytes = PlaintextType::abi_decode(&decrypted_bytes, false).unwrap();
+        String::from_utf8(decoded_bytes.to_vec()).unwrap()    
+    };
+
+    assert_eq!(decrypted_string, "hello world");
     //let mut seismic_tx = TxSeismic {
     //    chain_id: 31337u64,
     //    nonce,
