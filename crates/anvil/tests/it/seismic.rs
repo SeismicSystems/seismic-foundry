@@ -7,7 +7,7 @@ use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::{OtherFields, WithOtherFields};
 use anvil::{spawn, NodeConfig};
-use anvil_core::eth::transaction::{crypto::{self, client_decrypt}, SeismicCallRequest, TypedTransaction};
+use anvil_core::eth::transaction::{crypto, SeismicCallRequest, TypedTransaction};
 use axum::extract::FromRef;
 use serde::{Deserialize, Serialize};
 use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Encodable2718};
@@ -352,7 +352,7 @@ async fn test_seismic_precompiles_end_to_end() {
     let ciphertext = api.call(SeismicCallRequest::Bytes(raw_tx), None, None).await.unwrap();
     println!("ciphertext: {:0x}", ciphertext);
 
-    let decrypted_output = client_decrypt(&encryption_sk, ciphertext.as_ref(), nonce).unwrap();
+    let decrypted_output = crypto::client_decrypt(&encryption_sk, ciphertext.as_ref(), nonce).unwrap();
     let decrypted_string = {
         let decrypted_bytes = Bytes::from(decrypted_output);
         let decoded_bytes = PlaintextType::abi_decode(&decrypted_bytes, false).unwrap();
