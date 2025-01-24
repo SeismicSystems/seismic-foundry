@@ -111,8 +111,9 @@ dependencies = [
 [[package]]
 name = "alloy-consensus"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
+ "alloy-dyn-abi",
  "alloy-eips",
  "alloy-primitives",
  "alloy-rlp",
@@ -123,12 +124,13 @@ dependencies = [
  "derive_more",
  "k256",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "alloy-consensus-any"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -141,7 +143,7 @@ dependencies = [
 [[package]]
 name = "alloy-contract"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
@@ -209,7 +211,7 @@ dependencies = [
 [[package]]
 name = "alloy-eips"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
@@ -226,7 +228,7 @@ dependencies = [
 [[package]]
 name = "alloy-genesis"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-primitives",
  "alloy-serde",
@@ -248,7 +250,7 @@ dependencies = [
 [[package]]
 name = "alloy-json-rpc"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -261,7 +263,7 @@ dependencies = [
 [[package]]
 name = "alloy-network"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-consensus-any",
@@ -285,7 +287,7 @@ dependencies = [
 [[package]]
 name = "alloy-network-primitives"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -297,7 +299,7 @@ dependencies = [
 [[package]]
 name = "alloy-node-bindings"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-genesis",
  "alloy-primitives",
@@ -344,7 +346,7 @@ dependencies = [
 [[package]]
 name = "alloy-provider"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-chains",
  "alloy-consensus",
@@ -386,7 +388,7 @@ dependencies = [
 [[package]]
 name = "alloy-pubsub"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives",
@@ -426,7 +428,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-client"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives",
@@ -451,7 +453,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-anvil",
@@ -466,7 +468,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-anvil"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -477,7 +479,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-any"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus-any",
  "alloy-rpc-types-eth",
@@ -487,7 +489,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-debug"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -496,7 +498,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-engine"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -513,7 +515,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-eth"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-consensus-any",
@@ -532,7 +534,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-trace"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -545,7 +547,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-txpool"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -556,7 +558,7 @@ dependencies = [
 [[package]]
 name = "alloy-serde"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -566,7 +568,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-primitives",
@@ -581,7 +583,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-aws"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -598,7 +600,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-gcp"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -615,7 +617,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-ledger"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -634,7 +636,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-local"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -652,7 +654,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-trezor"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -736,7 +738,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-json-rpc",
  "base64 0.22.1",
@@ -755,7 +757,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport-http"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-json-rpc",
  "alloy-transport",
@@ -769,7 +771,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport-ipc"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-json-rpc",
  "alloy-pubsub",
@@ -789,7 +791,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport-ws"
 version = "0.8.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=0108a19#0108a19b9fca991a6e63a25fcfb3077ffbee31d3"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-alloy.git?rev=533beecb#533beecba06ceb6aef233acd54857d3e5f7fdd2d"
 dependencies = [
  "alloy-pubsub",
  "alloy-transport",
@@ -989,7 +991,6 @@ dependencies = [
  "alloy-rlp",
  "alloy-rpc-types",
  "alloy-serde",
- "alloy-signer",
  "alloy-trie",
  "anyhow",
  "bytes",

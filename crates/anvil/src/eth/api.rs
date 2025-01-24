@@ -30,7 +30,7 @@ use crate::{
     revm::primitives::{BlobExcessGasAndPrice, Output},
     ClientFork, LoggingManager, Miner, MiningMode, StorageInfo,
 };
-use alloy_consensus::{transaction::eip4844::TxEip4844Variant, Account};
+use alloy_consensus::{transaction::eip4844::TxEip4844Variant, Account, SignableTransaction, TxSeismic};
 use alloy_dyn_abi::TypedData;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_network::{
@@ -66,7 +66,7 @@ use anvil_core::{
     eth::{
         block::BlockInfo,
         transaction::{
-            seismic::{SeismicCallRequest, SeismicTxTypedData, TypedDataRequest},
+            seismic::{SeismicCallRequest, TypedDataRequest},
             transaction_request_to_typed, PendingTransaction, ReceiptResponse, TypedTransaction,
             TypedTransactionRequest,
         },
@@ -1181,18 +1181,26 @@ impl EthApi {
                 self.seismic_call(request, block_number, overrides, encryption_pubkey).await
             }
             SeismicCallRequest::TypedData(TypedDataRequest { data, signature }) => {
-                let tx_data = SeismicTxTypedData::from_typed_data(data).map_err(|e| {
-                    BlockchainError::Message(format!("Failed to decode typed data: {e:?}"))
+                let tx: TxSeismic = data.try_into().map_err(|e| {
+                    BlockchainError::Message(format!("Failed to decode typed data into seismic tx: {e:?}"))
                 })?;
                 let encryption_pubkey = PublicKey::from_slice(
-                    tx_data.tx.encryption_pubkey.as_slice(),
+                    tx.encryption_pubkey.as_slice(),
                 )
                 .map_err(|e| {
                     BlockchainError::Message(format!(
                         "Failed to parse encryption public key: {e:?}"
                     ))
                 })?;
-                let request = WithOtherFields::new(tx_data.tx.into());
+                
+                let signed_tx = tx.into_signed(signature);
+                let sender = signed_tx.recover_signer().map_err(|e| {
+                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+                })?;
+
+                let tx = signed_tx.into_parts().0;
+                let mut request: WithOtherFields<TransactionRequest>  = WithOtherFields::new(tx.into());
+                request.inner.from = Some(sender);
                 self.seismic_call(request, block_number, overrides, encryption_pubkey).await
             }
         }

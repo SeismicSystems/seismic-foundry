@@ -1,6 +1,5 @@
-use alloy_consensus::TxSeismic;
-use alloy_dyn_abi::{Eip712Domain, Resolver, TypedData};
-use alloy_primitives::{Address, Bytes, FixedBytes, PrimitiveSignature};
+use alloy_dyn_abi::TypedData;
+use alloy_primitives::{Bytes, PrimitiveSignature};
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use serde::{Deserialize, Serialize};
@@ -11,7 +10,21 @@ pub struct TypedDataRequest {
     pub signature: PrimitiveSignature,
 }
 
-/// Either a normal ETH call or a signed/serialized one
+// Either normal raw tx or typed data with signature
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
+pub enum SeismicRawTxRequest {
+    Bytes(Bytes),
+    TypedData(TypedDataRequest),
+}
+
+impl Into<SeismicRawTxRequest> for Bytes {
+    fn into(self) -> SeismicRawTxRequest {
+        SeismicRawTxRequest::Bytes(self)
+    }
+}
+
+/// Either a normal ETH call, raw tx, or typed data with signature
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(untagged)]
 pub enum SeismicCallRequest {
@@ -23,15 +36,14 @@ pub enum SeismicCallRequest {
     Bytes(Bytes),
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(untagged)]
-pub enum SeismicSignature {
-    // r, s, y_parity
-    Primitive(PrimitiveSignature),
-    // raw bytes
-    // Bytes(Bytes),
+impl Into<SeismicCallRequest> for Bytes {
+    fn into(self) -> SeismicCallRequest {
+        SeismicCallRequest::Bytes(self)
+    }
 }
 
+
+/*
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SeismicTxTypedData {
     domain: Eip712Domain,
@@ -60,4 +72,4 @@ impl SeismicTxTypedData {
         })
     }
 }
-
+*/
