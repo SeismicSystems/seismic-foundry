@@ -1,5 +1,5 @@
-use alloy_consensus::{transaction::TxSeismic, SignableTransaction, Signed, TypedTransaction};
-use alloy_dyn_abi::{DynSolType, EventExt};
+use alloy_consensus::{transaction::TxSeismic, SignableTransaction, Signed, TxLegacy};
+use alloy_dyn_abi::EventExt;
 use alloy_json_abi::{Event, EventParam};
 use alloy_network::{ReceiptResponse, TransactionBuilder, TxSigner};
 use alloy_primitives::{aliases::{B96, U96}, hex::{self, FromHex}, Bytes, FixedBytes, IntoLogData, TxKind, B256, U256};
@@ -7,11 +7,14 @@ use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::{OtherFields, WithOtherFields};
 use anvil::{spawn, NodeConfig};
-use anvil_core::eth::transaction::{crypto, SeismicCallRequest};
-use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Encodable2718};
+use anvil_core::eth::transaction::{crypto, SeismicCallRequest, TypedTransaction};
+use axum::extract::FromRef;
 use serde::{Deserialize, Serialize};
+use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Encodable2718};
+use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
+use bytes::BufMut;
 use std::fs;
-use tee_service_api::{get_sample_secp256k1_pk, get_sample_secp256k1_sk};
+use tee_service_api::{aes_decrypt, aes_encrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk};
 use alloy_sol_types::{sol, SolValue, SolCall};
 
 /// Seismic specific transaction field(s)
@@ -317,39 +320,66 @@ async fn test_seismic_precompiles_end_to_end() {
     let ciphertext = Bytes::from(result.body[0].abi_encode_packed());
     let call = Encryption::decryptCall{
         nonce, 
-        ciphertext,
+        ciphertext: ciphertext.clone(),
     };
 
     println!("result size: {:?}", result.body[0].abi_packed_encoded_size());
     println!("result: {:?}", hex::encode(call.abi_encode()));
 
     let set_data = crypto::client_encrypt(&encryption_sk, &call.abi_encode(), 3).unwrap();
+    let secp_private = secp256k1::SecretKey::from_slice(private_key.as_ref()).unwrap();
+    let key: &[u8; 32] = &secp_private.secret_bytes()[0..32].try_into().unwrap();
+    println!("ciphertext: {:?}", hex::encode(ciphertext.to_vec()));
+    let decrypted = aes_decrypt(key.into(), &ciphertext, result.indexed[0].abi_encode_packed()).unwrap();
+    
+    println!("decrypted: {:?}", hex::encode(decrypted));
+    println!("plaintext: {:?}", message);
     let nonce = provider.get_transaction_count(from).await.unwrap();
+    let tx = TransactionRequest::default()
+        .transaction_type(TxLegacy::TX_TYPE as u8)
+        .with_from(from)
+        .with_to(to)
+        .with_nonce(nonce)
+        .with_gas_limit(410000)
+        .with_chain_id(31337)
+        .with_input(set_data)
+        .encryption_pubkey(encryption_pk_write_tx);
 
-    let mut seismic_tx = TxSeismic {
-        chain_id: 31337u64,
-        nonce,
-        gas_price: 1000000000,
-        gas_limit: 410000,
-        to: TxKind::Call(to),
-        value: U256::ZERO,
-        input: set_data.into(),
-        encryption_pubkey: encryption_pk_write_tx,
-    };
-    
-    let signature = accounts[0].sign_transaction(&mut seismic_tx).await.unwrap();
-    let signed_tx: Signed<TxSeismic> = seismic_tx.into_signed(signature);
-    let typed_tx = TypedTransaction::Seismic(signed_tx.tx().clone());
+    let seismic_tx = WithOtherFields::new(tx); 
 
-    //    Or if you want to encode the signed version:
-    let mut rlp_encoded = Vec::new();
-    signed_tx.rlp_encode(&mut rlp_encoded);
+    //let transaction = api.sign_transaction(seismic_tx).await.unwrap();
 
-    let encoded_bytes = Bytes::from(rlp_encoded);
+    //let final_transaction = SeismicCallRequest::Bytes(transaction.into());
+    let output = api.unsigned_call(seismic_tx, None, None).await.unwrap();
+    println!("output: {:?}", output);
+    //let mut seismic_tx = TxSeismic {
+    //    chain_id: 31337u64,
+    //    nonce,
+    //    gas_price: 1000000000,
+    //    gas_limit: 410000,
+    //    to: TxKind::Call(to),
+    //    value: U256::ZERO,
+    //    input: set_data.into(),
+    //    encryption_pubkey: encryption_pk_write_tx,
+    //};
+    //
+    //let signature = accounts[0].sign_transaction(&mut seismic_tx).await.unwrap();
+    //println!("account private key: {:?}", hex::encode(accounts[0].credential().to_bytes()));
+    //let signed_tx: Signed<TxSeismic> = seismic_tx.into_signed(signature);
+    //let typed_tx = TypedTransaction::Seismic(signed_tx);
+    //println!("typed_tx: {:?}", typed_tx);
 
-    let final_request = SeismicCallRequest::Bytes(encoded_bytes);
+    ////    Or if you want to encode the signed version:
+    //let mut encoded_tx = Vec::new();
+    //typed_tx.encode(&mut encoded_tx);
 
-    let actual_plaintext = api.call(final_request, None, None).await.unwrap();
-    
-    println!("actual_plaintext: {:?}", actual_plaintext);
+    //let encoded_bytes = Bytes::from(encoded_tx.clone());
+
+    //println!("encoded_bytes: {:?}", encoded_bytes);
+    //let encoded_prefixed = alloy_primitives::hex::encode_prefixed(encoded_bytes.as_ref());
+    //let final_request = SeismicCallRequest::Bytes(encoded_prefixed.into());
+
+    //let actual_plaintext = api.call(final_request, None, None).await.unwrap();
+    //
+    //println!("actual_plaintext: {:?}", actual_plaintext);
 }
