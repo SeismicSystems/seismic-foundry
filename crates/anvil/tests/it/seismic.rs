@@ -336,15 +336,15 @@ async fn test_seismic_precompiles_end_to_end() {
     println!("decrypted: {:?}", hex::encode(decrypted));
     println!("plaintext: {:?}", message);
     let nonce = provider.get_transaction_count(from).await.unwrap();
-    let mut tx = TransactionRequest::default()
+    let tx = TransactionRequest::default()
         .transaction_type(TxSeismic::TX_TYPE as u8)
         .with_from(from)
         .with_to(to)
         .with_nonce(nonce)
         .with_gas_limit(410000)
         .with_chain_id(31337)
-        .with_input(set_data);
-    tx.encryption_pubkey = Some(encryption_pk_write_tx);
+        .with_input(set_data)
+        .with_encryption_pubkey(encryption_pk_write_tx);
 
     let seismic_tx = WithOtherFields::new(tx); 
     let transaction = api.sign_transaction(seismic_tx).await.unwrap();
