@@ -69,7 +69,8 @@ use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
-        crypto, optimism::DepositTransaction, DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse, TransactionInfo, TypedReceipt, TypedTransaction
+        crypto, optimism::DepositTransaction, DepositReceipt, MaybeImpersonatedTransaction,
+        PendingTransaction, ReceiptResponse, TransactionInfo, TypedReceipt, TypedTransaction,
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
 };
@@ -1382,7 +1383,7 @@ impl Backend {
                     nonce,
                     sidecar: _,
                     chain_id: _,
-                    transaction_type, 
+                    transaction_type,
                     encryption_pubkey,
                     .. // Rest of the gas fees related fields are taken from `fee_details`
                 },
@@ -1419,9 +1420,10 @@ impl Backend {
 
         let mut data = input.into_input().unwrap_or_default();
 
-        if transaction_type == Some(TxSeismic::TX_TYPE) && !data.is_empty() {   
+        if transaction_type == Some(TxSeismic::TX_TYPE) && !data.is_empty() {
             let nonce = nonce.expect("nonce is required for seismic transactions");
-            let encryption_pubkey = encryption_pubkey.expect("encryption pubkey is required for seismic transactions");
+            let encryption_pubkey =
+                encryption_pubkey.expect("encryption pubkey is required for seismic transactions");
 
             let public_key = PublicKey::from_slice(encryption_pubkey.as_slice())
                 .expect("failed to parse public key from bytes");
@@ -1451,7 +1453,7 @@ impl Backend {
                     None => TxKind::Create,
                 },
                 value: value.unwrap_or_default(),
-                data: data,
+                data,
                 chain_id: None,
                 // set nonce to None so that the correct nonce is chosen by the EVM
                 nonce: None,
