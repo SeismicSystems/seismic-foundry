@@ -4,7 +4,7 @@ use crate::eth::transaction::optimism::DepositTransaction;
 use alloy_consensus::{
     transaction::{
         eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
-        EncryptionPublicKey, TxEip7702, TxSeismic,
+        TxEip7702, TxSeismic,
     },
     Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559, TxEip2930,
     TxEnvelope, TxLegacy, TxReceipt, Typed2718,
