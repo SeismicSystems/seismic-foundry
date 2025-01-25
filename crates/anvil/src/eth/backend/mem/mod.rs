@@ -1340,15 +1340,14 @@ impl Backend {
         fee_details: FeeDetails,
         block_request: Option<BlockRequest>,
         overrides: Option<StateOverride>,
-        encryption_pubkey: PublicKey,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         self.with_database_at(block_request, |state, block| {
             let block_number = block.number.to::<u64>();
             let (exit, out, gas, state) = match overrides {
-                None => self.seismic_call_with_state(state.as_dyn(), request, fee_details, block, encryption_pubkey),
+                None => self.seismic_call_with_state(state.as_dyn(), request, fee_details, block),
                 Some(overrides) => {
                     let state = state::apply_state_override(overrides.into_iter().collect(), state)?;
-                    self.seismic_call_with_state(state.as_dyn(), request, fee_details, block, encryption_pubkey)
+                    self.seismic_call_with_state(state.as_dyn(), request, fee_details, block)
                 },
             }?;
             trace!(target: "backend", "seismic call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
@@ -1515,36 +1514,37 @@ impl Backend {
         request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
-        encryption_pubkey: PublicKey,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let nonce = request.nonce.unwrap_or_default();
         let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
-        if !is_seismic_tx {
-            warn!("Non-seismic tx passed to seismic_call. Likely a bug");
-        }
-
-        let mut inspector = self.build_inspector();
-        let env = self.build_call_env(request, fee_details, block_env);
-        let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
-        let ResultAndState { result, state } = evm.transact()?;
-        let (exit_reason, gas_used, out) = match result {
-            ExecutionResult::Success { reason, gas_used, output, .. } => {
-                (reason.into(), gas_used, Some(output))
+        let encryption_pubkey = match (is_seismic_tx, request.encryption_pubkey) {
+            (false, _) => {
+                warn!("Non-seismic tx passed to seismic_call. Likely a bug");
+                None
             }
-            ExecutionResult::Revert { gas_used, output } => {
-                (InstructionResult::Revert, gas_used, Some(Output::Call(output)))
+            (true, Some(encryption_pubkey)) => {
+                let pk_res = PublicKey::from_slice(encryption_pubkey.as_slice());
+                let pk = pk_res.map_err(|_| {
+                    BlockchainError::Message("Failed to parse encryption public key".to_string())
+                })?;
+                Some(pk)
             }
-            ExecutionResult::Halt { reason, gas_used } => (reason.into(), gas_used, None),
+            (true, None) => {
+                return Err(BlockchainError::Message(
+                    "Encryption pubkey is required for seismic transactions".to_string(),
+                ));
+            }
         };
-        drop(evm);
-        inspector.print_logs();
+
+        let (exit_reason, out, gas_used, state) =
+            self.call_with_state(state, request, fee_details, block_env)?;
 
         if !is_seismic_tx || out.is_none() {
-            return Ok((exit_reason, out, gas_used as u128, state));
+            return Ok((exit_reason, out, gas_used, state));
         }
 
         let encrypted = anvil_core::eth::transaction::crypto::server_encrypt(
-            &encryption_pubkey,
+            &encryption_pubkey.unwrap(),
             out.unwrap().data().as_ref(),
             nonce,
         )

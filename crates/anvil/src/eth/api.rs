@@ -1148,7 +1148,6 @@ impl EthApi {
         request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
-        encryption_pubkey: PublicKey,
     ) -> Result<Bytes> {
         node_info!("eth_call (signed)");
         let fees = FeeDetails::new(
@@ -1161,10 +1160,8 @@ impl EthApi {
 
         let block_request = self.block_request(block_number).await?;
         self.on_blocking_task(|this| async move {
-            let (exit, out, gas, _) = this
-                .backend
-                .seismic_call(request, fees, Some(block_request), overrides, encryption_pubkey)
-                .await?;
+            let (exit, out, gas, _) =
+                this.backend.seismic_call(request, fees, Some(block_request), overrides).await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })
@@ -1197,8 +1194,7 @@ impl EthApi {
                         if tried_to_spoof_from {
                             // We’ll embed the original error’s text (which may include
                             // revert data) plus a multiline explanation:
-                            Err(BlockchainError::Message(format!(
-"Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
+                            Err(BlockchainError::Message(format!("Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
                             orig = original_err
                         )))
                         } else {
@@ -1207,6 +1203,23 @@ impl EthApi {
                         }
                     }
                 }
+            }
+            SeismicCallRequest::TypedData(TypedDataRequest { data, signature }) => {
+                let tx: TxSeismic = data.try_into().map_err(|e| {
+                    BlockchainError::Message(format!(
+                        "Failed to decode typed data into seismic tx: {e:?}"
+                    ))
+                })?;
+                let signed_seismic_tx = tx.into_signed(signature);
+                // NOTE: this is recover_caller, not recover_signer
+                let sender = signed_seismic_tx.recover_caller().map_err(|e| {
+                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+                })?;
+                let tx = signed_seismic_tx.into_parts().0;
+                let mut request: WithOtherFields<TransactionRequest> =
+                    WithOtherFields::new(tx.into());
+                request.inner.from = Some(sender);
+                self.seismic_call(request, block_number, overrides).await
             }
             SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
@@ -1220,39 +1233,14 @@ impl EthApi {
                 let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
                     "Can only make signedCall with Seismic Transactions".to_string(),
                 ))?;
-                let seismic_tx = signed_seismic_tx.tx();
-                let encryption_pubkey_bytes = seismic_tx.encryption_pubkey;
-                let encryption_pubkey = PublicKey::from_slice(encryption_pubkey_bytes.as_slice())
-                    .map_err(|_| {
-                    BlockchainError::Message("Failed to parse encryption public key".to_string())
-                })?;
-                let request = WithOtherFields::new(tx);
-                self.seismic_call(request, block_number, overrides, encryption_pubkey).await
-            }
-            SeismicCallRequest::TypedData(TypedDataRequest { data, signature }) => {
-                let tx: TxSeismic = data.try_into().map_err(|e| {
-                    BlockchainError::Message(format!(
-                        "Failed to decode typed data into seismic tx: {e:?}"
-                    ))
-                })?;
-                let encryption_pubkey = PublicKey::from_slice(tx.encryption_pubkey.as_slice())
-                    .map_err(|e| {
-                        BlockchainError::Message(format!(
-                            "Failed to parse encryption public key: {e:?}"
-                        ))
-                    })?;
-
-                let signed_tx = tx.into_signed(signature);
-                let sender = signed_tx.recover_signer().map_err(|e| {
+                // unlike above, this can be either recover_signer or recover_caller,
+                // since message_version = 0 for these
+                let sender = signed_seismic_tx.recover_signer().map_err(|e| {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
-                println!("sender: {:?}", sender);
-
-                let tx = signed_tx.into_parts().0;
-                let mut request: WithOtherFields<TransactionRequest> =
-                    WithOtherFields::new(tx.into());
+                let mut request = WithOtherFields::new(tx);
                 request.inner.from = Some(sender);
-                self.seismic_call(request, block_number, overrides, encryption_pubkey).await
+                self.seismic_call(request, block_number, overrides).await
             }
         }
     }
