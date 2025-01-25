@@ -675,15 +675,6 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
         let essentials = value.essentials();
         let tx_type = value.r#type();
 
-        let (encryption_pubkey, message_version) = match &value {
-            TypedTransaction::Seismic(tx) => {
-                let encryption_pubkey = tx.tx().encryption_pubkey;
-                let message_version = tx.tx().message_version;
-                (Some(encryption_pubkey), Some(message_version))
-            }
-            _ => (None, None),
-        };
-
         Ok(Self {
             from: Some(from),
             to: Some(value.kind()),
@@ -697,8 +688,8 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
             nonce: Some(essentials.nonce),
             chain_id: essentials.chain_id,
             transaction_type: tx_type,
-            encryption_pubkey,
-            message_version,
+            encryption_pubkey: value.encryption_pubkey(),
+            message_version: value.message_version(),
             ..Default::default()
         })
     }
@@ -1107,6 +1098,20 @@ impl TypedTransaction {
     pub fn seismic(self) -> Option<Signed<TxSeismic>> {
         match self {
             Self::Seismic(tx) => Some(tx),
+            _ => None,
+        }
+    }
+
+    pub fn encryption_pubkey(&self) -> Option<alloy_consensus::transaction::EncryptionPublicKey> {
+        match self {
+            Self::Seismic(tx) => Some(tx.tx().encryption_pubkey),
+            _ => None,
+        }
+    }
+
+    pub fn message_version(&self) -> Option<u8> {
+        match self {
+            Self::Seismic(tx) => Some(tx.tx().message_version),
             _ => None,
         }
     }
