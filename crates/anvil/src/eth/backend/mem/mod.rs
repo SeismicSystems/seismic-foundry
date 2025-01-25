@@ -1516,7 +1516,7 @@ impl Backend {
         fee_details: FeeDetails,
         block_env: BlockEnv,
         encryption_pubkey: PublicKey,
-    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {        
+    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let nonce = request.nonce.unwrap_or_default();
         let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
         if !is_seismic_tx {

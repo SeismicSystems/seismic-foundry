@@ -681,11 +681,9 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
                 let message_version = tx.tx().message_version;
                 (Some(encryption_pubkey), Some(message_version))
             }
-            _ => {
-                (None, None)
-            }
+            _ => (None, None),
         };
-        
+
         Ok(Self {
             from: Some(from),
             to: Some(value.kind()),
@@ -891,7 +889,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: t.tx().chain_id,
                 access_list: Default::default(),
-                encryption_pubkey: None,
             },
             Self::EIP2930(t) => TransactionEssentials {
                 kind: t.tx().to,
@@ -906,7 +903,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: t.tx().access_list.clone(),
-                encryption_pubkey: None,
             },
             Self::EIP1559(t) => TransactionEssentials {
                 kind: t.tx().to,
@@ -921,7 +917,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: t.tx().access_list.clone(),
-                encryption_pubkey: None,
             },
             Self::EIP4844(t) => TransactionEssentials {
                 kind: TxKind::Call(t.tx().tx().to),
@@ -936,7 +931,6 @@ impl TypedTransaction {
                 value: t.tx().tx().value,
                 chain_id: Some(t.tx().tx().chain_id),
                 access_list: t.tx().tx().access_list.clone(),
-                encryption_pubkey: None,
             },
             Self::EIP7702(t) => TransactionEssentials {
                 kind: TxKind::Call(t.tx().to),
@@ -951,7 +945,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: t.tx().access_list.clone(),
-                encryption_pubkey: None,
             },
             Self::Deposit(t) => TransactionEssentials {
                 kind: t.kind,
@@ -966,7 +959,6 @@ impl TypedTransaction {
                 value: t.value,
                 chain_id: t.chain_id(),
                 access_list: Default::default(),
-                encryption_pubkey: None,
             },
             Self::Seismic(t) => TransactionEssentials {
                 kind: t.tx().kind(),
@@ -981,7 +973,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: Default::default(),
-                encryption_pubkey: Some(t.tx().encryption_pubkey),
             },
         }
     }
@@ -1234,7 +1225,6 @@ pub struct TransactionEssentials {
     pub value: U256,
     pub chain_id: Option<u64>,
     pub access_list: AccessList,
-    pub encryption_pubkey: Option<EncryptionPublicKey>,
 }
 
 /// Represents all relevant information of an executed transaction
