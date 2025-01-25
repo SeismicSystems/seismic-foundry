@@ -37,7 +37,6 @@ use std::{
 
 pub mod crypto;
 pub mod optimism;
-pub mod seismic;
 
 pub trait SeismicCompatible:
     Encodable

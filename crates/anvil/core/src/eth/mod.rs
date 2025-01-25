@@ -12,7 +12,6 @@ use alloy_rpc_types::{
     BlockId, BlockNumberOrTag as BlockNumber, Filter, Index,
 };
 use alloy_serde::WithOtherFields;
-use transaction::seismic::SeismicRawTxRequest;
 pub mod block;
 pub mod proof;
 pub mod subscription;
@@ -180,11 +179,11 @@ pub enum EthRequest {
     EthSendTransaction(Box<WithOtherFields<TransactionRequest>>),
 
     #[cfg_attr(feature = "serde", serde(rename = "eth_sendRawTransaction", with = "sequence"))]
-    EthSendRawTransaction(SeismicRawTxRequest),
+    EthSendRawTransaction(alloy_rpc_types::SeismicRawTxRequest),
 
     #[cfg_attr(feature = "serde", serde(rename = "eth_call"))]
     EthCall(
-        crate::eth::transaction::seismic::SeismicCallRequest,
+        alloy_rpc_types::SeismicCallRequest,
         #[cfg_attr(feature = "serde", serde(default))] Option<BlockId>,
         #[cfg_attr(feature = "serde", serde(default))] Option<StateOverride>,
     ),
