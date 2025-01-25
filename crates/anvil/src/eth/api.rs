@@ -1246,6 +1246,7 @@ impl EthApi {
                 let sender = signed_tx.recover_signer().map_err(|e| {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
+                println!("sender: {:?}", sender);
 
                 let tx = signed_tx.into_parts().0;
                 let mut request: WithOtherFields<TransactionRequest> =

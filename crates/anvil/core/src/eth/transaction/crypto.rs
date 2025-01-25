@@ -37,7 +37,7 @@ pub fn decrypt(
     if ciphertext.is_empty() {
         // in practice if they send empty plaintext,
         // they're sending a normal tx (e.g. just send native token).
-        // we probably want to allow this    
+        // we probably want to allow this
         return Ok(vec![])
     }
     let shared_secret = SharedSecret::new(public_key, secret_key);
