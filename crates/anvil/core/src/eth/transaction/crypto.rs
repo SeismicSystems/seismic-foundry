@@ -17,6 +17,9 @@ pub fn encrypt(
     nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
     if plaintext.is_empty() {
+        // in practice if they send empty plaintext,
+        // they're sending a normal tx (e.g. just send native token).
+        // we probably want to allow this
         return Ok(vec![])
     }
     let shared_secret = SharedSecret::new(public_key, secret_key);
@@ -31,6 +34,12 @@ pub fn decrypt(
     ciphertext: &[u8],
     nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
+    if ciphertext.is_empty() {
+        // in practice if they send empty plaintext,
+        // they're sending a normal tx (e.g. just send native token).
+        // we probably want to allow this    
+        return Ok(vec![])
+    }
     let shared_secret = SharedSecret::new(public_key, secret_key);
     let aes_key = derive_aes_key(&shared_secret)
         .map_err(|e| anyhow::anyhow!("Error deriving AES key: {:?}", e))?;
@@ -42,9 +51,6 @@ pub fn server_decrypt(
     ciphertext: &[u8],
     nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
-    if ciphertext.is_empty() {
-        return Ok(vec![])
-    }
     decrypt(&ENCRYPTION_KEY, public_key, ciphertext, nonce)
 }
 
