@@ -1159,8 +1159,6 @@ impl EthApi {
         )?
         .or_zero_fees();
 
-        println!("seismic_call: {:#?}", request);
-
         let block_request = self.block_request(block_number).await?;
         self.on_blocking_task(|this| async move {
             let (exit, out, gas, _) = this
