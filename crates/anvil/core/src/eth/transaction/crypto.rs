@@ -16,6 +16,9 @@ pub fn encrypt(
     plaintext: &[u8],
     nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
+    if plaintext.is_empty() {
+        return Ok(vec![])
+    }
     let shared_secret = SharedSecret::new(public_key, secret_key);
     let aes_key = derive_aes_key(&shared_secret)
         .map_err(|e| anyhow::anyhow!("Error deriving AES key: {:?}", e))?;
@@ -39,6 +42,9 @@ pub fn server_decrypt(
     ciphertext: &[u8],
     nonce: impl Into<Nonce>,
 ) -> anyhow::Result<Vec<u8>> {
+    if ciphertext.is_empty() {
+        return Ok(vec![])
+    }
     decrypt(&ENCRYPTION_KEY, public_key, ciphertext, nonce)
 }
 

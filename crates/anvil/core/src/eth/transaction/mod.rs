@@ -674,6 +674,18 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
             value.recover().map_err(|_| ConversionError::Custom("InvalidSignature".to_string()))?;
         let essentials = value.essentials();
         let tx_type = value.r#type();
+
+        let (encryption_pubkey, message_version) = match &value {
+            TypedTransaction::Seismic(tx) => {
+                let encryption_pubkey = tx.tx().encryption_pubkey;
+                let message_version = tx.tx().message_version;
+                (Some(encryption_pubkey), Some(message_version))
+            }
+            _ => {
+                (None, None)
+            }
+        };
+        
         Ok(Self {
             from: Some(from),
             to: Some(value.kind()),
@@ -687,6 +699,8 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
             nonce: Some(essentials.nonce),
             chain_id: essentials.chain_id,
             transaction_type: tx_type,
+            encryption_pubkey,
+            message_version,
             ..Default::default()
         })
     }
