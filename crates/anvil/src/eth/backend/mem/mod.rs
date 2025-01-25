@@ -1516,15 +1516,14 @@ impl Backend {
         fee_details: FeeDetails,
         block_env: BlockEnv,
         encryption_pubkey: PublicKey,
-    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
-        let mut inspector = self.build_inspector();
-        
+    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {        
         let nonce = request.nonce.unwrap_or_default();
         let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
         if !is_seismic_tx {
             warn!("Non-seismic tx passed to seismic_call. Likely a bug");
         }
 
+        let mut inspector = self.build_inspector();
         let env = self.build_call_env(request, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;
