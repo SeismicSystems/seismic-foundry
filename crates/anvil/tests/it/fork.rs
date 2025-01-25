@@ -873,11 +873,11 @@ async fn test_fork_call() {
 
     let res1 = api
         .call(
-            SeismicCallRequest::TransactionRequest(WithOtherFields::new(TransactionRequest {
+            WithOtherFields::new(TransactionRequest {
                 to: Some(TxKind::from(to)),
                 input: input.into(),
                 ..Default::default()
-            })),
+            }),
             None,
             None,
         )
@@ -1319,11 +1319,11 @@ async fn test_fork_execution_reverted() {
 
     let resp = api
         .call(
-            SeismicCallRequest::TransactionRequest(WithOtherFields::new(TransactionRequest {
+            WithOtherFields::new(TransactionRequest {
                 to: Some(TxKind::from(address!("Fd6CC4F251eaE6d02f9F7B41D1e80464D3d2F377"))),
                 input: TransactionInput::new(bytes!("8f283b3c")),
                 ..Default::default()
-            })),
+            }),
             Some(target.into()),
             None,
         )

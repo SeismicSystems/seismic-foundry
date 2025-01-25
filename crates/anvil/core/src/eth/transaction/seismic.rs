@@ -18,12 +18,6 @@ pub enum SeismicRawTxRequest {
     TypedData(TypedDataRequest),
 }
 
-impl Into<SeismicRawTxRequest> for Bytes {
-    fn into(self) -> SeismicRawTxRequest {
-        SeismicRawTxRequest::Bytes(self)
-    }
-}
-
 /// Either a normal ETH call, raw tx, or typed data with signature
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(untagged)]
@@ -39,6 +33,18 @@ pub enum SeismicCallRequest {
 impl Into<SeismicCallRequest> for Bytes {
     fn into(self) -> SeismicCallRequest {
         SeismicCallRequest::Bytes(self)
+    }
+}
+
+impl Into<SeismicCallRequest> for TransactionRequest {
+    fn into(self) -> SeismicCallRequest {
+        SeismicCallRequest::TransactionRequest(WithOtherFields::new(self))
+    }
+}
+
+impl Into<SeismicCallRequest> for TypedDataRequest {
+    fn into(self) -> SeismicCallRequest {
+        SeismicCallRequest::TypedData(self)
     }
 }
 

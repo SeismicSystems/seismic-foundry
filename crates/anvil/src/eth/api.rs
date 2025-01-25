@@ -1176,11 +1176,11 @@ impl EthApi {
     /// Handler for ETH RPC call: `eth_call`
     pub async fn call(
         &self,
-        request: SeismicCallRequest,
+        request: impl Into<SeismicCallRequest>,
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<Bytes> {
-        match request {
+        match request.into() {
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 let user_provided_from = tx.from;
 
