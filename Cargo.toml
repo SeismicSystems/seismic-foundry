@@ -302,9 +302,9 @@ tee_service_api = { git = "ssh://git@github.com/SeismicSystems/TEEService.git", 
 foundry-fork-db = { git = "ssh://git@github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "cd54596" }
 
 # seismic-revm
-revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "2f29cb0" }
-revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "2f29cb0" }
-revm-interpreter = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "2f29cb0" }
+revm = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "df323e5c65cecb53a23808cd90e5185f98c2440c" }
+revm-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "df323e5c65cecb53a23808cd90e5185f98c2440c" }
+revm-interpreter = { git = "ssh://git@github.com/SeismicSystems/seismic-revm.git", rev = "df323e5c65cecb53a23808cd90e5185f98c2440c" }
 
 # seismic-revm-inspectors
 revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "19828b8" }
