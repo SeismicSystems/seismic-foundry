@@ -157,7 +157,7 @@ where
         db: &mut ccx.ecx.db as &mut dyn DatabaseExt,
         error,
         l1_block_info,
-        kernel: revm::seismic::new_test_kernel_box(&ccx.ecx.env)
+        kernel: revm::seismic::Kernel::test_default()
     };
 
     let mut evm = new_evm_with_existing_context(inner, &mut *inspector);
