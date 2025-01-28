@@ -80,6 +80,10 @@ pub fn concat_input_data(selector: &str, value: Bytes) -> Bytes {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_transaction() {
     let (api, handle) = spawn(NodeConfig::test()).await;
+
+    // set automine to false
+    api.anvil_set_auto_mine(false).await.unwrap();
+
     let provider = handle.http_provider();
     let deployer = handle.dev_accounts().next().unwrap();
 
@@ -91,7 +95,7 @@ async fn test_seismic_transaction() {
     let pending = provider.send_transaction(deploy_tx).await.unwrap();
 
     // mine block
-    api.evm_mine(None).await.unwrap();
+    api.mine_one().await;
 
     let receipt =
         provider.get_transaction_receipt(pending.tx_hash().to_owned()).await.unwrap().unwrap();
@@ -124,7 +128,7 @@ async fn test_seismic_transaction() {
 
     let pending_set = provider.send_transaction(seismic_tx).await.unwrap();
 
-    api.evm_mine(None).await.unwrap();
+    api.mine_one().await;
 
     let receipt: Option<
         WithOtherFields<
@@ -155,7 +159,7 @@ async fn test_seismic_transaction() {
 
     let pending_increment = provider.send_transaction(seismic_tx).await.unwrap();
 
-    api.evm_mine(None).await.unwrap();
+    api.mine_one().await;
 
     let receipt =
         provider.get_transaction_receipt(pending_increment.tx_hash().to_owned()).await.unwrap();
@@ -180,7 +184,7 @@ async fn test_seismic_transaction() {
 
     let pending_get = provider.send_transaction(seismic_tx).await.unwrap();
 
-    api.evm_mine(None).await.unwrap();
+    api.mine_one().await;
 
     let receipt = provider.get_transaction_receipt(pending_get.tx_hash().to_owned()).await.unwrap();
     assert!(receipt.is_some());
