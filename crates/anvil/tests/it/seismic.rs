@@ -1,21 +1,18 @@
-use alloy_consensus::{transaction::TxSeismic, SignableTransaction, Signed, TxLegacy};
+use alloy_consensus::transaction::TxSeismic;
 use alloy_dyn_abi::EventExt;
 use alloy_json_abi::{Event, EventParam};
-use alloy_network::{ReceiptResponse, TransactionBuilder, TxSigner};
-use alloy_primitives::{aliases::{B96, U96}, hex::{self, FromHex}, Address, Bytes, FixedBytes, IntoLogData, TxKind, B256, U256};
+use alloy_network::{ReceiptResponse, TransactionBuilder};
+use alloy_primitives::{aliases::{B96, U96}, hex::{self, FromHex}, Address, Bytes, FixedBytes, IntoLogData, B256, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::{OtherFields, WithOtherFields};
 use anvil::{eth::EthApi, spawn, NodeConfig};
-use anvil_core::eth::transaction::{crypto, SeismicCallRequest, TypedTransaction};
+use anvil_core::eth::transaction::{crypto, SeismicCallRequest};
 use foundry_common::provider::RetryProvider;
 use secp256k1::SecretKey;
 use serde::{Deserialize, Serialize};
-use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Encodable2718};
-use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
-use bytes::BufMut;
 use std::fs;
-use tee_service_api::{aes_decrypt, aes_encrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk};
+use tee_service_api::{aes_decrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk};
 use alloy_sol_types::{sol, SolValue, SolCall};
 
 /// Seismic specific transaction field(s)
@@ -279,15 +276,16 @@ async fn seismic_read_call(
             .expect("Encryption for read call failed");
 
     let nonce = provider.get_transaction_count(from).await.unwrap();
-    let tx = TransactionRequest::default()
+    let mut tx = TransactionRequest::default()
         .transaction_type(TxSeismic::TX_TYPE as u8)
         .with_from(from)
         .with_to(to)
         .with_nonce(nonce)
         .with_gas_limit(410000)
         .with_chain_id(31337)
-        .with_input(encrypted_call)
-        .encryption_pubkey(encryption_pk_write_tx);
+        .with_input(encrypted_call);
+
+    tx.set_encryption_pubkey(encryption_pk_write_tx);
 
     let seismic_tx = WithOtherFields::new(tx);
 

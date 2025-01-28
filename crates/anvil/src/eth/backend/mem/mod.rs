@@ -69,7 +69,7 @@ use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
-        optimism::DepositTransaction, DepositReceipt, MaybeImpersonatedTransaction,
+        crypto, optimism::DepositTransaction, DepositReceipt, MaybeImpersonatedTransaction,
         PendingTransaction, ReceiptResponse, TransactionInfo, TypedReceipt, TypedTransaction,
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
@@ -1380,11 +1380,11 @@ impl Backend {
                     access_list,
                     blob_versioned_hashes,
                     authorization_list,
-                    // nonce is always ignored for calls
-                    nonce: _,
+                    nonce,
                     sidecar: _,
                     chain_id: _,
-                    transaction_type: _,
+                    transaction_type,
+                    encryption_pubkey,
                     .. // Rest of the gas fees related fields are taken from `fee_details`
                 },
             ..
@@ -1417,6 +1417,22 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
+
+        let mut data = input.into_input().unwrap_or_default();
+
+        if transaction_type == Some(TxSeismic::TX_TYPE) && !data.is_empty() {
+            let nonce = nonce.expect("nonce is required for seismic transactions");
+            let encryption_pubkey =
+                encryption_pubkey.expect("encryption pubkey is required for seismic transactions");
+
+            let public_key = PublicKey::from_slice(encryption_pubkey.as_slice())
+                .expect("failed to parse public key from bytes");
+            data = Bytes::from(
+                crypto::server_decrypt(&public_key, &data.as_ref(), nonce)
+                    .expect("Failed to decrypt seismic tx"),
+            );
+        }
+
         env.tx =
             TxEnv {
                 caller,
@@ -1437,7 +1453,7 @@ impl Backend {
                     None => TxKind::Create,
                 },
                 value: value.unwrap_or_default(),
-                data: input.into_input().unwrap_or_default(),
+                data,
                 chain_id: None,
                 // set nonce to None so that the correct nonce is chosen by the EVM
                 nonce: None,
@@ -1506,19 +1522,7 @@ impl Backend {
         let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
 
         let mut inspector = self.build_inspector();
-        let mut env = self.build_call_env(request, fee_details, block_env);
-        if is_seismic_tx {
-            let decrypted_input = anvil_core::eth::transaction::crypto::server_decrypt(
-                &encryption_pubkey,
-                &env.tx.data.as_ref(),
-                nonce,
-            )
-            .expect("Failed to decrypt seismic tx");
-            env.tx.data = decrypted_input.into();
-        } else {
-            // this should never happen
-            warn!("Non-seismic tx passed to seismic_call. Likely a bug");
-        }
+        let env = self.build_call_env(request, fee_details, block_env);
 
         let mut evm = self.new_evm_with_inspector_ref(state, env, &mut inspector);
         let ResultAndState { result, state } = evm.transact()?;
@@ -2932,6 +2936,27 @@ impl TransactionValidator for Backend {
                     return Err(InvalidTransactionError::InsufficientFunds);
                 }
             }
+        }
+
+        if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
+            // check that decryption works before we create tx env for it
+            let inner = seismic_tx.tx();
+            let public_key =
+                PublicKey::from_slice(inner.encryption_pubkey.as_slice()).map_err(|_e| {
+                    InvalidTransactionError::SeismicDecryptionFailed(format!(
+                        "Failed to parse encryption_pubkey"
+                    ))
+                })?;
+            let _decrypted_data = anvil_core::eth::transaction::crypto::server_decrypt(
+                &public_key,
+                &inner.input.as_ref(),
+                inner.nonce,
+            )
+            .map_err(|_e| {
+                InvalidTransactionError::SeismicDecryptionFailed(format!(
+                    "Failed to decrypt seismic calldata"
+                ))
+            })?;
         }
 
         Ok(())
