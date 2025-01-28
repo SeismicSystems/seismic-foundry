@@ -1053,7 +1053,7 @@ impl EthApi {
         Ok(*tx.hash())
     }
 
-    pub async fn unsigned_call(
+    async fn unsigned_call(
         &self,
         request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
@@ -1070,7 +1070,7 @@ impl EthApi {
                             "not available on past forked blocks".to_string(),
                         ));
                     }
-                    return Ok(fork.call(&request, Some(number.into())).await?)
+                    return Ok(fork.call(&request, Some(number.into())).await?);
                 }
             }
         }

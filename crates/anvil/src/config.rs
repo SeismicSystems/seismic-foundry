@@ -11,7 +11,7 @@ use crate::{
         fees::{INITIAL_BASE_FEE, INITIAL_GAS_PRICE},
         pool::transactions::{PoolTransaction, TransactionOrder},
     },
-    hardfork::{ChainHardfork, OptimismHardfork},
+    hardfork::{ChainHardfork, OptimismHardfork, SeismicHardfork},
     mem::{self, in_memory_db::MemDb},
     EthereumHardfork, FeeManager, PrecompileFactory,
 };
@@ -181,6 +181,8 @@ pub struct NodeConfig {
     pub disable_default_create2_deployer: bool,
     /// Enable Optimism deposit transaction
     pub enable_optimism: bool,
+    /// Enable Seismic EVM Specs
+    pub enable_seismic: bool,
     /// Slots in an epoch
     pub slots_in_an_epoch: u64,
     /// The memory limit per EVM execution in bytes.
@@ -464,6 +466,7 @@ impl Default for NodeConfig {
             transaction_block_keeper: None,
             disable_default_create2_deployer: false,
             enable_optimism: false,
+            enable_seismic: false,
             slots_in_an_epoch: 32,
             memory_limit: None,
             precompile_factory: None,
@@ -515,6 +518,9 @@ impl NodeConfig {
         }
         if self.enable_optimism {
             return OptimismHardfork::default().into();
+        }
+        if self.enable_seismic || cfg!(feature = "seismic") {
+            return SeismicHardfork::default().into();
         }
         EthereumHardfork::default().into()
     }
@@ -935,6 +941,13 @@ impl NodeConfig {
     #[must_use]
     pub fn with_optimism(mut self, enable_optimism: bool) -> Self {
         self.enable_optimism = enable_optimism;
+        self
+    }
+
+    /// Sets whether to enable seismic support
+    #[must_use]
+    pub fn with_seismic(mut self, enable_seismic: bool) -> Self {
+        self.enable_seismic = enable_seismic;
         self
     }
 

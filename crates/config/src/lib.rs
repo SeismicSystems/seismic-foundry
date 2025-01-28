@@ -213,6 +213,8 @@ pub struct Config {
     /// evm version to use
     #[serde(with = "from_str_lowercase")]
     pub evm_version: EvmVersion,
+    /// Seismic version to use. Will overwrite EVM version if set.
+    pub seismic_version: SpecId,
     /// list of contracts to report gas of
     pub gas_reports: Vec<String>,
     /// list of contracts to ignore for gas reports
@@ -875,7 +877,19 @@ impl Config {
 
         config.sanitize_eof_settings();
 
+        config.sanitize_seismic_settings();
+
         config
+    }
+
+    // Turn on seismic flag if evm version is seismic. For now this logic works.
+    pub fn sanitize_seismic_settings(&mut self) {
+        if self.seismic_version == SpecId::MERCURY {
+            self.seismic = true;
+        }
+        if self.seismic {
+            self.seismic_version = SpecId::MERCURY;
+        }
     }
 
     /// Cleans up any duplicate `Remapping` and sorts them
@@ -2316,6 +2330,7 @@ impl Default for Config {
             include_paths: vec![],
             force: false,
             evm_version: EvmVersion::Cancun,
+            seismic_version: SpecId::MERCURY,
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,

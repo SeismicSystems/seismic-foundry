@@ -296,9 +296,12 @@ impl TestRunnerConfig {
     /// Reconfigures all fields using the given `config`.
     pub fn reconfigure_with(&mut self, config: Arc<Config>) {
         debug_assert!(!Arc::ptr_eq(&self.config, &config));
-
         // TODO: self.evm_opts
         // TODO: self.env
+        if config.seismic {
+            println!("Reconfiguring with seismic version");
+            self.spec_id = config.seismic_version;
+        }
         self.spec_id = config.evm_spec_id();
         self.sender = config.sender;
         // self.coverage = N/A;
@@ -525,7 +528,11 @@ impl MultiContractRunnerBuilder {
             tcfg: TestRunnerConfig {
                 evm_opts,
                 env,
-                spec_id: self.evm_spec.unwrap_or_else(|| self.config.evm_spec_id()),
+                spec_id: if self.config.seismic {
+                    self.config.seismic_version
+                } else {
+                    self.evm_spec.unwrap_or_else(|| self.config.evm_spec_id())
+                },
                 sender: self.sender.unwrap_or(self.config.sender),
 
                 coverage: self.coverage,
