@@ -1053,7 +1053,7 @@ impl EthApi {
         Ok(*tx.hash())
     }
 
-    pub async fn unsigned_call(
+    async fn unsigned_call(
         &self,
         request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
