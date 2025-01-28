@@ -14,12 +14,12 @@ use foundry_config::NamedChain;
 use foundry_fork_db::DatabaseError;
 use revm::{
     handler::register::EvmHandler,
-    seismic::seismic_handle_register,
     interpreter::{
         return_ok, CallInputs, CallOutcome, CallScheme, CallValue, CreateInputs, CreateOutcome,
         Gas, InstructionResult, InterpreterResult,
     },
     primitives::{CreateScheme, EVMError, HandlerCfg, SpecId, KECCAK_EMPTY},
+    seismic::seismic_handle_register,
     FrameOrResult, FrameResult,
 };
 use std::{cell::RefCell, rc::Rc, sync::Arc};
@@ -334,8 +334,7 @@ pub fn new_evm_with_inspector<'evm, 'i, 'db, I: InspectorExt + ?Sized>(
     handler.append_handler_register_plain(revm::inspector_handle_register);
     if inspector.is_odyssey() {
         handler.append_handler_register_plain(odyssey_handler_register);
-    }
-    else if handler.is_seismic() {
+    } else if handler.is_seismic() {
         handler.append_handler_register_plain(seismic_handle_register);
     }
     handler.append_handler_register_plain(create2_handler_register);
@@ -355,8 +354,7 @@ pub fn new_evm_with_existing_context<'a>(
     handler.append_handler_register_plain(revm::inspector_handle_register);
     if inspector.is_odyssey() {
         handler.append_handler_register_plain(odyssey_handler_register);
-    }
-    else if handler.is_seismic() {
+    } else if handler.is_seismic() {
         handler.append_handler_register_plain(seismic_handle_register);
     }
     handler.append_handler_register_plain(create2_handler_register);

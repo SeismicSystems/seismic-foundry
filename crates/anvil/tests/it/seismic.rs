@@ -2,10 +2,15 @@ use alloy_consensus::transaction::TxSeismic;
 use alloy_dyn_abi::EventExt;
 use alloy_json_abi::{Event, EventParam};
 use alloy_network::{ReceiptResponse, TransactionBuilder};
-use alloy_primitives::{aliases::{B96, U96}, hex::{self, FromHex}, Address, Bytes, FixedBytes, IntoLogData, B256, U256};
+use alloy_primitives::{
+    aliases::{B96, U96},
+    hex::{self, FromHex},
+    Address, Bytes, FixedBytes, IntoLogData, B256, U256,
+};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::{OtherFields, WithOtherFields};
+use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{eth::EthApi, spawn, NodeConfig};
 use anvil_core::eth::transaction::{crypto, SeismicCallRequest};
 use foundry_common::provider::RetryProvider;
@@ -13,7 +18,6 @@ use secp256k1::SecretKey;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use tee_service_api::{aes_decrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk};
-use alloy_sol_types::{sol, SolValue, SolCall};
 
 /// Seismic specific transaction field(s)
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -35,8 +39,8 @@ pub const TEST_PRECOMPILES_BYTECODE_PATH: &str = "/tests/it/seismic_precompiles_
 pub const SET_NUMBER_SELECTOR: &str = "3fb5c1cb"; // setNumber(uint256)
 pub const INCREMENT_SELECTOR: &str = "d09de08a"; // increment()
 pub const GET_NUMBER_SELECTOR: &str = "f2c9ecd8"; // getNumber()
-pub const PRECOMPILES_TEST_SET_AES_KEY_SELECTOR: &str = "a0619040"; // setAESKey(suint256) 
-pub const PRECOMPILES_TEST_ENCRYPTED_LOG_SELECTOR: &str = "28696e36"; // submitMessage(bytes) 
+pub const PRECOMPILES_TEST_SET_AES_KEY_SELECTOR: &str = "a0619040"; // setAESKey(suint256)
+pub const PRECOMPILES_TEST_ENCRYPTED_LOG_SELECTOR: &str = "28696e36"; // submitMessage(bytes)
 
 /// Loads the bytecode from a file and returns it as a vector of bytes.
 pub fn load_bytecode_from_file(file_path: &str) -> Vec<u8> {
@@ -189,9 +193,7 @@ async fn test_seismic_transaction() {
 
 // Helpful type alias for the receipt you retrieve
 type SeismicReceipt = WithOtherFields<
-    alloy_rpc_types::TransactionReceipt<
-        alloy_network::AnyReceiptEnvelope<alloy_rpc_types::Log>,
-    >
+    alloy_rpc_types::TransactionReceipt<alloy_network::AnyReceiptEnvelope<alloy_rpc_types::Log>>,
 >;
 
 // 1. Deploy a contract from bytecode. Returns its deployed address.
@@ -230,9 +232,8 @@ async fn send_encrypted_tx(
     unencrypted_data: &[u8],
     encryption_nonce: u64,
 ) -> SeismicReceipt {
-    let encrypted_input =
-        crypto::client_encrypt(encryption_sk, unencrypted_data, encryption_nonce)
-            .expect("Encryption failed");
+    let encrypted_input = crypto::client_encrypt(encryption_sk, unencrypted_data, encryption_nonce)
+        .expect("Encryption failed");
 
     let nonce = provider.get_transaction_count(from).await.unwrap();
     let tx = TransactionRequest::default()
@@ -271,9 +272,8 @@ async fn seismic_read_call(
     unencrypted_data: &[u8],
     encryption_nonce: u64,
 ) -> Bytes {
-    let encrypted_call =
-        crypto::client_encrypt(encryption_sk, unencrypted_data, encryption_nonce)
-            .expect("Encryption for read call failed");
+    let encrypted_call = crypto::client_encrypt(encryption_sk, unencrypted_data, encryption_nonce)
+        .expect("Encryption for read call failed");
 
     let nonce = provider.get_transaction_count(from).await.unwrap();
     let mut tx = TransactionRequest::default()
@@ -317,9 +317,8 @@ async fn test_seismic_precompiles_end_to_end() {
     let encryption_sk = get_sample_secp256k1_sk();
     let encryption_pk = Bytes::from(get_sample_secp256k1_pk().serialize());
     let encryption_pk_write_tx = FixedBytes::<33>::from(get_sample_secp256k1_pk().serialize());
-    let private_key = B256::from_hex(
-        "7e34abdcd62eade2e803e0a8123a0015ce542b380537eff288d6da420bcc2d3b"
-    ).unwrap();
+    let private_key =
+        B256::from_hex("7e34abdcd62eade2e803e0a8123a0015ce542b380537eff288d6da420bcc2d3b").unwrap();
 
     //
     // 2. Tx #1: Set AES key in the contract
@@ -334,7 +333,8 @@ async fn test_seismic_precompiles_end_to_end() {
         encryption_pk.clone(),
         &unencrypted_aes_key,
         /* encryption_nonce */ 1,
-    ).await;
+    )
+    .await;
 
     //
     // 3. Tx #2: Encrypt & send "hello world"
@@ -354,7 +354,8 @@ async fn test_seismic_precompiles_end_to_end() {
         encryption_pk.clone(),
         &unencrypted_input,
         /* encryption_nonce */ 2,
-    ).await;
+    )
+    .await;
 
     //
     // 4. Tx #3: On-chain decrypt
@@ -369,7 +370,7 @@ async fn test_seismic_precompiles_end_to_end() {
         name: "EncryptedMessage".into(),
         inputs: vec![
             EventParam { ty: "int96".into(), indexed: true, ..Default::default() },
-            EventParam { ty: "bytes".into(),  indexed: false, ..Default::default() },
+            EventParam { ty: "bytes".into(), indexed: false, ..Default::default() },
         ],
         anonymous: false,
     };
@@ -387,9 +388,8 @@ async fn test_seismic_precompiles_end_to_end() {
     }
 
     // Extract (nonce, ciphertext)
-    let nonce: U96 = U96::from_be_bytes(
-        B96::from_slice(&decoded.indexed[0].abi_encode_packed()).into()
-    );
+    let nonce: U96 =
+        U96::from_be_bytes(B96::from_slice(&decoded.indexed[0].abi_encode_packed()).into());
     let ciphertext = Bytes::from(decoded.body[0].abi_encode_packed());
 
     let call = Encryption::decryptCall { nonce, ciphertext: ciphertext.clone() };
@@ -405,7 +405,8 @@ async fn test_seismic_precompiles_end_to_end() {
         encryption_pk_write_tx,
         &unencrypted_decrypt_call,
         /* encryption_nonce */ 3,
-    ).await;
+    )
+    .await;
 
     //
     // 5. Locally decrypt to cross-check
@@ -420,14 +421,13 @@ async fn test_seismic_precompiles_end_to_end() {
 
     // 5b. Decrypt the "output" from the read call
     let call_nonce = provider.get_transaction_count(from).await.unwrap();
-    let decrypted_output =
-        crypto::client_decrypt(&encryption_sk, output.as_ref(), call_nonce)
-            .expect("client_decrypt of read-output failed");
+    let decrypted_output = crypto::client_decrypt(&encryption_sk, output.as_ref(), call_nonce)
+        .expect("client_decrypt of read-output failed");
 
     let result_bytes = PlaintextType::abi_decode(&Bytes::from(decrypted_output), false)
         .expect("failed to decode the bytes");
-    let final_string = String::from_utf8(result_bytes.to_vec())
-        .expect("invalid utf8 in decrypted bytes");
+    let final_string =
+        String::from_utf8(result_bytes.to_vec()).expect("invalid utf8 in decrypted bytes");
 
     assert_eq!(final_string, "hello world");
 }

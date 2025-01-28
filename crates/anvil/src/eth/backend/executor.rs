@@ -30,7 +30,9 @@ use foundry_evm::{
     traces::CallTraceNode,
     utils::odyssey_handler_register,
 };
-use revm::{db::WrapDatabaseRef, primitives::MAX_BLOB_GAS_PER_BLOCK, seismic::seismic_handle_register};
+use revm::{
+    db::WrapDatabaseRef, primitives::MAX_BLOB_GAS_PER_BLOCK, seismic::seismic_handle_register,
+};
 use std::sync::Arc;
 
 /// Represents an executed transaction (transacted on the DB)

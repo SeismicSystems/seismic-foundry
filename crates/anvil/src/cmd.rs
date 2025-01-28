@@ -221,8 +221,7 @@ impl NodeArgs {
                     Some(OptimismHardfork::from_str(hf)?.into())
                 } else if self.evm_opts.seismic {
                     Some(SeismicHardfork::from_str(hf)?.into())
-                }
-                else {
+                } else {
                     Some(EthereumHardfork::from_str(hf)?.into())
                 }
             }
@@ -578,7 +577,7 @@ pub struct AnvilEvmArgs {
     /// Run an Optimism chain
     #[arg(long, visible_alias = "optimism")]
     pub optimism: bool,
-    
+
     /// Run a Seismic chain
     #[arg(long, visible_alias = "seismic")]
     pub seismic: bool,

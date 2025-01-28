@@ -181,7 +181,7 @@ pub struct NodeConfig {
     pub disable_default_create2_deployer: bool,
     /// Enable Optimism deposit transaction
     pub enable_optimism: bool,
-    /// Enable Seismic EVM Specs 
+    /// Enable Seismic EVM Specs
     pub enable_seismic: bool,
     /// Slots in an epoch
     pub slots_in_an_epoch: u64,
@@ -943,7 +943,7 @@ impl NodeConfig {
         self.enable_optimism = enable_optimism;
         self
     }
-    
+
     /// Sets whether to enable seismic support
     #[must_use]
     pub fn with_seismic(mut self, enable_seismic: bool) -> Self {
