@@ -3907,9 +3907,9 @@ dependencies = [
 
 [[package]]
 name = "foundry-compilers"
-version = "0.12.8"
+version = "0.12.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d817beee8c566a99f4267f25ff63d0de46c442948496ecef91ead56e3383090c"
+checksum = "f67e3eab56847dcf269eb186226f95874b171e262952cff6c910da36b1469e10"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -8637,9 +8637,9 @@ dependencies = [
 
 [[package]]
 name = "solar-ast"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5aeaf7a4bd326242c909bd287291226a540b62b36fa5824880248f4b1d4d6af"
+checksum = "5d3f6c4a476a16dcd36933a70ecdb0a807f8949cc5f3c4c1984e3748666bd714"
 dependencies = [
  "alloy-primitives",
  "bumpalo",
@@ -8719,14 +8719,14 @@ dependencies = [
 
 [[package]]
 name = "solar-parse"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b82c3659c15975cd80e5e1c44591278c230c59ad89082d797837499a4784e1b"
+checksum = "2e1e2d07fae218aca1b4cca81216e5c9ad7822516d48a28f11e2eaa8ffa5b249"
 dependencies = [
  "alloy-primitives",
  "bitflags 2.8.0",
  "bumpalo",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "memchr",
  "num-bigint",
  "num-rational",

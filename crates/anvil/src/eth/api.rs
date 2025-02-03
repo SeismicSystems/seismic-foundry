@@ -1064,7 +1064,7 @@ impl EthApi {
     /// Handler for ETH RPC call: `eth_sendRawTransaction`
     pub async fn send_signed_typed_data_tx(
         &self,
-        td: alloy_rpc_types::TypedDataRequest,
+        td: alloy_eips::eip712::TypedDataRequest,
     ) -> Result<TxHash> {
         node_info!("eth_sendRawTransaction via eth_signTypedData");
 
@@ -1205,10 +1205,9 @@ impl EthApi {
                     }
                 }
             }
-            alloy_rpc_types::SeismicCallRequest::TypedData(alloy_rpc_types::TypedDataRequest {
-                data,
-                signature,
-            }) => {
+            alloy_rpc_types::SeismicCallRequest::TypedData(
+                alloy_eips::eip712::TypedDataRequest { data, signature },
+            ) => {
                 let tx: TxSeismic = data.try_into().map_err(|e| {
                     BlockchainError::Message(format!(
                         "Failed to decode typed data into seismic tx: {e:?}"
