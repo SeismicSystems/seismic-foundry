@@ -4,7 +4,7 @@ use crate::eth::transaction::optimism::DepositTransaction;
 use alloy_consensus::{
     transaction::{
         eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
-        EncryptionPublicKey, TxEip7702, TxSeismic,
+        TxEip7702, TxSeismic,
     },
     Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559, TxEip2930,
     TxEnvelope, TxLegacy, TxReceipt, Typed2718,
@@ -78,6 +78,7 @@ pub fn transaction_request_to_typed(
                 sidecar,
                 transaction_type,
                 encryption_pubkey,
+                message_version,
                 ..
             },
         other,
@@ -111,6 +112,7 @@ pub fn transaction_request_to_typed(
             chain_id: chain_id.unwrap(),
             input: input.input.unwrap_or_default(),
             encryption_pubkey,
+            message_version: message_version.unwrap_or(0),
         }));
     }
     match (
@@ -614,6 +616,7 @@ impl PendingTransaction {
                     chain_id,
                     input,
                     encryption_pubkey,
+                    message_version: _,
                 } = &tx.tx();
 
                 // these two have already been validated in TransactionValidator,
@@ -670,6 +673,7 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
             value.recover().map_err(|_| ConversionError::Custom("InvalidSignature".to_string()))?;
         let essentials = value.essentials();
         let tx_type = value.r#type();
+
         Ok(Self {
             from: Some(from),
             to: Some(value.kind()),
@@ -683,7 +687,8 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
             nonce: Some(essentials.nonce),
             chain_id: essentials.chain_id,
             transaction_type: tx_type,
-            encryption_pubkey: essentials.encryption_pubkey,
+            encryption_pubkey: value.encryption_pubkey(),
+            message_version: value.message_version(),
             ..Default::default()
         })
     }
@@ -874,7 +879,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: t.tx().chain_id,
                 access_list: Default::default(),
-                encryption_pubkey: None,
             },
             Self::EIP2930(t) => TransactionEssentials {
                 kind: t.tx().to,
@@ -889,7 +893,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: t.tx().access_list.clone(),
-                encryption_pubkey: None,
             },
             Self::EIP1559(t) => TransactionEssentials {
                 kind: t.tx().to,
@@ -904,7 +907,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: t.tx().access_list.clone(),
-                encryption_pubkey: None,
             },
             Self::EIP4844(t) => TransactionEssentials {
                 kind: TxKind::Call(t.tx().tx().to),
@@ -919,7 +921,6 @@ impl TypedTransaction {
                 value: t.tx().tx().value,
                 chain_id: Some(t.tx().tx().chain_id),
                 access_list: t.tx().tx().access_list.clone(),
-                encryption_pubkey: None,
             },
             Self::EIP7702(t) => TransactionEssentials {
                 kind: TxKind::Call(t.tx().to),
@@ -934,7 +935,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: t.tx().access_list.clone(),
-                encryption_pubkey: None,
             },
             Self::Deposit(t) => TransactionEssentials {
                 kind: t.kind,
@@ -949,7 +949,6 @@ impl TypedTransaction {
                 value: t.value,
                 chain_id: t.chain_id(),
                 access_list: Default::default(),
-                encryption_pubkey: None,
             },
             Self::Seismic(t) => TransactionEssentials {
                 kind: t.tx().kind(),
@@ -964,7 +963,6 @@ impl TypedTransaction {
                 value: t.tx().value,
                 chain_id: Some(t.tx().chain_id),
                 access_list: Default::default(),
-                encryption_pubkey: Some(t.tx().encryption_pubkey),
             },
         }
     }
@@ -1102,6 +1100,20 @@ impl TypedTransaction {
             _ => None,
         }
     }
+
+    pub fn encryption_pubkey(&self) -> Option<alloy_consensus::transaction::EncryptionPublicKey> {
+        match self {
+            Self::Seismic(tx) => Some(tx.tx().encryption_pubkey),
+            _ => None,
+        }
+    }
+
+    pub fn message_version(&self) -> Option<u8> {
+        match self {
+            Self::Seismic(tx) => Some(tx.tx().message_version),
+            _ => None,
+        }
+    }
 }
 
 impl Encodable for TypedTransaction {
@@ -1217,7 +1229,6 @@ pub struct TransactionEssentials {
     pub value: U256,
     pub chain_id: Option<u64>,
     pub access_list: AccessList,
-    pub encryption_pubkey: Option<EncryptionPublicKey>,
 }
 
 /// Represents all relevant information of an executed transaction
@@ -1635,16 +1646,6 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
     })
 }
 
-/// Either a normal ETH call or a signed/serialized one
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(untagged)]
-pub enum SeismicCallRequest {
-    /// signed call request
-    Bytes(Bytes),
-    /// normal call request
-    TransactionRequest(WithOtherFields<TransactionRequest>),
-}
-
 #[cfg(test)]
 mod tests {
     use alloy_consensus::SignableTransaction;
@@ -1901,8 +1902,9 @@ mod tests {
             gas_limit: 100000,
             to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
             value: U256::from(1000000000000000u64),
-            input: decrypted_input.clone(),
             encryption_pubkey: test_pubkey(),
+            message_version: 0,
+            input: decrypted_input.clone(),
         };
 
         let r =
@@ -1921,19 +1923,19 @@ mod tests {
         signed_tt.encode(&mut encoded_tx);
 
         let encoded_bytes = Bytes::from(encoded_tx);
-        let reth_encoded = Bytes::from_str("0xb8d44af8d1827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a001a01e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04a0779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3").unwrap();
+        let reth_encoded = Bytes::from_str("0xb8d54af8d2827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a080b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb87501a01e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04a0779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3").unwrap();
         assert_eq!(reth_encoded, encoded_bytes);
     }
 
     #[test]
     fn test_seismic_tx_decoding() {
         // from viem sendRawTransaction
-        let encoded = Bytes::from_str("0x4af8d1827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a001a01e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04a0779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3").unwrap();
+        let encoded = Bytes::from_str("0x4af8d2827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a080b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb87501a0a4eae372fd9bd79c17867aa75d905aa90fc2b54deffd176e9cda1de19303a8e6a041ffd254632c4fe0a19f4004a0753a8560c18044dd890913c1d46274824bd6ed").unwrap();
         let mut buf = encoded.as_ref();
         let decoded_tx = TypedTransaction::decode_2718(&mut buf).unwrap();
 
         let expected_sighash = FixedBytes::<32>::from_str(
-            "ab1ddfbb9c83e88fae2eb3d14835d0ede2a791072d920a57bc2ffab83564c765",
+            "d63bc3bdfd863663ce38725a926fdfcb0033b95f55ad434ff058bdc1f62e01cc",
         )
         .unwrap();
         match &decoded_tx {

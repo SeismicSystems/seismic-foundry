@@ -124,6 +124,7 @@ pub fn configure_tx_req_env(
         ref authorization_list,
         sidecar: _,
         encryption_pubkey: _,
+        message_version: _,
     } = *tx;
 
     // If no `to` field then set create kind: https://eips.ethereum.org/EIPS/eip-2470#deployment-transaction

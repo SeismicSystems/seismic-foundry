@@ -8,11 +8,11 @@ use alloy_primitives::{
     Address, Bytes, FixedBytes, IntoLogData, B256, U256,
 };
 use alloy_provider::Provider;
-use alloy_rpc_types::TransactionRequest;
+use alloy_rpc_types::{SeismicCallRequest, TransactionRequest};
 use alloy_serde::{OtherFields, WithOtherFields};
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{eth::EthApi, spawn, NodeConfig};
-use anvil_core::eth::transaction::{crypto, SeismicCallRequest};
+use anvil_core::eth::transaction::crypto;
 use foundry_common::provider::RetryProvider;
 use secp256k1::SecretKey;
 use serde::{Deserialize, Serialize};

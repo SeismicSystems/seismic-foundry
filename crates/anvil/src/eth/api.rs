@@ -30,7 +30,9 @@ use crate::{
     revm::primitives::{BlobExcessGasAndPrice, Output},
     ClientFork, LoggingManager, Miner, MiningMode, StorageInfo,
 };
-use alloy_consensus::{transaction::eip4844::TxEip4844Variant, Account};
+use alloy_consensus::{
+    transaction::eip4844::TxEip4844Variant, Account, SignableTransaction, TxSeismic,
+};
 use alloy_dyn_abi::TypedData;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_network::{
@@ -66,8 +68,8 @@ use anvil_core::{
     eth::{
         block::BlockInfo,
         transaction::{
-            transaction_request_to_typed, PendingTransaction, ReceiptResponse, SeismicCallRequest,
-            TypedTransaction, TypedTransactionRequest,
+            transaction_request_to_typed, PendingTransaction, ReceiptResponse, TypedTransaction,
+            TypedTransactionRequest,
         },
         wallet::{WalletCapabilities, WalletError},
         EthRequest,
@@ -88,7 +90,6 @@ use foundry_evm::{
 use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
 use revm::primitives::Bytecode;
-use secp256k1::PublicKey;
 use std::{future::Future, sync::Arc, time::Duration};
 use yansi::Paint;
 
@@ -246,9 +247,14 @@ impl EthApi {
             EthRequest::EthSignTypedDataV4(addr, data) => {
                 self.sign_typed_data_v4(addr, &data).await.to_rpc_result()
             }
-            EthRequest::EthSendRawTransaction(tx) => {
-                self.send_raw_transaction(tx).await.to_rpc_result()
-            }
+            EthRequest::EthSendRawTransaction(req) => match req {
+                alloy_rpc_types::SeismicRawTxRequest::Bytes(tx) => {
+                    self.send_raw_transaction(tx).await.to_rpc_result()
+                }
+                alloy_rpc_types::SeismicRawTxRequest::TypedData(td) => {
+                    self.send_signed_typed_data_tx(td).await.to_rpc_result()
+                }
+            },
             EthRequest::EthCall(call, block, overrides) => {
                 self.call(call, block, overrides).await.to_rpc_result()
             }
@@ -1053,7 +1059,51 @@ impl EthApi {
         Ok(*tx.hash())
     }
 
-    async fn unsigned_call(
+    /// Sends signed typed data transaction, returning its hash.
+    ///
+    /// Handler for ETH RPC call: `eth_sendRawTransaction`
+    pub async fn send_signed_typed_data_tx(
+        &self,
+        td: alloy_eips::eip712::TypedDataRequest,
+    ) -> Result<TxHash> {
+        node_info!("eth_sendRawTransaction via eth_signTypedData");
+
+        let tx: TxSeismic = td.data.try_into().map_err(|e: serde_json::Error| {
+            BlockchainError::Message(format!(
+                "Failed to decode typed data into seismic tx: {}",
+                e.to_string()
+            ))
+        })?;
+        let signed_tx = tx.into_signed(td.signature);
+        let transaction = TypedTransaction::Seismic(signed_tx);
+
+        // NOTE: rest is copy pasta from send_raw_transaction
+        self.ensure_typed_transaction_supported(&transaction)?;
+
+        let pending_transaction = PendingTransaction::new(transaction)?;
+
+        // pre-validate
+        self.backend.validate_pool_transaction(&pending_transaction).await?;
+
+        let on_chain_nonce = self.backend.current_nonce(*pending_transaction.sender()).await?;
+        let from = *pending_transaction.sender();
+        let nonce = pending_transaction.transaction.nonce();
+        let requires = required_marker(nonce, on_chain_nonce, from);
+
+        let priority = self.transaction_priority(&pending_transaction.transaction);
+        let pool_transaction = PoolTransaction {
+            requires,
+            provides: vec![to_marker(nonce, *pending_transaction.sender())],
+            pending_transaction,
+            priority,
+        };
+
+        let tx = self.pool.add_transaction(pool_transaction)?;
+        trace!(target: "node", "Added transaction: [{:?}] sender={:?}", tx.hash(), from);
+        Ok(*tx.hash())
+    }
+
+    pub async fn unsigned_call(
         &self,
         request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
@@ -1099,7 +1149,6 @@ impl EthApi {
         request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
-        encryption_pubkey: PublicKey,
     ) -> Result<Bytes> {
         node_info!("eth_call (signed)");
         let fees = FeeDetails::new(
@@ -1112,10 +1161,8 @@ impl EthApi {
 
         let block_request = self.block_request(block_number).await?;
         self.on_blocking_task(|this| async move {
-            let (exit, out, gas, _) = this
-                .backend
-                .seismic_call(request, fees, Some(block_request), overrides, encryption_pubkey)
-                .await?;
+            let (exit, out, gas, _) =
+                this.backend.seismic_call(request, fees, Some(block_request), overrides).await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })
@@ -1127,12 +1174,12 @@ impl EthApi {
     /// Handler for ETH RPC call: `eth_call`
     pub async fn call(
         &self,
-        request: SeismicCallRequest,
+        request: impl Into<alloy_rpc_types::SeismicCallRequest>,
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<Bytes> {
-        match request {
-            SeismicCallRequest::TransactionRequest(mut tx) => {
+        match request.into() {
+            alloy_rpc_types::SeismicCallRequest::TransactionRequest(mut tx) => {
                 let user_provided_from = tx.from;
 
                 // don't let them spoof msg.sender with unsigned calls
@@ -1148,8 +1195,7 @@ impl EthApi {
                         if tried_to_spoof_from {
                             // We’ll embed the original error’s text (which may include
                             // revert data) plus a multiline explanation:
-                            Err(BlockchainError::Message(format!(
-"Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
+                            Err(BlockchainError::Message(format!("Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
                             orig = original_err
                         )))
                         } else {
@@ -1159,7 +1205,26 @@ impl EthApi {
                     }
                 }
             }
-            SeismicCallRequest::Bytes(bytes) => {
+            alloy_rpc_types::SeismicCallRequest::TypedData(
+                alloy_eips::eip712::TypedDataRequest { data, signature },
+            ) => {
+                let tx: TxSeismic = data.try_into().map_err(|e| {
+                    BlockchainError::Message(format!(
+                        "Failed to decode typed data into seismic tx: {e:?}"
+                    ))
+                })?;
+                let signed_seismic_tx = tx.into_signed(signature);
+                // NOTE: this is recover_caller, not recover_signer
+                let sender = signed_seismic_tx.recover_caller().map_err(|e| {
+                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+                })?;
+                let tx = signed_seismic_tx.into_parts().0;
+                let mut request: WithOtherFields<TransactionRequest> =
+                    WithOtherFields::new(tx.into());
+                request.inner.from = Some(sender);
+                self.seismic_call(request, block_number, overrides).await
+            }
+            alloy_rpc_types::SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
                     .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
                 let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
@@ -1171,14 +1236,14 @@ impl EthApi {
                 let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
                     "Can only make signedCall with Seismic Transactions".to_string(),
                 ))?;
-                let seismic_tx = signed_seismic_tx.tx();
-                let encryption_pubkey_bytes = seismic_tx.encryption_pubkey;
-                let encryption_pubkey = PublicKey::from_slice(encryption_pubkey_bytes.as_slice())
-                    .map_err(|_| {
-                    BlockchainError::Message("Failed to parse encryption public key".to_string())
+                // unlike above, this can be either recover_signer or recover_caller,
+                // since message_version = 0 for these
+                let sender = signed_seismic_tx.recover_signer().map_err(|e| {
+                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
-                let request = WithOtherFields::new(tx);
-                self.seismic_call(request, block_number, overrides, encryption_pubkey).await
+                let mut request = WithOtherFields::new(tx);
+                request.inner.from = Some(sender);
+                self.seismic_call(request, block_number, overrides).await
             }
         }
     }
