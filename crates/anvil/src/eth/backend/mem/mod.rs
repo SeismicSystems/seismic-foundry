@@ -1460,6 +1460,7 @@ impl Backend {
                 blob_hashes,
                 optimism: OptimismFields { enveloped_tx: Some(Bytes::new()), ..Default::default() },
                 authorization_list: authorization_list.map(Into::into),
+                tx_hash: B256::ZERO,
             };
 
         if env.block.basefee.is_zero() {
