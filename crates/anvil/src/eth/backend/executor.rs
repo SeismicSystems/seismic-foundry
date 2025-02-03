@@ -30,7 +30,9 @@ use foundry_evm::{
     traces::CallTraceNode,
     utils::odyssey_handler_register,
 };
-use revm::{db::WrapDatabaseRef, primitives::MAX_BLOB_GAS_PER_BLOCK};
+use revm::{
+    db::WrapDatabaseRef, primitives::MAX_BLOB_GAS_PER_BLOCK, seismic::seismic_handle_register,
+};
 use std::sync::Arc;
 
 /// Represents an executed transaction (transacted on the DB)
@@ -413,6 +415,10 @@ pub fn new_evm_with_inspector<DB: revm::Database>(
     handler.append_handler_register_plain(revm::inspector_handle_register);
     if odyssey {
         handler.append_handler_register_plain(odyssey_handler_register);
+    }
+
+    if handler.is_seismic() {
+        handler.append_handler_register_plain(seismic_handle_register);
     }
 
     let context = revm::Context::new(revm::EvmContext::new_with_env(db, env), inspector);
