@@ -143,26 +143,32 @@ install_ssolc() {
        -o "$TEMP_DIR/$TARGET_NAME" \
        "https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/assets/$ASSET_ID"
 
-  echo "Extracting $TARGET_NAME..."
-  if [[ "$OS_TYPE" == "windows" ]]; then
-    unzip "$TEMP_DIR/$TARGET_NAME" -d "$TEMP_DIR"
+  # Verify the downloaded file is a valid gzip archive
+  echo "Verifying the downloaded file..."
+  if file "$TEMP_DIR/$TARGET_NAME" | grep -q 'gzip compressed data'; then
+      echo "File verified as a valid gzip archive."
   else
-    tar -xzf "$TEMP_DIR/$TARGET_NAME" -C "$TEMP_DIR"
+      echo "Error: Downloaded file is not a valid gzip archive."
+      exit 1
   fi
 
+  # Extract the gzip archive
+  echo "Extracting $TARGET_NAME..."
+  tar -xzf "$TEMP_DIR/$TARGET_NAME" -C "$TEMP_DIR"
+
   # Ensure the extracted folder exists
-  EXTRACTED_BIN="$TEMP_DIR/ssolc"
-  if [[ ! -f "$EXTRACTED_BIN" ]]; then
-      echo "Error: Expected binary 'ssolc' not found in the extracted archive."
+  EXTRACTED_DIR="$TEMP_DIR/solc"
+  if [[ ! -d "$EXTRACTED_DIR" ]]; then
+      echo "Error: Expected directory 'solc' not found in the extracted archive."
       exit 1
   fi
 
   # Move the binary to /usr/local/bin and set permissions
-  echo "Installing ssolc binary..."
-  sudo mv "$EXTRACTED_BIN" "$SSOLC_BIN"
+  echo "Installing solc binary..."
+  sudo mv "$EXTRACTED_DIR/solc" "$SSOLC_BIN"
   sudo chmod +x "$SSOLC_BIN"
 
-  echo "Installation complete! ssolc installed at $SSOLC_BIN."
+  echo "Installation complete! sscolc installed at $SSOLC_BIN."
 }
 
 install_from_remote_repo() {
