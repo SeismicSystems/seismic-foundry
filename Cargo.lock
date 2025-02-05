@@ -7590,7 +7590,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "18.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=16f1faba#16f1fabaaf4197c8d7b822dec7879100446967ed"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=79ed1b4#79ed1b481a80ab9b81cb76c6692be69f824e515a"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -7629,7 +7629,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "14.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=16f1faba#16f1fabaaf4197c8d7b822dec7879100446967ed"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=79ed1b4#79ed1b481a80ab9b81cb76c6692be69f824e515a"
 dependencies = [
  "revm-primitives",
  "serde",
@@ -7638,7 +7638,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "15.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=16f1faba#16f1fabaaf4197c8d7b822dec7879100446967ed"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=79ed1b4#79ed1b481a80ab9b81cb76c6692be69f824e515a"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -7657,7 +7657,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "14.0.0"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=16f1faba#16f1fabaaf4197c8d7b822dec7879100446967ed"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-revm.git?rev=79ed1b4#79ed1b481a80ab9b81cb76c6692be69f824e515a"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",

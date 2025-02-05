@@ -157,7 +157,7 @@ where
         db: &mut ccx.ecx.db as &mut dyn DatabaseExt,
         error,
         l1_block_info,
-        rng_container: revm::seismic::RngContainer::default()
+        rng_container: revm::seismic::RngContainer::default(),
     };
 
     let mut evm = new_evm_with_existing_context(inner, &mut *inspector);
