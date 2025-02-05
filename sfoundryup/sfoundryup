@@ -79,14 +79,53 @@ install_ssolc() {
       exit 1
   fi
 
-  GITHUB_API_URL="https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/latest"
-  TARGET_NAME="ssolc-macos-arm64.tar.gz"
+  # Detect OS
+  OS="$(uname -s)"
+  ARCH="$(uname -m)"
+
+  case "$OS" in
+    Linux*)
+      OS_TYPE="linux"
+      ;;
+    Darwin*)
+      OS_TYPE="macos"
+      ;;
+    CYGWIN*|MINGW*|MSYS*|Windows_NT)
+      OS_TYPE="windows"
+      ;;
+    *)
+      echo "Unsupported OS: $OS"
+      exit 1
+      ;;
+  esac
+
+  case "$ARCH" in
+    x86_64)
+      ARCH_TYPE="x86_64"
+      ;;
+    arm64|aarch64)
+      ARCH_TYPE="arm64"
+      ;;
+    *)
+      echo "Unsupported architecture: $ARCH"
+      exit 1
+      ;;
+  esac
+
+  # Construct target name
+  if [[ "$OS_TYPE" == "windows" ]]; then
+    TARGET_NAME="ssolc-windows-$ARCH_TYPE.zip"
+  else
+    TARGET_NAME="ssolc-$OS_TYPE-$ARCH_TYPE.tar.gz"
+  fi
+
   INSTALL_DIR="/usr/local/bin"
   SSOLC_BIN="$INSTALL_DIR/ssolc"
   TEMP_DIR=$(mktemp -d)
 
   # Fetch the asset ID for the target file
   echo "Fetching asset ID for $TARGET_NAME..."
+  GITHUB_API_URL="https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/latest"
   ASSET_ID=$(curl -s -H "Authorization: token $SEISMIC_PAT" "$GITHUB_API_URL" | \
       jq -r --arg name "$TARGET_NAME" '.assets[] | select(.name == $name) | .id')
 
