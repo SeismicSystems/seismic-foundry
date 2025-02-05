@@ -8,9 +8,9 @@ export SEISMIC_PAT=your_personal_access_token
 ```
 Then, run the following command to install sfoundryup:
 ```bash
-curl -s -H "Authorization: token $SEISMIC_PAT" \
-  -H "Accept: application/vnd.github.v3.raw" \
-  https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/install | bash
+curl -L -H "Authorization: token $SEISMIC_PAT" \
+     -H "Accept: application/vnd.github.v3.raw" \
+     "https://api.github.com/repos/SeismicSystems/seismic-foundry/contents/sfoundryup/install?ref=seismic" | bash
 ```
 ## Usage
 ### Install Seismic Foundry as a developer building on top of Seismic:
