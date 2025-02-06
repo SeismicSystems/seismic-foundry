@@ -299,7 +299,6 @@ impl TestRunnerConfig {
         // TODO: self.evm_opts
         // TODO: self.env
         if config.seismic {
-            println!("Reconfiguring with seismic version");
             self.spec_id = config.seismic_version;
         }
         self.spec_id = config.evm_spec_id();
