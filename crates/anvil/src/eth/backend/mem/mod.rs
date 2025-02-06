@@ -1461,6 +1461,7 @@ impl Backend {
                 optimism: OptimismFields { enveloped_tx: Some(Bytes::new()), ..Default::default() },
                 authorization_list: authorization_list.map(Into::into),
                 tx_hash: B256::ZERO,
+                rng_mode: revm::primitives::RngMode::Execution,
             };
 
         if env.block.basefee.is_zero() {
