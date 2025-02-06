@@ -6,10 +6,9 @@ use crate::{
 };
 use alloy_network::{EthereumWallet, TransactionBuilder};
 use alloy_primitives::{
-    map::{AddressHashMap, B256HashMap, HashMap},
-    Address, ChainId, B256, U256,
+    map::{AddressHashMap, B256HashMap, HashMap}, Address, ChainId, TxKind, B256, U256
 };
-use alloy_provider::Provider;
+use alloy_provider::{create_seismic_provider, test_utils, Provider, SendableTx};
 use alloy_rpc_types::{
     request::TransactionRequest, state::AccountOverride, BlockId, BlockNumberOrTag,
     BlockTransactions,
@@ -18,6 +17,7 @@ use alloy_serde::WithOtherFields;
 use anvil::{eth::api::CLIENT_VERSION, spawn, NodeConfig, CHAIN_ID};
 use futures::join;
 use std::time::Duration;
+use url::Url;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_get_block_number() {
@@ -276,9 +276,16 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     let wallet = handle.dev_wallets().next().unwrap();
     let signer: EthereumWallet = wallet.clone().into();
 
-    let provider = http_provider_with_signer(&handle.http_endpoint(), signer);
+    let node_url = Url::parse(&handle.http_endpoint()).unwrap();
+
+    let provider = http_provider_with_signer(&handle.http_endpoint(), signer.clone());
+    let seismic_provider = create_seismic_provider(
+        signer.clone(), 
+        node_url
+    );
 
     api.anvil_set_auto_mine(true).await.unwrap();
+     
 
     let init_value = "toto".to_string();
 
@@ -291,15 +298,19 @@ async fn can_call_with_undersized_max_fee_per_gas() {
 
     assert!(undersized_max_fee_per_gas < latest_block_base_fee_per_gas);
 
-    let last_sender = simple_storage_contract
+    let last_sender_tx = simple_storage_contract
         .lastSender()
-        .max_fee_per_gas(undersized_max_fee_per_gas.into())
-        .from(wallet.address())
-        .call()
+        .into_transaction_request();
+    let raw_input = last_sender_tx.input().unwrap();
+        let output = seismic_provider 
+        .seismic_call(SendableTx::Builder(test_utils::get_seismic_tx_builder(
+            raw_input.clone(),
+            TxKind::Call(simple_storage_contract.address().clone()),
+            wallet.address(),
+        )))
         .await
-        .unwrap()
-        ._0;
-    assert_eq!(last_sender, Address::ZERO);
+        .unwrap();
+    assert_eq!(**output, B256::ZERO.to_vec());
 }
 
 #[tokio::test(flavor = "multi_thread")]

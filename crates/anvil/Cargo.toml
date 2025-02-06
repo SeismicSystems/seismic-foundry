@@ -131,7 +131,7 @@ alloy-pubsub.workspace = true
 foundry-test-utils.workspace = true
 similar-asserts.workspace = true
 tokio = { workspace = true, features = ["full"] }
-
+url = "2.5"
 # op-alloy-rpc-types.workspace = true
 
 

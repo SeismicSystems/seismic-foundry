@@ -109,7 +109,7 @@ pub fn transaction_request_to_typed(
             gas_limit: gas.unwrap_or_default() as u64,
             to: to.unwrap_or_default(),
             value: value.unwrap_or_default(),
-            chain_id: chain_id.unwrap(),
+            chain_id: chain_id.unwrap_or_default(),
             input: input.input.unwrap_or_default(),
             encryption_pubkey,
             message_version: message_version.unwrap_or(0),
