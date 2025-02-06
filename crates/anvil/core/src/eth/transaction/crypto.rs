@@ -20,7 +20,7 @@ pub fn encrypt(
         // in practice if they send empty plaintext,
         // they're sending a normal tx (e.g. just send native token).
         // we probably want to allow this
-        return Ok(vec![])
+        return Ok(vec![]);
     }
     let shared_secret = SharedSecret::new(public_key, secret_key);
     let aes_key = derive_aes_key(&shared_secret)
@@ -38,7 +38,7 @@ pub fn decrypt(
         // in practice if they send empty plaintext,
         // they're sending a normal tx (e.g. just send native token).
         // we probably want to allow this
-        return Ok(vec![])
+        return Ok(vec![]);
     }
     let shared_secret = SharedSecret::new(public_key, secret_key);
     let aes_key = derive_aes_key(&shared_secret)
