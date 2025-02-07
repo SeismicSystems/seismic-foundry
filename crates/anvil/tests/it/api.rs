@@ -6,7 +6,8 @@ use crate::{
 };
 use alloy_network::{EthereumWallet, TransactionBuilder};
 use alloy_primitives::{
-    map::{AddressHashMap, B256HashMap, HashMap}, Address, ChainId, TxKind, B256, U256
+    map::{AddressHashMap, B256HashMap, HashMap},
+    Address, ChainId, TxKind, B256, U256,
 };
 use alloy_provider::{create_seismic_provider, test_utils, Provider, SendableTx};
 use alloy_rpc_types::{
@@ -279,13 +280,9 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
     let provider = http_provider_with_signer(&handle.http_endpoint(), signer.clone());
-    let seismic_provider = create_seismic_provider(
-        signer.clone(), 
-        node_url
-    );
+    let seismic_provider = create_seismic_provider(signer.clone(), node_url);
 
     api.anvil_set_auto_mine(true).await.unwrap();
-     
 
     let init_value = "toto".to_string();
 
@@ -298,11 +295,9 @@ async fn can_call_with_undersized_max_fee_per_gas() {
 
     assert!(undersized_max_fee_per_gas < latest_block_base_fee_per_gas);
 
-    let last_sender_tx = simple_storage_contract
-        .lastSender()
-        .into_transaction_request();
+    let last_sender_tx = simple_storage_contract.lastSender().into_transaction_request();
     let raw_input = last_sender_tx.input().unwrap();
-        let output = seismic_provider 
+    let output = seismic_provider
         .seismic_call(SendableTx::Builder(test_utils::get_seismic_tx_builder(
             raw_input.clone(),
             TxKind::Call(simple_storage_contract.address().clone()),
