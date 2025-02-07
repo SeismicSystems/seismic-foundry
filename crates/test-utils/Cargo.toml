@@ -20,7 +20,17 @@ foundry-compilers = { workspace = true, features = ["project-util"] }
 foundry-config.workspace = true
 
 alloy-primitives.workspace = true
-alloy-provider.workspace = true
+alloy-provider = { workspace = true, features = [
+    "reqwest",
+] }
+
+revm = { workspace = true, features = [
+    "std",
+    "serde",
+    "memory_limit",
+    "c-kzg",
+    "seismic"
+] }
 
 eyre.workspace = true
 fd-lock = "4.0"
@@ -40,3 +50,4 @@ foundry-block-explorers.workspace = true
 [features]
 # feature for integration tests that test external projects
 external-integration-tests = []
+seismic = []
