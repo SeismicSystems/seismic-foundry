@@ -884,11 +884,8 @@ impl Config {
 
     // Turn on seismic flag if evm version is seismic. For now this logic works.
     pub fn sanitize_seismic_settings(&mut self) {
-        if self.seismic_version == SpecId::MERCURY {
+        if SpecId::MERCURY.is_enabled_in(self.seismic_version) {
             self.seismic = true;
-        }
-        if self.seismic {
-            self.seismic_version = SpecId::MERCURY;
         }
     }
 
