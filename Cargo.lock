@@ -3931,7 +3931,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers"
 version = "0.12.9"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=9ec8117#9ec811704801d21cbceca6b24d7a5d37dc331a58"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=b1cf865#b1cf8651f8958d93c70f8240073354f3867cc18e"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -3967,7 +3967,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts"
 version = "0.12.9"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=9ec8117#9ec811704801d21cbceca6b24d7a5d37dc331a58"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=b1cf865#b1cf8651f8958d93c70f8240073354f3867cc18e"
 dependencies = [
  "foundry-compilers-artifacts-solc",
  "foundry-compilers-artifacts-vyper",
@@ -3976,7 +3976,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts-solc"
 version = "0.12.9"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=9ec8117#9ec811704801d21cbceca6b24d7a5d37dc331a58"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=b1cf865#b1cf8651f8958d93c70f8240073354f3867cc18e"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -3999,7 +3999,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts-vyper"
 version = "0.12.9"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=9ec8117#9ec811704801d21cbceca6b24d7a5d37dc331a58"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=b1cf865#b1cf8651f8958d93c70f8240073354f3867cc18e"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4013,7 +4013,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-core"
 version = "0.12.9"
-source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=9ec8117#9ec811704801d21cbceca6b24d7a5d37dc331a58"
+source = "git+ssh://git@github.com/SeismicSystems/seismic-compilers.git?rev=b1cf865#b1cf8651f8958d93c70f8240073354f3867cc18e"
 dependencies = [
  "alloy-primitives",
  "cfg-if",
