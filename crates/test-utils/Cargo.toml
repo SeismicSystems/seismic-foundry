@@ -24,14 +24,6 @@ alloy-provider = { workspace = true, features = [
     "reqwest",
 ] }
 
-revm = { workspace = true, features = [
-    "std",
-    "serde",
-    "memory_limit",
-    "c-kzg",
-    "seismic"
-] }
-
 eyre.workspace = true
 fd-lock = "4.0"
 parking_lot.workspace = true

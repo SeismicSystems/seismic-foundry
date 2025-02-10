@@ -169,7 +169,7 @@ foundry-linking = { path = "crates/linking" }
 
 # solc & compilation utilities
 foundry-block-explorers = { version = "0.9.0", default-features = false }
-foundry-compilers = { version = "0.12.8", default-features = false }
+foundry-compilers = { version = "=0.12.9", default-features = false }
 foundry-fork-db = "0.9.0"
 solang-parser = "=0.3.3"
 solar-ast = { version = "=0.1.1", default-features = false }
@@ -345,3 +345,9 @@ alloy-transport-ipc = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy
 alloy-transport-ws = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy.git", rev = "f9ff836" }
 alloy-node-bindings = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy.git", rev = "f9ff836" }
 alloy-network-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy.git", rev = "f9ff836" }
+
+foundry-compilers = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117" }
+foundry-compilers-artifacts = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117", package = "foundry-compilers-artifacts" }
+foundry-compilers-artifacts-solc = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117", package = "foundry-compilers-artifacts-solc" }
+foundry-compilers-artifacts-vyper = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117", package = "foundry-compilers-artifacts-vyper" }
+foundry-compilers-core = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117", package = "foundry-compilers-core" }

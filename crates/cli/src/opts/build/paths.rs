@@ -72,6 +72,7 @@ impl ProjectPathsArgs {
     ///
     /// Panics if the project root directory cannot be found. See [`find_project_root`].
     pub fn project_root(&self) -> PathBuf {
+        info!("root: {:?}", self.root);
         self.root.clone().unwrap_or_else(|| find_project_root(None))
     }
 
