@@ -346,8 +346,8 @@ alloy-transport-ws = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy.
 alloy-node-bindings = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy.git", rev = "f9ff836" }
 alloy-network-primitives = { git = "ssh://git@github.com/SeismicSystems/seismic-alloy.git", rev = "f9ff836" }
 
-foundry-compilers = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117" }
-foundry-compilers-artifacts = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117", package = "foundry-compilers-artifacts" }
-foundry-compilers-artifacts-solc = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117", package = "foundry-compilers-artifacts-solc" }
-foundry-compilers-artifacts-vyper = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117", package = "foundry-compilers-artifacts-vyper" }
-foundry-compilers-core = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "9ec8117", package = "foundry-compilers-core" }
+foundry-compilers = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "b1cf865" }
+foundry-compilers-artifacts = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "b1cf865", package = "foundry-compilers-artifacts" }
+foundry-compilers-artifacts-solc = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "b1cf865", package = "foundry-compilers-artifacts-solc" }
+foundry-compilers-artifacts-vyper = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "b1cf865", package = "foundry-compilers-artifacts-vyper" }
+foundry-compilers-core = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "b1cf865", package = "foundry-compilers-core" }
