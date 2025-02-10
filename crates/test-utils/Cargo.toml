@@ -18,18 +18,9 @@ workspace = true
 foundry-common.workspace = true
 foundry-compilers = { workspace = true, features = ["project-util"] }
 foundry-config.workspace = true
-
 alloy-primitives.workspace = true
 alloy-provider = { workspace = true, features = [
     "reqwest",
-] }
-
-revm = { workspace = true, features = [
-    "std",
-    "serde",
-    "memory_limit",
-    "c-kzg",
-    "seismic"
 ] }
 
 eyre.workspace = true

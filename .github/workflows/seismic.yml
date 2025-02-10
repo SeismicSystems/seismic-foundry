@@ -47,6 +47,7 @@ jobs:
               ${{ secrets.ACTIONS_SFOUNDRYFDB_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SRETH_SSH_ED25519 }}
               ${{ secrets.ACTIONS_TEESERVICE_SSH_ED25519 }}
+              ${{ secrets.ACTIONS_SCOMPILERS_SSH_ED25519 }}
       - name: sforge build
         run: cargo build --bin sforge
       - name: sanvil build
@@ -78,6 +79,7 @@ jobs:
               ${{ secrets.ACTIONS_SFOUNDRYFDB_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SRETH_SSH_ED25519 }}
               ${{ secrets.ACTIONS_TEESERVICE_SSH_ED25519 }}
+              ${{ secrets.ACTIONS_SCOMPILERS_SSH_ED25519 }}
       - name: sforge warnings
         run: RUSTFLAGS="-D warnings" cargo check --bin sforge
       - name: sanvil warnings
@@ -105,6 +107,7 @@ jobs:
               ${{ secrets.ACTIONS_SFOUNDRYFDB_SSH_ED25519 }}
               ${{ secrets.ACTIONS_SRETH_SSH_ED25519 }}
               ${{ secrets.ACTIONS_TEESERVICE_SSH_ED25519 }}
+              ${{ secrets.ACTIONS_SCOMPILERS_SSH_ED25519 }}
       - name: seismic transaction
         run: cargo test test_seismic_transaction
       # - name: sforge tests
