@@ -213,8 +213,6 @@ pub struct Config {
     /// evm version to use
     #[serde(with = "from_str_lowercase")]
     pub evm_version: EvmVersion,
-    /// Seismic version to use. Will overwrite EVM version if set.
-    pub seismic_version: SpecId,
     /// list of contracts to report gas of
     pub gas_reports: Vec<String>,
     /// list of contracts to ignore for gas reports
@@ -884,7 +882,7 @@ impl Config {
 
     // Turn on seismic flag if evm version is seismic. For now this logic works.
     pub fn sanitize_seismic_settings(&mut self) {
-        if SpecId::MERCURY.is_enabled_in(self.seismic_version) {
+        if self.evm_version == EvmVersion::Mercury {
             self.seismic = true;
         }
     }
@@ -2327,7 +2325,6 @@ impl Default for Config {
             include_paths: vec![],
             force: false,
             evm_version: EvmVersion::Mercury,
-            seismic_version: SpecId::MERCURY,
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,
