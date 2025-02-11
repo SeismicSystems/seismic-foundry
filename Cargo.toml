@@ -31,10 +31,10 @@ version = "0.3.0"
 edition = "2021"
 # Remember to update clippy.toml as well
 rust-version = "1.83"
-authors = ["Foundry Contributors"]
+authors = ["Foundry Contributors", "Seismic Developers"]
 license = "MIT OR Apache-2.0"
-homepage = "https://github.com/foundry-rs/foundry"
-repository = "https://github.com/foundry-rs/foundry"
+homepage = "https://github.com/SeismicSystems/seismic-foundry"
+repository = "https://github.com/SeismicSystems/seismic-foundry"
 exclude = ["benches/", "tests/", "test-data/", "testdata/"]
 
 [workspace.lints.clippy]

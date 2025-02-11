@@ -12,7 +12,7 @@ on:
 
 env:
     REGISTRY: ghcr.io
-    # Will resolve to foundry-rs/foundry
+    # Will resolve to SeismicSystems/seismic-foundry
     IMAGE_NAME: ${{ github.repository }}
 
 jobs:
