@@ -204,7 +204,11 @@ impl NodeConfig {
         let mut s: String = String::new();
         let _ = write!(s, "\n{}", BANNER.rgb(172, 103, 42));
         let _ = write!(s, "\n    {VERSION_MESSAGE}");
-        let _ = write!(s, "\n    {}", "https://github.com/SeismicSystems/seismic-foundry".rgb(172, 103, 42));
+        let _ = write!(
+            s,
+            "\n    {}",
+            "https://github.com/SeismicSystems/seismic-foundry".rgb(172, 103, 42)
+        );
 
         let _ = write!(
             s,
