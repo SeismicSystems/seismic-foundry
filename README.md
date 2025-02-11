@@ -31,7 +31,7 @@ cargo install --root=$HOME/.seismic --profile dev --path ./crates/anvil --locked
 
 ## Acknowledgments
 
-This project is built upon the excellent work of the [Foundry Contributors](https://github.com/foundry-rs/foundry). We are grateful for their contributions to the Ethereum development ecosystem.
+This project is built upon the excellent work of the [Foundry](https://github.com/foundry-rs/foundry) Contributors. We are grateful for their contributions to the Ethereum development ecosystem.
 
 ## License
 
