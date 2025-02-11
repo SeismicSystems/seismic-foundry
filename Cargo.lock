@@ -142,9 +142,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-contract"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b668c78c4b1f12f474ede5a85e8ce550d0aa1ef7d49fd1d22855a43b960e725"
+version = "0.8.0"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7366de0#7366de03e696760300d5aae01954d22fe2466053"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
@@ -347,9 +346,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-provider"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc2dfaddd9a30aa870a78a4e1316e3e115ec1e12e552cbc881310456b85c1f24"
+version = "0.8.0"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7366de0#7366de03e696760300d5aae01954d22fe2466053"
 dependencies = [
  "alloy-chains",
  "alloy-consensus",
@@ -363,7 +361,7 @@ dependencies = [
  "alloy-rpc-types-debug",
  "alloy-rpc-types-eth",
  "alloy-rpc-types-trace",
- "alloy-rpc-types-txpool 0.8.3",
+ "alloy-rpc-types-txpool",
  "alloy-transport",
  "alloy-transport-http",
  "alloy-transport-ipc",
@@ -381,6 +379,7 @@ dependencies = [
  "schnellru",
  "serde",
  "serde_json",
+ "tee_service_api 0.1.0 (git+https://github.com/SeismicSystems/TEEService.git?rev=55970f5)",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
@@ -463,7 +462,7 @@ dependencies = [
  "alloy-rpc-types-engine",
  "alloy-rpc-types-eth",
  "alloy-rpc-types-trace",
- "alloy-rpc-types-txpool 0.8.0",
+ "alloy-rpc-types-txpool",
  "alloy-serde",
  "serde",
 ]
@@ -491,9 +490,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-debug"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1dec1c1b65614ebd5834a7dfddf525a186962082023718e10f4f64ed2d02514"
+version = "0.8.0"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7366de0#7366de03e696760300d5aae01954d22fe2466053"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -552,18 +550,6 @@ dependencies = [
 name = "alloy-rpc-types-txpool"
 version = "0.8.0"
 source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7366de0#7366de03e696760300d5aae01954d22fe2466053"
-dependencies = [
- "alloy-primitives",
- "alloy-rpc-types-eth",
- "alloy-serde",
- "serde",
-]
-
-[[package]]
-name = "alloy-rpc-types-txpool"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a574e97dff62097d22d6cd360f898f3d069239ca0ca7bfc2e5e7b22815ec572"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -985,7 +971,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "similar-asserts",
- "tee_service_api 0.1.0 (git+https://github.com/SeismicSystems/TEEService.git?rev=73289ef)",
+ "tee_service_api 0.1.0 (git+https://github.com/SeismicSystems/TEEService.git?rev=55970f5)",
  "tempfile",
  "thiserror 2.0.11",
  "tikv-jemallocator",
@@ -1022,7 +1008,7 @@ dependencies = [
  "secp256k1",
  "serde",
  "serde_json",
- "tee_service_api 0.1.0 (git+https://github.com/SeismicSystems/TEEService.git?rev=73289ef)",
+ "tee_service_api 0.1.0 (git+https://github.com/SeismicSystems/TEEService.git?rev=55970f5)",
  "thiserror 2.0.11",
 ]
 
@@ -9082,7 +9068,7 @@ dependencies = [
 [[package]]
 name = "tee_service_api"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/TEEService.git?rev=73289ef#73289ef1dc7ba9e4b064c003dc8d9629055a6800"
+source = "git+https://github.com/SeismicSystems/TEEService.git?rev=55970f5#55970f581ddeb2e97404d56cf352669181574708"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -10864,13 +10850,3 @@ dependencies = [
  "once_cell",
  "simd-adler32",
 ]
-
-[[patch.unused]]
-name = "alloy-contract"
-version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7366de0#7366de03e696760300d5aae01954d22fe2466053"
-
-[[patch.unused]]
-name = "alloy-provider"
-version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7366de0#7366de03e696760300d5aae01954d22fe2466053"

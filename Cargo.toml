@@ -294,7 +294,7 @@ url = "2"
 vergen = { version = "8", default-features = false }
 yansi = { version = "1.0", features = ["detect-tty", "detect-env"] }
 
-tee_service_api = { git = "https://github.com/SeismicSystems/TEEService.git", package = "tee_service_api", rev = "73289ef" }
+tee_service_api = "0.1.0"
 
 [patch.crates-io]
 # If our dependencies depend on these things,
@@ -351,3 +351,5 @@ foundry-compilers-artifacts = { git = "https://github.com/SeismicSystems/seismic
 foundry-compilers-artifacts-solc = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d", package = "foundry-compilers-artifacts-solc" }
 foundry-compilers-artifacts-vyper = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d", package = "foundry-compilers-artifacts-vyper" }
 foundry-compilers-core = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d", package = "foundry-compilers-core" }
+
+tee_service_api = { git = "https://github.com/SeismicSystems/TEEService.git", package = "tee_service_api", rev = "55970f5" }
