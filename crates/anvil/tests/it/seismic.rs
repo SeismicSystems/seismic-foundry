@@ -17,7 +17,7 @@ use foundry_common::provider::RetryProvider;
 use secp256k1::SecretKey;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use tee_service_api::{aes_decrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk};
+use seismic_enclave::{aes_decrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk};
 
 /// Seismic specific transaction field(s)
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

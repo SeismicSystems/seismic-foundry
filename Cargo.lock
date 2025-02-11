@@ -967,11 +967,11 @@ dependencies = [
  "rand",
  "revm",
  "secp256k1",
+ "seismic-enclave",
  "serde",
  "serde_json",
  "serde_repr",
  "similar-asserts",
- "tee_service_api 0.1.0 (git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=39b2865)",
  "tempfile",
  "thiserror 2.0.11",
  "tikv-jemallocator",
@@ -1006,9 +1006,9 @@ dependencies = [
  "rand",
  "revm",
  "secp256k1",
+ "seismic-enclave",
  "serde",
  "serde_json",
- "tee_service_api 0.1.0 (git+ssh://git@github.com/SeismicSystems/TEEService.git?rev=39b2865)",
  "thiserror 2.0.11",
 ]
 
@@ -8272,6 +8272,31 @@ checksum = "49db231d56a190491cb4aeda9527f1ad45345af50b0851622a7adb8c03b01c32"
 dependencies = [
  "core-foundation-sys",
  "libc",
+]
+
+[[package]]
+name = "seismic-enclave"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SeismicSystems/enclave.git?rev=f2c0757#f2c0757cf12208049a758f797f263912b00cf842"
+dependencies = [
+ "aes-gcm",
+ "anyhow",
+ "bincode",
+ "byteorder",
+ "bytes",
+ "hkdf",
+ "http-body-util",
+ "hyper 0.14.32",
+ "kbs-types",
+ "once_cell",
+ "reqwest",
+ "schnorrkel",
+ "secp256k1",
+ "serde",
+ "serde_json",
+ "sha2",
+ "strum 0.25.0",
+ "tokio",
 ]
 
 [[package]]
