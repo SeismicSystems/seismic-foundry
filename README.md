@@ -7,7 +7,7 @@ Seismic Foundry is a fork of [Foundry](https://github.com/foundry-rs/foundry), c
 This repository contains modified versions of Foundry's core tools:
 - `sforge`: Seismic's version of `forge`, for testing Ethereum smart contracts
 - `sanvil`: Seismic's version of `anvil`, for running local Ethereum test networks
->> NOTE: Seismic does not yet support `cast` or `chisel`
+> **NOTE:** seismic-foundry does not yet support foundry's `cast` or `chisel`
 
 For details about Seismic's modifications to reth, please see:
 - [seismic-reth README](https://github.com/SeismicSystems/seismic-reth/blob/seismic/README.md)
