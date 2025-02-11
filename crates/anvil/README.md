@@ -27,13 +27,13 @@ A local Ethereum node, akin to Ganache, designed for development with [**Forge**
 ### Installing from source
 
 ```sh
-cargo install --git https://github.com/foundry-rs/foundry anvil --locked --force
+cargo install --git https://github.com/SeismicSystems/seismic-foundry anvil --locked --force
 ```
 
 ## Getting started
 
 ```console
-$ anvil
+$ sanvil
 
                              _   _
                             (_) | |
