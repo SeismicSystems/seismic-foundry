@@ -377,7 +377,7 @@ dependencies = [
  "pin-project 1.1.9",
  "reqwest",
  "schnellru",
- "seismic-enclave",
+ "seismic-enclave 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "thiserror 2.0.11",
@@ -967,7 +967,7 @@ dependencies = [
  "rand",
  "revm",
  "secp256k1",
- "seismic-enclave",
+ "seismic-enclave 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "serde_repr",
@@ -1006,7 +1006,7 @@ dependencies = [
  "rand",
  "revm",
  "secp256k1",
- "seismic-enclave",
+ "seismic-enclave 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "thiserror 2.0.11",
@@ -7630,7 +7630,7 @@ dependencies = [
  "revm-precompile",
  "schnorrkel",
  "secp256k1",
- "seismic-enclave",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/enclave.git?rev=f2c0757)",
  "serde",
  "serde_json",
  "sha2",
@@ -8272,6 +8272,32 @@ checksum = "49db231d56a190491cb4aeda9527f1ad45345af50b0851622a7adb8c03b01c32"
 dependencies = [
  "core-foundation-sys",
  "libc",
+]
+
+[[package]]
+name = "seismic-enclave"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "038ecbb935f63d62ba9590c54f185bb35f1086580566ac4332fc3840c4b585bd"
+dependencies = [
+ "aes-gcm",
+ "anyhow",
+ "bincode",
+ "byteorder",
+ "bytes",
+ "hkdf",
+ "http-body-util",
+ "hyper 0.14.32",
+ "kbs-types",
+ "once_cell",
+ "reqwest",
+ "schnorrkel",
+ "secp256k1",
+ "serde",
+ "serde_json",
+ "sha2",
+ "strum 0.25.0",
+ "tokio",
 ]
 
 [[package]]

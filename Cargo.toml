@@ -351,5 +351,3 @@ foundry-compilers-artifacts = { git = "ssh://git@github.com/SeismicSystems/seism
 foundry-compilers-artifacts-solc = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "b1cf865", package = "foundry-compilers-artifacts-solc" }
 foundry-compilers-artifacts-vyper = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "b1cf865", package = "foundry-compilers-artifacts-vyper" }
 foundry-compilers-core = { git = "ssh://git@github.com/SeismicSystems/seismic-compilers.git", rev = "b1cf865", package = "foundry-compilers-core" }
-
-seismic-enclave = { git = "https://github.com/SeismicSystems/enclave.git", rev = "f2c0757" }
