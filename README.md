@@ -10,8 +10,8 @@ This repository contains modified versions of Foundry's core tools:
 > **NOTE:** seismic-foundry does not yet support foundry's `cast` or `chisel`
 
 For details about Seismic's modifications to reth, please see:
-- [seismic-reth README](https://github.com/SeismicSystems/seismic-reth/blob/seismic/README.md)
-- [Seismic Features Documentation](https://github.com/SeismicSystems/seismic-reth/blob/seismic/seismic-features.md)
+- seismic-reth's [README](https://github.com/SeismicSystems/seismic-reth/blob/seismic/README.md)
+- Seismic's [Features](https://github.com/SeismicSystems/seismic-reth/blob/seismic/seismic-features.md)
 
 ## Installation
 
