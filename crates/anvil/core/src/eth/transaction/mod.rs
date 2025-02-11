@@ -1650,8 +1650,8 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 mod tests {
     use alloy_consensus::SignableTransaction;
     use alloy_primitives::{b256, hex, FixedBytes, LogData};
-    use std::str::FromStr;
     use seismic_enclave::get_sample_secp256k1_pk;
+    use std::str::FromStr;
 
     use super::*;
 
