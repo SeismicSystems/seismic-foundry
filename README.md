@@ -1,6 +1,6 @@
 # seismic-foundry
 
-Seismic Foundry is a fork of [Foundry](https://github.com/foundry-rs/foundry), customized to work with [seismic-reth](https://github.com/SeismicSystems/seismic-reth). It provides a testing toolchain specifically designed for Seismic's modified version of reth.
+Seismic Foundry is a fork of [Foundry](https://github.com/foundry-rs/foundry), customized to work with the Seismic blockchain. It provides a testing toolchain specifically designed for Seismic's [modified version](https://github.com/SeismicSystems/seismic-reth) of reth
 
 ## Overview
 
