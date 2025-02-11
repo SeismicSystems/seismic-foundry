@@ -34,8 +34,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-cache"
-      - name: Set git config # TODO: remove after open sourcing
-        run: git config --global url."ssh://git@github.com/SeismicSystems".insteadOf "https://github.com/SeismicSystems"
       - name: Install SSH Keys
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -68,8 +66,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "warnings-cache"
-      - name: Set git config # TODO: remove after open sourcing
-        run: git config --global url."ssh://git@github.com/SeismicSystems".insteadOf "https://github.com/SeismicSystems"
       - name: Install SSH Keys
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -98,8 +94,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "test-cache"
-      - name: Set git config # TODO: remove after open sourcing
-        run: git config --global url."ssh://git@github.com/SeismicSystems".insteadOf "https://github.com/SeismicSystems"
       - name: Install SSH Keys
         uses: webfactory/ssh-agent@v0.9.0
         with:
