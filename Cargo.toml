@@ -347,7 +347,7 @@ alloy-node-bindings = { git = "https://github.com/SeismicSystems/seismic-alloy.g
 alloy-network-primitives = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "15971ef" }
 
 foundry-compilers = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d" }
-foundry-compilers-artifacts = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d", package = "foundry-compilers-artifacts" }
-foundry-compilers-artifacts-solc = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d", package = "foundry-compilers-artifacts-solc" }
-foundry-compilers-artifacts-vyper = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d", package = "foundry-compilers-artifacts-vyper" }
-foundry-compilers-core = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d", package = "foundry-compilers-core" }
+foundry-compilers-artifacts = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d" }
+foundry-compilers-artifacts-solc = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d" }
+foundry-compilers-artifacts-vyper = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d" }
+foundry-compilers-core = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "352264d" }
