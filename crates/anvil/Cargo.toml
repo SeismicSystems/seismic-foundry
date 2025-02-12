@@ -114,7 +114,7 @@ ctrlc = { version = "3", optional = true }
 fdlimit = { version = "0.3", optional = true }
 clap_complete_fig = "4"
 
-tee_service_api.workspace = true
+seismic-enclave.workspace = true
 
 
 [target.'cfg(unix)'.dependencies]

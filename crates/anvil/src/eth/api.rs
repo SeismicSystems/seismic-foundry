@@ -1103,47 +1103,6 @@ impl EthApi {
         Ok(*tx.hash())
     }
 
-    pub async fn unsigned_call(
-        &self,
-        request: WithOtherFields<TransactionRequest>,
-        block_number: Option<BlockId>,
-        overrides: Option<StateOverride>,
-    ) -> Result<Bytes> {
-        node_info!("eth_call");
-        let block_request = self.block_request(block_number).await?;
-        // check if the number predates the fork, if in fork mode
-        if let BlockRequest::Number(number) = block_request {
-            if let Some(fork) = self.get_fork() {
-                if fork.predates_fork(number) {
-                    if overrides.is_some() {
-                        return Err(BlockchainError::StateOverrideError(
-                            "not available on past forked blocks".to_string(),
-                        ));
-                    }
-                    return Ok(fork.call(&request, Some(number.into())).await?);
-                }
-            }
-        }
-
-        let fees = FeeDetails::new(
-            request.gas_price,
-            request.max_fee_per_gas,
-            request.max_priority_fee_per_gas,
-            request.max_fee_per_blob_gas,
-        )?
-        .or_zero_fees();
-        // this can be blocking for a bit, especially in forking mode
-        // <https://github.com/foundry-rs/foundry/issues/6036>
-        self.on_blocking_task(|this| async move {
-            let (exit, out, gas, _) =
-                this.backend.call(request, fees, Some(block_request), overrides).await?;
-            trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
-
-            ensure_return_ok(exit, &out)
-        })
-        .await
-    }
-
     async fn seismic_call(
         &self,
         request: WithOtherFields<TransactionRequest>,
@@ -1182,10 +1141,14 @@ impl EthApi {
             alloy_rpc_types::SeismicCallRequest::TransactionRequest(mut tx) => {
                 let user_provided_from = tx.from;
 
-                // don't let them spoof msg.sender with unsigned calls
                 tx.from = None;
+                tx.gas_price = None; // preventing InsufficientFunds error
+                tx.max_fee_per_gas = None; // preventing InsufficientFunds error
+                tx.max_priority_fee_per_gas = None; // preventing InsufficientFunds error
+                tx.max_fee_per_blob_gas = None; // preventing InsufficientFunds error
+                tx.value = None; // preventing InsufficientFunds error
 
-                match self.unsigned_call(tx, block_number, overrides).await {
+                match self.seismic_call(tx, block_number, overrides).await {
                     Ok(bytes) => Ok(bytes),
                     Err(original_err) => {
                         // Only attach a custom message if user tried to set `from` != zero

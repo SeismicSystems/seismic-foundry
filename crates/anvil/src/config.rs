@@ -80,12 +80,14 @@ pub const VERSION_MESSAGE: &str = concat!(
 );
 
 const BANNER: &str = r"
-                             _   _
-                            (_) | |
-      __ _   _ __   __   __  _  | |
-     / _` | | '_ \  \ \ / / | | | |
-    | (_| | | | | |  \ V /  | | | |
-     \__,_| |_| |_|   \_/   |_| |_|
+
+░██████╗░█████╗░███╗░░██╗██╗░░░██╗██╗██╗░░░░░
+██╔════╝██╔══██╗████╗░██║██║░░░██║██║██║░░░░░
+╚█████╗░███████║██╔██╗██║╚██╗░██╔╝██║██║░░░░░
+░╚═══██╗██╔══██║██║╚████║░╚████╔╝░██║██║░░░░░
+██████╔╝██║░░██║██║░╚███║░░╚██╔╝░░██║███████╗
+╚═════╝░╚═╝░░╚═╝╚═╝░░╚══╝░░░╚═╝░░░╚═╝╚══════╝
+
 ";
 
 /// Configurations of the EVM node
@@ -200,9 +202,13 @@ pub struct NodeConfig {
 impl NodeConfig {
     fn as_string(&self, fork: Option<&ClientFork>) -> String {
         let mut s: String = String::new();
-        let _ = write!(s, "\n{}", BANNER.green());
+        let _ = write!(s, "\n{}", BANNER.rgb(172, 103, 42));
         let _ = write!(s, "\n    {VERSION_MESSAGE}");
-        let _ = write!(s, "\n    {}", "https://github.com/foundry-rs/foundry".green());
+        let _ = write!(
+            s,
+            "\n    {}",
+            "https://github.com/SeismicSystems/seismic-foundry".rgb(172, 103, 42)
+        );
 
         let _ = write!(
             s,
@@ -277,7 +283,7 @@ Chain ID
 
 {}
 "#,
-                self.get_chain_id().green()
+                self.get_chain_id().rgb(172, 103, 42)
             );
         }
 
@@ -290,7 +296,7 @@ Gas Price
 
 {}
 "#,
-                self.get_gas_price().green()
+                self.get_gas_price().rgb(172, 103, 42)
             );
         } else {
             let _ = write!(
@@ -301,7 +307,7 @@ Base Fee
 
 {}
 "#,
-                self.get_base_fee().green()
+                self.get_base_fee().rgb(172, 103, 42)
             );
         }
 
@@ -326,7 +332,7 @@ Gas Limit
                     })
                 }
             }
-            .green()
+            .rgb(172, 103, 42)
         );
 
         let _ = write!(
@@ -337,7 +343,7 @@ Genesis Timestamp
 
 {}
 "#,
-            self.get_genesis_timestamp().green()
+            self.get_genesis_timestamp().rgb(172, 103, 42)
         );
 
         s

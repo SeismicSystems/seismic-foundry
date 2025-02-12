@@ -2,7 +2,7 @@ use alloy_consensus::{transaction::TxSeismic, Signed};
 use alloy_primitives::{FixedBytes, SignatureError};
 use once_cell::sync::Lazy;
 use secp256k1::{ecdh::SharedSecret, PublicKey, SecretKey};
-use tee_service_api::{
+use seismic_enclave::{
     aes_decrypt, aes_encrypt, derive_aes_key, get_sample_secp256k1_pk, get_sample_secp256k1_sk,
     nonce::Nonce,
 };
