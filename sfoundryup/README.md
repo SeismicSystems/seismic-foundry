@@ -1,7 +1,7 @@
 # `sfoundryup`
-Install, update, or revert to a specific branch, fork, or version of Seismic Foundry tools with ease.
+Install, and update the Seismic Foundry suite of developer tools with ease.
 ### Installing
-Run the following command to install sfoundryup:
+Run the following command to install `sfoundryup`:
 ```bash
 curl -L -H "Accept: application/vnd.github.v3.raw" \
      "https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/sfoundryup/install" | bash
