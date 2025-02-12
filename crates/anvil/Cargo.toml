@@ -1,5 +1,5 @@
 [package]
-name = "sanvil"
+name = "anvil"
 description = "Local ethereum node"
 
 version.workspace = true
