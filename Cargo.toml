@@ -300,7 +300,7 @@ seismic-enclave = "0.1.0"
 # If our dependencies depend on these things,
 # then this will override whatever versions they point to
 # and instead use our local version
-foundry-fork-db = { git = "https://github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "cd54596" }
+foundry-fork-db = { git = "https://github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "86fa364" }
 
 # seismic-revm
 revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "77a08e9" }
