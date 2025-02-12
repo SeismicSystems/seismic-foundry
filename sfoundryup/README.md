@@ -1,6 +1,5 @@
 # `sfoundryup`
 Install, update, or revert to a specific branch, fork, or version of Seismic Foundry tools with ease.
-## For developers building on top of Seismic
 ### Installing
 Run the following command to install sfoundryup:
 ```bash
@@ -31,6 +30,7 @@ source ~/.profile
 
 ## Usage
 ### Install Seismic Foundry:
+Run the following in your terminal to install the Seismic Foundry suite of developer tools:
 ```bash
 sfoundryup
 ```
