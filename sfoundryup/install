@@ -10,12 +10,6 @@ SEISMIC_BIN_DIR="$SEISMIC_DIR/bin"
 
 BIN_PATH="$SEISMIC_BIN_DIR/sfoundryup"
 
-# Ensure SEISMIC_PAT is set
-if [[ -z "$SEISMIC_PAT" ]]; then
-  echo "Error: SEISMIC_PAT environment variable is not set. Please export it with your GitHub Personal Access Token."
-  echo "Example: export SEISMIC_PAT=your_personal_access_token"
-  exit 1
-fi
 
 # GitHub raw URL to sfoundryup in the private repository
 RAW_API_URL="https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/sfoundryup/sfoundryup"
@@ -25,8 +19,7 @@ mkdir -p "$SEISMIC_BIN_DIR"
 
 # Download sfoundryup using GitHub raw content URL
 echo "Fetching sfoundryup from the private repository..."
-curl -sSf -H "Authorization: token $SEISMIC_PAT" \
-     "$RAW_API_URL" -o "$BIN_PATH"
+curl -sSf "$RAW_API_URL" -o "$BIN_PATH"
 
 # Make the file executable
 chmod +x "$BIN_PATH"

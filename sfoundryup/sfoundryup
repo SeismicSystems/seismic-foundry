@@ -12,12 +12,9 @@ BINS=(sforge scast sanvil schisel)
 export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
 
 main() {
-  # Default to devs mode
-  SEISMIC_MODE="devs"
   while [[ -n $1 ]]; do
     case $1 in
       --)               shift; break;;
-      --core)           SEISMIC_MODE="core";;
       -v|--version)     shift; SEISMICUP_VERSION=$1;;
       -p|--path)        shift; SEISMICUP_LOCAL_REPO=$1;;
       -j|--jobs)        shift; SEISMICUP_JOBS=$1;;
@@ -33,15 +30,6 @@ main() {
     esac
     shift
   done
-
-  echo "SEISMIC_MODE: $SEISMIC_MODE"
-
-  # Ensure SEISMIC_PAT is set if not using seismic-core
-  if [[ -z "$SEISMIC_PAT" && "$SEISMIC_MODE" != "core" ]]; then
-    echo "Error: SEISMIC_PAT environment variable is not set. Please export it with your GitHub Personal Access Token."
-    echo "Example: export SEISMIC_PAT=your_personal_access_token"
-    exit 1
-  fi
 
   need_cmd git
   need_cmd curl
@@ -67,17 +55,6 @@ main() {
 
 install_ssolc() {
   echo "Starting ssolc installation..."
-
-  if [[ "$SEISMIC_MODE" == "core" ]]; then
-    echo "Please ensure you have 'ssolc' installed in /usr/local/bin."
-    return
-  fi
-
-  # Ensure SEISMIC_PAT is set
-  if [[ -z "$SEISMIC_PAT" ]]; then
-      echo "Error: SEISMIC_PAT environment variable is not set. Please provide a valid GitHub Personal Access Token."
-      exit 1
-  fi
 
   # Detect OS
   OS="$(uname -s)"
@@ -126,7 +103,7 @@ install_ssolc() {
   # Fetch the asset ID for the target file
   echo "Fetching asset ID for $TARGET_NAME..."
   GITHUB_API_URL="https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/latest"
-  ASSET_ID=$(curl -s -H "Authorization: token $SEISMIC_PAT" "$GITHUB_API_URL" | \
+  ASSET_ID=$(curl -s "$GITHUB_API_URL" | \
       jq -r --arg name "$TARGET_NAME" '.assets[] | select(.name == $name) | .id')
 
   if [[ -z "$ASSET_ID" ]]; then
@@ -138,8 +115,7 @@ install_ssolc() {
 
   # Download the file using the asset ID
   echo "Downloading $TARGET_NAME..."
-  curl -L -H "Authorization: token $SEISMIC_PAT" \
-       -H "Accept: application/octet-stream" \
+  curl -L -H "Accept: application/octet-stream" \
        -o "$TEMP_DIR/$TARGET_NAME" \
        "https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/assets/$ASSET_ID"
 
@@ -183,14 +159,8 @@ install_from_remote_repo() {
   # Clone the repository if it doesn't already exist
   if [ ! -d "$REPO_PATH" ]; then
     ensure mkdir -p "$SEISMIC_DIR"
-    say "Cloning the repository using PAT..."
-    if [[ "$SEISMIC_MODE" == "core" ]]; then
-    # Use SSH for core
-    ensure git clone "git@github.com:$SEISMICUP_REPO.git" "$REPO_PATH"
-    else
-    # Use HTTPS for devs
-    ensure git clone "https://$SEISMIC_PAT@github.com/$SEISMICUP_REPO.git" "$REPO_PATH"
-    fi
+    say "Cloning the repository..."
+    ensure git clone "https://github.com/$SEISMICUP_REPO.git" "$REPO_PATH"
   fi
 
   # Fetch and checkout the branch
@@ -200,17 +170,6 @@ install_from_remote_repo() {
 
   # Use the git CLI to fetch dependencies
   export CARGO_NET_GIT_FETCH_WITH_CLI=true
-
-  if [[ "$SEISMIC_MODE" == "core" ]]; then
-   echo "Using SSH dependencies for Seismic core team members"
-  else
-   echo "Using HTTPS dependencies for Seismic developers"
-   # For Seismic dependencies, remap the use of SSH to use HTTPS + access token
-   # First remove any previous remapping with old access token
-   ensure git config --global --get-regexp '^url\.https://.*@github\.com/SeismicSystems\.insteadOf' | cut -d' ' -f1 | while read -r key; do git config --global --unset "$key"; done || true
-   # Then add URL remapping
-   ensure git config --global url."https://$SEISMIC_PAT@github.com/SeismicSystems".insteadOf "ssh://git@github.com/SeismicSystems"
-  fi
 
   # Build the binaries
   ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
@@ -236,7 +195,6 @@ USAGE:
     sfoundryup <OPTIONS>
 
 OPTIONS:
-    --core  Install Seismic Foundry for core Seismic team members (SSH dependencies)
     -h, --help      Print help information
     -v, --version   Install a specific version from built binaries
     -p, --path      Build and install a local repository
