@@ -52,10 +52,6 @@ jobs:
         run: cargo build --bin sforge
       - name: sanvil build
         run: cargo build --bin sanvil
-      - name: sforge warnings
-        run: RUSTFLAGS="-D warnings" cargo check --bin sforge
-      - name: sanvil warnings
-        run: RUSTFLAGS="-D warnings" cargo check --bin sanvil
 
   warnings:
     runs-on: ubuntu-latest
