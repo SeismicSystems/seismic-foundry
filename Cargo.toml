@@ -308,7 +308,7 @@ revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", 
 revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "77a08e9" }
 
 # seismic-revm-inspectors
-revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "75ab456" }
+revm-inspectors = { git = "ssh://git@github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "9868b93" }
 
 # seismic-alloy-core
 alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "3042b07" }
