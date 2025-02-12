@@ -1,5 +1,5 @@
 # `sfoundryup`
-Install, and update the Seismic Foundry suite of developer tools with ease.
+Install and update the Seismic Foundry suite of developer tools with ease.
 ### Installing
 Run the following command to install `sfoundryup`:
 ```bash
