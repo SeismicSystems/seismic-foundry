@@ -1,21 +1,28 @@
-use alloy_consensus::transaction::TxSeismic;
+use alloy_consensus::{transaction::TxSeismic, TxEnvelope};
 use alloy_dyn_abi::EventExt;
+use alloy_eips::eip712::TypedDataRequest;
 use alloy_json_abi::{Event, EventParam};
-use alloy_network::{ReceiptResponse, TransactionBuilder};
+use alloy_network::{Ethereum, EthereumWallet, ReceiptResponse, TransactionBuilder};
 use alloy_primitives::{
     aliases::{B96, U96},
     hex::{self, FromHex},
-    Address, Bytes, FixedBytes, IntoLogData, B256, U256,
+    Address, Bytes, FixedBytes, IntoLogData, TxKind, B256, U256,
 };
-use alloy_provider::Provider;
-use alloy_rpc_types::{SeismicCallRequest, TransactionRequest};
+use alloy_provider::{
+    create_seismic_provider, create_seismic_provider_without_wallet, test_utils, Provider,
+    SendableTx,
+};
+use alloy_rpc_types::{SeismicCallRequest, TransactionInput, TransactionRequest};
 use alloy_serde::{OtherFields, WithOtherFields};
+use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{eth::EthApi, spawn, NodeConfig};
 use anvil_core::eth::transaction::crypto;
 use foundry_common::provider::RetryProvider;
-use secp256k1::SecretKey;
-use seismic_enclave::{aes_decrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk};
+use secp256k1::{PublicKey, SecretKey};
+use seismic_enclave::{
+    aes_decrypt, ecdh_decrypt, ecdh_encrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk,
+};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
@@ -34,11 +41,7 @@ impl From<SeismicTransactionFields> for OtherFields {
 }
 
 // common utils
-pub const TEST_BYTECODE_PATH: &str = "/tests/it/seismic_test_bytecode.txt";
 pub const TEST_PRECOMPILES_BYTECODE_PATH: &str = "/tests/it/seismic_precompiles_test_bytecode.txt";
-pub const SET_NUMBER_SELECTOR: &str = "3fb5c1cb"; // setNumber(uint256)
-pub const INCREMENT_SELECTOR: &str = "d09de08a"; // increment()
-pub const GET_NUMBER_SELECTOR: &str = "f2c9ecd8"; // getNumber()
 pub const PRECOMPILES_TEST_SET_AES_KEY_SELECTOR: &str = "a0619040"; // setAESKey(suint256)
 pub const PRECOMPILES_TEST_ENCRYPTED_LOG_SELECTOR: &str = "28696e36"; // submitMessage(bytes)
 
@@ -78,117 +81,179 @@ pub fn concat_input_data(selector: &str, value: Bytes) -> Bytes {
     input_data.into()
 }
 
+pub fn get_sk(sk_wallet: &PrivateKeySigner) -> SecretKey {
+    SecretKey::from_slice(&sk_wallet.credential().to_bytes()).expect("32 bytes, within curve order")
+}
+
+pub fn get_pk(sk_wallet: &PrivateKeySigner) -> PublicKey {
+    PublicKey::from_secret_key_global(&get_sk(sk_wallet))
+}
+
+pub async fn get_unsigned_seismic_tx_request(
+    signer: &PrivateKeySigner,
+    pk: &PublicKey,
+    nonce: u64,
+    to: TxKind,
+    chain_id: u64,
+    plaintext: Bytes,
+) -> TransactionRequest {
+    let encryption_sk = get_sk(signer);
+    let encryption_pk = get_pk(signer);
+
+    let encrypted_input = ecdh_encrypt(&pk, &encryption_sk, plaintext.to_vec(), nonce).unwrap();
+
+    TransactionRequest {
+        from: Some(signer.address()),
+        nonce: Some(nonce),
+        value: Some(U256::from(0)),
+        to: Some(to),
+        gas: Some(6000000),
+        gas_price: Some(20e9 as u128),
+        chain_id: Some(chain_id),
+        input: TransactionInput { input: Some(Bytes::from(encrypted_input)), data: None },
+        transaction_type: Some(TxSeismic::TX_TYPE),
+        encryption_pubkey: Some(alloy_consensus::transaction::EncryptionPublicKey::from(
+            encryption_pk.serialize(),
+        )),
+        ..Default::default()
+    }
+}
+
+pub async fn sign_tx(wallet: PrivateKeySigner, tx: TransactionRequest) -> TxEnvelope {
+    let signer = EthereumWallet::from(wallet);
+    <TransactionRequest as TransactionBuilder<Ethereum>>::build(tx, &signer).await.unwrap()
+}
+
+/// Create a seismic transaction with typed data
+pub async fn get_signed_seismic_tx_typed_data(
+    signer: &PrivateKeySigner,
+    pk: &PublicKey,
+    nonce: u64,
+    to: TxKind,
+    chain_id: u64,
+    plaintext: Bytes,
+) -> TypedDataRequest {
+    let tx = get_unsigned_seismic_tx_request(signer, pk, nonce, to, chain_id, plaintext)
+        .await
+        .with_message_version(2); //message version makes it a typed data
+    let signed = sign_tx(signer.clone(), tx).await;
+
+    match signed {
+        TxEnvelope::Seismic(tx) => tx.into(),
+        _ => panic!("Signed transaction is not a seismic transaction"),
+    }
+}
+
 #[tokio::test(flavor = "multi_thread")]
-async fn test_seismic_transaction() {
+async fn test_seismic_transaction_rpc() {
+    // send a send_raw_transaction bytes
+    // send a unsigned call with transactionrequest type
+    // send a send_raw_transaction typeddata type
+    // send a call bytes
+    // send a call typeddata
+
     let (api, handle) = spawn(NodeConfig::test()).await;
-
-    // set automine to false
-    api.anvil_set_auto_mine(false).await.unwrap();
-
-    let provider = handle.http_provider();
+    api.anvil_set_auto_mine(true).await.unwrap();
+    let signer = handle.dev_wallets().next().unwrap();
+    let provider = create_seismic_provider(
+        EthereumWallet::new(signer.clone()),
+        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
+    );
+    let unsigned_provider = create_seismic_provider_without_wallet(
+        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
+    );
     let deployer = handle.dev_accounts().next().unwrap();
+    let network_pubkey =
+        PublicKey::from_slice(&provider.get_tee_pubkey().await.unwrap().0).unwrap();
+    let plaintext_bytecode = test_utils::ContractTestContext::get_deploy_input_plaintext();
 
-    let bytecode = load_bytecode_from_file(TEST_BYTECODE_PATH);
+    // send a send_raw_transaction bytes
+    let contract_address = provider
+        .send_transaction(test_utils::get_seismic_tx_builder(
+            plaintext_bytecode.clone(),
+            TxKind::Create,
+            deployer,
+        ))
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+    let code = provider.get_code_at(contract_address).await.unwrap();
+    assert_eq!(code, test_utils::ContractTestContext::get_code());
 
-    let deploy_tx = TransactionRequest::default().from(deployer).with_deploy_code(bytecode.clone());
-    let deploy_tx = WithOtherFields::new(deploy_tx);
+    // send a call bytes
+    let res = provider
+        .seismic_call(SendableTx::Builder(test_utils::get_seismic_tx_builder(
+            plaintext_bytecode.clone(),
+            TxKind::Create,
+            deployer,
+        )))
+        .await
+        .unwrap();
+    assert_eq!(res, test_utils::ContractTestContext::get_code());
 
-    let pending = provider.send_transaction(deploy_tx).await.unwrap();
+    // send a usngiend call
+    let res = unsigned_provider
+        .seismic_call(SendableTx::Builder(test_utils::get_seismic_tx_builder(
+            plaintext_bytecode.clone(),
+            TxKind::Create,
+            deployer,
+        )))
+        .await
+        .unwrap();
+    assert_eq!(res, test_utils::ContractTestContext::get_code());
 
-    // mine block
+    // send a signed typed data transaction
+    let tx_hash = api
+        .send_signed_typed_data_tx(
+            get_signed_seismic_tx_typed_data(
+                &signer,
+                &network_pubkey,
+                provider.get_transaction_count(deployer).await.unwrap(),
+                TxKind::Create,
+                provider.get_chain_id().await.unwrap(),
+                plaintext_bytecode.clone(),
+            )
+            .await,
+        )
+        .await
+        .unwrap();
     api.mine_one().await;
+    let receipt = provider.get_transaction_receipt(tx_hash).await.unwrap().unwrap();
+    assert!(receipt.status());
+    let code = provider.get_code_at(receipt.contract_address.unwrap()).await.unwrap();
+    assert_eq!(code, test_utils::ContractTestContext::get_code());
 
-    let receipt =
-        provider.get_transaction_receipt(pending.tx_hash().to_owned()).await.unwrap().unwrap();
-    assert!(receipt.contract_address.is_some());
-
-    let accounts: Vec<_> = handle.dev_wallets().collect();
-
-    let from = accounts[0].address();
-    let encryption_sk = get_sample_secp256k1_sk();
-    let encryption_pk = Bytes::from(get_sample_secp256k1_pk().serialize());
-
-    let to = receipt.contract_address.unwrap();
-
-    let encoded_setnumber_data = get_input_data(SET_NUMBER_SELECTOR, B256::from(U256::from(10)));
-    let set_data = crypto::client_encrypt(&encryption_sk, &encoded_setnumber_data, 1).unwrap();
-
-    let tx = TransactionRequest::default()
-        .transaction_type(TxSeismic::TX_TYPE)
-        .with_from(from)
-        .with_to(to)
-        .with_nonce(1)
-        .with_gas_limit(210000)
-        .with_chain_id(31337)
-        .with_input(set_data);
-
-    let seismic_tx = WithOtherFields {
-        inner: tx,
-        other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
-    };
-
-    let pending_set = provider.send_transaction(seismic_tx).await.unwrap();
-
-    api.mine_one().await;
-
-    let receipt: Option<
-        WithOtherFields<
-            alloy_rpc_types::TransactionReceipt<
-                alloy_network::AnyReceiptEnvelope<alloy_rpc_types::Log>,
-            >,
-        >,
-    > = provider.get_transaction_receipt(pending_set.tx_hash().to_owned()).await.unwrap();
-    assert!(receipt.is_some());
-
-    let encoded_increment_data = get_input_data(INCREMENT_SELECTOR, B256::from(U256::from(10)));
-    let increment_data =
-        crypto::client_encrypt(&encryption_sk, &encoded_increment_data, 2).unwrap();
-
-    let tx = TransactionRequest::default()
-        .transaction_type(TxSeismic::TX_TYPE)
-        .with_from(from)
-        .with_to(to)
-        .with_nonce(2)
-        .with_gas_limit(210000)
-        .with_chain_id(31337)
-        .with_input(increment_data);
-
-    let seismic_tx = WithOtherFields {
-        inner: tx,
-        other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
-    };
-
-    let pending_increment = provider.send_transaction(seismic_tx).await.unwrap();
-
-    api.mine_one().await;
-
-    let receipt =
-        provider.get_transaction_receipt(pending_increment.tx_hash().to_owned()).await.unwrap();
-    assert!(receipt.is_some());
-
-    let encoded_getnumber_data = hex::decode(GET_NUMBER_SELECTOR).unwrap();
-    let get_data = crypto::client_encrypt(&encryption_sk, &encoded_getnumber_data, 3).unwrap();
-
-    let tx = TransactionRequest::default()
-        .transaction_type(TxSeismic::TX_TYPE)
-        .with_from(from)
-        .with_to(to)
-        .with_nonce(3)
-        .with_gas_limit(210000)
-        .with_chain_id(31337)
-        .with_input(get_data);
-
-    let seismic_tx = WithOtherFields {
-        inner: tx,
-        other: SeismicTransactionFields { encryption_pubkey: encryption_pk.clone() }.into(),
-    };
-
-    let pending_get = provider.send_transaction(seismic_tx).await.unwrap();
-
-    api.mine_one().await;
-
-    let receipt = provider.get_transaction_receipt(pending_get.tx_hash().to_owned()).await.unwrap();
-    assert!(receipt.is_some());
+    // a signed data call
+    let res = api
+        .call(
+            SeismicCallRequest::TypedData(
+                get_signed_seismic_tx_typed_data(
+                    &signer,
+                    &network_pubkey,
+                    provider.get_transaction_count(deployer).await.unwrap(),
+                    TxKind::Create,
+                    provider.get_chain_id().await.unwrap(),
+                    plaintext_bytecode.clone(),
+                )
+                .await,
+            ),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    let decrypted = ecdh_decrypt(
+        &network_pubkey,
+        &get_sk(&signer),
+        res.to_vec(),
+        provider.get_transaction_count(deployer).await.unwrap(),
+    )
+    .unwrap();
+    assert_eq!(Bytes::from(decrypted), test_utils::ContractTestContext::get_code());
 }
 
 // Helpful type alias for the receipt you retrieve
