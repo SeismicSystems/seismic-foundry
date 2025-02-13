@@ -6,7 +6,7 @@ use alloy_network::{Ethereum, EthereumWallet, ReceiptResponse, TransactionBuilde
 use alloy_primitives::{
     aliases::{B96, U96},
     hex::{self, FromHex},
-    Address, Bytes, FixedBytes, IntoLogData, TxHash, TxKind, B256, U256,
+    Address, Bytes, FixedBytes, IntoLogData, TxKind, B256, U256,
 };
 use alloy_provider::{
     create_seismic_provider, create_seismic_provider_without_wallet, test_utils, Provider,
@@ -17,16 +17,14 @@ use alloy_serde::{OtherFields, WithOtherFields};
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{eth::EthApi, spawn, NodeConfig};
-use anvil_core::eth::{transaction::crypto, EthRequest};
-use anvil_rpc::response::ResponseResult;
+use anvil_core::eth::transaction::crypto;
 use foundry_common::provider::RetryProvider;
 use secp256k1::{PublicKey, SecretKey};
 use seismic_enclave::{
     aes_decrypt, ecdh_decrypt, ecdh_encrypt, get_sample_secp256k1_pk, get_sample_secp256k1_sk,
 };
 use serde::{Deserialize, Serialize};
-use std::{fs, str::FromStr};
-use yansi::Paint;
+use std::fs;
 
 /// Seismic specific transaction field(s)
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -43,11 +41,7 @@ impl From<SeismicTransactionFields> for OtherFields {
 }
 
 // common utils
-pub const TEST_BYTECODE_PATH: &str = "/tests/it/seismic_test_bytecode.txt";
 pub const TEST_PRECOMPILES_BYTECODE_PATH: &str = "/tests/it/seismic_precompiles_test_bytecode.txt";
-pub const SET_NUMBER_SELECTOR: &str = "3fb5c1cb"; // setNumber(uint256)
-pub const INCREMENT_SELECTOR: &str = "d09de08a"; // increment()
-pub const GET_NUMBER_SELECTOR: &str = "f2c9ecd8"; // getNumber()
 pub const PRECOMPILES_TEST_SET_AES_KEY_SELECTOR: &str = "a0619040"; // setAESKey(suint256)
 pub const PRECOMPILES_TEST_ENCRYPTED_LOG_SELECTOR: &str = "28696e36"; // submitMessage(bytes)
 
@@ -151,12 +145,12 @@ pub async fn get_signed_seismic_tx_typed_data(
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_seismic_transaction_new() {
-    // send a call transactionrequest type
+async fn test_seismic_transaction_rpc() {
+    // send a send_raw_transaction bytes
+    // send a unsigned call with transactionrequest type
+    // send a send_raw_transaction typeddata type
     // send a call bytes
     // send a call typeddata
-    // send a send_raw_transaction typeddata type
-    // send a send_raw_transaction bytes
 
     let (api, handle) = spawn(NodeConfig::test()).await;
     api.anvil_set_auto_mine(true).await.unwrap();
