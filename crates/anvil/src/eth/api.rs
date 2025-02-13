@@ -34,7 +34,7 @@ use alloy_consensus::{
     transaction::eip4844::TxEip4844Variant, Account, SignableTransaction, TxSeismic,
 };
 use alloy_dyn_abi::TypedData;
-use alloy_eips::eip2718::Encodable2718;
+use alloy_eips::{eip2718::Encodable2718, eip712::Decodable712};
 use alloy_network::{
     eip2718::Decodable2718, AnyRpcBlock, AnyRpcTransaction, BlockResponse, Ethereum, NetworkWallet,
     TransactionBuilder, TransactionResponse,
@@ -1068,14 +1068,12 @@ impl EthApi {
     ) -> Result<TxHash> {
         node_info!("eth_sendRawTransaction via eth_signTypedData");
 
-        let tx: TxSeismic = td.data.try_into().map_err(|e: serde_json::Error| {
+        let transaction = TypedTransaction::decode_712(&td).map_err(|e| {
             BlockchainError::Message(format!(
-                "Failed to decode typed data into seismic tx: {}",
-                e.to_string()
+                "Failed to decode typed data into seismic tx: {:?}",
+                e
             ))
         })?;
-        let signed_tx = tx.into_signed(td.signature);
-        let transaction = TypedTransaction::Seismic(signed_tx);
 
         // NOTE: rest is copy pasta from send_raw_transaction
         self.ensure_typed_transaction_supported(&transaction)?;
@@ -1168,22 +1166,29 @@ impl EthApi {
                     }
                 }
             }
-            alloy_rpc_types::SeismicCallRequest::TypedData(
-                alloy_eips::eip712::TypedDataRequest { data, signature },
-            ) => {
-                let tx: TxSeismic = data.try_into().map_err(|e| {
+            alloy_rpc_types::SeismicCallRequest::TypedData(td) => {
+                println!("call typed data: {:?}", td);
+                let typed_tx = TypedTransaction::decode_712(&td).map_err(|e| {
                     BlockchainError::Message(format!(
-                        "Failed to decode typed data into seismic tx: {e:?}"
+                        "Failed to decode typed data into seismic tx: {:?}",
+                        e
                     ))
                 })?;
-                let signed_seismic_tx = tx.into_signed(signature);
-                // NOTE: this is recover_caller, not recover_signer
-                let sender = signed_seismic_tx.recover_caller().map_err(|e| {
+                let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
+                    BlockchainError::Message(
+                        "Failed to decode bytes to transaction request".to_string(),
+                    )
+                })?;
+
+                let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
+                    "Can only make signedCall with Seismic Transactions".to_string(),
+                ))?;
+                // unlike above, this can be either recover_signer or recover_caller,
+                // since message_version = 0 for these
+                let sender = signed_seismic_tx.recover_signer().map_err(|e| {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
-                let tx = signed_seismic_tx.into_parts().0;
-                let mut request: WithOtherFields<TransactionRequest> =
-                    WithOtherFields::new(tx.into());
+                let mut request = WithOtherFields::new(tx);
                 request.inner.from = Some(sender);
                 self.seismic_call(request, block_number, overrides).await
             }

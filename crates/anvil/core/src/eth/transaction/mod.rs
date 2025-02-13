@@ -9,7 +9,10 @@ use alloy_consensus::{
     Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559, TxEip2930,
     TxEnvelope, TxLegacy, TxReceipt, Typed2718,
 };
-use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Encodable2718};
+use alloy_eips::{
+    eip2718::{Decodable2718, Eip2718Error, Encodable2718},
+    eip712::{Decodable712, Eip712Result, TypedDataRequest},
+};
 use alloy_network::{AnyReceiptEnvelope, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope};
 use alloy_primitives::{
     Address, Bloom, Bytes, Log, PrimitiveSignature, TxHash, TxKind, B256, U256, U64,
@@ -1199,6 +1202,12 @@ impl Decodable2718 for TypedTransaction {
             TxEnvelope::Legacy(tx) => Ok(Self::Legacy(tx)),
             _ => unreachable!(),
         }
+    }
+}
+
+impl Decodable712 for TypedTransaction {
+    fn decode_712(typed_data: &TypedDataRequest) -> Eip712Result<Self> {
+        TxEnvelope::decode_712(typed_data).map(Self::from)
     }
 }
 
