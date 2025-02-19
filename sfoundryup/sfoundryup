@@ -12,221 +12,237 @@ BINS=(sforge scast sanvil schisel)
 export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
 
 main() {
-  while [[ -n $1 ]]; do
-    case $1 in
-      --)               shift; break;;
-      -v|--version)     shift; SEISMICUP_VERSION=$1;;
-      -p|--path)        shift; SEISMICUP_LOCAL_REPO=$1;;
-      -j|--jobs)        shift; SEISMICUP_JOBS=$1;;
-      -h|--help)
-        usage
-        exit 0
-        ;;
-      *)
-        warn "unknown option: $1"
-        usage
-        exit 1
-        ;;
-    esac
-    shift
-  done
+ while [[ -n $1 ]]; do
+   case $1 in
+     --)               shift; break;;
+     -v|--version)     shift; SEISMICUP_VERSION=$1;;
+     -p|--path)        shift; SEISMICUP_LOCAL_REPO=$1;;
+     -j|--jobs)        shift; SEISMICUP_JOBS=$1;;
+     -h|--help)
+       usage
+       exit 0
+       ;;
+     *)
+       warn "unknown option: $1"
+       usage
+       exit 1
+       ;;
+   esac
+   shift
+ done
 
-  need_cmd git
-  need_cmd curl
-  need_cmd jq
+ need_cmd git
+ need_cmd curl
+ need_cmd jq
 
-  CARGO_BUILD_ARGS=(--release)
+ CARGO_BUILD_ARGS=(--release)
 
-  if [ -n "$SEISMICUP_JOBS" ]; then
-    CARGO_BUILD_ARGS+=(--jobs "$SEISMICUP_JOBS")
-  fi
+ if [ -n "$SEISMICUP_JOBS" ]; then
+   CARGO_BUILD_ARGS+=(--jobs "$SEISMICUP_JOBS")
+ fi
 
-  # Print the banner after successfully parsing args
-  banner
+ banner
+ install_ssolc
 
-  install_ssolc
-
-  if [[ -n "$SEISMICUP_LOCAL_REPO" ]]; then
-    install_from_local_repo
-  else
-    install_from_remote_repo
-  fi
+ if [[ -n "$SEISMICUP_LOCAL_REPO" ]]; then
+   install_from_local_repo
+ else
+   install_from_remote_repo
+ fi
 }
 
 install_ssolc() {
-  echo "Starting ssolc installation..."
+ echo "Starting ssolc installation..."
 
-  # Detect OS
-  OS="$(uname -s)"
-  ARCH="$(uname -m)"
+ # Detect OS and set installation paths
+ OS="$(uname -s)"
+ ARCH="$(uname -m)"
 
-  case "$OS" in
-    Linux*)
-      OS_TYPE="linux"
-      ;;
-    Darwin*)
-      OS_TYPE="macos"
-      ;;
-    CYGWIN*|MINGW*|MSYS*|Windows_NT)
-      OS_TYPE="windows"
-      ;;
-    *)
-      echo "Unsupported OS: $OS"
-      exit 1
-      ;;
-  esac
+ case "$OS" in
+   Linux*)     
+     OS_TYPE="linux"
+     INSTALL_DIR="/usr/local/bin"
+     ;;
+   Darwin*)    
+     OS_TYPE="macos"
+     INSTALL_DIR="/usr/local/bin"
+     ;;
+   CYGWIN*|MINGW*|MSYS*|Windows_NT)
+     OS_TYPE="windows"
+     INSTALL_DIR="$PROGRAMFILES/Seismic/bin"
+     ;;
+   *)
+     echo "Unsupported OS: $OS"
+     exit 1
+     ;;
+ esac
 
-  case "$ARCH" in
-    x86_64)
-      ARCH_TYPE="x86_64"
-      ;;
-    arm64|aarch64)
-      ARCH_TYPE="arm64"
-      ;;
-    *)
-      echo "Unsupported architecture: $ARCH"
-      exit 1
-      ;;
-  esac
+ case "$ARCH" in
+   x86_64)     ARCH_TYPE="x86_64" ;;
+   arm64|aarch64) ARCH_TYPE="arm64" ;;
+   *)
+     echo "Unsupported architecture: $ARCH"
+     exit 1
+     ;;
+ esac
 
-  # Construct target name
+  # Set target info
+  TARGET_NAME="ssolc-${OS_TYPE}-${ARCH_TYPE}"
   if [[ "$OS_TYPE" == "windows" ]]; then
-    TARGET_NAME="ssolc-windows-$ARCH_TYPE.zip"
+    TARGET_NAME="${TARGET_NAME}.zip"
   else
-    TARGET_NAME="ssolc-$OS_TYPE-$ARCH_TYPE.tar.gz"
+    TARGET_NAME="${TARGET_NAME}.tar.gz"
   fi
-
-  INSTALL_DIR="/usr/local/bin"
-  SSOLC_BIN="$INSTALL_DIR/ssolc"
-  TEMP_DIR=$(mktemp -d)
-
-  # Fetch the asset ID for the target file
-  echo "Fetching asset ID for $TARGET_NAME..."
-  GITHUB_API_URL="https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/latest"
-  ASSET_ID=$(curl -s "$GITHUB_API_URL" | \
-      jq -r --arg name "$TARGET_NAME" '.assets[] | select(.name == $name) | .id')
-
-  if [[ -z "$ASSET_ID" ]]; then
-      echo "Error: Asset $TARGET_NAME not found in the latest release."
-      exit 1
-  fi
-
-  echo "Found asset ID: $ASSET_ID"
-
-  # Download the file using the asset ID
-  echo "Downloading $TARGET_NAME..."
-  curl -L -H "Accept: application/octet-stream" \
-       -o "$TEMP_DIR/$TARGET_NAME" \
-       "https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/assets/$ASSET_ID"
-
-  # Verify the downloaded file is a valid gzip archive
-  echo "Verifying the downloaded file..."
-  if file "$TEMP_DIR/$TARGET_NAME" | grep -q 'gzip compressed data'; then
-      echo "File verified as a valid gzip archive."
+  
+  if [[ "$OS_TYPE" == "windows" ]]; then
+    SSOLC_BIN="${INSTALL_DIR}/ssolc.exe"
   else
-      echo "Error: Downloaded file is not a valid gzip archive."
-      exit 1
+    SSOLC_BIN="${INSTALL_DIR}/ssolc"
   fi
 
-  # Extract the gzip archive
-  echo "Extracting $TARGET_NAME..."
-  tar -xzf "$TEMP_DIR/$TARGET_NAME" -C "$TEMP_DIR"
+ TEMP_DIR=$(mktemp -d)
+ trap 'rm -rf "$TEMP_DIR"' EXIT
 
-  # Ensure the extracted folder exists
-  EXTRACTED_DIR="$TEMP_DIR/solc"
-  if [[ ! -d "$EXTRACTED_DIR" ]]; then
-      echo "Error: Expected directory 'solc' not found in the extracted archive."
-      exit 1
-  fi
+ # Download the release
+ echo "Fetching latest release information..."
+ GITHUB_API_URL="https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/latest"
+ ASSET_ID=$(curl -s "$GITHUB_API_URL" | \
+     jq -r --arg name "$TARGET_NAME" '.assets[] | select(.name == $name) | .id')
 
-  # Move the binary to /usr/local/bin and set permissions
-  echo "Installing solc binary..."
-  sudo mv "$EXTRACTED_DIR/solc" "$SSOLC_BIN"
-  sudo chmod +x "$SSOLC_BIN"
+ if [[ -z "$ASSET_ID" ]]; then
+   echo "Error: Asset $TARGET_NAME not found in the latest release."
+   exit 1
+ fi
 
-  echo "Installation complete! sscolc installed at $SSOLC_BIN."
+ echo "Downloading $TARGET_NAME..."
+ DOWNLOAD_PATH="$TEMP_DIR/$TARGET_NAME"
+ curl -L -H "Accept: application/octet-stream" \
+      -o "$DOWNLOAD_PATH" \
+      "https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/assets/$ASSET_ID"
+
+ # Extract and install
+ echo "Extracting archive..."
+ mkdir -p "$TEMP_DIR/extract"
+ 
+ if [[ "$OS_TYPE" == "windows" ]]; then
+   if ! file "$DOWNLOAD_PATH" | grep -q 'Zip archive data'; then
+     echo "Error: Invalid zip archive"
+     exit 1
+   fi
+   unzip -q "$DOWNLOAD_PATH" -d "$TEMP_DIR/extract"
+   BINARY_PATH="$TEMP_DIR/extract/solc.exe"
+ else
+   if ! file "$DOWNLOAD_PATH" | grep -q 'gzip compressed data'; then
+     echo "Error: Invalid gzip archive"
+     exit 1
+   fi
+   tar -xzf "$DOWNLOAD_PATH" -C "$TEMP_DIR/extract"
+   BINARY_PATH="$TEMP_DIR/extract/solc/solc"
+ fi
+
+ if [[ ! -f "$BINARY_PATH" ]]; then
+   echo "Error: Binary not found in extracted archive"
+   exit 1
+ fi
+
+ # Install the binary
+ echo "Installing binary to $SSOLC_BIN..."
+ mkdir -p "$(dirname "$SSOLC_BIN")"
+ 
+ if [[ "$OS_TYPE" == "windows" ]]; then
+   mv "$BINARY_PATH" "$SSOLC_BIN"
+   chmod +x "$SSOLC_BIN"
+   echo "Adding $INSTALL_DIR to PATH..."
+   setx PATH "%PATH%;$INSTALL_DIR"
+   echo "Please restart your terminal for PATH changes to take effect."
+ else
+   sudo mv "$BINARY_PATH" "$SSOLC_BIN"
+   sudo chmod +x "$SSOLC_BIN"
+ fi
+
+ echo "Installation complete! ssolc installed at $SSOLC_BIN"
 }
 
 install_from_remote_repo() {
-  SEISMICUP_REPO="SeismicSystems/seismic-foundry"
-  SEISMICUP_BRANCH="seismic"
+ SEISMICUP_REPO="SeismicSystems/seismic-foundry"
+ SEISMICUP_BRANCH="seismic"
 
-  need_cmd cargo
-  say "Installing Seismic Foundry from $SEISMICUP_REPO (branch: $SEISMICUP_BRANCH)..."
+ need_cmd cargo
+ say "Installing Seismic Foundry from $SEISMICUP_REPO (branch: $SEISMICUP_BRANCH)..."
 
-  REPO_PATH="$SEISMIC_DIR/$(basename "$SEISMICUP_REPO")"
+ REPO_PATH="$SEISMIC_DIR/$(basename "$SEISMICUP_REPO")"
 
-  # Clone the repository if it doesn't already exist
-  if [ ! -d "$REPO_PATH" ]; then
-    ensure mkdir -p "$SEISMIC_DIR"
-    say "Cloning the repository..."
-    ensure git clone "https://github.com/$SEISMICUP_REPO.git" "$REPO_PATH"
-  fi
+ # Clone the repository if it doesn't already exist
+ if [ ! -d "$REPO_PATH" ]; then
+   ensure mkdir -p "$SEISMIC_DIR"
+   say "Cloning the repository..."
+   ensure git clone "https://github.com/$SEISMICUP_REPO.git" "$REPO_PATH"
+ fi
 
-  # Fetch and checkout the branch
-  cd "$REPO_PATH"
-  ensure git fetch origin "${SEISMICUP_BRANCH}:remotes/origin/${SEISMICUP_BRANCH}"
-  ensure git checkout "origin/${SEISMICUP_BRANCH}"
+ # Fetch and checkout the branch
+ cd "$REPO_PATH"
+ ensure git fetch origin "${SEISMICUP_BRANCH}:remotes/origin/${SEISMICUP_BRANCH}"
+ ensure git checkout "origin/${SEISMICUP_BRANCH}"
 
-  # Use the git CLI to fetch dependencies
-  export CARGO_NET_GIT_FETCH_WITH_CLI=true
+ # Use the git CLI to fetch dependencies
+ export CARGO_NET_GIT_FETCH_WITH_CLI=true
 
-  # Build the binaries
-  ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
-  for bin in "${BINS[@]}"; do
-    for try_path in target/release/$bin target/release/$bin.exe; do
-      if [ -f "$try_path" ]; then
-        [ -e "$SEISMIC_BIN_DIR/$bin" ] && warn "Overwriting existing $bin in $SEISMIC_BIN_DIR"
-        mv -f "$try_path" "$SEISMIC_BIN_DIR"
-      fi
-    done
-  done
+ # Build the binaries
+ ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
+ for bin in "${BINS[@]}"; do
+   for try_path in target/release/$bin target/release/$bin.exe; do
+     if [ -f "$try_path" ]; then
+       [ -e "$SEISMIC_BIN_DIR/$bin" ] && warn "Overwriting existing $bin in $SEISMIC_BIN_DIR"
+       mv -f "$try_path" "$SEISMIC_BIN_DIR"
+     fi
+   done
+ done
 
-  say "Seismic Foundry installation complete."
+ say "Seismic Foundry installation complete."
 }
 
 usage() {
-  cat 1>&2 <<EOF
+ cat 1>&2 <<EOF
 The installer for Seismic Foundry.
 
 Installs or updates ssolc, sforge, scast, sanvil, and schisel for Ethereum development.
 
 USAGE:
-    sfoundryup <OPTIONS>
+   sfoundryup <OPTIONS>
 
 OPTIONS:
-    -h, --help      Print help information
-    -v, --version   Install a specific version from built binaries
-    -p, --path      Build and install a local repository
-    -j, --jobs      Number of CPUs to use for building (default: all CPUs)
+   -h, --help      Print help information
+   -v, --version   Install a specific version from built binaries
+   -p, --path      Build and install a local repository
+   -j, --jobs      Number of CPUs to use for building (default: all CPUs)
 EOF
 }
 
 say() {
-  printf "sfoundryup: %s\n" "$1"
+ printf "sfoundryup: %s\n" "$1"
 }
 
 warn() {
-  say "warning: $1" >&2
+ say "warning: $1" >&2
 }
 
 err() {
-  say "$1" >&2
-  exit 1
+ say "$1" >&2
+ exit 1
 }
 
 need_cmd() {
-  if ! command -v "$1" &>/dev/null; then
-    err "Need '$1' (command not found)"
-  fi
+ if ! command -v "$1" &>/dev/null; then
+   err "Need '$1' (command not found)"
+ fi
 }
 
 ensure() {
-  if ! "$@"; then err "Command failed: $*"; fi
+ if ! "$@"; then err "Command failed: $*"; fi
 }
 
 banner() {
-  printf '
+ printf '
 
  #####   #######   ######   #####   ##   ##   ######   #####            #######   #####   ### ###  ##  ###  ######   ######   ### ###  
 ###  ##  ### ###     ##    ###  ##  ### ###     ##    ### ###           ###  ##  ### ###  ### ###  ### ###  ### ###  ### ###  ### ###  
@@ -234,13 +250,10 @@ banner() {
  #####   #####       ##     #####   #######     ##    ###       ######  #####    ### ###  ### ###  #######  ### ###  ######    #####   
      ##  ###         ##         ##  ### ###     ##    ###               ###      ### ###  ### ###  ### ###  ### ###  ### ##     ###    
 ###  ##  ### ###     ##    ###  ##  ### ###     ##    ### ###           ###      ### ###  ### ###  ### ###  ### ###  ### ###    ###    
- #####   #######   ######   #####   ### ###   ######   #####            ###       #####    #####   ### ###  ######   ### ###    ###    
+ #####   #######   ######   #####   ### ###   ######   #####            ###       #####    #####   ### ###  ######   ### ###    ###      
 
 Repo       : https://github.com/SeismicSystems/seismic-foundry
-Book       : TODO
-Chat       : TODO
-Support    : TODO
-Contribute : TODO
+Chat       : https://t.me/+xpzfNO4pmRoyM2Ux
 '
 }
 

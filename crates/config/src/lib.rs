@@ -1131,7 +1131,11 @@ impl Config {
         }
         if self.seismic {
             // Define the default solc path when seismic is true
-            let default_solc_path = PathBuf::from("/usr/local/bin/ssolc");
+            let default_solc_path = if cfg!(windows) {
+                PathBuf::from("C:\\Program Files\\Seismic\\bin\\ssolc.exe")
+            } else {
+                PathBuf::from("/usr/local/bin/ssolc")
+            };
             if !default_solc_path.is_file() {
                 return Err(SolcError::msg(format!(
                     "`solc` {} does not exist",
