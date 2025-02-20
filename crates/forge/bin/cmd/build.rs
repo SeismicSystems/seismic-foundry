@@ -79,6 +79,8 @@ impl BuildArgs {
     pub fn run(self) -> Result<ProjectCompileOutput> {
         let mut config = self.try_load_config_emit_warnings()?;
 
+        println!("evm version: {}", config.evm_version);
+
         if install::install_missing_dependencies(&mut config) && config.auto_detect_remappings {
             // need to re-configure here to also catch additional remappings
             config = self.load_config();
