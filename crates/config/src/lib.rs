@@ -658,6 +658,7 @@ impl Config {
 
     fn try_from_figment(figment: Figment) -> Result<Self, ExtractConfigError> {
         let mut config = figment.extract::<Self>().map_err(ExtractConfigError::new)?;
+        println!("extracted config is: {:?}", config);
         config.profile = figment.profile().clone();
 
         // The `"profile"` profile contains all the profiles as keys.
