@@ -231,6 +231,7 @@ where
 {
     fn try_load_config(self) -> Result<Config, ExtractConfigError> {
         let figment: Figment = self.into();
+        // println!("figment profile is: {:?}", figment.profile());
         Ok(Config::try_from(figment)?.sanitized())
     }
 
@@ -271,6 +272,7 @@ where
 
     fn try_load_config_emit_warnings(self) -> Result<Config, ExtractConfigError> {
         let config = self.try_load_config()?;
+        println!("config is: {:?}", config);
         emit_warnings(&config);
         Ok(config)
     }
