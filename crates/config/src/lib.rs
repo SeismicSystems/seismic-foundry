@@ -884,6 +884,7 @@ impl Config {
     pub fn sanitize_seismic_settings(&mut self) {
         if self.evm_version == EvmVersion::Mercury {
             self.seismic = true;
+            println!("Seismic flag is true");
         }
     }
 
