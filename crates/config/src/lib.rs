@@ -882,7 +882,7 @@ impl Config {
 
         config.sanitize_seismic_settings();
 
-        // config.evm_version = EvmVersion::Mercury;
+        config.evm_version = EvmVersion::Mercury;
 
         config
     }
