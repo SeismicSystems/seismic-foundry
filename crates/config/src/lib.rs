@@ -678,6 +678,8 @@ impl Config {
         add_profile(&Self::DEFAULT_PROFILE);
         add_profile(&config.profile);
 
+        config.evm_version = EvmVersion::Mercury;
+
         Ok(config)
     }
 
@@ -877,6 +879,8 @@ impl Config {
         config.sanitize_eof_settings();
 
         config.sanitize_seismic_settings();
+
+        config.evm_version = EvmVersion::Mercury;
 
         config
     }
