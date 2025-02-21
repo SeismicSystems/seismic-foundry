@@ -658,7 +658,7 @@ impl Config {
 
     fn try_from_figment(figment: Figment) -> Result<Self, ExtractConfigError> {
         let mut config = figment.extract::<Self>().map_err(ExtractConfigError::new)?;
-        println!("extracted config is: {:?}", config);
+        println!("extracted config root and evm version for is: {:?} and {:?}", config.root, config.evm_version);
         config.profile = figment.profile().clone();
 
         // The `"profile"` profile contains all the profiles as keys.
@@ -678,7 +678,7 @@ impl Config {
         add_profile(&Self::DEFAULT_PROFILE);
         add_profile(&config.profile);
 
-        config.evm_version = EvmVersion::Mercury;
+        // config.evm_version = EvmVersion::Mercury;
 
         Ok(config)
     }
@@ -871,6 +871,8 @@ impl Config {
     pub fn sanitized(self) -> Self {
         let mut config = self.canonic();
 
+        println!("canonic config evm version for lib {:?} is: {:?}", config.root, config.evm_version);
+
         config.sanitize_remappings();
 
         config.libs.sort_unstable();
@@ -880,7 +882,7 @@ impl Config {
 
         config.sanitize_seismic_settings();
 
-        config.evm_version = EvmVersion::Mercury;
+        // config.evm_version = EvmVersion::Mercury;
 
         config
     }

@@ -77,6 +77,8 @@ pub struct BuildArgs {
 
 impl BuildArgs {
     pub fn run(self) -> Result<ProjectCompileOutput> {
+
+        println!("sforge build called!");
         let mut config = self.try_load_config_emit_warnings()?;
 
         println!("evm version is: {}", config.evm_version);
