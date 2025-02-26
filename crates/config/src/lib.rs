@@ -657,7 +657,9 @@ impl Config {
     }
 
     fn try_from_figment(figment: Figment) -> Result<Self, ExtractConfigError> {
+        println!("try_from_figment called 1!");
         let mut config = figment.extract::<Self>().map_err(ExtractConfigError::new)?;
+        config.evm_version = EvmVersion::Mercury;
         println!("extracted config root and evm version for is: {:?} and {:?}", config.root, config.evm_version);
         config.profile = figment.profile().clone();
 

@@ -231,6 +231,7 @@ where
 {
     fn try_load_config(self) -> Result<Config, ExtractConfigError> {
         println!("try_load_config called 1!");
+        println!("before the extracted config");
         let figment: Figment = self.into();
         // println!("figment profile is: {:?}", figment.profile());
         println!("try_load_config called 2!");
