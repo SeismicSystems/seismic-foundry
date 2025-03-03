@@ -1382,7 +1382,7 @@ impl Backend {
                     nonce,
                     sidecar: _,
                     chain_id: _,
-                    transaction_type,
+                    transaction_type: _,
                     encryption_pubkey,
                     .. // Rest of the gas fees related fields are taken from `fee_details`
                 },
@@ -1419,7 +1419,7 @@ impl Backend {
 
         let mut data = input.into_input().unwrap_or_default();
 
-        if transaction_type == Some(TxSeismic::TX_TYPE) && !data.is_empty() {
+        if request.inner.is_seismic() && !data.is_empty() {
             let nonce = nonce.expect("nonce is required for seismic transactions");
             let encryption_pubkey =
                 encryption_pubkey.expect("encryption pubkey is required for seismic transactions");
