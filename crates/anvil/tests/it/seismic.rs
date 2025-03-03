@@ -169,11 +169,12 @@ async fn test_seismic_transaction_rpc() {
 
     // send a send_raw_transaction bytes
     let contract_address = provider
-        .send_transaction(test_utils::get_seismic_tx_builder(
-            plaintext_bytecode.clone(),
-            TxKind::Create,
-            deployer,
-        ))
+        .send_transaction(
+            TransactionRequest::default()
+                .with_from(deployer)
+                .with_kind(TxKind::Create)
+                .with_input(plaintext_bytecode.clone()),
+        )
         .await
         .unwrap()
         .get_receipt()
@@ -186,22 +187,24 @@ async fn test_seismic_transaction_rpc() {
 
     // send a call bytes
     let res = provider
-        .seismic_call(SendableTx::Builder(test_utils::get_seismic_tx_builder(
-            plaintext_bytecode.clone(),
-            TxKind::Create,
-            deployer,
-        )))
+        .seismic_call(SendableTx::Builder(
+            TransactionRequest::default()
+                .with_from(deployer)
+                .with_kind(TxKind::Create)
+                .with_input(plaintext_bytecode.clone()),
+        ))
         .await
         .unwrap();
     assert_eq!(res, test_utils::ContractTestContext::get_code());
 
     // send a usngiend call
     let res = unsigned_provider
-        .seismic_call(SendableTx::Builder(test_utils::get_seismic_tx_builder(
-            plaintext_bytecode.clone(),
-            TxKind::Create,
-            deployer,
-        )))
+        .seismic_call(SendableTx::Builder(
+            TransactionRequest::default()
+                .with_from(deployer)
+                .with_kind(TxKind::Create)
+                .with_input(plaintext_bytecode.clone()),
+        ))
         .await
         .unwrap();
     assert_eq!(res, test_utils::ContractTestContext::get_code());

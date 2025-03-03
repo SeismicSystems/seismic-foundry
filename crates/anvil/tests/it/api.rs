@@ -298,11 +298,12 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     let last_sender_tx = simple_storage_contract.lastSender().into_transaction_request();
     let raw_input = last_sender_tx.input().unwrap();
     let output = seismic_provider
-        .seismic_call(SendableTx::Builder(test_utils::get_seismic_tx_builder(
-            raw_input.clone(),
-            TxKind::Call(simple_storage_contract.address().clone()),
-            wallet.address(),
-        )))
+        .seismic_call(SendableTx::Builder(
+            TransactionRequest::default()
+                .with_from(wallet.address())
+                .with_to(simple_storage_contract.address())
+                .with_input(raw_input),
+        ))
         .await
         .unwrap();
     assert_eq!(**output, B256::ZERO.to_vec());

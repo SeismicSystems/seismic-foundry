@@ -77,12 +77,12 @@ async fn test_solc_revert_example() {
     let tx = contract.buy(U256::from(100)).into_transaction_request();
     let input = tx.input().unwrap();
     let err = seismic_provider
-        .seismic_call(SendableTx::Builder(get_seismic_tx_builder(
-            input.clone(),
-            TxKind::Call(contract.address().clone()),
-            sender,
-            U256::from(1),
-        )))
+        .seismic_call(SendableTx::Builder(
+            TransactionRequest::default()
+                .with_from(sender)
+                .with_to(contract.address())
+                .with_input(input),
+        ))
         .await
         .unwrap_err();
 
