@@ -301,8 +301,8 @@ async fn can_call_with_undersized_max_fee_per_gas() {
         .seismic_call(SendableTx::Builder(
             TransactionRequest::default()
                 .with_from(wallet.address())
-                .with_to(simple_storage_contract.address())
-                .with_input(raw_input),
+                .with_to(*simple_storage_contract.address())
+                .with_input(raw_input.clone()),
         ))
         .await
         .unwrap();

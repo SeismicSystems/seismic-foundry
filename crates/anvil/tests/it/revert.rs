@@ -2,7 +2,7 @@ use crate::abi::VendingMachine;
 use alloy_consensus::TxSeismic;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{bytes, Address, Bytes, TxKind, U256};
-use alloy_provider::{create_seismic_provider, Provider, SendableTx};
+use alloy_provider::{Provider, SeismicSignedProvider, SendableTx};
 use alloy_rpc_types::{TransactionInput, TransactionRequest};
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
@@ -71,7 +71,7 @@ async fn test_solc_revert_example() {
     let provider = handle.http_provider();
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
-    let seismic_provider = create_seismic_provider(wallet.clone().into(), node_url);
+    let seismic_provider = SeismicSignedProvider::new(wallet.clone().into(), node_url);
 
     let contract = VendingMachine::deploy(&provider).await.unwrap();
     let tx = contract.buy(U256::from(100)).into_transaction_request();
@@ -80,8 +80,8 @@ async fn test_solc_revert_example() {
         .seismic_call(SendableTx::Builder(
             TransactionRequest::default()
                 .with_from(sender)
-                .with_to(contract.address())
-                .with_input(input),
+                .with_to(*contract.address())
+                .with_input(input.clone()),
         ))
         .await
         .unwrap_err();

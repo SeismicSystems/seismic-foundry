@@ -9,8 +9,7 @@ use alloy_primitives::{
     Address, Bytes, FixedBytes, IntoLogData, TxKind, B256, U256,
 };
 use alloy_provider::{
-    create_seismic_provider, create_seismic_provider_without_wallet, test_utils, Provider,
-    SendableTx,
+    test_utils, Provider, SeismicSignedProvider, SeismicUnsignedProvider, SendableTx,
 };
 use alloy_rpc_types::{SeismicCallRequest, TransactionInput, TransactionRequest};
 use alloy_serde::{OtherFields, WithOtherFields};
@@ -155,13 +154,12 @@ async fn test_seismic_transaction_rpc() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     api.anvil_set_auto_mine(true).await.unwrap();
     let signer = handle.dev_wallets().next().unwrap();
-    let provider = create_seismic_provider(
+    let provider = SeismicSignedProvider::new(
         EthereumWallet::new(signer.clone()),
         reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
     );
-    let unsigned_provider = create_seismic_provider_without_wallet(
-        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
-    );
+    let unsigned_provider =
+        SeismicUnsignedProvider::new(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap());
     let deployer = handle.dev_accounts().next().unwrap();
     let network_pubkey =
         PublicKey::from_slice(&provider.get_tee_pubkey().await.unwrap().0).unwrap();
