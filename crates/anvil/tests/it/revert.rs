@@ -90,24 +90,6 @@ async fn test_solc_revert_example() {
     assert!(s.contains("Not enough Ether provided."), "{s:?}");
 }
 
-pub fn get_seismic_tx_builder(
-    plaintext: Bytes,
-    to: TxKind,
-    from: Address,
-    value: U256,
-) -> TransactionRequest {
-    TransactionRequest {
-        from: Some(from),
-        to: Some(to),
-        input: TransactionInput { input: Some(plaintext), data: None },
-        transaction_type: Some(TxSeismic::TX_TYPE),
-        gas_price: Some(20e9 as u128), /* make seismic tx treated as legacy tx when estimate
-                                        * for gas */
-        value: Some(value),
-        ..Default::default()
-    }
-}
-
 // <https://github.com/foundry-rs/foundry/issues/1871>
 #[tokio::test(flavor = "multi_thread")]
 async fn test_another_revert_message() {

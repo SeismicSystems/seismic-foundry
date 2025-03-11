@@ -7,9 +7,9 @@ use crate::{
 use alloy_network::{EthereumWallet, TransactionBuilder};
 use alloy_primitives::{
     map::{AddressHashMap, B256HashMap, HashMap},
-    Address, ChainId, TxKind, B256, U256,
+    Address, ChainId, B256, U256,
 };
-use alloy_provider::{test_utils, Provider, SeismicSignedProvider, SendableTx};
+use alloy_provider::{Provider, SeismicSignedProvider, SendableTx};
 use alloy_rpc_types::{
     request::TransactionRequest, state::AccountOverride, BlockId, BlockNumberOrTag,
     BlockTransactions,
