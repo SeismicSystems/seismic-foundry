@@ -2,7 +2,7 @@ use crate::abi::VendingMachine;
 use alloy_consensus::TxSeismic;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{bytes, Address, Bytes, TxKind, U256};
-use alloy_provider::{create_seismic_provider, Provider, SendableTx};
+use alloy_provider::{Provider, SeismicSignedProvider, SendableTx};
 use alloy_rpc_types::{TransactionInput, TransactionRequest};
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
@@ -71,41 +71,23 @@ async fn test_solc_revert_example() {
     let provider = handle.http_provider();
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
-    let seismic_provider = create_seismic_provider(wallet.clone().into(), node_url);
+    let seismic_provider = SeismicSignedProvider::new(wallet.clone().into(), node_url);
 
     let contract = VendingMachine::deploy(&provider).await.unwrap();
     let tx = contract.buy(U256::from(100)).into_transaction_request();
     let input = tx.input().unwrap();
     let err = seismic_provider
-        .seismic_call(SendableTx::Builder(get_seismic_tx_builder(
-            input.clone(),
-            TxKind::Call(contract.address().clone()),
-            sender,
-            U256::from(1),
-        )))
+        .seismic_call(SendableTx::Builder(
+            TransactionRequest::default()
+                .with_from(sender)
+                .with_to(*contract.address())
+                .with_input(input.clone()),
+        ))
         .await
         .unwrap_err();
 
     let s = err.to_string();
     assert!(s.contains("Not enough Ether provided."), "{s:?}");
-}
-
-pub fn get_seismic_tx_builder(
-    plaintext: Bytes,
-    to: TxKind,
-    from: Address,
-    value: U256,
-) -> TransactionRequest {
-    TransactionRequest {
-        from: Some(from),
-        to: Some(to),
-        input: TransactionInput { input: Some(plaintext), data: None },
-        transaction_type: Some(TxSeismic::TX_TYPE),
-        gas_price: Some(20e9 as u128), /* make seismic tx treated as legacy tx when estimate
-                                        * for gas */
-        value: Some(value),
-        ..Default::default()
-    }
 }
 
 // <https://github.com/foundry-rs/foundry/issues/1871>
