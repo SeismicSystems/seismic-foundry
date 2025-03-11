@@ -35,8 +35,7 @@ use crate::{
 };
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    transaction::TxSeismic, Account, Header, Receipt, ReceiptWithBloom, Signed,
-    Transaction as TransactionTrait, TxEnvelope,
+    Account, Header, Receipt, ReceiptWithBloom, Signed, Transaction as TransactionTrait, TxEnvelope,
 };
 use alloy_eips::eip4844::MAX_BLOBS_PER_BLOCK;
 use alloy_network::{
