@@ -1518,7 +1518,7 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let nonce = request.nonce.unwrap_or_default();
-        let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
+        let is_seismic_tx = request.inner.is_seismic();
         let encryption_pubkey = match (is_seismic_tx, request.encryption_pubkey) {
             (false, _) => {
                 warn!("Non-seismic tx passed to seismic_call. Likely a bug");
