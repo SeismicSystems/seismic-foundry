@@ -118,7 +118,7 @@ install_ssolc() {
  DOWNLOAD_PATH="$TEMP_DIR/$TARGET_NAME"
  curl -L -H "Accept: application/octet-stream" \
       -o "$DOWNLOAD_PATH" \
-      "https://api.github.com/repos/SeismicSystems/seismic-solidity-releases/releases/assets/$ASSET_ID"
+      "https://api.github.com/repos/SeismicSystems/seismic-solidity/releases/assets/$ASSET_ID"
 
  # Extract and install
  echo "Extracting archive..."
