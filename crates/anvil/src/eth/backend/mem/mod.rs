@@ -35,8 +35,7 @@ use crate::{
 };
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    transaction::TxSeismic, Account, Header, Receipt, ReceiptWithBloom, Signed,
-    Transaction as TransactionTrait, TxEnvelope,
+    Account, Header, Receipt, ReceiptWithBloom, Signed, Transaction as TransactionTrait, TxEnvelope,
 };
 use alloy_eips::eip4844::MAX_BLOBS_PER_BLOCK;
 use alloy_network::{
@@ -1382,7 +1381,7 @@ impl Backend {
                     nonce,
                     sidecar: _,
                     chain_id: _,
-                    transaction_type,
+                    transaction_type: _,
                     encryption_pubkey,
                     .. // Rest of the gas fees related fields are taken from `fee_details`
                 },
@@ -1419,7 +1418,7 @@ impl Backend {
 
         let mut data = input.into_input().unwrap_or_default();
 
-        if transaction_type == Some(TxSeismic::TX_TYPE) && !data.is_empty() {
+        if request.inner.is_seismic() && !data.is_empty() {
             let nonce = nonce.expect("nonce is required for seismic transactions");
             let encryption_pubkey =
                 encryption_pubkey.expect("encryption pubkey is required for seismic transactions");
@@ -1518,7 +1517,7 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let nonce = request.nonce.unwrap_or_default();
-        let is_seismic_tx = Some(TxSeismic::TX_TYPE) == request.transaction_type;
+        let is_seismic_tx = request.inner.is_seismic();
         let encryption_pubkey = match (is_seismic_tx, request.encryption_pubkey) {
             (false, _) => {
                 warn!("Non-seismic tx passed to seismic_call. Likely a bug");
