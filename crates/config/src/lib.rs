@@ -1130,19 +1130,34 @@ impl Config {
             };
         }
         if self.seismic {
-            // Define the default solc path when seismic is true
-            let default_solc_path = if cfg!(windows) {
-                PathBuf::from("C:\\Program Files\\Seismic\\bin\\ssolc.exe")
-            } else {
-                PathBuf::from("/usr/local/bin/ssolc")
-            };
-            if !default_solc_path.is_file() {
-                return Err(SolcError::msg(format!(
-                    "`solc` {} does not exist",
-                    default_solc_path.display()
-                )));
+            if let Some(ref solc_req) = self.solc {
+                match solc_req {
+                    SolcReq::Version(version) => {
+                        if version.to_string() == "0.8.28" {
+                            let default_solc_path = self.get_default_ssolc_path()?;
+                            return Ok(Some(Solc::new(default_solc_path)?));
+                        } else {
+                            if let Some(solc) = Solc::find_svm_installed_version(version)? {
+                                return Ok(Some(solc));
+                            } else if self.offline {
+                                return Err(SolcError::msg(format!(
+                                    "can't install missing solc {version} in offline mode"
+                                )));
+                            }
+                            return Ok(Some(Solc::blocking_install(version)?));
+                        }
+                    }
+                    SolcReq::Local(local_solc_path) => {
+                        if !local_solc_path.is_file() {
+                            return Err(SolcError::msg(format!(
+                                "`solc` {} does not exist",
+                                local_solc_path.display()
+                            )));
+                        }
+                        return Ok(Some(Solc::new(local_solc_path)?));
+                    }
+                }
             }
-            return Ok(Some(Solc::new(default_solc_path)?));
         }
         if let Some(ref solc) = self.solc {
             let solc = match solc {
@@ -1175,6 +1190,23 @@ impl Config {
     }
 
     /// Returns the [SpecId] derived from the configured [EvmVersion]
+    #[inline]
+    pub fn get_default_ssolc_path(&self) -> Result<PathBuf, SolcError> {
+        let default_solc_path = if cfg!(windows) {
+            PathBuf::from("C:\\Program Files\\Seismic\\bin\\ssolc.exe")
+        } else {
+            PathBuf::from("/usr/local/bin/ssolc")
+        };
+        if !default_solc_path.is_file() {
+            return Err(SolcError::msg(format!(
+                "`solc` {} does not exist",
+                default_solc_path.display()
+            )));
+        }
+        Ok(default_solc_path)
+    }
+
+    /// Get default ssolc path
     #[inline]
     pub fn evm_spec_id(&self) -> SpecId {
         evm_spec_id(self.evm_version, self.odyssey)
@@ -2332,7 +2364,7 @@ impl Default for Config {
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,
-            solc: None,
+            solc: Some(SolcReq::Version(Version::parse("0.8.28").unwrap())),
             vyper: Default::default(),
             auto_detect_solc: true,
             offline: false,

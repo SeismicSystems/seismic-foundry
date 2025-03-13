@@ -11,14 +11,14 @@ SEISMIC_BIN_DIR="$SEISMIC_DIR/bin"
 BIN_PATH="$SEISMIC_BIN_DIR/sfoundryup"
 
 
-# GitHub raw URL to sfoundryup in the private repository
+# GitHub raw URL to sfoundryup
 RAW_API_URL="https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/sfoundryup/sfoundryup"
 
 # Create necessary directories
 mkdir -p "$SEISMIC_BIN_DIR"
 
 # Download sfoundryup using GitHub raw content URL
-echo "Fetching sfoundryup from the private repository..."
+echo "Fetching sfoundryup..."
 curl -sSf "$RAW_API_URL" -o "$BIN_PATH"
 
 # Make the file executable
