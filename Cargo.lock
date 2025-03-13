@@ -125,7 +125,7 @@ dependencies = [
  "derive_more",
  "jsonrpsee",
  "k256",
- "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?branch=peter%2Fmock)",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812)",
  "serde",
  "serde_json",
 ]
@@ -380,7 +380,7 @@ dependencies = [
  "pin-project 1.1.10",
  "reqwest",
  "schnellru",
- "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?branch=peter%2Fmock)",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812)",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -971,7 +971,7 @@ dependencies = [
  "reqwest",
  "revm",
  "secp256k1",
- "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?branch=peter%2Fmock)",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812)",
  "serde",
  "serde_json",
  "serde_repr",
@@ -1007,7 +1007,7 @@ dependencies = [
  "op-alloy-consensus",
  "rand 0.8.5",
  "revm",
- "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?branch=peter%2Fmock)",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812)",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -8869,7 +8869,7 @@ dependencies = [
 [[package]]
 name = "seismic-enclave"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/seismic-enclave.git?branch=peter%2Fmock#04b5170d1b94af82d09c9df17155231a475469bb"
+source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812#4a9a81235addc09a92ff20b71963cf41a2f68687"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -8921,7 +8921,7 @@ dependencies = [
 [[package]]
 name = "seismic-enclave-derive"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/seismic-enclave.git?branch=peter%2Fmock#04b5170d1b94af82d09c9df17155231a475469bb"
+source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812#4a9a81235addc09a92ff20b71963cf41a2f68687"
 dependencies = [
  "proc-macro2",
  "quote",
