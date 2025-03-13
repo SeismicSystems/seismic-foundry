@@ -1516,7 +1516,10 @@ impl Backend {
                     .map_err(|e| {
                         BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                     })
-                    .map(|ciphertext| Output::new_encrypted_output(plaintext_output, ciphertext)),
+                    .map(|ciphertext| match plaintext_output {
+                        Output::Call(data) => Output::Call(ciphertext),
+                        Output::Create(data, address) => Output::Create(ciphertext, address),
+                    }),
                 None => Ok(plaintext_output),
             })
             .transpose()?;
