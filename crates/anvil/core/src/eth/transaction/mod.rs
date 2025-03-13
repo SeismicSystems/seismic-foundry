@@ -4,7 +4,7 @@ use crate::eth::transaction::optimism::DepositTransaction;
 use alloy_consensus::{
     transaction::{
         eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
-        TxEip7702, TxSeismic,
+        TxEip7702, TxSeismic, TxSeismicElements,
     },
     Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559, TxEip2930,
     TxEnvelope, TxLegacy, TxReceipt, Typed2718,
@@ -30,7 +30,7 @@ use revm::{
     interpreter::InstructionResult,
     primitives::{OptimismFields, TxEnv},
 };
-use secp256k1::PublicKey;
+use seismic_enclave::MockEnclaveClient;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Debug,
@@ -38,7 +38,6 @@ use std::{
     ops::{Deref, Mul},
 };
 
-pub mod crypto;
 pub mod optimism;
 
 pub trait SeismicCompatible:
@@ -80,8 +79,7 @@ pub fn transaction_request_to_typed(
                 access_list,
                 sidecar,
                 transaction_type,
-                encryption_pubkey,
-                message_version,
+                seismic_elements,
                 ..
             },
         other,
@@ -101,11 +99,9 @@ pub fn transaction_request_to_typed(
             is_system_transaction: other.get_deserialized::<bool>("isSystemTx")?.ok()?,
             input: input.into_input().unwrap_or_default(),
         }));
-    } else if transaction_type == Some(TxSeismic::TX_TYPE) {
-        let encryption_pubkey = match encryption_pubkey {
-            Some(epk) => epk,
-            None => panic!("Seismic transaction is missing 'encryption_pubkey' field"),
-        };
+    }
+
+    if let Some(seismic_elements) = seismic_elements {
         return Some(TypedTransactionRequest::Seismic(TxSeismic {
             nonce: nonce.unwrap_or_default(),
             gas_price: gas_price.unwrap_or_default(),
@@ -114,10 +110,10 @@ pub fn transaction_request_to_typed(
             value: value.unwrap_or_default(),
             chain_id: chain_id.unwrap_or_default(),
             input: input.input.unwrap_or_default(),
-            encryption_pubkey,
-            message_version: message_version.unwrap_or(0),
+            seismic_elements,
         }));
     }
+
     match (
         transaction_type,
         gas_price,
@@ -618,18 +614,17 @@ impl PendingTransaction {
                     value,
                     chain_id,
                     input,
-                    encryption_pubkey,
-                    message_version: _,
+                    seismic_elements,
                 } = &tx.tx();
 
-                // these two have already been validated in TransactionValidator,
-                // so we simply unwrap here
-                let public_key = PublicKey::from_slice(encryption_pubkey.as_slice()).unwrap();
-                let data = crypto::server_decrypt(&public_key, &input.as_ref(), *nonce).unwrap();
                 TxEnv {
                     caller,
                     transact_to: transact_to(&to),
-                    data: Bytes::from(data),
+                    // these two have already been validated in TransactionValidator,
+                    // so we simply unwrap here
+                    data: seismic_elements
+                        .server_decrypt(&MockEnclaveClient::new(), input)
+                        .expect("failed to decrypt seismic elements"),
                     chain_id: Some(*chain_id),
                     nonce: Some(*nonce),
                     value: *value,
@@ -690,8 +685,7 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
             nonce: Some(essentials.nonce),
             chain_id: essentials.chain_id,
             transaction_type: tx_type,
-            encryption_pubkey: value.encryption_pubkey(),
-            message_version: value.message_version(),
+            seismic_elements: value.seismic_elements(),
             ..Default::default()
         })
     }
@@ -1104,16 +1098,9 @@ impl TypedTransaction {
         }
     }
 
-    pub fn encryption_pubkey(&self) -> Option<alloy_consensus::transaction::EncryptionPublicKey> {
+    pub fn seismic_elements(&self) -> Option<TxSeismicElements> {
         match self {
-            Self::Seismic(tx) => Some(tx.tx().encryption_pubkey),
-            _ => None,
-        }
-    }
-
-    pub fn message_version(&self) -> Option<u8> {
-        match self {
-            Self::Seismic(tx) => Some(tx.tx().message_version),
+            Self::Seismic(tx) => Some(tx.tx().seismic_elements),
             _ => None,
         }
     }
@@ -1658,8 +1645,7 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 #[cfg(test)]
 mod tests {
     use alloy_consensus::SignableTransaction;
-    use alloy_primitives::{b256, hex, FixedBytes, LogData};
-    use seismic_enclave::get_sample_secp256k1_pk;
+    use alloy_primitives::{b256, hex, LogData};
     use std::str::FromStr;
 
     use super::*;
@@ -1897,10 +1883,6 @@ mod tests {
         let _typed_tx: TypedTransaction = serde_json::from_str(tx).unwrap();
     }
 
-    fn test_pubkey() -> alloy_consensus::transaction::EncryptionPublicKey {
-        get_sample_secp256k1_pk().serialize().into()
-    }
-
     #[test]
     fn test_seismic_tx_encoding() {
         let decrypted_input = Bytes::from_str("0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875").unwrap();
@@ -1911,8 +1893,11 @@ mod tests {
             gas_limit: 100000,
             to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
             value: U256::from(1000000000000000u64),
-            encryption_pubkey: test_pubkey(),
-            message_version: 0,
+            seismic_elements: TxSeismicElements {
+                encryption_pubkey: TxSeismicElements::get_rand_encryption_keypair().public_key(),
+                encryption_nonce: TxSeismicElements::get_rand_encryption_nonce(),
+                message_version: 0,
+            },
             input: decrypted_input.clone(),
         };
 
@@ -1931,39 +1916,9 @@ mod tests {
         let mut encoded_tx = Vec::new();
         signed_tt.encode(&mut encoded_tx);
 
-        let encoded_bytes = Bytes::from(encoded_tx);
-        let reth_encoded = Bytes::from_str("0xb8d54af8d2827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a080b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb87501a01e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04a0779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3").unwrap();
-        assert_eq!(reth_encoded, encoded_bytes);
-    }
-
-    #[test]
-    fn test_seismic_tx_decoding() {
-        // from viem sendRawTransaction
-        let encoded = Bytes::from_str("0x4af8d2827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a080b840fc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb87501a0a4eae372fd9bd79c17867aa75d905aa90fc2b54deffd176e9cda1de19303a8e6a041ffd254632c4fe0a19f4004a0753a8560c18044dd890913c1d46274824bd6ed").unwrap();
-        let mut buf = encoded.as_ref();
+        let mut buf = encoded_tx.as_ref();
         let decoded_tx = TypedTransaction::decode_2718(&mut buf).unwrap();
 
-        let expected_sighash = FixedBytes::<32>::from_str(
-            "d63bc3bdfd863663ce38725a926fdfcb0033b95f55ad434ff058bdc1f62e01cc",
-        )
-        .unwrap();
-        match &decoded_tx {
-            TypedTransaction::Seismic(tx) => {
-                assert_eq!(tx.signature_hash(), expected_sighash);
-                assert_eq!(
-                    tx.tx().encryption_pubkey,
-                    alloy_consensus::transaction::EncryptionPublicKey::from_str(
-                        "0x028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0"
-                    )
-                    .unwrap()
-                );
-            }
-            _ => unreachable!(),
-        };
-
-        let sender = decoded_tx.recover().unwrap();
-        let expected_sender =
-            Address::from_str("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap();
-        assert_eq!(sender, expected_sender);
+        assert_eq!(decoded_tx, signed_tt);
     }
 }

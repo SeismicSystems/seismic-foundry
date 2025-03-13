@@ -68,7 +68,7 @@ use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
-        crypto, optimism::DepositTransaction, DepositReceipt, MaybeImpersonatedTransaction,
+        optimism::DepositTransaction, DepositReceipt, MaybeImpersonatedTransaction,
         PendingTransaction, ReceiptResponse, TransactionInfo, TypedReceipt, TypedTransaction,
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
@@ -102,6 +102,7 @@ use revm::{
         ResultAndState,
     },
 };
+use seismic_enclave::MockEnclaveClient;
 use std::{
     collections::BTreeMap,
     io::{Read, Write},
@@ -111,8 +112,6 @@ use std::{
 };
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
-
-use secp256k1::PublicKey;
 
 pub mod cache;
 pub mod fork_db;
@@ -1378,11 +1377,8 @@ impl Backend {
                     access_list,
                     blob_versioned_hashes,
                     authorization_list,
-                    nonce,
                     sidecar: _,
                     chain_id: _,
-                    transaction_type: _,
-                    encryption_pubkey,
                     .. // Rest of the gas fees related fields are taken from `fee_details`
                 },
             ..
@@ -1416,20 +1412,13 @@ impl Backend {
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
 
-        let mut data = input.into_input().unwrap_or_default();
-
-        if request.inner.is_seismic() && !data.is_empty() {
-            let nonce = nonce.expect("nonce is required for seismic transactions");
-            let encryption_pubkey =
-                encryption_pubkey.expect("encryption pubkey is required for seismic transactions");
-
-            let public_key = PublicKey::from_slice(encryption_pubkey.as_slice())
-                .expect("failed to parse public key from bytes");
-            data = Bytes::from(
-                crypto::server_decrypt(&public_key, &data.as_ref(), nonce)
-                    .expect("Failed to decrypt seismic tx"),
-            );
-        }
+        let data = input.into_input().unwrap_or_default();
+        let data = match request.inner.seismic_elements {
+            Some(seismic_elements) => seismic_elements
+                .server_encrypt(&MockEnclaveClient::new(), &data)
+                .expect("failed to encrypt seismic elements"),
+            None => data,
+        };
 
         env.tx =
             TxEnv {
@@ -1516,41 +1505,23 @@ impl Backend {
         fee_details: FeeDetails,
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
-        let nonce = request.nonce.unwrap_or_default();
-        let is_seismic_tx = request.inner.is_seismic();
-        let encryption_pubkey = match (is_seismic_tx, request.encryption_pubkey) {
-            (false, _) => {
-                warn!("Non-seismic tx passed to seismic_call. Likely a bug");
-                None
-            }
-            (true, Some(encryption_pubkey)) => {
-                let pk_res = PublicKey::from_slice(encryption_pubkey.as_slice());
-                let pk = pk_res.map_err(|_| {
-                    BlockchainError::Message("Failed to parse encryption public key".to_string())
-                })?;
-                Some(pk)
-            }
-            (true, None) => {
-                return Err(BlockchainError::Message(
-                    "Encryption pubkey is required for seismic transactions".to_string(),
-                ));
-            }
-        };
-
+        let seismic_elements = request.inner.seismic_elements;
         let (exit_reason, out, gas_used, state) =
             self.call_with_state(state, request, fee_details, block_env)?;
 
-        if !is_seismic_tx || out.is_none() {
-            return Ok((exit_reason, out, gas_used, state));
-        }
+        let output_data = out
+            .map(|plaintext_output| match seismic_elements {
+                Some(seismic_elements) => seismic_elements
+                    .server_encrypt(&MockEnclaveClient::new(), &plaintext_output.data())
+                    .map_err(|e| {
+                        BlockchainError::Message(format!("Failed to encrypt output: {}", e))
+                    })
+                    .map(|ciphertext| Output::new_encrypted_output(plaintext_output, ciphertext)),
+                None => Ok(plaintext_output),
+            })
+            .transpose()?;
 
-        let encrypted = anvil_core::eth::transaction::crypto::server_encrypt(
-            &encryption_pubkey.unwrap(),
-            out.unwrap().data().as_ref(),
-            nonce,
-        )
-        .map_err(|e| BlockchainError::Message(format!("Failed to encrypt output: {}", e)))?;
-        Ok((exit_reason, Some(Output::Call(Bytes::from(encrypted))), gas_used as u128, state))
+        Ok((exit_reason, output_data, gas_used as u128, state))
     }
 
     pub async fn call_with_tracing(
@@ -2943,22 +2914,14 @@ impl TransactionValidator for Backend {
         if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
             // check that decryption works before we create tx env for it
             let inner = seismic_tx.tx();
-            let public_key =
-                PublicKey::from_slice(inner.encryption_pubkey.as_slice()).map_err(|_e| {
+            let _decrypted_data = inner
+                .seismic_elements
+                .server_decrypt(&MockEnclaveClient::new(), &inner.input)
+                .map_err(|_e| {
                     InvalidTransactionError::SeismicDecryptionFailed(format!(
-                        "Failed to parse encryption_pubkey"
+                        "Failed to decrypt seismic calldata"
                     ))
                 })?;
-            let _decrypted_data = anvil_core::eth::transaction::crypto::server_decrypt(
-                &public_key,
-                &inner.input.as_ref(),
-                inner.nonce,
-            )
-            .map_err(|_e| {
-                InvalidTransactionError::SeismicDecryptionFailed(format!(
-                    "Failed to decrypt seismic calldata"
-                ))
-            })?;
         }
 
         Ok(())

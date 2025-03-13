@@ -88,6 +88,7 @@ use foundry_evm::{
 use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
 use revm::primitives::Bytecode;
+use seismic_enclave::{rpc::SyncEnclaveApiClient, MockEnclaveClient};
 use std::{future::Future, sync::Arc, time::Duration};
 use yansi::Paint;
 
@@ -163,10 +164,12 @@ impl EthApi {
     pub async fn execute(&self, request: EthRequest) -> ResponseResult {
         trace!(target: "rpc::api", "executing eth request");
         match request {
-            EthRequest::SeismicGetTeePublicKey(()) => Ok(Bytes::from(alloy_primitives::hex!(
-                "028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0"
-            )))
-            .to_rpc_result(),
+            EthRequest::SeismicGetTeePublicKey(()) => {
+                let result = MockEnclaveClient::new()
+                    .get_public_key()
+                    .map_err(|e| BlockchainError::Internal(e.to_string()));
+                result.to_rpc_result()
+            }
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),
             EthRequest::Web3Sha3(content) => self.sha3(content).to_rpc_result(),
             EthRequest::EthGetAccount(addr, block) => {
@@ -1152,7 +1155,7 @@ impl EthApi {
                             user_provided_from.map_or(false, |addr| !addr.is_zero());
 
                         if tried_to_spoof_from {
-                            // We’ll embed the original error’s text (which may include
+                            // We'll embed the original error's text (which may include
                             // revert data) plus a multiline explanation:
                             Err(BlockchainError::Message(format!("Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
                             orig = original_err

@@ -1,9 +1,8 @@
 use crate::abi::VendingMachine;
-use alloy_consensus::TxSeismic;
 use alloy_network::TransactionBuilder;
-use alloy_primitives::{bytes, Address, Bytes, TxKind, U256};
+use alloy_primitives::{bytes, U256};
 use alloy_provider::{Provider, SeismicSignedProvider, SendableTx};
-use alloy_rpc_types::{TransactionInput, TransactionRequest};
+use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{spawn, NodeConfig};
