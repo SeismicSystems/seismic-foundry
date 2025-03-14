@@ -263,6 +263,7 @@ impl EthApi {
                 self.create_access_list(call, block).await.to_rpc_result()
             }
             EthRequest::EthEstimateGas(call, block, overrides) => {
+                println!("Call: {:?}", call);
                 self.estimate_gas(call, block, overrides).await.to_rpc_result()
             }
             EthRequest::EthGetRawTransactionByHash(hash) => {

@@ -1921,4 +1921,29 @@ mod tests {
 
         assert_eq!(decoded_tx, signed_tt);
     }
+
+    #[test]
+    fn test_seismic_elements_otherfields() {
+        let decrypted_input = Bytes::from_str("0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875").unwrap();
+        let orig_decoded_tx = TxSeismic {
+            chain_id: 31337u64,
+            nonce: 2,
+            gas_price: 1000000000,
+            gas_limit: 100000,
+            to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
+            value: U256::from(1000000000000000u64),
+            seismic_elements: TxSeismicElements {
+                encryption_pubkey: TxSeismicElements::get_rand_encryption_keypair().public_key(),
+                encryption_nonce: TxSeismicElements::get_rand_encryption_nonce(),
+                message_version: 0,
+            },
+            input: decrypted_input.clone(),
+        };
+        let tx_req: TransactionRequest = orig_decoded_tx.into();
+        let tx_req_wof = WithOtherFields::new(tx_req);
+        let serialized_tx = serde_json::to_value(&tx_req_wof).unwrap();
+        println!("serialized_tx: {:#?}", serialized_tx);
+        let tx: WithOtherFields<TransactionRequest> = serde_json::from_value(serialized_tx).unwrap();
+        println!("tx: {:#?}", tx);
+    }
 }
