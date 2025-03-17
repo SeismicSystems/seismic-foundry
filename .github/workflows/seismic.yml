@@ -75,6 +75,7 @@ jobs:
     timeout-minutes: 30
     env:
       SFOUNDRY_ROOT: /home/runner/work/seismic-foundry/seismic-foundry
+      PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -87,4 +88,4 @@ jobs:
       - name: sanvil build
         run: cargo build --bin sanvil
       - name: Run viem tests vs. Anvil
-        run: bun viem:test:anvil
+        run: bun test
