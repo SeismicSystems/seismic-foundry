@@ -1027,7 +1027,7 @@ impl EthApi {
     ///
     /// Handler for ETH RPC call: `eth_sendRawTransaction`
     pub async fn send_raw_transaction(&self, tx: Bytes) -> Result<TxHash> {
-        node_info!("eth_sendRawTransaction");
+        node_info!("eth_sendRawTransaction, {:?}", tx);
         let mut data = tx.as_ref();
         if data.is_empty() {
             return Err(BlockchainError::EmptyRawTransactionData);
@@ -1035,6 +1035,7 @@ impl EthApi {
 
         let transaction = TypedTransaction::decode_2718(&mut data)
             .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
+        node_info!("transaction: {:?}", transaction);
 
         self.ensure_typed_transaction_supported(&transaction)?;
 
@@ -1137,7 +1138,9 @@ impl EthApi {
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<Bytes> {
-        match request.into() {
+        let request = request.into();
+        node_info!("eth_call, {:?}", request);
+        match request {
             alloy_rpc_types::SeismicCallRequest::TransactionRequest(mut tx) => {
                 let user_provided_from = tx.from;
 
@@ -1287,7 +1290,7 @@ impl EthApi {
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<U256> {
-        node_info!("eth_estimateGas");
+        node_info!("eth_estimateGas, {:?}", request);
         self.do_estimate_gas(
             request,
             block_number.or_else(|| Some(BlockNumber::Pending.into())),

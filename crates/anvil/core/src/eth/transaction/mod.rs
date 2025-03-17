@@ -1941,9 +1941,9 @@ mod tests {
         };
         let tx_req: TransactionRequest = orig_decoded_tx.into();
         let tx_req_wof = WithOtherFields::new(tx_req);
-        let serialized_tx = serde_json::to_value(&tx_req_wof).unwrap();
+        let serialized_tx = serde_json::to_string(&tx_req_wof).unwrap();
         println!("serialized_tx: {:#?}", serialized_tx);
-        let tx: WithOtherFields<TransactionRequest> = serde_json::from_value(serialized_tx).unwrap();
+        let tx: WithOtherFields<TransactionRequest> = serde_json::from_str(&serialized_tx).unwrap();
         println!("tx: {:#?}", tx);
     }
 }
