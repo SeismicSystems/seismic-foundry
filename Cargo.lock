@@ -111,7 +111,7 @@ dependencies = [
 [[package]]
 name = "alloy-consensus"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-eips",
@@ -125,7 +125,7 @@ dependencies = [
  "derive_more",
  "jsonrpsee",
  "k256",
- "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812)",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=788ae84)",
  "serde",
  "serde_json",
 ]
@@ -133,7 +133,7 @@ dependencies = [
 [[package]]
 name = "alloy-consensus-any"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -146,7 +146,7 @@ dependencies = [
 [[package]]
 name = "alloy-contract"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
@@ -214,7 +214,7 @@ dependencies = [
 [[package]]
 name = "alloy-eips"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-eip2930",
@@ -232,7 +232,7 @@ dependencies = [
 [[package]]
 name = "alloy-genesis"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-primitives",
  "alloy-serde",
@@ -254,7 +254,7 @@ dependencies = [
 [[package]]
 name = "alloy-json-rpc"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -267,7 +267,7 @@ dependencies = [
 [[package]]
 name = "alloy-network"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-consensus-any",
@@ -291,7 +291,7 @@ dependencies = [
 [[package]]
 name = "alloy-network-primitives"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -303,7 +303,7 @@ dependencies = [
 [[package]]
 name = "alloy-node-bindings"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-genesis",
  "alloy-primitives",
@@ -350,7 +350,7 @@ dependencies = [
 [[package]]
 name = "alloy-provider"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-chains",
  "alloy-consensus",
@@ -380,7 +380,7 @@ dependencies = [
  "pin-project 1.1.10",
  "reqwest",
  "schnellru",
- "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812)",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=788ae84)",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -393,7 +393,7 @@ dependencies = [
 [[package]]
 name = "alloy-pubsub"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives",
@@ -433,7 +433,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-client"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives",
@@ -458,7 +458,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-anvil",
@@ -473,7 +473,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-anvil"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -484,7 +484,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-any"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus-any",
  "alloy-rpc-types-eth",
@@ -494,7 +494,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-debug"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -503,7 +503,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-engine"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -520,7 +520,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-eth"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-consensus-any",
@@ -539,7 +539,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-trace"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -552,7 +552,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-txpool"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -563,9 +563,10 @@ dependencies = [
 [[package]]
 name = "alloy-serde"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-primitives",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=788ae84)",
  "serde",
  "serde_json",
 ]
@@ -573,7 +574,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-primitives",
@@ -588,7 +589,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-aws"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -605,7 +606,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-gcp"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -622,7 +623,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-ledger"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -641,7 +642,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-local"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -659,7 +660,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-trezor"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -743,7 +744,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-json-rpc",
  "base64 0.22.1",
@@ -762,7 +763,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport-http"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-json-rpc",
  "alloy-transport",
@@ -776,7 +777,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport-ipc"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-json-rpc",
  "alloy-pubsub",
@@ -796,13 +797,13 @@ dependencies = [
 [[package]]
 name = "alloy-transport-ws"
 version = "0.8.0"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=a77c89a#a77c89a8c67e21b45aa142f2a00cc301029c1047"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=04dc6b7#04dc6b7428bdda4e5153faebeeba330f2e9e73e8"
 dependencies = [
  "alloy-pubsub",
  "alloy-transport",
  "futures",
  "http 1.3.1",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "serde_json",
  "tokio",
  "tokio-tungstenite",
@@ -971,7 +972,7 @@ dependencies = [
  "reqwest",
  "revm",
  "secp256k1",
- "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812)",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=788ae84)",
  "serde",
  "serde_json",
  "serde_repr",
@@ -1007,7 +1008,7 @@ dependencies = [
  "op-alloy-consensus",
  "rand 0.8.5",
  "revm",
- "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812)",
+ "seismic-enclave 0.1.0 (git+https://github.com/SeismicSystems/seismic-enclave.git?rev=788ae84)",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -1059,9 +1060,9 @@ dependencies = [
 
 [[package]]
 name = "ariadne"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31beedec3ce83ae6da3a79592b3d8d7afd146a5b15bb9bb940279aced60faa89"
+checksum = "36f5e3dca4e09a6f340a61a0e9c7b61e030c69fc27bf29d73218f7e5e3b7638f"
 dependencies = [
  "unicode-width 0.1.14",
  "yansi",
@@ -1217,9 +1218,9 @@ dependencies = [
 
 [[package]]
 name = "async-compression"
-version = "0.4.20"
+version = "0.4.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "310c9bcae737a48ef5cdee3174184e6d548b292739ede61a1f955ef76a738861"
+checksum = "c0cf008e5e1a9e9e22a7d3c9a4992e21a350290069e36d8fb72304ed17e8f2d2"
 dependencies = [
  "flate2",
  "futures-core",
@@ -1272,9 +1273,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.87"
+version = "0.1.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d556ec1359574147ec0c4fc5eb525f3f23263a592b1a9c07e0a75b427de55c97"
+checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1394,9 +1395,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-sys"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bbe221bbf523b625a4dd8585c7f38166e31167ec2ca98051dbcb4c3b6e825d2"
+checksum = "77926887776171ced7d662120a75998e444d3750c951abfe07f90da130514b1f"
 dependencies = [
  "bindgen",
  "cc",
@@ -1427,7 +1428,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "tracing",
- "uuid 1.15.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -1594,7 +1595,7 @@ dependencies = [
  "hyper-util",
  "pin-project-lite",
  "rustls 0.21.12",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "rustls-native-certs 0.8.1",
  "rustls-pki-types",
  "tokio",
@@ -1941,9 +1942,9 @@ dependencies = [
 
 [[package]]
 name = "bon"
-version = "3.4.0"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a8a41e51fda5f7d87152d00f50d08ce24bf5cee8a962facf7f2526a66f8a5fa"
+checksum = "625e90403736670c971aad50573b7db42e131970d60a14f215b61fdf24e0aa84"
 dependencies = [
  "bon-macros",
  "rustversion",
@@ -1951,9 +1952,9 @@ dependencies = [
 
 [[package]]
 name = "bon-macros"
-version = "3.4.0"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b592add4016ac26ca340298fed5cc2524abe8bacae78ebca3780286da588304"
+checksum = "fa915c54d505ca9b9b7ac056df7797508c3b817e51609d0ed19949dd0925b872"
 dependencies = [
  "darling",
  "ident_case",
@@ -3196,9 +3197,9 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "elasticlunr-rs"
-version = "3.0.2"
+version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41e83863a500656dfa214fee6682de9c5b9f03de6860fec531235ed2ae9f6571"
+checksum = "2d2feae8e4b9a700f5dfb266a8c2ea16d6504715f229e2ae04b78c0ecf1c532b"
 dependencies = [
  "regex",
  "serde",
@@ -3617,9 +3618,9 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foldhash"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0d2fde1f7b3d48b8395d5f2de76c18a528bd6a9cdde438df747bfcba3e05d6f"
+checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
 name = "foreign-types"
@@ -5085,9 +5086,9 @@ dependencies = [
 
 [[package]]
 name = "half"
-version = "2.4.1"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dd08c532ae367adf81c312a4580bc67f1d0fe8bc9c460520283f4c0ff277888"
+checksum = "7db2ff139bba50379da6aa0766b52fdcb62cb5b263009b09ed58ba604e14bbd1"
 dependencies = [
  "cfg-if",
  "crunchy",
@@ -5095,9 +5096,9 @@ dependencies = [
 
 [[package]]
 name = "handlebars"
-version = "6.3.1"
+version = "6.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d752747ddabc4c1a70dd28e72f2e3c218a816773e0d7faf67433f1acfa6cba7c"
+checksum = "759e2d5aea3287cb1190c8ec394f42866cb5bf74fcbf213f354e3c856ea26098"
 dependencies = [
  "derive_builder",
  "log",
@@ -5397,7 +5398,7 @@ dependencies = [
  "hyper 1.6.0",
  "hyper-util",
  "log",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "rustls-native-certs 0.8.1",
  "rustls-pki-types",
  "tokio",
@@ -5956,16 +5957,18 @@ dependencies = [
 
 [[package]]
 name = "jni"
-version = "0.19.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6df18c2e3db7e453d3c6ac5b3e9d5182664d28788126d39b91f2d1e22b017ec"
+checksum = "1a87aa2bb7d2af34197c04845522473242e1aa17c12f4935d5856491a7fb8c97"
 dependencies = [
  "cesu8",
+ "cfg-if",
  "combine",
  "jni-sys",
  "log",
  "thiserror 1.0.69",
  "walkdir",
+ "windows-sys 0.45.0",
 ]
 
 [[package]]
@@ -6006,9 +6009,9 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee"
-version = "0.24.8"
+version = "0.24.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "834af00800e962dee8f7bfc0f60601de215e73e78e5497d733a2919da837d3c8"
+checksum = "37b26c20e2178756451cfeb0661fb74c47dd5988cb7e3939de7e9241fd604d42"
 dependencies = [
  "jsonrpsee-client-transport",
  "jsonrpsee-core",
@@ -6024,9 +6027,9 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-client-transport"
-version = "0.24.8"
+version = "0.24.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "def0fd41e2f53118bd1620478d12305b2c75feef57ea1f93ef70568c98081b7e"
+checksum = "bacb85abf4117092455e1573625e21b8f8ef4dec8aff13361140b2dc266cdff2"
 dependencies = [
  "base64 0.22.1",
  "futures-channel",
@@ -6035,7 +6038,7 @@ dependencies = [
  "http 1.3.1",
  "jsonrpsee-core",
  "pin-project 1.1.10",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "rustls-pki-types",
  "rustls-platform-verifier",
  "soketto",
@@ -6049,9 +6052,9 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-core"
-version = "0.24.8"
+version = "0.24.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76637f6294b04e747d68e69336ef839a3493ca62b35bf488ead525f7da75c5bb"
+checksum = "456196007ca3a14db478346f58c7238028d55ee15c1df15115596e411ff27925"
 dependencies = [
  "async-trait",
  "bytes",
@@ -6076,9 +6079,9 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-http-client"
-version = "0.24.8"
+version = "0.24.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87c24e981ad17798bbca852b0738bfb7b94816ed687bd0d5da60bfa35fa0fdc3"
+checksum = "c872b6c9961a4ccc543e321bb5b89f6b2d2c7fe8b61906918273a3333c95400c"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -6088,7 +6091,7 @@ dependencies = [
  "hyper-util",
  "jsonrpsee-core",
  "jsonrpsee-types",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "rustls-platform-verifier",
  "serde",
  "serde_json",
@@ -6101,9 +6104,9 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-proc-macros"
-version = "0.24.8"
+version = "0.24.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fcae0c6c159e11541080f1f829873d8f374f81eda0abc67695a13fc8dc1a580"
+checksum = "5e65763c942dfc9358146571911b0cd1c361c2d63e2d2305622d40d36376ca80"
 dependencies = [
  "heck 0.5.0",
  "proc-macro-crate",
@@ -6114,9 +6117,9 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-server"
-version = "0.24.8"
+version = "0.24.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66b7a3df90a1a60c3ed68e7ca63916b53e9afa928e33531e87f61a9c8e9ae87b"
+checksum = "55e363146da18e50ad2b51a0a7925fc423137a0b1371af8235b1c231a0647328"
 dependencies = [
  "futures-util",
  "http 1.3.1",
@@ -6141,9 +6144,9 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-types"
-version = "0.24.8"
+version = "0.24.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddb81adb1a5ae9182df379e374a79e24e992334e7346af4d065ae5b2acb8d4c6"
+checksum = "08a8e70baf945b6b5752fc8eb38c918a48f1234daf11355e07106d963f860089"
 dependencies = [
  "http 1.3.1",
  "serde",
@@ -6153,9 +6156,9 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-wasm-client"
-version = "0.24.8"
+version = "0.24.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42e41af42ca39657313748174d02766e5287d3a57356f16756dbd8065b933977"
+checksum = "e6558a9586cad43019dafd0b6311d0938f46efc116b34b28c74778bc11a2edf6"
 dependencies = [
  "jsonrpsee-client-transport",
  "jsonrpsee-core",
@@ -6164,9 +6167,9 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-ws-client"
-version = "0.24.8"
+version = "0.24.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f4f3642a292f5b76d8a16af5c88c16a0860f2ccc778104e5c848b28183d9538"
+checksum = "01b3323d890aa384f12148e8d2a1fd18eb66e9e7e825f9de4fa53bcc19b93eef"
 dependencies = [
  "http 1.3.1",
  "jsonrpsee-client-transport",
@@ -6371,9 +6374,9 @@ checksum = "d26c52dbd32dccf2d10cac7725f8eae5296885fb5703b261f7d0a0739ec807ab"
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.9.2"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6db9c683daf087dc577b7506e9695b3d556a9f3849903fa28186283afd6809e9"
+checksum = "fe7db12097d22ec582439daf8618b8fdd1a7bef6270e9af3b1ebcd30893cf413"
 
 [[package]]
 name = "litemap"
@@ -6701,7 +6704,7 @@ version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee3224f0e8be7c2a1ebc77ef9c3eecb90f55c6594399ee825de964526b3c9056"
 dependencies = [
- "uuid 1.15.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -7787,7 +7790,7 @@ dependencies = [
  "quick-xml 0.37.2",
  "strip-ansi-escapes",
  "thiserror 2.0.12",
- "uuid 1.15.1",
+ "uuid 1.16.0",
 ]
 
 [[package]]
@@ -7819,7 +7822,7 @@ dependencies = [
  "quinn-proto",
  "quinn-udp",
  "rustc-hash 2.1.1",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "socket2",
  "thiserror 2.0.12",
  "tokio",
@@ -7837,7 +7840,7 @@ dependencies = [
  "rand 0.8.5",
  "ring",
  "rustc-hash 2.1.1",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "rustls-pki-types",
  "slab",
  "thiserror 2.0.12",
@@ -8112,7 +8115,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "quinn",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "rustls-native-certs 0.8.1",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
@@ -8425,7 +8428,7 @@ dependencies = [
  "bitflags 2.9.0",
  "errno",
  "libc",
- "linux-raw-sys 0.9.2",
+ "linux-raw-sys 0.9.3",
  "windows-sys 0.59.0",
 ]
 
@@ -8443,16 +8446,16 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.23"
+version = "0.23.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47796c98c480fce5406ef69d1c76378375492c3b0a0de587be0c1d9feb12f395"
+checksum = "822ee9188ac4ec04a2f0531e55d035fb2de73f18b41a63c70c2712503b6fb13c"
 dependencies = [
  "aws-lc-rs",
  "log",
  "once_cell",
  "ring",
  "rustls-pki-types",
- "rustls-webpki 0.102.8",
+ "rustls-webpki 0.103.0",
  "subtle",
  "zeroize",
 ]
@@ -8465,19 +8468,6 @@ checksum = "a9aace74cb666635c918e9c12bc0d348266037aa8eb599b5cba565709a8dff00"
 dependencies = [
  "openssl-probe",
  "rustls-pemfile 1.0.4",
- "schannel",
- "security-framework 2.11.1",
-]
-
-[[package]]
-name = "rustls-native-certs"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5bfb394eeed242e909609f56089eecfe5fda225042e8b171791b9c95f5931e5"
-dependencies = [
- "openssl-probe",
- "rustls-pemfile 2.2.0",
- "rustls-pki-types",
  "schannel",
  "security-framework 2.11.1",
 ]
@@ -8523,23 +8513,23 @@ dependencies = [
 
 [[package]]
 name = "rustls-platform-verifier"
-version = "0.3.4"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afbb878bdfdf63a336a5e63561b1835e7a8c91524f51621db870169eac84b490"
+checksum = "4a5467026f437b4cb2a533865eaa73eb840019a0916f4b9ec563c6e617e086c9"
 dependencies = [
- "core-foundation 0.9.4",
+ "core-foundation 0.10.0",
  "core-foundation-sys",
  "jni",
  "log",
  "once_cell",
- "rustls 0.23.23",
- "rustls-native-certs 0.7.3",
+ "rustls 0.23.25",
+ "rustls-native-certs 0.8.1",
  "rustls-platform-verifier-android",
- "rustls-webpki 0.102.8",
- "security-framework 2.11.1",
+ "rustls-webpki 0.103.0",
+ "security-framework 3.2.0",
  "security-framework-sys",
- "webpki-roots",
- "winapi",
+ "webpki-root-certs",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8560,9 +8550,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.102.8"
+version = "0.103.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64ca1bc8749bd4cf37b5ce386cc146580777b4e8572c7b97baf22c83f444bee9"
+checksum = "0aa4eeac2588ffff23e9d7a7e9b3f971c5fb5b7ebc9452745e0c232c64f83b2f"
 dependencies = [
  "aws-lc-rs",
  "ring",
@@ -8839,7 +8829,6 @@ dependencies = [
  "core-foundation 0.9.4",
  "core-foundation-sys",
  "libc",
- "num-bigint",
  "security-framework-sys",
 ]
 
@@ -8869,7 +8858,7 @@ dependencies = [
 [[package]]
 name = "seismic-enclave"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812#4a9a81235addc09a92ff20b71963cf41a2f68687"
+source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=788ae84#788ae848f366f56f969cc8b36e7d0b7bf2758cd5"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -8921,7 +8910,7 @@ dependencies = [
 [[package]]
 name = "seismic-enclave-derive"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=4a9a812#4a9a81235addc09a92ff20b71963cf41a2f68687"
+source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=788ae84#788ae848f366f56f969cc8b36e7d0b7bf2758cd5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -9483,7 +9472,7 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "toml_edit",
- "uuid 1.15.1",
+ "uuid 1.16.0",
  "zip",
  "zip-extract",
 ]
@@ -9627,9 +9616,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "svm-rs"
-version = "0.5.12"
+version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "feb9fc1391b3c05693c79c23845d4abd7c061cdfdf51ae238d4cd9efbb830aa7"
+checksum = "9a30a58b94c1ddc5f07a428d16e58e8f4c7cee9e67130cda12ed148f5ef98fff"
 dependencies = [
  "const-hex",
  "dirs 6.0.0",
@@ -9647,9 +9636,9 @@ dependencies = [
 
 [[package]]
 name = "svm-rs-builds"
-version = "0.5.11"
+version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "074faea21171905847a96135b3896e2e0b74373758ca07b96a41c646cc04a8e5"
+checksum = "ebddc0ea9fd9fb61d0de9585a99c58f87e8c14b8811726a57cc5f5b1a029585e"
 dependencies = [
  "build_const",
  "const-hex",
@@ -9719,11 +9708,10 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tempfile"
-version = "3.18.0"
+version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c317e0a526ee6120d8dabad239c8dadca62b24b6f168914bbbc8e2fb1f0e567"
+checksum = "488960f40a3fd53d72c2a29a58722561dee8afdd175bd88e3db4677d7b2ba600"
 dependencies = [
- "cfg-if",
  "fastrand",
  "getrandom 0.3.1",
  "once_cell",
@@ -9994,7 +9982,7 @@ version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e727b36a1a0e8b74c376ac2211e40c2c8af09fb4013c60d910495810f008e9b"
 dependencies = [
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "tokio",
 ]
 
@@ -10030,7 +10018,7 @@ checksum = "edc5f74e248dc973e0dbb7b74c7e0d6fcc301c694ff50049504004ef4d0cdcd9"
 dependencies = [
  "futures-util",
  "log",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "rustls-pki-types",
  "tokio",
  "tokio-rustls 0.26.2",
@@ -10357,7 +10345,7 @@ dependencies = [
  "httparse",
  "log",
  "rand 0.8.5",
- "rustls 0.23.23",
+ "rustls 0.23.25",
  "rustls-pki-types",
  "sha1",
  "thiserror 1.0.69",
@@ -10546,9 +10534,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.15.1"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0f540e3240398cce6128b64ba83fdbdd86129c16a3aa1a3a252efd66eb3d587"
+checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 dependencies = [
  "getrandom 0.3.1",
  "serde",
@@ -10824,6 +10812,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "webpki-root-certs"
+version = "0.26.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09aed61f5e8d2c18344b3faa33a4c837855fe56642757754775548fee21386c4"
+dependencies = [
+ "rustls-pki-types",
+]
+
+[[package]]
 name = "webpki-roots"
 version = "0.26.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10858,9 +10855,9 @@ dependencies = [
 
 [[package]]
 name = "widestring"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7219d36b6eac893fa81e84ebe06485e7dcbb616177469b142df14f1f4deb1311"
+checksum = "dd7cf3379ca1aac9eea11fba24fd7e315d621f8dfe35c8d7d2be8b793726e07d"
 
 [[package]]
 name = "winapi"
@@ -11048,6 +11045,15 @@ dependencies = [
 
 [[package]]
 name = "windows-sys"
+version = "0.45.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75283be5efb2831d37ea142365f009c02ec203cd29a3ebecbc093d52315b66d0"
+dependencies = [
+ "windows-targets 0.42.2",
+]
+
+[[package]]
+name = "windows-sys"
 version = "0.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "677d2418bec65e3338edb076e806bc1ec15693c5d0104683f2efe857f61056a9"
@@ -11071,6 +11077,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
 dependencies = [
  "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows-targets"
+version = "0.42.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e5180c00cd44c9b1c88adb3693291f1cd93605ded80c250a75d472756b4d071"
+dependencies = [
+ "windows_aarch64_gnullvm 0.42.2",
+ "windows_aarch64_msvc 0.42.2",
+ "windows_i686_gnu 0.42.2",
+ "windows_i686_msvc 0.42.2",
+ "windows_x86_64_gnu 0.42.2",
+ "windows_x86_64_gnullvm 0.42.2",
+ "windows_x86_64_msvc 0.42.2",
 ]
 
 [[package]]
@@ -11122,6 +11143,12 @@ dependencies = [
 
 [[package]]
 name = "windows_aarch64_gnullvm"
+version = "0.42.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "597a5118570b68bc08d8d59125332c54f1ba9d9adeedeef5b99b02ba2b0698f8"
+
+[[package]]
+name = "windows_aarch64_gnullvm"
 version = "0.48.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b38e32f0abccf9987a4e3079dfb67dcd799fb61361e53e2882c3cbaf0d905d8"
@@ -11140,6 +11167,12 @@ checksum = "86b8d5f90ddd19cb4a147a5fa63ca848db3df085e25fee3cc10b39b6eebae764"
 
 [[package]]
 name = "windows_aarch64_msvc"
+version = "0.42.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e08e8864a60f06ef0d0ff4ba04124db8b0fb3be5776a5cd47641e942e58c4d43"
+
+[[package]]
+name = "windows_aarch64_msvc"
 version = "0.48.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc35310971f3b2dbbf3f0690a219f40e2d9afcf64f9ab7cc1be722937c26b4bc"
@@ -11155,6 +11188,12 @@ name = "windows_aarch64_msvc"
 version = "0.53.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7651a1f62a11b8cbd5e0d42526e55f2c99886c77e007179efff86c2b137e66c"
+
+[[package]]
+name = "windows_i686_gnu"
+version = "0.42.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c61d927d8da41da96a81f029489353e68739737d3beca43145c8afec9a31a84f"
 
 [[package]]
 name = "windows_i686_gnu"
@@ -11188,6 +11227,12 @@ checksum = "9ce6ccbdedbf6d6354471319e781c0dfef054c81fbc7cf83f338a4296c0cae11"
 
 [[package]]
 name = "windows_i686_msvc"
+version = "0.42.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44d840b6ec649f480a41c8d80f9c65108b92d89345dd94027bfe06ac444d1060"
+
+[[package]]
+name = "windows_i686_msvc"
 version = "0.48.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f55c233f70c4b27f66c523580f78f1004e8b5a8b659e05a4eb49d4166cca406"
@@ -11203,6 +11248,12 @@ name = "windows_i686_msvc"
 version = "0.53.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "581fee95406bb13382d2f65cd4a908ca7b1e4c2f1917f143ba16efe98a589b5d"
+
+[[package]]
+name = "windows_x86_64_gnu"
+version = "0.42.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8de912b8b8feb55c064867cf047dda097f92d51efad5b491dfb98f6bbb70cb36"
 
 [[package]]
 name = "windows_x86_64_gnu"
@@ -11224,6 +11275,12 @@ checksum = "2e55b5ac9ea33f2fc1716d1742db15574fd6fc8dadc51caab1c16a3d3b4190ba"
 
 [[package]]
 name = "windows_x86_64_gnullvm"
+version = "0.42.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26d41b46a36d453748aedef1486d5c7a85db22e56aff34643984ea85514e94a3"
+
+[[package]]
+name = "windows_x86_64_gnullvm"
 version = "0.48.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b7b52767868a23d5bab768e390dc5f5c55825b6d30b86c844ff2dc7414044cc"
@@ -11239,6 +11296,12 @@ name = "windows_x86_64_gnullvm"
 version = "0.53.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0a6e035dd0599267ce1ee132e51c27dd29437f63325753051e71dd9e42406c57"
+
+[[package]]
+name = "windows_x86_64_msvc"
+version = "0.42.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9aec5da331524158c6d1a4ac0ab1541149c0b9505fde06423b02f5ef0106b9f0"
 
 [[package]]
 name = "windows_x86_64_msvc"
@@ -11475,9 +11538,9 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "2.2.3"
+version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b280484c454e74e5fff658bbf7df8fdbe7a07c6b2de4a53def232c15ef138f3a"
+checksum = "938cc23ac49778ac8340e366ddc422b2227ea176edb447e23fc0627608dddadd"
 dependencies = [
  "arbitrary",
  "bzip2",

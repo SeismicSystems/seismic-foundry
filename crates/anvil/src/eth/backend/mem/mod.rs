@@ -1508,7 +1508,6 @@ impl Backend {
         let seismic_elements = request.inner.seismic_elements;
         let (exit_reason, out, gas_used, state) =
             self.call_with_state(state, request, fee_details, block_env)?;
-
         let output_data = out
             .map(|plaintext_output| match seismic_elements {
                 Some(seismic_elements) => seismic_elements
