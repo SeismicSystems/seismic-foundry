@@ -85,6 +85,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "viem-cache"
+      - name: Install dependencies
+        run: bun install
       - name: sanvil build
         run: cargo build --bin sanvil
       - name: Run viem tests vs. Anvil
