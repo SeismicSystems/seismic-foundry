@@ -84,7 +84,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache"
+          shared-key: "viem-cache"
       - name: sanvil build
         run: cargo build --bin sanvil
       - name: Run viem tests vs. Anvil
