@@ -11,7 +11,10 @@ use alloy_primitives::{
     hex::{self, FromHex},
     Bytes, IntoLogData, TxKind, B256, U256,
 };
-use alloy_provider::{Provider, SeismicSignedProvider, SeismicUnsignedProvider, SendableTx};
+use alloy_provider::{
+    layers::seismic::test_utils, Provider, SeismicSignedProvider, SeismicUnsignedProvider,
+    SendableTx,
+};
 use alloy_rpc_types::{SeismicCallRequest, TransactionInput, TransactionRequest};
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
