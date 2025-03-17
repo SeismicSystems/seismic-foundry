@@ -1,0 +1,8 @@
+{
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "bun run --cwd packages/client-test test"
+  }
+}
