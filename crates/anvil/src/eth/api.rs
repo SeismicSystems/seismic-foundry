@@ -1076,6 +1076,8 @@ impl EthApi {
             ))
         })?;
 
+        println!("send_signed_typed_data_tx transaction: {:?}", transaction);
+
         // NOTE: rest is copy pasta from send_raw_transaction
         self.ensure_typed_transaction_supported(&transaction)?;
 
@@ -1190,6 +1192,7 @@ impl EthApi {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
                 let mut request = WithOtherFields::new(tx);
+                println!("call request to seismic_call: {:?}", request);
                 request.inner.from = Some(sender);
                 self.seismic_call(request, block_number, overrides).await
             }
