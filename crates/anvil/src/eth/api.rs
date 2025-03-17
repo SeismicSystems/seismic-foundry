@@ -1076,8 +1076,6 @@ impl EthApi {
             ))
         })?;
 
-        println!("send_signed_typed_data_tx transaction: {:?}", transaction);
-
         // NOTE: rest is copy pasta from send_raw_transaction
         self.ensure_typed_transaction_supported(&transaction)?;
 
