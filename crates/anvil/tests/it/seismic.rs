@@ -11,9 +11,7 @@ use alloy_primitives::{
     hex::{self, FromHex},
     Bytes, IntoLogData, TxKind, B256, U256,
 };
-use alloy_provider::{
-    test_utils, Provider, SeismicSignedProvider, SeismicUnsignedProvider, SendableTx,
-};
+use alloy_provider::{Provider, SeismicSignedProvider, SeismicUnsignedProvider, SendableTx};
 use alloy_rpc_types::{SeismicCallRequest, TransactionInput, TransactionRequest};
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
@@ -96,7 +94,7 @@ pub async fn get_unsigned_seismic_tx_request(
         transaction_type: Some(TxSeismic::TX_TYPE),
         seismic_elements: Some(TxSeismicElements {
             encryption_pubkey: encryption_pk,
-            encryption_nonce: nonce,
+            encryption_nonce: U96::from(nonce),
             ..Default::default()
         }),
         ..Default::default()
