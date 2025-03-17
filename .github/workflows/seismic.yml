@@ -89,7 +89,9 @@ jobs:
         run: bun install
       - name: sanvil build
         run: |
+          cd $SFOUNDRY_ROOT
           git checkout 86379796502893c5292b54e43c24e88d7fc665f4
           cargo build --bin sanvil
+          cd $GITHUB_WORKSPACE
       - name: Run viem tests vs. Anvil
         run: bun test
