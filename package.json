@@ -1,8 +1,13 @@
 {
   "workspaces": [
-    "packages/*"
+    "packages/**"
   ],
+  "private": true,
   "scripts": {
     "test": "bun run --cwd packages/client-test test"
+  },
+  "dependencies": {
+    "seismic-tests": "0.0.1-experimental.3",
+    "seismic-viem-tests": "^0.0.1"
   }
 }
