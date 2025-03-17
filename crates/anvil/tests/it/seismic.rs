@@ -239,9 +239,6 @@ async fn test_seismic_transaction_rpc() {
         .await
         .unwrap();
 
-    println!("res: {:?}", res);
-    println!("nonce: {:?}", provider.get_transaction_count(deployer).await.unwrap());
-
     let decrypted = ecdh_decrypt(
         &network_pubkey,
         &get_sk(&signer),
