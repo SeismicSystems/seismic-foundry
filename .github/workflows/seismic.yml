@@ -90,6 +90,9 @@ jobs:
       - name: sanvil build
         run: |
           cd $SFOUNDRY_ROOT
+          echo "Current directory: $(pwd)"
+          echo "Listing files:"
+          ls -la
           git checkout 86379796502893c5292b54e43c24e88d7fc665f4
           cargo build --bin sanvil
           cd $GITHUB_WORKSPACE
