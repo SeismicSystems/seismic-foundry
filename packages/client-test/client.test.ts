@@ -1,7 +1,5 @@
-import { createPublicClient, http, type Hex } from "viem";
+import type { Hex } from "viem";
 import {
-  createShieldedPublicClient,
-  createShieldedWalletClient,
   sanvil,
 } from "seismic-viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
@@ -21,6 +19,7 @@ import {
   testSeismicTxEncoding,
   testSeismicTxTypedData,
   testWsConnection,
+  buildNode,
 } from "seismic-viem-tests";
 
 const privateKey = process.env.PRIVATE_KEY as Hex;
@@ -37,6 +36,10 @@ const pcParams = { chain, url };
 
 const encryptionSk = generatePrivateKey();
 const encryptionPubkey = privateKeyToAccount(encryptionSk).publicKey;
+
+beforeAll(async () => {
+  await buildNode(chain)
+})
 
 describe("seismic-viem-tests", () => {
   test("testAes", testAesKeygen);
