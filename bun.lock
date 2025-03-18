@@ -4,7 +4,7 @@
     "": {
       "dependencies": {
         "seismic-tests": "0.0.1-experimental.3",
-        "seismic-viem-tests": "0.0.2",
+        "seismic-viem-tests": "0.0.3",
       },
     },
     "packages/client-test": {
@@ -59,7 +59,7 @@
 
     "seismic-viem": ["seismic-viem@1.0.27-experimental.2", "", { "dependencies": { "@noble/ciphers": "^1.2.0", "@noble/curves": "^1.8.0", "@noble/hashes": "^1.7.0", "viem": "^2.21.50" } }, "sha512-uUe4MEZXK1wCAElt/8GCJ0BbIOjoAOiKUqeHu9G9HnEWKLTYMM3oBzUmphwtXBdEBtm1LM0ZRkvVTAL6wChfZQ=="],
 
-    "seismic-viem-tests": ["seismic-viem-tests@0.0.2", "", {}, "sha512-KEwABVLYqeCKragbqahIlEmVJotIoOSdpHlRWmJtCv6kKc+fV9Jq7qk0VQo8XUH64r/bCiXks4SLKmxKgMkh8A=="],
+    "seismic-viem-tests": ["seismic-viem-tests@0.0.3", "", {}, "sha512-2GvI8k+G9VQPkVobdwut/psVS4H4et528G05+c/NAFHXPcQbGz+y8UqggtTCNstBt9BgXDjKf7iLncfEWJ6lNg=="],
 
     "typescript": ["typescript@5.8.2", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ=="],
 
