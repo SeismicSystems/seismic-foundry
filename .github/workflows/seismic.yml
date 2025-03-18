@@ -87,6 +87,7 @@ jobs:
           shared-key: "viem-cache"
       - name: Install dependencies
         run: bun install
+      # TODO: don't change commits once viem works vs. seismic branch
       - name: sanvil build
         run: |
           cd $SFOUNDRY_ROOT
