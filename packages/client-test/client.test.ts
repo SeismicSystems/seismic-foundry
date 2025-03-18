@@ -29,6 +29,7 @@ if (!privateKey) {
 }
 
 const chain = sanvil;
+await buildNode(chain)
 const { url, exitProcess } = await setupNode(chain);
 const account = privateKeyToAccount(privateKey);
 
@@ -36,10 +37,6 @@ const pcParams = { chain, url };
 
 const encryptionSk = generatePrivateKey();
 const encryptionPubkey = privateKeyToAccount(encryptionSk).publicKey;
-
-beforeAll(async () => {
-  await buildNode(chain)
-})
 
 describe("seismic-viem-tests", () => {
   test("testAes", testAesKeygen);
