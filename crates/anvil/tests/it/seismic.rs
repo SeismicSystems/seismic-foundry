@@ -20,7 +20,7 @@ use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{spawn, NodeConfig};
 use secp256k1::{PublicKey, SecretKey};
-use seismic_enclave::{aes_decrypt, ecdh_decrypt};
+use seismic_enclave::aes_decrypt;
 use std::{fs, str::FromStr};
 
 // common utils
@@ -62,10 +62,6 @@ pub fn concat_input_data(selector: &str, value: Bytes) -> Bytes {
     input_data.extend_from_slice(&value_bytes);
 
     input_data.into()
-}
-
-pub fn get_sk(sk_wallet: &PrivateKeySigner) -> SecretKey {
-    SecretKey::from_slice(&sk_wallet.credential().to_bytes()).expect("32 bytes, within curve order")
 }
 
 pub fn get_encryption_nonce() -> U96 {
