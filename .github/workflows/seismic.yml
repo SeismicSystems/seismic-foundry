@@ -85,9 +85,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "viem-cache"
-      - name: Install dependencies
-        run: bun install
-      # TODO: don't change commits once viem works vs. seismic branch
       - name: sanvil build
         run: |
           cd $SFOUNDRY_ROOT
@@ -96,5 +93,8 @@ jobs:
           cargo build --bin sanvil
           git checkout seismic
           cd $GITHUB_WORKSPACE
+      - name: Install dependencies
+        run: bun install
+      # TODO: don't change commits once viem works vs. seismic branch
       - name: Run viem tests vs. Anvil
         run: bun test
