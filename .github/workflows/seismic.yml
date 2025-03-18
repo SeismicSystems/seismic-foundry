@@ -78,9 +78,6 @@ jobs:
       PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
     steps:
       - uses: actions/checkout@v4
-        with:
-          # TODO: remove this once foundry works vs latest seismic-viem
-          ref: 86379796502893c5292b54e43c24e88d7fc665f4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.2.5
@@ -93,7 +90,10 @@ jobs:
       - name: sanvil build
         run: |
           cd $SFOUNDRY_ROOT
+          git fetch origin 86379796502893c5292b54e43c24e88d7fc665f4
+          git checkout 86379796502893c5292b54e43c24e88d7fc665f4
           cargo build --bin sanvil
+          git checkout seismic
           cd $GITHUB_WORKSPACE
       - name: Run viem tests vs. Anvil
         run: bun test
