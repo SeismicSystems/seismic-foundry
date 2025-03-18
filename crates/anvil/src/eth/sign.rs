@@ -91,6 +91,8 @@ impl Signer for DevSigner {
     async fn sign_hash(&self, address: Address, hash: B256) -> Result<Signature, BlockchainError> {
         let signer = self.accounts.get(&address).ok_or(BlockchainError::NoSignerAvailable)?;
 
+        println!("sign_typed_data dev_signer hash: {:?}", hash);
+
         Ok(signer.sign_hash(&hash).await?)
     }
 

@@ -1415,10 +1415,12 @@ impl Backend {
         let data = input.into_input().unwrap_or_default();
         let data = match request.inner.seismic_elements {
             Some(seismic_elements) => seismic_elements
-                .server_encrypt(&MockEnclaveClient::new(), &data)
-                .expect("failed to encrypt seismic elements"),
+                .server_decrypt(&MockEnclaveClient::new(), &data)
+                .expect("failed to decrypt seismic elements"),
             None => data,
         };
+
+        println!("seismic_call_with_state data: {:?}", data);
 
         env.tx =
             TxEnv {
@@ -1508,6 +1510,10 @@ impl Backend {
         let seismic_elements = request.inner.seismic_elements;
         let (exit_reason, out, gas_used, state) =
             self.call_with_state(state, request, fee_details, block_env)?;
+        println!(
+            "seismic_call_with_state exit_reason: {:?}, out: {:?}, gas_used: {:?}",
+            exit_reason, out, gas_used
+        );
         let output_data = out
             .map(|plaintext_output| match seismic_elements {
                 Some(seismic_elements) => seismic_elements

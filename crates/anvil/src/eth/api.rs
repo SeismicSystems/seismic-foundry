@@ -932,6 +932,7 @@ impl EthApi {
     /// Handler for ETH RPC call: `eth_signTypedData_v4`
     pub async fn sign_typed_data_v4(&self, address: Address, data: &TypedData) -> Result<String> {
         node_info!("eth_signTypedData_v4");
+        println!("sign_typed_data_v4 address: {:?}, data: {:?}", address, data);
         let signer = self.get_signer(address).ok_or(BlockchainError::NoSignerAvailable)?;
         let signature = signer.sign_typed_data(address, data).await?;
         let signature = alloy_primitives::hex::encode(signature.as_bytes());
@@ -1190,8 +1191,8 @@ impl EthApi {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
                 let mut request = WithOtherFields::new(tx);
-                println!("call request to seismic_call: {:?}", request);
                 request.inner.from = Some(sender);
+
                 self.seismic_call(request, block_number, overrides).await
             }
             alloy_rpc_types::SeismicCallRequest::Bytes(bytes) => {
