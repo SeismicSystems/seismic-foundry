@@ -60,8 +60,8 @@ describe("seismic-viem-tests", () => {
       encryptionPubkey,
       encryptionSk,
     }));
-  test("ws connection", () =>
-    testWsConnection({ chain, wsUrl: "ws://localhost:8545" })
+  test("ws connection", async () =>
+    await testWsConnection({ chain, wsUrl: "ws://localhost:8545" })
   );
   test("testSeismicTx", () => testSeismicTx({ ...pcParams, account }));
   test("testSeismicTxEncoding", () =>
