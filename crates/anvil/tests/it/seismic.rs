@@ -12,14 +12,15 @@ use alloy_primitives::{
     Bytes, IntoLogData, TxKind, B256, U256,
 };
 use alloy_provider::{
-    test_utils, Provider, SeismicSignedProvider, SeismicUnsignedProvider, SendableTx,
+    layers::seismic::test_utils, Provider, SeismicSignedProvider, SeismicUnsignedProvider,
+    SendableTx,
 };
 use alloy_rpc_types::{SeismicCallRequest, TransactionInput, TransactionRequest};
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{spawn, NodeConfig};
 use secp256k1::{PublicKey, SecretKey};
-use seismic_enclave::{aes_decrypt, ecdh_decrypt, ecdh_encrypt};
+use seismic_enclave::{aes_decrypt, ecdh_decrypt};
 use std::fs;
 
 // common utils
@@ -82,7 +83,17 @@ pub async fn get_unsigned_seismic_tx_request(
     let encryption_sk = get_sk(signer);
     let encryption_pk = get_pk(signer);
 
-    let encrypted_input = ecdh_encrypt(&pk, &encryption_sk, &plaintext, nonce).unwrap();
+    println!("nonce: {:?}", nonce);
+    let encryption_nonce = U96::from(nonce);
+    println!("encryption_nonce: {:?}", encryption_nonce);
+
+    let seismic_elements = TxSeismicElements {
+        encryption_pubkey: encryption_pk,
+        encryption_nonce,
+        ..Default::default()
+    };
+
+    let encrypted_input = seismic_elements.client_encrypt(&plaintext, &pk, &encryption_sk).unwrap();
 
     TransactionRequest {
         from: Some(signer.address()),
@@ -94,11 +105,7 @@ pub async fn get_unsigned_seismic_tx_request(
         chain_id: Some(chain_id),
         input: TransactionInput { input: Some(Bytes::from(encrypted_input)), data: None },
         transaction_type: Some(TxSeismic::TX_TYPE),
-        seismic_elements: Some(TxSeismicElements {
-            encryption_pubkey: encryption_pk,
-            encryption_nonce: nonce,
-            ..Default::default()
-        }),
+        seismic_elements: Some(seismic_elements),
         ..Default::default()
     }
 }
@@ -117,8 +124,8 @@ pub async fn get_signed_seismic_tx_typed_data(
     chain_id: u64,
     plaintext: Bytes,
 ) -> TypedDataRequest {
-    let tx = get_unsigned_seismic_tx_request(signer, pk, nonce, to, chain_id, plaintext).await;
-    tx.seismic_elements.unwrap().message_version = 2;
+    let mut tx = get_unsigned_seismic_tx_request(signer, pk, nonce, to, chain_id, plaintext).await;
+    tx.seismic_elements = Some(tx.seismic_elements.unwrap().with_message_version(2));
 
     let signed = sign_tx(signer.clone(), tx).await;
 

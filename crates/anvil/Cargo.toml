@@ -124,7 +124,7 @@ tikv-jemallocator = { workspace = true, optional = true }
 alloy-json-abi.workspace = true
 alloy-rpc-client = { workspace = true, features = ["pubsub"] }
 alloy-transport-ipc = { workspace = true, features = ["mock"] }
-alloy-provider = { workspace = true, features = ["txpool-api"] }
+alloy-provider = { workspace = true, features = ["txpool-api", "reqwest"] }
 alloy-transport-ws.workspace = true
 alloy-json-rpc.workspace = true
 alloy-pubsub.workspace = true
