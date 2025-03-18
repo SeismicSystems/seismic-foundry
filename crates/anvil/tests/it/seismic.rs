@@ -20,7 +20,7 @@ use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{spawn, NodeConfig};
 use secp256k1::{PublicKey, SecretKey};
-use seismic_enclave::{aes_decrypt, ecdh_decrypt, nonce::Nonce};
+use seismic_enclave::{aes_decrypt, ecdh_decrypt};
 use std::{fs, str::FromStr};
 
 // common utils
@@ -66,10 +66,6 @@ pub fn concat_input_data(selector: &str, value: Bytes) -> Bytes {
 
 pub fn get_sk(sk_wallet: &PrivateKeySigner) -> SecretKey {
     SecretKey::from_slice(&sk_wallet.credential().to_bytes()).expect("32 bytes, within curve order")
-}
-
-pub fn get_pk(sk_wallet: &PrivateKeySigner) -> PublicKey {
-    PublicKey::from_secret_key_global(&get_sk(sk_wallet))
 }
 
 pub fn get_encryption_nonce() -> U96 {
@@ -245,9 +241,9 @@ async fn test_seismic_transaction_rpc() {
         .await
         .unwrap();
 
-    let decrypted =
-        ecdh_decrypt(&network_pubkey, &get_sk(&signer), &res, get_encryption_nonce().to_be_bytes())
-            .unwrap();
+    let decrypted = get_seismic_elements()
+        .client_decrypt(&res, &network_pubkey, &get_encryption_private_key())
+        .unwrap();
     assert_eq!(Bytes::from(decrypted), test_utils::ContractTestContext::get_code());
 }
 
