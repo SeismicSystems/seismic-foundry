@@ -20,8 +20,8 @@ use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{spawn, NodeConfig};
 use secp256k1::{PublicKey, SecretKey};
-use seismic_enclave::{aes_decrypt, ecdh_decrypt};
-use std::fs;
+use seismic_enclave::{aes_decrypt, ecdh_decrypt, nonce::Nonce};
+use std::{fs, str::FromStr};
 
 // common utils
 pub const TEST_PRECOMPILES_BYTECODE_PATH: &str = "/tests/it/seismic_precompiles_test_bytecode.txt";
@@ -72,6 +72,22 @@ pub fn get_pk(sk_wallet: &PrivateKeySigner) -> PublicKey {
     PublicKey::from_secret_key_global(&get_sk(sk_wallet))
 }
 
+pub fn get_encryption_nonce() -> U96 {
+    U96::MAX
+}
+
+pub fn get_seismic_elements() -> TxSeismicElements {
+    let encryption_sk = get_encryption_private_key();
+    let encryption_pk = PublicKey::from_secret_key_global(&encryption_sk);
+    let encryption_nonce = get_encryption_nonce();
+    TxSeismicElements { encryption_pubkey: encryption_pk, encryption_nonce, message_version: 0 }
+}
+
+pub fn get_encryption_private_key() -> SecretKey {
+    SecretKey::from_str("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
+        .expect("Invalid private key")
+}
+
 pub async fn get_unsigned_seismic_tx_request(
     signer: &PrivateKeySigner,
     pk: &PublicKey,
@@ -80,20 +96,9 @@ pub async fn get_unsigned_seismic_tx_request(
     chain_id: u64,
     plaintext: Bytes,
 ) -> TransactionRequest {
-    let encryption_sk = get_sk(signer);
-    let encryption_pk = get_pk(signer);
-
-    println!("nonce: {:?}", nonce);
-    let encryption_nonce = U96::from(nonce);
-    println!("encryption_nonce: {:?}", encryption_nonce);
-
-    let seismic_elements = TxSeismicElements {
-        encryption_pubkey: encryption_pk,
-        encryption_nonce,
-        ..Default::default()
-    };
-
-    let encrypted_input = seismic_elements.client_encrypt(&plaintext, &pk, &encryption_sk).unwrap();
+    let encrypted_input = get_seismic_elements()
+        .client_encrypt(&plaintext, &pk, &get_encryption_private_key())
+        .unwrap();
 
     TransactionRequest {
         from: Some(signer.address()),
@@ -105,7 +110,7 @@ pub async fn get_unsigned_seismic_tx_request(
         chain_id: Some(chain_id),
         input: TransactionInput { input: Some(Bytes::from(encrypted_input)), data: None },
         transaction_type: Some(TxSeismic::TX_TYPE),
-        seismic_elements: Some(seismic_elements),
+        seismic_elements: Some(get_seismic_elements()),
         ..Default::default()
     }
 }
@@ -154,6 +159,7 @@ async fn test_seismic_transaction_rpc() {
         SeismicUnsignedProvider::new(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap());
     let deployer = handle.dev_accounts().next().unwrap();
     let network_pubkey = provider.get_tee_pubkey().await.unwrap();
+
     let plaintext_bytecode = test_utils::ContractTestContext::get_deploy_input_plaintext();
 
     // send a send_raw_transaction bytes
@@ -239,13 +245,9 @@ async fn test_seismic_transaction_rpc() {
         .await
         .unwrap();
 
-    let decrypted = ecdh_decrypt(
-        &network_pubkey,
-        &get_sk(&signer),
-        &res,
-        provider.get_transaction_count(deployer).await.unwrap(),
-    )
-    .unwrap();
+    let decrypted =
+        ecdh_decrypt(&network_pubkey, &get_sk(&signer), &res, get_encryption_nonce().to_be_bytes())
+            .unwrap();
     assert_eq!(Bytes::from(decrypted), test_utils::ContractTestContext::get_code());
 }
 
@@ -380,9 +382,9 @@ async fn test_seismic_precompiles_end_to_end() {
     // 5a. AES decryption with your local private key
     let secp_private = secp256k1::SecretKey::from_slice(private_key.as_ref()).unwrap();
     let aes_key: &[u8; 32] = &secp_private.secret_bytes()[0..32].try_into().unwrap();
+    let nonce: [u8; 12] = decoded.indexed[0].abi_encode_packed().try_into().unwrap();
     let decrypted_locally =
-        aes_decrypt(aes_key.into(), &ciphertext, decoded.indexed[0].abi_encode_packed())
-            .expect("AES decryption failed");
+        aes_decrypt(aes_key.into(), &ciphertext, nonce).expect("AES decryption failed");
     assert_eq!(decrypted_locally, message);
 
     // 5b. Decrypt the "output" from the read call
