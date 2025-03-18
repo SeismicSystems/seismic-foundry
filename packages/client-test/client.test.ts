@@ -1,4 +1,4 @@
-import type { Hex } from "viem";
+import type { Chain, Hex } from "viem";
 import {
   sanvil,
 } from "seismic-viem";
@@ -23,20 +23,26 @@ import {
 } from "seismic-viem-tests";
 
 const privateKey = process.env.PRIVATE_KEY as Hex;
-
 if (!privateKey) {
   throw new Error("PRIVATE_KEY is not set");
 }
 
-const chain = sanvil;
-await buildNode(chain)
-const { url, exitProcess } = await setupNode(chain);
 const account = privateKeyToAccount(privateKey);
-
-const pcParams = { chain, url };
-
 const encryptionSk = generatePrivateKey();
 const encryptionPubkey = privateKeyToAccount(encryptionSk).publicKey;
+
+const chain = sanvil;
+await buildNode(chain)
+
+let exitProcess: () => void;
+let pcParams: { chain: Chain, url: string };
+
+beforeAll(async () => {
+  await buildNode(chain)
+  const node = await setupNode(chain);
+  pcParams = { chain, url: node.url };
+  exitProcess = node.exitProcess;
+})
 
 describe("seismic-viem-tests", () => {
   test("testAes", testAesKeygen);
