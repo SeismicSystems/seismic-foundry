@@ -3,7 +3,6 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "seismic-viem": "1.0.28",
         "seismic-viem-tests": "^0.0.5",
       },
     },
