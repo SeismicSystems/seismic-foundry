@@ -7,3 +7,4 @@ out.json
 .vscode
 
 node_modules
+bun.lock
