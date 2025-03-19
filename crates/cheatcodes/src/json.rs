@@ -6,7 +6,7 @@ use alloy_primitives::{
     aliases::{SInt, SUInt},
     hex, Address, SAddress, B256, I256,
 };
-use alloy_sol_types::SolValue;
+use alloy_sol_types::{sol_data::Sbool, SolValue};
 use foundry_common::fs;
 use foundry_config::fs_permissions::FsAccessKind;
 use serde_json::{Map, Value};
@@ -632,6 +632,7 @@ fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
             values.into_iter().map(serialize_value_as_json).collect::<Result<_>>()?,
         )),
         DynSolValue::Function(_) => bail!("cannot serialize function pointer"),
+        DynSolValue::Sbool(Sbool(b)) => Ok(Value::Bool(b)),
         DynSolValue::Saddress(SAddress(a)) => Ok(Value::String(a.to_string())),
         DynSolValue::Sint(SInt(i), _) => {
             let suint = serde_json::from_str(&i.to_string())?;
