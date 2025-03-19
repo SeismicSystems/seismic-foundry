@@ -7,6 +7,6 @@
     "test": "bun run --cwd packages/client-test test"
   },
   "dependencies": {
-    "seismic-viem-tests": "^0.0.5"
+    "seismic-viem-tests": "^0.0.6"
   }
 }
