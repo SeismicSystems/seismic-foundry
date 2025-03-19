@@ -3,9 +3,8 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "seismic-tests": "0.0.1-experimental.3",
         "seismic-viem": "1.0.28",
-        "seismic-viem-tests": "0.0.5",
+        "seismic-viem-tests": "^0.0.5",
       },
     },
     "packages/client-test": {
@@ -55,8 +54,6 @@
     "isows": ["isows@1.0.6", "", { "peerDependencies": { "ws": "*" } }, "sha512-lPHCayd40oW98/I0uvgaHKWCSvkzY27LjWLbtzOm64yQ+G3Q5npjjbdppU65iZXkK1Zt+kH9pfegli0AYfwYYw=="],
 
     "ox": ["ox@0.6.9", "", { "dependencies": { "@adraffy/ens-normalize": "^1.10.1", "@noble/curves": "^1.6.0", "@noble/hashes": "^1.5.0", "@scure/bip32": "^1.5.0", "@scure/bip39": "^1.4.0", "abitype": "^1.0.6", "eventemitter3": "5.0.1" }, "peerDependencies": { "typescript": ">=5.4.0" }, "optionalPeers": ["typescript"] }, "sha512-wi5ShvzE4eOcTwQVsIPdFr+8ycyX+5le/96iAJutaZAvCes1J0+RvpEPg5QDPDiaR0XQQAvZVl7AwqQcINuUug=="],
-
-    "seismic-tests": ["seismic-tests@0.0.1-experimental.3", "", {}, "sha512-EPIOmvFqbir1RcUn5KFf0HB8rjmhNqv1cYcvrQ0odAyzxGDl1IXWjI09Sqs0UZbUk1TuhlWffC10fA4n6kWIPg=="],
 
     "seismic-viem": ["seismic-viem@1.0.28", "", { "dependencies": { "@noble/ciphers": "^1.2.0", "@noble/curves": "^1.8.0", "@noble/hashes": "^1.7.0", "viem": "^2.21.50" } }, "sha512-Et3gEFQ9RwxfLD8vLU7snImNyIwXfdPBi529fU2PtJJqRdG3xWcyZi4SCh1YRFL01Exk0cVsEdkSuMOIS2Yh4w=="],
 
