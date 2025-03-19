@@ -1190,8 +1190,8 @@ impl EthApi {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
                 let mut request = WithOtherFields::new(tx);
-                println!("call request to seismic_call: {:?}", request);
                 request.inner.from = Some(sender);
+
                 self.seismic_call(request, block_number, overrides).await
             }
             alloy_rpc_types::SeismicCallRequest::Bytes(bytes) => {

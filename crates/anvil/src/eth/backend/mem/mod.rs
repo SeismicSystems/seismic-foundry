@@ -1415,8 +1415,8 @@ impl Backend {
         let data = input.into_input().unwrap_or_default();
         let data = match request.inner.seismic_elements {
             Some(seismic_elements) => seismic_elements
-                .server_encrypt(&MockEnclaveClient::new(), &data)
-                .expect("failed to encrypt seismic elements"),
+                .server_decrypt(&MockEnclaveClient::new(), &data)
+                .expect("failed to decrypt seismic elements"),
             None => data,
         };
 
