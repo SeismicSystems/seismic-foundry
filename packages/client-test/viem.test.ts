@@ -28,15 +28,13 @@ const privateKey = process.env.PRIVATE_KEY as Hex;
 if (!privateKey) {
   throw new Error("PRIVATE_KEY is not set");
 }
-
 const account = privateKeyToAccount(privateKey);
 const encryptionSk = generatePrivateKey();
 const encryptionPubkey = privateKeyToAccount(encryptionSk).publicKey;
 
 const chain = sanvil;
-await buildNode(chain)
-
 const port = 8545;
+
 let url: string;
 let wsUrl: string;
 let exitProcess: () => void;
