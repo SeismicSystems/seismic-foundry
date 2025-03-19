@@ -4,6 +4,6 @@
   ],
   "private": true,
   "scripts": {
-    "test": "bun run --cwd packages/client-test test"
+    "test": "bun run --cwd packages/client-tests test"
   }
 }
