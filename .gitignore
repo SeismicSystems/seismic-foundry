@@ -5,3 +5,6 @@ snapshots/
 out.json
 .idea
 .vscode
+
+node_modules
+bun.lock

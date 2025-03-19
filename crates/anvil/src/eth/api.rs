@@ -1168,7 +1168,6 @@ impl EthApi {
                 }
             }
             alloy_rpc_types::SeismicCallRequest::TypedData(td) => {
-                println!("call typed data: {:?}", td);
                 let typed_tx = TypedTransaction::decode_712(&td).map_err(|e| {
                     BlockchainError::Message(format!(
                         "Failed to decode typed data into seismic tx: {:?}",
