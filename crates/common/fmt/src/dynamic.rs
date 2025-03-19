@@ -4,6 +4,7 @@ use alloy_primitives::{
     aliases::{SInt, SUInt},
     hex, SAddress,
 };
+use alloy_sol_types::sol_data::Sbool;
 use std::fmt;
 
 /// [`DynSolValue`] formatter.
@@ -73,6 +74,7 @@ impl DynValueFormatter {
                     self.tuple(tuple, f)
                 }
             }
+            &DynSolValue::Sbool(Sbool(inner)) => write!(f, "{}", inner),
             &DynSolValue::Saddress(SAddress(inner)) => write!(f, "{inner}"),
             &DynSolValue::Sint(SInt(inner), _) => write!(f, "{inner}"),
             &DynSolValue::Suint(SUInt(inner), _) => write!(f, "{inner}"),
