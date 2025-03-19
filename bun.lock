@@ -4,7 +4,8 @@
     "": {
       "dependencies": {
         "seismic-tests": "0.0.1-experimental.3",
-        "seismic-viem-tests": "0.0.4",
+        "seismic-viem": "1.0.28",
+        "seismic-viem-tests": "^0.0.4",
       },
     },
     "packages/client-test": {
@@ -57,7 +58,7 @@
 
     "seismic-tests": ["seismic-tests@0.0.1-experimental.3", "", {}, "sha512-EPIOmvFqbir1RcUn5KFf0HB8rjmhNqv1cYcvrQ0odAyzxGDl1IXWjI09Sqs0UZbUk1TuhlWffC10fA4n6kWIPg=="],
 
-    "seismic-viem": ["seismic-viem@1.0.27-experimental.2", "", { "dependencies": { "@noble/ciphers": "^1.2.0", "@noble/curves": "^1.8.0", "@noble/hashes": "^1.7.0", "viem": "^2.21.50" } }, "sha512-uUe4MEZXK1wCAElt/8GCJ0BbIOjoAOiKUqeHu9G9HnEWKLTYMM3oBzUmphwtXBdEBtm1LM0ZRkvVTAL6wChfZQ=="],
+    "seismic-viem": ["seismic-viem@1.0.28", "", { "dependencies": { "@noble/ciphers": "^1.2.0", "@noble/curves": "^1.8.0", "@noble/hashes": "^1.7.0", "viem": "^2.21.50" } }, "sha512-Et3gEFQ9RwxfLD8vLU7snImNyIwXfdPBi529fU2PtJJqRdG3xWcyZi4SCh1YRFL01Exk0cVsEdkSuMOIS2Yh4w=="],
 
     "seismic-viem-tests": ["seismic-viem-tests@0.0.4", "", {}, "sha512-v0iVLnNdOaMl//BvdoXgaqHs71FRx5h4rtNPQzI7jMgwSFqSBEUSS2H5zfmPG9fTo4i3hVTy8SbY4r7MaHKEoA=="],
 
