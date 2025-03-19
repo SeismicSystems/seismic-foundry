@@ -44,7 +44,7 @@ beforeAll(async () => {
   pcParams = { chain, url: node.url }
   exitProcess = node.exitProcess
   url = node.url
-  wsUrl = "ws://localhost:8545"
+  wsUrl = `ws://localhost:${port}`
 })
 
 describe("Seismic Contract", async () => {
