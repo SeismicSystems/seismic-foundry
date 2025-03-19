@@ -22,13 +22,11 @@ import {
 
 const TIMEOUT_MS = 10_000
 
-const privateKey = process.env.PRIVATE_KEY as Hex
-if (!privateKey) {
-  throw new Error("PRIVATE_KEY is not set")
-}
-const account = privateKeyToAccount(privateKey)
-const encryptionSk = generatePrivateKey()
-const encryptionPubkey = privateKeyToAccount(encryptionSk).publicKey
+const TEST_ACCOUNT_PRIVATE_KEY =
+  '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+const account = privateKeyToAccount(TEST_ACCOUNT_PRIVATE_KEY)
+const encryptionSk = '0x311d54d3bf8359c70827122a44a7b4458733adce3c51c6b59d9acfce85e07505'
+const encryptionPubkey = '0x028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0'
 
 const chain = sanvil
 const port = 8545
