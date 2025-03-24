@@ -7,7 +7,7 @@ SEISMIC_BIN_DIR="$SEISMIC_DIR/bin"
 SEISMIC_MAN_DIR="$SEISMIC_DIR/share/man/man1"
 
 SEISMICUP_JOBS=""
-BINS=(sforge scast sanvil schisel)
+BINS=(sanvil sforge scast schisel)
 
 export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
 
