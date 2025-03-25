@@ -30,7 +30,10 @@ use crate::{
     revm::primitives::{BlobExcessGasAndPrice, Output},
     ClientFork, LoggingManager, Miner, MiningMode, StorageInfo,
 };
-use alloy_consensus::{transaction::{eip4844::TxEip4844Variant, ShieldableTransaction}, Account, Typed2718};
+use alloy_consensus::{
+    transaction::{eip4844::TxEip4844Variant, ShieldableTransaction},
+    Account, Typed2718,
+};
 use alloy_dyn_abi::TypedData;
 use alloy_eips::{eip2718::Encodable2718, eip712::Decodable712};
 use alloy_network::{
@@ -1305,7 +1308,7 @@ impl EthApi {
 
     pub fn shield_block_txs(mut block: AnyRpcBlock) -> AnyRpcBlock {
         match &mut block.transactions {
-            BlockTransactions::Full(txs) => {   
+            BlockTransactions::Full(txs) => {
                 for tx_wof in txs.iter_mut() {
                     *tx_wof = EthApi::shield_tx(tx_wof.clone());
                 }
@@ -1353,7 +1356,11 @@ impl EthApi {
         index: Index,
     ) -> Result<Option<AnyRpcTransaction>> {
         node_info!("eth_getTransactionByBlockHashAndIndex");
-        Ok(self.backend.transaction_by_block_hash_and_index(hash, index).await?.map(EthApi::shield_tx))
+        Ok(self
+            .backend
+            .transaction_by_block_hash_and_index(hash, index)
+            .await?
+            .map(EthApi::shield_tx))
     }
 
     /// Returns transaction by given block number and index.
@@ -1365,7 +1372,11 @@ impl EthApi {
         idx: Index,
     ) -> Result<Option<AnyRpcTransaction>> {
         node_info!("eth_getTransactionByBlockNumberAndIndex");
-        Ok(self.backend.transaction_by_block_number_and_index(block, idx).await?.map(EthApi::shield_tx))
+        Ok(self
+            .backend
+            .transaction_by_block_number_and_index(block, idx)
+            .await?
+            .map(EthApi::shield_tx))
     }
 
     /// Returns transaction receipt by transaction hash.
@@ -1401,7 +1412,10 @@ impl EthApi {
             self.backend.ensure_block_number(Some(BlockId::Hash(block_hash.into()))).await?;
         if let Some(fork) = self.get_fork() {
             if fork.predates_fork_inclusive(number) {
-                return Ok(fork.uncle_by_block_hash_and_index(block_hash, idx.into()).await?.map(EthApi::shield_block_txs));
+                return Ok(fork
+                    .uncle_by_block_hash_and_index(block_hash, idx.into())
+                    .await?
+                    .map(EthApi::shield_block_txs));
             }
         }
         // It's impossible to have uncles outside of fork mode
@@ -1420,7 +1434,10 @@ impl EthApi {
         let number = self.backend.ensure_block_number(Some(BlockId::Number(block_number))).await?;
         if let Some(fork) = self.get_fork() {
             if fork.predates_fork_inclusive(number) {
-                return Ok(fork.uncle_by_block_number_and_index(number, idx.into()).await?.map(EthApi::shield_block_txs));
+                return Ok(fork
+                    .uncle_by_block_number_and_index(number, idx.into())
+                    .await?
+                    .map(EthApi::shield_block_txs));
             }
         }
         // It's impossible to have uncles outside of fork mode

@@ -1,6 +1,8 @@
 //! Support for forking off another client
 
-use crate::eth::{backend::db::Db, error::BlockchainError, pool::transactions::PoolTransaction, EthApi};
+use crate::eth::{
+    backend::db::Db, error::BlockchainError, pool::transactions::PoolTransaction, EthApi,
+};
 use alloy_consensus::Account;
 use alloy_eips::eip2930::AccessListResult;
 use alloy_network::{AnyRpcBlock, AnyRpcTransaction, BlockResponse, TransactionResponse};
@@ -538,7 +540,10 @@ impl ClientFork {
         index: usize,
     ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(block) = self.block_by_hash(hash).await? {
-            return Ok(self.uncles_by_block_and_index(block, index).await?.map(EthApi::shield_block_txs));
+            return Ok(self
+                .uncles_by_block_and_index(block, index)
+                .await?
+                .map(EthApi::shield_block_txs));
         }
         Ok(None)
     }
@@ -549,7 +554,10 @@ impl ClientFork {
         index: usize,
     ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(block) = self.block_by_number(number).await? {
-            return Ok(self.uncles_by_block_and_index(block, index).await?.map(EthApi::shield_block_txs));
+            return Ok(self
+                .uncles_by_block_and_index(block, index)
+                .await?
+                .map(EthApi::shield_block_txs));
         }
         Ok(None)
     }
