@@ -181,6 +181,7 @@ fn get_create2_factory_call_inputs(
         is_static: false,
         return_memory_offset: 0..0,
         is_eof: false,
+        tx_type: Some(0),
     }
 }
 
