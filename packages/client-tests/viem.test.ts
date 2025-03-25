@@ -18,6 +18,8 @@ import {
   testSeismicTxTypedData,
   testWsConnection,
   buildNode,
+  testSeismicTxTrace,
+  testLegacyTxTrace,
 } from "seismic-viem-tests"
 
 const TIMEOUT_MS = 10_000
@@ -134,6 +136,25 @@ describe("Seismic Precompiles", async () => {
   test("secp256k1", () => testSecp256k1({ chain, url }), {
     timeout: TIMEOUT_MS,
   })
+})
+
+describe('Transaction Trace', async () => {
+  test(
+    'Seismic Tx removes input from trace',
+    async () => {
+      await testSeismicTxTrace({ chain, url, account })
+    },
+    {
+      timeout: TIMEOUT_MS,
+    }
+  )
+  test(
+    'Legacy Tx keeps input in trace',
+    async () => {
+      await testLegacyTxTrace({ chain, url, account })
+    },
+    { timeout: TIMEOUT_MS }
+  )
 })
 
 afterAll(() => {
