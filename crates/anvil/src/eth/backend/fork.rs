@@ -1,6 +1,6 @@
 //! Support for forking off another client
 
-use crate::eth::{backend::db::Db, error::BlockchainError, pool::transactions::PoolTransaction};
+use crate::eth::{backend::db::Db, error::BlockchainError, pool::transactions::PoolTransaction, EthApi};
 use alloy_consensus::Account;
 use alloy_eips::eip2930::AccessListResult;
 use alloy_network::{AnyRpcBlock, AnyRpcTransaction, BlockResponse, TransactionResponse};
@@ -469,7 +469,7 @@ impl ClientFork {
         if let Some(block) = self.storage_read().blocks.get(&hash).cloned() {
             return Ok(Some(self.convert_to_full_block(block)));
         }
-        self.fetch_full_block(hash).await
+        Ok(self.fetch_full_block(hash).await?.map(EthApi::shield_block_txs))
     }
 
     pub async fn block_by_number(
@@ -504,7 +504,7 @@ impl ClientFork {
             .copied()
             .and_then(|hash| self.storage_read().blocks.get(&hash).cloned())
         {
-            return Ok(Some(self.convert_to_full_block(block)));
+            return Ok(Some(EthApi::shield_block_txs(self.convert_to_full_block(block))));
         }
 
         self.fetch_full_block(block_number).await
@@ -526,7 +526,7 @@ impl ClientFork {
             storage.transactions.extend(block_txs.iter().map(|tx| (tx.tx_hash(), tx.clone())));
             storage.hashes.insert(block_number, hash);
             storage.blocks.insert(hash, block.clone());
-            return Ok(Some(block));
+            return Ok(Some(EthApi::shield_block_txs(block)));
         }
 
         Ok(None)
@@ -538,7 +538,7 @@ impl ClientFork {
         index: usize,
     ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(block) = self.block_by_hash(hash).await? {
-            return self.uncles_by_block_and_index(block, index).await;
+            return Ok(self.uncles_by_block_and_index(block, index).await?.map(EthApi::shield_block_txs));
         }
         Ok(None)
     }
@@ -549,7 +549,7 @@ impl ClientFork {
         index: usize,
     ) -> Result<Option<AnyRpcBlock>, TransportError> {
         if let Some(block) = self.block_by_number(number).await? {
-            return self.uncles_by_block_and_index(block, index).await;
+            return Ok(self.uncles_by_block_and_index(block, index).await?.map(EthApi::shield_block_txs));
         }
         Ok(None)
     }
@@ -562,7 +562,7 @@ impl ClientFork {
         let block_hash = block.header.hash;
         let block_number = block.header.number;
         if let Some(uncles) = self.storage_read().uncles.get(&block_hash) {
-            return Ok(uncles.get(index).cloned());
+            return Ok(uncles.get(index).cloned().map(EthApi::shield_block_txs));
         }
 
         let mut uncles = Vec::with_capacity(block.uncles.len());
@@ -575,7 +575,7 @@ impl ClientFork {
             uncles.push(uncle);
         }
         self.storage_write().uncles.insert(block_hash, uncles.clone());
-        Ok(uncles.get(index).cloned())
+        Ok(uncles.get(index).cloned().map(EthApi::shield_block_txs))
     }
 
     /// Converts a block of hashes into a full block
@@ -595,8 +595,7 @@ impl ClientFork {
         }
         // TODO: fix once blocks have generic transactions
         block.inner.transactions = BlockTransactions::Full(transactions);
-
-        block
+        EthApi::shield_block_txs(block)
     }
 }
 

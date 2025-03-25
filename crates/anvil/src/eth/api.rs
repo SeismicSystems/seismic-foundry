@@ -30,7 +30,7 @@ use crate::{
     revm::primitives::{BlobExcessGasAndPrice, Output},
     ClientFork, LoggingManager, Miner, MiningMode, StorageInfo,
 };
-use alloy_consensus::{transaction::eip4844::TxEip4844Variant, Account};
+use alloy_consensus::{transaction::{eip4844::TxEip4844Variant, ShieldableTransaction}, Account, Typed2718};
 use alloy_dyn_abi::TypedData;
 use alloy_eips::{eip2718::Encodable2718, eip712::Decodable712};
 use alloy_network::{
@@ -1296,6 +1296,25 @@ impl EthApi {
         .map(U256::from)
     }
 
+    pub fn shield_tx(mut tx_wof: AnyRpcTransaction) -> AnyRpcTransaction {
+        if tx_wof.ty() == alloy_consensus::transaction::TxSeismic::TX_TYPE {
+            tx_wof.shield_input();
+        }
+        tx_wof
+    }
+
+    pub fn shield_block_txs(mut block: AnyRpcBlock) -> AnyRpcBlock {
+        match &mut block.transactions {
+            BlockTransactions::Full(txs) => {   
+                for tx_wof in txs.iter_mut() {
+                    *tx_wof = EthApi::shield_tx(tx_wof.clone());
+                }
+            }
+            _ => {}
+        }
+        block
+    }
+
     /// Get transaction by its hash.
     ///
     /// This will check the storage for a matching transaction, if no transaction exists in storage
@@ -1322,7 +1341,7 @@ impl EthApi {
             tx = self.backend.transaction_by_hash(hash).await?
         }
 
-        Ok(tx)
+        Ok(tx.map(EthApi::shield_tx))
     }
 
     /// Returns transaction at given block hash and index.
@@ -1334,7 +1353,7 @@ impl EthApi {
         index: Index,
     ) -> Result<Option<AnyRpcTransaction>> {
         node_info!("eth_getTransactionByBlockHashAndIndex");
-        self.backend.transaction_by_block_hash_and_index(hash, index).await
+        Ok(self.backend.transaction_by_block_hash_and_index(hash, index).await?.map(EthApi::shield_tx))
     }
 
     /// Returns transaction by given block number and index.
@@ -1346,7 +1365,7 @@ impl EthApi {
         idx: Index,
     ) -> Result<Option<AnyRpcTransaction>> {
         node_info!("eth_getTransactionByBlockNumberAndIndex");
-        self.backend.transaction_by_block_number_and_index(block, idx).await
+        Ok(self.backend.transaction_by_block_number_and_index(block, idx).await?.map(EthApi::shield_tx))
     }
 
     /// Returns transaction receipt by transaction hash.
@@ -1382,7 +1401,7 @@ impl EthApi {
             self.backend.ensure_block_number(Some(BlockId::Hash(block_hash.into()))).await?;
         if let Some(fork) = self.get_fork() {
             if fork.predates_fork_inclusive(number) {
-                return Ok(fork.uncle_by_block_hash_and_index(block_hash, idx.into()).await?);
+                return Ok(fork.uncle_by_block_hash_and_index(block_hash, idx.into()).await?.map(EthApi::shield_block_txs));
             }
         }
         // It's impossible to have uncles outside of fork mode
@@ -1401,7 +1420,7 @@ impl EthApi {
         let number = self.backend.ensure_block_number(Some(BlockId::Number(block_number))).await?;
         if let Some(fork) = self.get_fork() {
             if fork.predates_fork_inclusive(number) {
-                return Ok(fork.uncle_by_block_number_and_index(number, idx.into()).await?);
+                return Ok(fork.uncle_by_block_number_and_index(number, idx.into()).await?.map(EthApi::shield_block_txs));
             }
         }
         // It's impossible to have uncles outside of fork mode
