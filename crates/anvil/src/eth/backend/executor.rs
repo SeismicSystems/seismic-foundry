@@ -206,6 +206,7 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
                 out: out.map(Output::into_data),
                 nonce: tx.nonce,
                 gas_used: tx.gas_used,
+                tx_type: transaction.pending_transaction.transaction.r#type().map(|t| t as isize),
             };
 
             transaction_infos.push(info);

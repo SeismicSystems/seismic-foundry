@@ -1450,6 +1450,7 @@ impl Backend {
                 authorization_list: authorization_list.map(Into::into),
                 tx_hash: B256::ZERO,
                 rng_mode: revm::primitives::RngMode::Execution,
+                tx_type: request.inner.transaction_type.map(|t| t as isize),
             };
 
         if env.block.basefee.is_zero() {
