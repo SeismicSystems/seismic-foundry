@@ -457,6 +457,7 @@ impl PendingTransaction {
                     gas_priority_fee: None,
                     gas_limit: *gas_limit,
                     access_list: vec![],
+                    tx_type: Some(tx.tx().ty() as isize),
                     ..Default::default()
                 }
             }
@@ -483,6 +484,7 @@ impl PendingTransaction {
                     gas_priority_fee: None,
                     gas_limit: *gas_limit,
                     access_list: access_list.clone().into(),
+                    tx_type: Some(tx.tx().ty() as isize),
                     ..Default::default()
                 }
             }
@@ -510,6 +512,7 @@ impl PendingTransaction {
                     gas_priority_fee: Some(U256::from(*max_priority_fee_per_gas)),
                     gas_limit: *gas_limit,
                     access_list: access_list.clone().into(),
+                    tx_type: Some(tx.tx().ty() as isize),
                     ..Default::default()
                 }
             }
@@ -541,6 +544,7 @@ impl PendingTransaction {
                     blob_hashes: blob_versioned_hashes.clone(),
                     gas_limit: *gas_limit,
                     access_list: access_list.clone().into(),
+                    tx_type: Some(tx.tx().ty() as isize),
                     ..Default::default()
                 }
             }
@@ -569,6 +573,7 @@ impl PendingTransaction {
                     gas_limit: *gas_limit,
                     access_list: access_list.clone().into(),
                     authorization_list: Some(authorization_list.clone().into()),
+                    tx_type: Some(tx.tx().ty() as isize),
                     ..Default::default()
                 }
             }
@@ -602,6 +607,7 @@ impl PendingTransaction {
                         is_system_transaction: Some(*is_system_tx),
                         enveloped_tx: None,
                     },
+                    tx_type: Some(DEPOSIT_TX_TYPE_ID as isize),
                     ..Default::default()
                 }
             }
@@ -632,6 +638,7 @@ impl PendingTransaction {
                     gas_priority_fee: None,
                     gas_limit: *gas_limit,
                     access_list: vec![],
+                    tx_type: Some(tx.tx().ty() as isize),
                     ..Default::default()
                 }
             }
