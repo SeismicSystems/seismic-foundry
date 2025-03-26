@@ -1420,6 +1420,8 @@ impl Backend {
             None => data,
         };
 
+        println!("tx type: {:?}", request.inner.transaction_type);
+
         env.tx =
             TxEnv {
                 caller,

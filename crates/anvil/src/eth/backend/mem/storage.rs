@@ -562,10 +562,8 @@ impl MinedTransaction {
                                         call_config,
                                         self.receipt.cumulative_gas_used() as u64,
                                     );
-                                if self.info.tx_type ==
-                                    Some(
-                                        alloy_consensus::transaction::TxSeismic::TX_TYPE as isize,
-                                    )
+                                frame.tx_type = self.info.tx_type.unwrap_or_default();
+                                if frame.tx_type == alloy_consensus::transaction::TxSeismic::TX_TYPE as isize
                                 {
                                     frame = frame.shield_inputs();
                                 }
