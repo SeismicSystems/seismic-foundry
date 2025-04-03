@@ -30,10 +30,7 @@ use crate::{
     revm::primitives::{BlobExcessGasAndPrice, Output},
     ClientFork, LoggingManager, Miner, MiningMode, StorageInfo,
 };
-use alloy_consensus::{
-    transaction::{eip4844::TxEip4844Variant, ShieldableTransaction},
-    Account, Typed2718,
-};
+use alloy_consensus::{transaction::eip4844::TxEip4844Variant, Account};
 use alloy_dyn_abi::TypedData;
 use alloy_eips::{eip2718::Encodable2718, eip712::Decodable712};
 use alloy_network::{
