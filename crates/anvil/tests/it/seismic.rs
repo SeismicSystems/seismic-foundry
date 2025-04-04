@@ -16,6 +16,7 @@ use alloy_provider::{
     SendableTx,
 };
 use alloy_rpc_types::{SeismicCallRequest, TransactionInput, TransactionRequest};
+use alloy_serde::WithOtherFields;
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{spawn, NodeConfig};
@@ -241,6 +242,28 @@ async fn test_seismic_transaction_rpc() {
         .client_decrypt(&res, &network_pubkey, &get_encryption_private_key())
         .unwrap();
     assert_eq!(Bytes::from(decrypted), test_utils::ContractTestContext::get_code());
+
+    // estiamte gas
+    let gas_estimate = api
+        .estimate_gas(
+            WithOtherFields::new(
+                get_unsigned_seismic_tx_request(
+                    &signer,
+                    &network_pubkey,
+                    0,
+                    TxKind::Create,
+                    provider.get_chain_id().await.unwrap(),
+                    plaintext_bytecode.clone(),
+                )
+                .await,
+            ),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    println!("gas_estimate: {}", gas_estimate);
+    assert!(gas_estimate > U256::ZERO);
 }
 
 // Actual contract being tested:
