@@ -14,7 +14,7 @@ repository.workspace = true
 workspace = true
 
 [[bin]]
-name = "anvil"
+name = "sanvil"
 path = "src/anvil.rs"
 required-features = ["cli"]
 
@@ -43,6 +43,7 @@ revm = { workspace = true, features = [
     "serde",
     "memory_limit",
     "c-kzg",
+    "seismic"
 ] }
 alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-consensus = { workspace = true, features = ["k256", "kzg"] }
@@ -68,6 +69,11 @@ alloy-chains.workspace = true
 alloy-genesis.workspace = true
 alloy-trie.workspace = true
 op-alloy-consensus = { workspace = true, features = ["serde"] }
+
+secp256k1 = { version = "0.29", default-features = false, features = [
+    "global-context",
+    "recovery",
+] }
 
 # axum related
 axum.workspace = true
@@ -108,6 +114,9 @@ ctrlc = { version = "3", optional = true }
 fdlimit = { version = "0.3", optional = true }
 clap_complete_fig = "4"
 
+seismic-enclave.workspace = true
+
+
 [target.'cfg(unix)'.dependencies]
 tikv-jemallocator = { workspace = true, optional = true }
 
@@ -115,20 +124,22 @@ tikv-jemallocator = { workspace = true, optional = true }
 alloy-json-abi.workspace = true
 alloy-rpc-client = { workspace = true, features = ["pubsub"] }
 alloy-transport-ipc = { workspace = true, features = ["mock"] }
-alloy-provider = { workspace = true, features = ["txpool-api"] }
+alloy-provider = { workspace = true, features = ["txpool-api", "reqwest"] }
 alloy-transport-ws.workspace = true
 alloy-json-rpc.workspace = true
 alloy-pubsub.workspace = true
 foundry-test-utils.workspace = true
 similar-asserts.workspace = true
 tokio = { workspace = true, features = ["full"] }
-
-op-alloy-rpc-types.workspace = true
+url = "2.5"
+reqwest.workspace = true
+# op-alloy-rpc-types.workspace = true
 
 
 [features]
-default = ["cli", "jemalloc"]
+default = ["cli", "jemalloc", "seismic"]
 cmd = ["clap", "clap_complete", "ctrlc", "anvil-server/clap"]
 cli = ["tokio/full", "cmd", "fdlimit"]
 asm-keccak = ["alloy-primitives/asm-keccak"]
 jemalloc = ["dep:tikv-jemallocator"]
+seismic = []

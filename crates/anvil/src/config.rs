@@ -11,7 +11,7 @@ use crate::{
         fees::{INITIAL_BASE_FEE, INITIAL_GAS_PRICE},
         pool::transactions::{PoolTransaction, TransactionOrder},
     },
-    hardfork::{ChainHardfork, OptimismHardfork},
+    hardfork::{ChainHardfork, OptimismHardfork, SeismicHardfork},
     mem::{self, in_memory_db::MemDb},
     EthereumHardfork, FeeManager, PrecompileFactory,
 };
@@ -80,12 +80,14 @@ pub const VERSION_MESSAGE: &str = concat!(
 );
 
 const BANNER: &str = r"
-                             _   _
-                            (_) | |
-      __ _   _ __   __   __  _  | |
-     / _` | | '_ \  \ \ / / | | | |
-    | (_| | | | | |  \ V /  | | | |
-     \__,_| |_| |_|   \_/   |_| |_|
+
+░██████╗░█████╗░███╗░░██╗██╗░░░██╗██╗██╗░░░░░
+██╔════╝██╔══██╗████╗░██║██║░░░██║██║██║░░░░░
+╚█████╗░███████║██╔██╗██║╚██╗░██╔╝██║██║░░░░░
+░╚═══██╗██╔══██║██║╚████║░╚████╔╝░██║██║░░░░░
+██████╔╝██║░░██║██║░╚███║░░╚██╔╝░░██║███████╗
+╚═════╝░╚═╝░░╚═╝╚═╝░░╚══╝░░░╚═╝░░░╚═╝╚══════╝
+
 ";
 
 /// Configurations of the EVM node
@@ -181,6 +183,8 @@ pub struct NodeConfig {
     pub disable_default_create2_deployer: bool,
     /// Enable Optimism deposit transaction
     pub enable_optimism: bool,
+    /// Enable Seismic EVM Specs
+    pub enable_seismic: bool,
     /// Slots in an epoch
     pub slots_in_an_epoch: u64,
     /// The memory limit per EVM execution in bytes.
@@ -198,9 +202,13 @@ pub struct NodeConfig {
 impl NodeConfig {
     fn as_string(&self, fork: Option<&ClientFork>) -> String {
         let mut s: String = String::new();
-        let _ = write!(s, "\n{}", BANNER.green());
+        let _ = write!(s, "\n{}", BANNER.rgb(172, 103, 42));
         let _ = write!(s, "\n    {VERSION_MESSAGE}");
-        let _ = write!(s, "\n    {}", "https://github.com/foundry-rs/foundry".green());
+        let _ = write!(
+            s,
+            "\n    {}",
+            "https://github.com/SeismicSystems/seismic-foundry".rgb(172, 103, 42)
+        );
 
         let _ = write!(
             s,
@@ -275,7 +283,7 @@ Chain ID
 
 {}
 "#,
-                self.get_chain_id().green()
+                self.get_chain_id().rgb(172, 103, 42)
             );
         }
 
@@ -288,7 +296,7 @@ Gas Price
 
 {}
 "#,
-                self.get_gas_price().green()
+                self.get_gas_price().rgb(172, 103, 42)
             );
         } else {
             let _ = write!(
@@ -299,7 +307,7 @@ Base Fee
 
 {}
 "#,
-                self.get_base_fee().green()
+                self.get_base_fee().rgb(172, 103, 42)
             );
         }
 
@@ -324,7 +332,7 @@ Gas Limit
                     })
                 }
             }
-            .green()
+            .rgb(172, 103, 42)
         );
 
         let _ = write!(
@@ -335,7 +343,7 @@ Genesis Timestamp
 
 {}
 "#,
-            self.get_genesis_timestamp().green()
+            self.get_genesis_timestamp().rgb(172, 103, 42)
         );
 
         s
@@ -464,6 +472,7 @@ impl Default for NodeConfig {
             transaction_block_keeper: None,
             disable_default_create2_deployer: false,
             enable_optimism: false,
+            enable_seismic: false,
             slots_in_an_epoch: 32,
             memory_limit: None,
             precompile_factory: None,
@@ -515,6 +524,9 @@ impl NodeConfig {
         }
         if self.enable_optimism {
             return OptimismHardfork::default().into();
+        }
+        if self.enable_seismic || cfg!(feature = "seismic") {
+            return SeismicHardfork::default().into();
         }
         EthereumHardfork::default().into()
     }
@@ -935,6 +947,13 @@ impl NodeConfig {
     #[must_use]
     pub fn with_optimism(mut self, enable_optimism: bool) -> Self {
         self.enable_optimism = enable_optimism;
+        self
+    }
+
+    /// Sets whether to enable seismic support
+    #[must_use]
+    pub fn with_seismic(mut self, enable_seismic: bool) -> Self {
+        self.enable_seismic = enable_seismic;
         self
     }
 

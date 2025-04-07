@@ -296,7 +296,6 @@ impl TestRunnerConfig {
     /// Reconfigures all fields using the given `config`.
     pub fn reconfigure_with(&mut self, config: Arc<Config>) {
         debug_assert!(!Arc::ptr_eq(&self.config, &config));
-
         // TODO: self.evm_opts
         // TODO: self.env
         self.spec_id = config.evm_spec_id();

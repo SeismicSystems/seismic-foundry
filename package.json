@@ -1,0 +1,13 @@
+{
+  "workspaces": [
+    "packages/**"
+  ],
+  "private": true,
+  "scripts": {
+    "test": "bun run --cwd packages/client-tests test"
+  },
+  "dependencies": {
+    "seismic-viem": "^1.0.34",
+    "seismic-viem-tests": "^0.0.9"
+  }
+}

@@ -276,6 +276,7 @@ pub fn evm_spec_id(evm_version: EvmVersion, odyssey: bool) -> SpecId {
         EvmVersion::Paris => SpecId::MERGE,
         EvmVersion::Shanghai => SpecId::SHANGHAI,
         EvmVersion::Cancun => SpecId::CANCUN,
+        EvmVersion::Mercury => SpecId::MERCURY,
         EvmVersion::Prague => SpecId::OSAKA, // Osaka enables EOF
     }
 }

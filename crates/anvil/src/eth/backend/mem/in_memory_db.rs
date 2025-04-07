@@ -11,6 +11,7 @@ use crate::{
 use alloy_primitives::{map::HashMap, Address, B256, U256, U64};
 use alloy_rpc_types::BlockId;
 use foundry_evm::backend::{BlockchainDb, DatabaseResult, StateSnapshot};
+use revm::primitives::FlaggedStorage;
 
 // reexport for convenience
 pub use foundry_evm::{backend::MemDb, revm::db::DatabaseRef};
@@ -21,8 +22,13 @@ impl Db for MemDb {
         self.inner.insert_account_info(address, account)
     }
 
-    fn set_storage_at(&mut self, address: Address, slot: B256, val: B256) -> DatabaseResult<()> {
-        self.inner.insert_account_storage(address, slot.into(), val.into())
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: U256,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()> {
+        self.inner.insert_account_storage(address, slot, val)
     }
 
     fn insert_block_hash(&mut self, number: U256, hash: B256) {
@@ -166,9 +172,7 @@ mod tests {
                 nonce: 1234,
             },
         );
-        dump_db
-            .set_storage_at(test_addr, U256::from(1234567).into(), U256::from(1).into())
-            .unwrap();
+        dump_db.set_storage_at(test_addr, U256::from(1234567), U256::from(1).into()).unwrap();
 
         // blocks dumping/loading tested in storage.rs
         let state = dump_db
@@ -185,7 +189,10 @@ mod tests {
         assert_eq!(loaded_account.balance, U256::from(123456));
         assert_eq!(load_db.code_by_hash_ref(loaded_account.code_hash).unwrap(), contract_code);
         assert_eq!(loaded_account.nonce, 1234);
-        assert_eq!(load_db.storage_ref(test_addr, U256::from(1234567)).unwrap(), U256::from(1));
+        assert_eq!(
+            load_db.storage_ref(test_addr, U256::from(1234567)).unwrap(),
+            U256::from(1).into()
+        );
     }
 
     // verifies that multiple accounts can be loaded at a time, and storage is merged within those
@@ -211,8 +218,8 @@ mod tests {
             },
         );
 
-        db.set_storage_at(test_addr, U256::from(1234567).into(), U256::from(1).into()).unwrap();
-        db.set_storage_at(test_addr, U256::from(1234568).into(), U256::from(2).into()).unwrap();
+        db.set_storage_at(test_addr, U256::from(1234567), U256::from(1).into()).unwrap();
+        db.set_storage_at(test_addr, U256::from(1234568), U256::from(2).into()).unwrap();
 
         let mut new_state = SerializableState::default();
 
@@ -227,7 +234,7 @@ mod tests {
         );
 
         let mut new_storage = BTreeMap::default();
-        new_storage.insert(U256::from(1234568).into(), U256::from(5).into());
+        new_storage.insert(U256::from(1234568), U256::from(5).into());
 
         new_state.accounts.insert(
             test_addr,
@@ -235,7 +242,7 @@ mod tests {
                 balance: U256::from(100100),
                 code: contract_code.bytes()[..contract_code.len()].to_vec().into(),
                 nonce: 100,
-                storage: new_storage,
+                storage: new_storage.into(),
             },
         );
 
@@ -249,7 +256,7 @@ mod tests {
         assert_eq!(loaded_account.balance, U256::from(100100));
         assert_eq!(db.code_by_hash_ref(loaded_account.code_hash).unwrap(), contract_code);
         assert_eq!(loaded_account.nonce, 1234);
-        assert_eq!(db.storage_ref(test_addr, U256::from(1234567)).unwrap(), U256::from(1));
-        assert_eq!(db.storage_ref(test_addr, U256::from(1234568)).unwrap(), U256::from(5));
+        assert_eq!(db.storage_ref(test_addr, U256::from(1234567)).unwrap(), U256::from(1).into());
+        assert_eq!(db.storage_ref(test_addr, U256::from(1234568)).unwrap(), U256::from(5).into());
     }
 }

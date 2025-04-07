@@ -182,7 +182,7 @@ pub fn print_storage_layout(storage_layout: Option<&StorageLayout>) -> Result<()
     };
 
     if shell::is_json() {
-        return print_json(&storage_layout)
+        return print_json(&storage_layout);
     }
 
     let mut table = Table::new();

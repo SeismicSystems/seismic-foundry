@@ -19,6 +19,7 @@ use revm::{
         Gas, InstructionResult, InterpreterResult,
     },
     primitives::{CreateScheme, EVMError, HandlerCfg, SpecId, KECCAK_EMPTY},
+    seismic::seismic_handle_register,
     FrameOrResult, FrameResult,
 };
 use std::{cell::RefCell, rc::Rc, sync::Arc};
@@ -122,6 +123,7 @@ pub fn configure_tx_req_env(
         transaction_type: _,
         ref authorization_list,
         sidecar: _,
+        seismic_elements: _,
     } = *tx;
 
     // If no `to` field then set create kind: https://eips.ethereum.org/EIPS/eip-2470#deployment-transaction
@@ -179,6 +181,7 @@ fn get_create2_factory_call_inputs(
         is_static: false,
         return_memory_offset: 0..0,
         is_eof: false,
+        tx_type: Some(0),
     }
 }
 
@@ -230,7 +233,7 @@ pub fn create2_handler_register<I: InspectorExt>(
                         gas: Gas::new(gas_limit),
                     },
                     memory_offset: 0..0,
-                })))
+                })));
             } else if code_hash != DEFAULT_CREATE2_DEPLOYER_CODEHASH {
                 return Ok(FrameOrResult::Result(FrameResult::Call(CallOutcome {
                     result: InterpreterResult {
@@ -239,7 +242,7 @@ pub fn create2_handler_register<I: InspectorExt>(
                         gas: Gas::new(gas_limit),
                     },
                     memory_offset: 0..0,
-                })))
+                })));
             }
 
             // Handle potential inspector override.
@@ -332,6 +335,8 @@ pub fn new_evm_with_inspector<'evm, 'i, 'db, I: InspectorExt + ?Sized>(
     handler.append_handler_register_plain(revm::inspector_handle_register);
     if inspector.is_odyssey() {
         handler.append_handler_register_plain(odyssey_handler_register);
+    } else if handler.is_seismic() {
+        handler.append_handler_register_plain(seismic_handle_register);
     }
     handler.append_handler_register_plain(create2_handler_register);
 
@@ -350,6 +355,8 @@ pub fn new_evm_with_existing_context<'a>(
     handler.append_handler_register_plain(revm::inspector_handle_register);
     if inspector.is_odyssey() {
         handler.append_handler_register_plain(odyssey_handler_register);
+    } else if handler.is_seismic() {
+        handler.append_handler_register_plain(seismic_handle_register);
     }
     handler.append_handler_register_plain(create2_handler_register);
 

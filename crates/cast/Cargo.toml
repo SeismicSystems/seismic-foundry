@@ -17,7 +17,7 @@ workspace = true
 name = "cast"
 
 [[bin]]
-name = "cast"
+name = "scast"
 path = "bin/main.rs"
 
 [build-dependencies]

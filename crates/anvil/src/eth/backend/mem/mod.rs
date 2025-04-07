@@ -98,9 +98,11 @@ use parking_lot::{Mutex, RwLock};
 use revm::{
     db::WrapDatabaseRef,
     primitives::{
-        calc_blob_gasprice, BlobExcessGasAndPrice, HashMap, OptimismFields, ResultAndState,
+        calc_blob_gasprice, BlobExcessGasAndPrice, FlaggedStorage, HashMap, OptimismFields,
+        ResultAndState,
     },
 };
+use seismic_enclave::MockEnclaveClient;
 use std::{
     collections::BTreeMap,
     io::{Read, Write},
@@ -110,6 +112,7 @@ use std::{
 };
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
+
 pub mod cache;
 pub mod fork_db;
 pub mod in_memory_db;
@@ -444,7 +447,7 @@ impl Backend {
     /// Returns `true` if the account is already impersonated
     pub fn impersonate(&self, addr: Address) -> bool {
         if self.cheats.impersonated_accounts().contains(&addr) {
-            return true
+            return true;
         }
         // Ensure EIP-3607 is disabled
         let mut env = self.env.write();
@@ -681,7 +684,8 @@ impl Backend {
         slot: U256,
         val: B256,
     ) -> DatabaseResult<()> {
-        self.db.write().await.set_storage_at(address, slot.into(), val)
+        let val_u256: U256 = val.into();
+        self.db.write().await.set_storage_at(address, slot.into(), val_u256.into())
     }
 
     /// Returns the configured specid
@@ -752,7 +756,7 @@ impl Backend {
     /// Returns an error if op-stack deposits are not active
     pub fn ensure_op_deposits_active(&self) -> Result<(), BlockchainError> {
         if self.is_optimism() {
-            return Ok(())
+            return Ok(());
         }
         Err(BlockchainError::DepositTransactionUnsupported)
     }
@@ -1123,7 +1127,6 @@ impl Backend {
     ) -> MinedBlockOutcome {
         let _mining_guard = self.mining.lock().await;
         trace!(target: "backend", "creating new block with {} transactions", pool_transactions.len());
-
         let (outcome, header, block_hash) = {
             let current_base_fee = self.base_fee();
             let current_excess_blob_gas_and_price = self.excess_blob_gas_and_price();
@@ -1324,6 +1327,32 @@ impl Backend {
         }).await?
     }
 
+    /// Executes the [TransactionRequest] without writing to the DB
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `block_number` is greater than the current height
+    pub async fn seismic_call(
+        &self,
+        request: WithOtherFields<TransactionRequest>,
+        fee_details: FeeDetails,
+        block_request: Option<BlockRequest>,
+        overrides: Option<StateOverride>,
+    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
+        self.with_database_at(block_request, |state, block| {
+            let block_number = block.number.to::<u64>();
+            let (exit, out, gas, state) = match overrides {
+                None => self.seismic_call_with_state(state.as_dyn(), request, fee_details, block),
+                Some(overrides) => {
+                    let state = state::apply_state_override(overrides.into_iter().collect(), state)?;
+                    self.seismic_call_with_state(state.as_dyn(), request, fee_details, block)
+                },
+            }?;
+            trace!(target: "backend", "seismic call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
+            Ok((exit, out, gas, state))
+        }).await?
+    }
+
     /// ## EVM settings
     ///
     /// This modifies certain EVM settings to mirror geth's `SkipAccountChecks` when transacting requests, see also: <https://github.com/ethereum/go-ethereum/blob/380688c636a654becc8f114438c2a5d93d2db032/core/state_transition.go#L145-L148>:
@@ -1348,15 +1377,12 @@ impl Backend {
                     access_list,
                     blob_versioned_hashes,
                     authorization_list,
-                    // nonce is always ignored for calls
-                    nonce: _,
                     sidecar: _,
                     chain_id: _,
-                    transaction_type: _,
                     .. // Rest of the gas fees related fields are taken from `fee_details`
                 },
             ..
-        } = request;
+        } = request.clone();
 
         let FeeDetails {
             gas_price,
@@ -1385,6 +1411,15 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
+
+        let data = input.into_input().unwrap_or_default();
+        let data = match request.inner.seismic_elements {
+            Some(seismic_elements) => seismic_elements
+                .server_decrypt(&MockEnclaveClient::new(), &data)
+                .expect("failed to decrypt seismic elements"),
+            None => data,
+        };
+
         env.tx =
             TxEnv {
                 caller,
@@ -1405,7 +1440,7 @@ impl Backend {
                     None => TxKind::Create,
                 },
                 value: value.unwrap_or_default(),
-                data: input.into_input().unwrap_or_default(),
+                data,
                 chain_id: None,
                 // set nonce to None so that the correct nonce is chosen by the EVM
                 nonce: None,
@@ -1413,6 +1448,9 @@ impl Backend {
                 blob_hashes,
                 optimism: OptimismFields { enveloped_tx: Some(Bytes::new()), ..Default::default() },
                 authorization_list: authorization_list.map(Into::into),
+                tx_hash: B256::ZERO,
+                rng_mode: revm::primitives::RngMode::Execution,
+                tx_type: request.inner.transaction_type.map(|t| t as isize),
             };
 
         if env.block.basefee.is_zero() {
@@ -1459,6 +1497,34 @@ impl Backend {
         drop(evm);
         inspector.print_logs();
         Ok((exit_reason, out, gas_used as u128, state))
+    }
+
+    pub fn seismic_call_with_state(
+        &self,
+        state: &dyn DatabaseRef<Error = DatabaseError>,
+        request: WithOtherFields<TransactionRequest>,
+        fee_details: FeeDetails,
+        block_env: BlockEnv,
+    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
+        let seismic_elements = request.inner.seismic_elements;
+        let (exit_reason, out, gas_used, state) =
+            self.call_with_state(state, request, fee_details, block_env)?;
+        let output_data = out
+            .map(|plaintext_output| match seismic_elements {
+                Some(seismic_elements) => seismic_elements
+                    .server_encrypt(&MockEnclaveClient::new(), &plaintext_output.data())
+                    .map_err(|e| {
+                        BlockchainError::Message(format!("Failed to encrypt output: {}", e))
+                    })
+                    .map(|ciphertext| match plaintext_output {
+                        Output::Call(_data) => Output::Call(ciphertext),
+                        Output::Create(_data, address) => Output::Create(ciphertext, address),
+                    }),
+                None => Ok(plaintext_output),
+            })
+            .transpose()?;
+
+        Ok((exit_reason, output_data, gas_used as u128, state))
     }
 
     pub async fn call_with_tracing(
@@ -1522,7 +1588,7 @@ impl Backend {
                     GethDebugTracerType::JsTracer(_code) => {
                         Err(RpcError::invalid_params("unsupported tracer type").into())
                     }
-                }
+                };
             }
 
             // defaults to StructLog tracer used since no tracer is specified
@@ -1760,7 +1826,7 @@ impl Backend {
         }
 
         if let Some(fork) = self.get_fork() {
-            return Ok(fork.block_by_hash_full(hash).await?)
+            return Ok(fork.block_by_hash_full(hash).await?);
         }
 
         Ok(None)
@@ -1811,7 +1877,7 @@ impl Backend {
         if let Some(fork) = self.get_fork() {
             let number = self.convert_block_number(Some(number));
             if fork.predates_fork_inclusive(number) {
-                return Ok(fork.block_by_number(number).await?)
+                return Ok(fork.block_by_number(number).await?);
             }
         }
 
@@ -1830,7 +1896,7 @@ impl Backend {
         if let Some(fork) = self.get_fork() {
             let number = self.convert_block_number(Some(number));
             if fork.predates_fork_inclusive(number) {
-                return Ok(fork.block_by_number_full(number).await?)
+                return Ok(fork.block_by_number_full(number).await?);
             }
         }
 
@@ -2158,7 +2224,7 @@ impl Backend {
         }
 
         if let Some(fork) = self.get_fork() {
-            return Ok(fork.trace_transaction(hash).await?)
+            return Ok(fork.trace_transaction(hash).await?);
         }
 
         Ok(vec![])
@@ -2202,7 +2268,7 @@ impl Backend {
         }
 
         if let Some(fork) = self.get_fork() {
-            return Ok(fork.debug_trace_transaction(hash, opts).await?)
+            return Ok(fork.debug_trace_transaction(hash, opts).await?);
         }
 
         Ok(GethTrace::Default(Default::default()))
@@ -2228,7 +2294,7 @@ impl Backend {
 
         if let Some(fork) = self.get_fork() {
             if fork.predates_fork(number) {
-                return Ok(fork.trace_block(number).await?)
+                return Ok(fork.trace_block(number).await?);
             }
         }
 
@@ -2363,6 +2429,7 @@ impl Backend {
                 .map_or(self.base_fee() as u128, |g| g as u128)
                 .saturating_add(t.tx().max_priority_fee_per_gas),
             TypedTransaction::Deposit(_) => 0_u128,
+            TypedTransaction::Seismic(_) => 0_u128,
         };
 
         let receipts = self.get_receipts(block.transactions.iter().map(|tx| tx.hash()));
@@ -2402,6 +2469,7 @@ impl Backend {
                 deposit_nonce: r.deposit_nonce,
                 deposit_receipt_version: r.deposit_receipt_version,
             }),
+            TypedReceipt::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         };
 
         let inner = TransactionReceipt {
@@ -2460,7 +2528,7 @@ impl Backend {
         if let Some(fork) = self.get_fork() {
             let number = self.convert_block_number(Some(number));
             if fork.predates_fork(number) {
-                return Ok(fork.transaction_by_block_number_and_index(number, index.into()).await?)
+                return Ok(fork.transaction_by_block_number_and_index(number, index.into()).await?);
             }
         }
 
@@ -2477,7 +2545,7 @@ impl Backend {
         }
 
         if let Some(fork) = self.get_fork() {
-            return Ok(fork.transaction_by_block_hash_and_index(hash, index.into()).await?)
+            return Ok(fork.transaction_by_block_hash_and_index(hash, index.into()).await?);
         }
 
         Ok(None)
@@ -2516,7 +2584,7 @@ impl Backend {
         }
 
         if let Some(fork) = self.get_fork() {
-            return fork.transaction_by_hash(hash).await.map_err(BlockchainError::AlloyForkProvider)
+            return fork.transaction_by_hash(hash).await.map_err(BlockchainError::AlloyForkProvider);
         }
 
         Ok(None)
@@ -2587,7 +2655,7 @@ impl Backend {
                     .map(|(key, proof)| {
                         let storage_key: U256 = key.into();
                         let value = account.storage.get(&storage_key).cloned().unwrap_or_default();
-                        StorageProof { key: JsonStorageKey::Hash(key), value, proof }
+                        StorageProof { key: JsonStorageKey::Hash(key), value: value.into(), proof }
                     })
                     .collect(),
             };
@@ -2701,7 +2769,7 @@ fn get_pool_transactions_nonce(
         .max()
     {
         let tx_count = highest_nonce.saturating_add(1);
-        return Some(tx_count)
+        return Some(tx_count);
     }
     None
 }
@@ -2804,17 +2872,17 @@ impl TransactionValidator for Backend {
 
             // Ensure there are blob hashes.
             if blob_count == 0 {
-                return Err(InvalidTransactionError::NoBlobHashes)
+                return Err(InvalidTransactionError::NoBlobHashes);
             }
 
             // Ensure the tx does not exceed the max blobs per block.
             if blob_count > MAX_BLOBS_PER_BLOCK {
-                return Err(InvalidTransactionError::TooManyBlobs(MAX_BLOBS_PER_BLOCK, blob_count))
+                return Err(InvalidTransactionError::TooManyBlobs(MAX_BLOBS_PER_BLOCK, blob_count));
             }
 
             // Check for any blob validation errors
             if let Err(err) = tx.validate(env.cfg.kzg_settings.get()) {
-                return Err(InvalidTransactionError::BlobTransactionValidationError(err))
+                return Err(InvalidTransactionError::BlobTransactionValidationError(err));
             }
         }
 
@@ -2844,6 +2912,19 @@ impl TransactionValidator for Backend {
                     return Err(InvalidTransactionError::InsufficientFunds);
                 }
             }
+        }
+
+        if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
+            // check that decryption works before we create tx env for it
+            let inner = seismic_tx.tx();
+            let _decrypted_data = inner
+                .seismic_elements
+                .server_decrypt(&MockEnclaveClient::new(), &inner.input)
+                .map_err(|_e| {
+                    InvalidTransactionError::SeismicDecryptionFailed(format!(
+                        "Failed to decrypt seismic calldata"
+                    ))
+                })?;
         }
 
         Ok(())
@@ -2984,6 +3065,11 @@ pub fn transaction_build(
             let new_signed = Signed::new_unchecked(t, sig, hash);
             AnyTxEnvelope::Ethereum(TxEnvelope::Eip7702(new_signed))
         }
+        TxEnvelope::Seismic(signed_tx) => {
+            let (tx, signature, _) = signed_tx.into_parts();
+            let new_signed = Signed::new_unchecked(tx, signature, hash);
+            AnyTxEnvelope::Ethereum(TxEnvelope::Seismic(new_signed))
+        }
         _ => unreachable!("unknown tx type"),
     };
 
@@ -3006,7 +3092,7 @@ pub fn transaction_build(
 /// `storage_key` is the hash of the desired storage key, meaning
 /// this will only work correctly under a secure trie.
 /// `storage_key` == keccak(key)
-pub fn prove_storage(storage: &HashMap<U256, U256>, keys: &[B256]) -> Vec<Vec<Bytes>> {
+pub fn prove_storage(storage: &HashMap<U256, FlaggedStorage>, keys: &[B256]) -> Vec<Vec<Bytes>> {
     let keys: Vec<_> = keys.iter().map(|key| Nibbles::unpack(keccak256(key))).collect();
 
     let mut builder = HashBuilder::default().with_proof_retainer(ProofRetainer::new(keys.clone()));
@@ -3033,7 +3119,7 @@ pub fn prove_storage(storage: &HashMap<U256, U256>, keys: &[B256]) -> Vec<Vec<By
 
 pub fn is_arbitrum(chain_id: u64) -> bool {
     if let Ok(chain) = NamedChain::try_from(chain_id) {
-        return chain.is_arbitrum()
+        return chain.is_arbitrum();
     }
     false
 }

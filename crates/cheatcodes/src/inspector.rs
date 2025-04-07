@@ -157,6 +157,7 @@ where
         db: &mut ccx.ecx.db as &mut dyn DatabaseExt,
         error,
         l1_block_info,
+        rng_container: revm::seismic::RngContainer::default(),
     };
 
     let mut evm = new_evm_with_existing_context(inner, &mut *inspector);
@@ -317,7 +318,7 @@ impl ArbitraryStorage {
     pub fn save(&mut self, ecx: InnerEcx, address: Address, slot: U256, data: U256) {
         self.values.get_mut(&address).expect("missing arbitrary address entry").insert(slot, data);
         if let Ok(mut account) = ecx.load_account(address) {
-            account.storage.insert(slot, EvmStorageSlot::new(data));
+            account.storage.insert(slot, EvmStorageSlot::new(data.into()));
         }
     }
 
@@ -335,14 +336,14 @@ impl ArbitraryStorage {
                 storage_cache.insert(slot, new_value);
                 // Update source storage with new value.
                 if let Ok(mut source_account) = ecx.load_account(*source) {
-                    source_account.storage.insert(slot, EvmStorageSlot::new(new_value));
+                    source_account.storage.insert(slot, EvmStorageSlot::new(new_value.into()));
                 }
                 new_value
             }
         };
         // Update target storage with new value.
         if let Ok(mut target_account) = ecx.load_account(target) {
-            target_account.storage.insert(slot, EvmStorageSlot::new(value));
+            target_account.storage.insert(slot, EvmStorageSlot::new(value.into()));
         }
         value
     }
@@ -1730,7 +1731,7 @@ impl Cheatcodes {
         let (key, target_address) = if interpreter.current_opcode() == op::SLOAD {
             (try_or_return!(interpreter.stack().peek(0)), interpreter.contract().target_address)
         } else {
-            return
+            return;
         };
 
         let Ok(value) = ecx.sload(target_address, key) else {

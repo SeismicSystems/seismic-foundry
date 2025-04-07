@@ -1,11 +1,12 @@
 use crate::abi::VendingMachine;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{bytes, U256};
-use alloy_provider::Provider;
+use alloy_provider::{Provider, SeismicSignedProvider, SendableTx};
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{spawn, NodeConfig};
+use url::Url;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deploy_reverting() {
@@ -65,12 +66,25 @@ async fn test_revert_messages() {
 async fn test_solc_revert_example() {
     let (_api, handle) = spawn(NodeConfig::test()).await;
     let sender = handle.dev_accounts().next().unwrap();
+    let wallet = handle.dev_wallets().next().unwrap();
     let provider = handle.http_provider();
+    let node_url = Url::parse(&handle.http_endpoint()).unwrap();
+
+    let seismic_provider = SeismicSignedProvider::new(wallet.clone().into(), node_url);
 
     let contract = VendingMachine::deploy(&provider).await.unwrap();
+    let tx = contract.buy(U256::from(100)).into_transaction_request();
+    let input = tx.input().unwrap();
+    let err = seismic_provider
+        .seismic_call(SendableTx::Builder(
+            TransactionRequest::default()
+                .with_from(sender)
+                .with_to(*contract.address())
+                .with_input(input.clone()),
+        ))
+        .await
+        .unwrap_err();
 
-    let err =
-        contract.buy(U256::from(100)).value(U256::from(1)).from(sender).call().await.unwrap_err();
     let s = err.to_string();
     assert!(s.contains("Not enough Ether provided."), "{s:?}");
 }

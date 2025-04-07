@@ -108,6 +108,7 @@ impl Signer for DevSigner {
             TypedTransactionRequest::Deposit(_) => {
                 unreachable!("op deposit txs should not be signed")
             }
+            TypedTransactionRequest::Seismic(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
         }
     }
 }
@@ -155,6 +156,9 @@ pub fn build_typed_transaction(
                 is_system_tx: is_system_transaction,
                 nonce: 0,
             })
+        }
+        TypedTransactionRequest::Seismic(tx) => {
+            TypedTransaction::Seismic(tx.into_signed(signature))
         }
     };
 

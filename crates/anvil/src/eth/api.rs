@@ -32,7 +32,7 @@ use crate::{
 };
 use alloy_consensus::{transaction::eip4844::TxEip4844Variant, Account};
 use alloy_dyn_abi::TypedData;
-use alloy_eips::eip2718::Encodable2718;
+use alloy_eips::{eip2718::Encodable2718, eip712::Decodable712};
 use alloy_network::{
     eip2718::Decodable2718, AnyRpcBlock, AnyRpcTransaction, BlockResponse, Ethereum, NetworkWallet,
     TransactionBuilder, TransactionResponse,
@@ -88,7 +88,9 @@ use foundry_evm::{
 use futures::channel::{mpsc::Receiver, oneshot};
 use parking_lot::RwLock;
 use revm::primitives::Bytecode;
+use seismic_enclave::{rpc::SyncEnclaveApiClient, MockEnclaveClient};
 use std::{future::Future, sync::Arc, time::Duration};
+use yansi::Paint;
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -162,6 +164,12 @@ impl EthApi {
     pub async fn execute(&self, request: EthRequest) -> ResponseResult {
         trace!(target: "rpc::api", "executing eth request");
         match request {
+            EthRequest::SeismicGetTeePublicKey(()) => {
+                let result = MockEnclaveClient::new()
+                    .get_public_key()
+                    .map_err(|e| BlockchainError::Internal(e.to_string()));
+                result.to_rpc_result()
+            }
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),
             EthRequest::Web3Sha3(content) => self.sha3(content).to_rpc_result(),
             EthRequest::EthGetAccount(addr, block) => {
@@ -240,9 +248,14 @@ impl EthApi {
             EthRequest::EthSignTypedDataV4(addr, data) => {
                 self.sign_typed_data_v4(addr, &data).await.to_rpc_result()
             }
-            EthRequest::EthSendRawTransaction(tx) => {
-                self.send_raw_transaction(tx).await.to_rpc_result()
-            }
+            EthRequest::EthSendRawTransaction(req) => match req {
+                alloy_rpc_types::SeismicRawTxRequest::Bytes(tx) => {
+                    self.send_raw_transaction(tx).await.to_rpc_result()
+                }
+                alloy_rpc_types::SeismicRawTxRequest::TypedData(td) => {
+                    self.send_signed_typed_data_tx(td).await.to_rpc_result()
+                }
+            },
             EthRequest::EthCall(call, block, overrides) => {
                 self.call(call, block, overrides).await.to_rpc_result()
             }
@@ -370,7 +383,7 @@ impl EthApi {
                 if time >= U256::from(u64::MAX) {
                     return ResponseResult::Error(RpcError::invalid_params(
                         "The timestamp is too big",
-                    ))
+                    ));
                 }
                 let time = time.to::<u64>();
                 self.evm_set_next_block_timestamp(time).to_rpc_result()
@@ -379,7 +392,7 @@ impl EthApi {
                 if timestamp >= U256::from(u64::MAX) {
                     return ResponseResult::Error(RpcError::invalid_params(
                         "The timestamp is too big",
-                    ))
+                    ));
                 }
                 let time = timestamp.to::<u64>();
                 self.evm_set_time(time).to_rpc_result()
@@ -479,13 +492,13 @@ impl EthApi {
                     B256::with_last_byte(1),
                     false,
                 );
-                return build_typed_transaction(request, nil_signature)
+                return build_typed_transaction(request, nil_signature);
             }
             _ => {
                 for signer in self.signers.iter() {
                     if signer.accounts().contains(from) {
                         let signature = signer.sign_transaction(request.clone(), from)?;
-                        return build_typed_transaction(request, signature)
+                        return build_typed_transaction(request, signature);
                     }
                 }
             }
@@ -676,7 +689,7 @@ impl EthApi {
         if let BlockRequest::Number(number) = block_request {
             if let Some(fork) = self.get_fork() {
                 if fork.predates_fork(number) {
-                    return Ok(fork.get_balance(address, number).await?)
+                    return Ok(fork.get_balance(address, number).await?);
                 }
             }
         }
@@ -699,7 +712,7 @@ impl EthApi {
         if let BlockRequest::Number(number) = block_request {
             if let Some(fork) = self.get_fork() {
                 if fork.predates_fork(number) {
-                    return Ok(fork.get_account(address, number).await?)
+                    return Ok(fork.get_account(address, number).await?);
                 }
             }
         }
@@ -856,7 +869,7 @@ impl EthApi {
         if let BlockRequest::Number(number) = block_request {
             if let Some(fork) = self.get_fork() {
                 if fork.predates_fork(number) {
-                    return Ok(fork.get_code(address, number).await?)
+                    return Ok(fork.get_code(address, number).await?);
                 }
             }
         }
@@ -881,7 +894,7 @@ impl EthApi {
         if let BlockRequest::Number(number) = block_request {
             if let Some(fork) = self.get_fork() {
                 if fork.predates_fork_inclusive(number) {
-                    return Ok(fork.get_proof(address, keys, Some(number.into())).await?)
+                    return Ok(fork.get_proof(address, keys, Some(number.into())).await?);
                 }
             }
         }
@@ -1047,31 +1060,55 @@ impl EthApi {
         Ok(*tx.hash())
     }
 
-    /// Call contract, returning the output data.
+    /// Sends signed typed data transaction, returning its hash.
     ///
-    /// Handler for ETH RPC call: `eth_call`
-    pub async fn call(
+    /// Handler for ETH RPC call: `eth_sendRawTransaction`
+    pub async fn send_signed_typed_data_tx(
+        &self,
+        td: alloy_eips::eip712::TypedDataRequest,
+    ) -> Result<TxHash> {
+        node_info!("eth_sendRawTransaction via eth_signTypedData");
+
+        let transaction = TypedTransaction::decode_712(&td).map_err(|e| {
+            BlockchainError::Message(format!(
+                "Failed to decode typed data into seismic tx: {:?}",
+                e
+            ))
+        })?;
+
+        // NOTE: rest is copy pasta from send_raw_transaction
+        self.ensure_typed_transaction_supported(&transaction)?;
+
+        let pending_transaction = PendingTransaction::new(transaction)?;
+
+        // pre-validate
+        self.backend.validate_pool_transaction(&pending_transaction).await?;
+
+        let on_chain_nonce = self.backend.current_nonce(*pending_transaction.sender()).await?;
+        let from = *pending_transaction.sender();
+        let nonce = pending_transaction.transaction.nonce();
+        let requires = required_marker(nonce, on_chain_nonce, from);
+
+        let priority = self.transaction_priority(&pending_transaction.transaction);
+        let pool_transaction = PoolTransaction {
+            requires,
+            provides: vec![to_marker(nonce, *pending_transaction.sender())],
+            pending_transaction,
+            priority,
+        };
+
+        let tx = self.pool.add_transaction(pool_transaction)?;
+        trace!(target: "node", "Added transaction: [{:?}] sender={:?}", tx.hash(), from);
+        Ok(*tx.hash())
+    }
+
+    async fn seismic_call(
         &self,
         request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
         overrides: Option<StateOverride>,
     ) -> Result<Bytes> {
-        node_info!("eth_call");
-        let block_request = self.block_request(block_number).await?;
-        // check if the number predates the fork, if in fork mode
-        if let BlockRequest::Number(number) = block_request {
-            if let Some(fork) = self.get_fork() {
-                if fork.predates_fork(number) {
-                    if overrides.is_some() {
-                        return Err(BlockchainError::StateOverrideError(
-                            "not available on past forked blocks".to_string(),
-                        ));
-                    }
-                    return Ok(fork.call(&request, Some(number.into())).await?)
-                }
-            }
-        }
-
+        node_info!("eth_call (signed)");
         let fees = FeeDetails::new(
             request.gas_price,
             request.max_fee_per_gas,
@@ -1079,16 +1116,105 @@ impl EthApi {
             request.max_fee_per_blob_gas,
         )?
         .or_zero_fees();
-        // this can be blocking for a bit, especially in forking mode
-        // <https://github.com/foundry-rs/foundry/issues/6036>
+
+        let block_request = self.block_request(block_number).await?;
         self.on_blocking_task(|this| async move {
             let (exit, out, gas, _) =
-                this.backend.call(request, fees, Some(block_request), overrides).await?;
+                this.backend.seismic_call(request, fees, Some(block_request), overrides).await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
-
             ensure_return_ok(exit, &out)
         })
         .await
+    }
+
+    /// Call contract, returning the output data.
+    ///
+    /// Handler for ETH RPC call: `eth_call`
+    pub async fn call(
+        &self,
+        request: impl Into<alloy_rpc_types::SeismicCallRequest>,
+        block_number: Option<BlockId>,
+        overrides: Option<StateOverride>,
+    ) -> Result<Bytes> {
+        match request.into() {
+            alloy_rpc_types::SeismicCallRequest::TransactionRequest(mut tx) => {
+                let user_provided_from = tx.from;
+
+                tx.from = None;
+                tx.gas_price = None; // preventing InsufficientFunds error
+                tx.max_fee_per_gas = None; // preventing InsufficientFunds error
+                tx.max_priority_fee_per_gas = None; // preventing InsufficientFunds error
+                tx.max_fee_per_blob_gas = None; // preventing InsufficientFunds error
+                tx.value = None; // preventing InsufficientFunds error
+
+                match self.seismic_call(tx, block_number, overrides).await {
+                    Ok(bytes) => Ok(bytes),
+                    Err(original_err) => {
+                        // Only attach a custom message if user tried to set `from` != zero
+                        let tried_to_spoof_from =
+                            user_provided_from.map_or(false, |addr| !addr.is_zero());
+
+                        if tried_to_spoof_from {
+                            // We'll embed the original error's text (which may include
+                            // revert data) plus a multiline explanation:
+                            Err(BlockchainError::Message(format!("Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
+                            orig = original_err
+                        )))
+                        } else {
+                            // Otherwise bubble up the original error
+                            Err(original_err)
+                        }
+                    }
+                }
+            }
+            alloy_rpc_types::SeismicCallRequest::TypedData(td) => {
+                let typed_tx = TypedTransaction::decode_712(&td).map_err(|e| {
+                    BlockchainError::Message(format!(
+                        "Failed to decode typed data into seismic tx: {:?}",
+                        e
+                    ))
+                })?;
+                let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
+                    BlockchainError::Message(
+                        "Failed to decode bytes to transaction request".to_string(),
+                    )
+                })?;
+
+                let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
+                    "Can only make signedCall with Seismic Transactions".to_string(),
+                ))?;
+                // unlike above, this can be either recover_signer or recover_caller,
+                // since message_version = 0 for these
+                let sender = signed_seismic_tx.recover_signer().map_err(|e| {
+                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+                })?;
+                let mut request = WithOtherFields::new(tx);
+                request.inner.from = Some(sender);
+
+                self.seismic_call(request, block_number, overrides).await
+            }
+            alloy_rpc_types::SeismicCallRequest::Bytes(bytes) => {
+                let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
+                    .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
+                let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
+                    BlockchainError::Message(
+                        "Failed to decode bytes to transaction request".to_string(),
+                    )
+                })?;
+
+                let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
+                    "Can only make signedCall with Seismic Transactions".to_string(),
+                ))?;
+                // unlike above, this can be either recover_signer or recover_caller,
+                // since message_version = 0 for these
+                let sender = signed_seismic_tx.recover_signer().map_err(|e| {
+                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+                })?;
+                let mut request = WithOtherFields::new(tx);
+                request.inner.from = Some(sender);
+                self.seismic_call(request, block_number, overrides).await
+            }
+        }
     }
 
     /// This method creates an EIP2930 type accessList based on a given Transaction. The accessList
@@ -1115,7 +1241,7 @@ impl EthApi {
         if let BlockRequest::Number(number) = block_request {
             if let Some(fork) = self.get_fork() {
                 if fork.predates_fork(number) {
-                    return Ok(fork.create_access_list(&request, Some(number.into())).await?)
+                    return Ok(fork.create_access_list(&request, Some(number.into())).await?);
                 }
             }
         }
@@ -1737,7 +1863,7 @@ impl EthApi {
     /// Handler for RPC call: `anvil_dropAllTransactions`
     pub async fn anvil_drop_all_transactions(&self) -> Result<()> {
         node_info!("anvil_dropAllTransactions");
-        self.pool.clear();
+        self.pool.resetting();
         Ok(())
     }
 
@@ -2400,7 +2526,7 @@ impl EthApi {
         // Validate the request
         // reject transactions that have a non-zero value to prevent draining the executor.
         if request.value.is_some_and(|val| val > U256::ZERO) {
-            return Err(WalletError::ValueNotZero.into())
+            return Err(WalletError::ValueNotZero.into());
         }
 
         // reject transactions that have from set, as this will be the executor.
@@ -2574,7 +2700,7 @@ impl EthApi {
                             "not available on past forked blocks".to_string(),
                         ));
                     }
-                    return Ok(fork.estimate_gas(&request, Some(number.into())).await?)
+                    return Ok(fork.estimate_gas(&request, Some(number.into())).await?);
                 }
             }
         }
@@ -2893,6 +3019,14 @@ impl EthApi {
                 m.gas_limit = gas_limit;
                 TypedTransactionRequest::Deposit(m)
             }
+            Some(TypedTransactionRequest::Seismic(mut m)) => {
+                m.gas_limit = gas_limit as u64;
+                if gas_price.is_none() {
+                    m.gas_price = self.gas_price();
+                }
+                m.chain_id = chain_id;
+                TypedTransactionRequest::Seismic(m)
+            }
             None => return Err(BlockchainError::FailedToDecodeTransaction),
         };
         Ok(request)
@@ -2916,7 +3050,8 @@ impl EthApi {
             TypedTransactionRequest::EIP2930(_) |
             TypedTransactionRequest::EIP1559(_) |
             TypedTransactionRequest::EIP4844(_) |
-            TypedTransactionRequest::Deposit(_) => Signature::from_scalars_and_parity(
+            TypedTransactionRequest::Deposit(_) |
+            TypedTransactionRequest::Seismic(_) => Signature::from_scalars_and_parity(
                 B256::with_last_byte(1),
                 B256::with_last_byte(1),
                 false,
@@ -2935,7 +3070,7 @@ impl EthApi {
         if let BlockRequest::Number(number) = block_request {
             if let Some(fork) = self.get_fork() {
                 if fork.predates_fork(number) {
-                    return Ok(fork.get_nonce(address, number).await?)
+                    return Ok(fork.get_nonce(address, number).await?);
                 }
             }
         }
@@ -2992,6 +3127,7 @@ impl EthApi {
             TypedTransaction::EIP7702(_) => self.backend.ensure_eip7702_active(),
             TypedTransaction::Deposit(_) => self.backend.ensure_op_deposits_active(),
             TypedTransaction::Legacy(_) => Ok(()),
+            TypedTransaction::Seismic(_) => Ok(()),
         }
     }
 }
@@ -3047,6 +3183,10 @@ fn determine_base_gas_by_kind(request: &WithOtherFields<TransactionRequest>) -> 
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,
                 TxKind::Create => MIN_CREATE_GAS,
             },
+            TypedTransactionRequest::Seismic(req) => match req.to {
+                TxKind::Call(_) => MIN_TRANSACTION_GAS,
+                TxKind::Create => MIN_CREATE_GAS,
+            },
         },
         // Tighten the gas limit upwards if we don't know the transaction type to avoid deployments
         // failing.
@@ -3078,6 +3218,8 @@ impl TryFrom<Result<(InstructionResult, Option<Output>, u128, State)>> for GasEs
 
                 InstructionResult::Revert => Ok(Self::Revert(output.map(|o| o.into_data()))),
 
+                InstructionResult::InvalidPublicStorageAccess |
+                InstructionResult::InvalidPrivateStorageAccess |
                 InstructionResult::OutOfGas |
                 InstructionResult::MemoryOOG |
                 InstructionResult::MemoryLimitOOG |

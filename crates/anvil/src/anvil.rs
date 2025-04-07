@@ -11,7 +11,7 @@ static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 /// A fast local Ethereum development node.
 #[derive(Parser)]
-#[command(name = "anvil", version = anvil::VERSION_MESSAGE, next_display_order = None)]
+#[command(name = "sanvil", version = anvil::VERSION_MESSAGE, next_display_order = None)]
 pub struct Anvil {
     /// Include the global options.
     #[command(flatten)]
@@ -69,7 +69,7 @@ fn run() -> Result<()> {
                 &mut std::io::stdout(),
             ),
         }
-        return Ok(())
+        return Ok(());
     }
 
     let _ = fdlimit::raise_fd_limit();

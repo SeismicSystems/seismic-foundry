@@ -30,7 +30,9 @@ use foundry_evm::{
     traces::CallTraceNode,
     utils::odyssey_handler_register,
 };
-use revm::{db::WrapDatabaseRef, primitives::MAX_BLOB_GAS_PER_BLOCK};
+use revm::{
+    db::WrapDatabaseRef, primitives::MAX_BLOB_GAS_PER_BLOCK, seismic::seismic_handle_register,
+};
 use std::sync::Arc;
 
 /// Represents an executed transaction (transacted on the DB)
@@ -73,6 +75,7 @@ impl ExecutedTransaction {
                 deposit_nonce: Some(tx.nonce),
                 deposit_receipt_version: Some(1),
             }),
+            TypedTransaction::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         }
     }
 }
@@ -148,22 +151,22 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
                 }
                 TransactionExecutionOutcome::Exhausted(tx) => {
                     trace!(target: "backend",  tx_gas_limit = %tx.pending_transaction.transaction.gas_limit(), ?tx,  "block gas limit exhausting, skipping transaction");
-                    continue
+                    continue;
                 }
                 TransactionExecutionOutcome::BlobGasExhausted(tx) => {
                     trace!(target: "backend",  blob_gas = %tx.pending_transaction.transaction.blob_gas().unwrap_or_default(), ?tx,  "block blob gas limit exhausting, skipping transaction");
-                    continue
+                    continue;
                 }
                 TransactionExecutionOutcome::Invalid(tx, _) => {
                     trace!(target: "backend", ?tx,  "skipping invalid transaction");
                     invalid.push(tx);
-                    continue
+                    continue;
                 }
                 TransactionExecutionOutcome::DatabaseError(_, err) => {
                     // Note: this is only possible in forking mode, if for example a rpc request
                     // failed
                     trace!(target: "backend", ?err,  "Failed to execute transaction due to database error");
-                    continue
+                    continue;
                 }
             };
             if is_cancun {
@@ -203,6 +206,7 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
                 out: out.map(Output::into_data),
                 nonce: tx.nonce,
                 gas_used: tx.gas_used,
+                tx_type: transaction.pending_transaction.transaction.r#type().map(|t| t as isize),
             };
 
             transaction_infos.push(info);
@@ -276,12 +280,12 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
             Ok(account) => account,
             Err(err) => return Some(TransactionExecutionOutcome::DatabaseError(transaction, err)),
         };
-        let env = self.env_for(&transaction.pending_transaction);
 
+        let env = self.env_for(&transaction.pending_transaction);
         // check that we comply with the block's gas limit, if not disabled
         let max_gas = self.gas_used.saturating_add(env.tx.gas_limit);
         if !env.cfg.disable_block_gas_limit && max_gas > env.block.gas_limit.to::<u64>() {
-            return Some(TransactionExecutionOutcome::Exhausted(transaction))
+            return Some(TransactionExecutionOutcome::Exhausted(transaction));
         }
 
         // check that we comply with the block's blob gas limit
@@ -289,7 +293,7 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
             transaction.pending_transaction.transaction.transaction.blob_gas().unwrap_or(0),
         );
         if max_blob_gas > MAX_BLOB_GAS_PER_BLOCK {
-            return Some(TransactionExecutionOutcome::BlobGasExhausted(transaction))
+            return Some(TransactionExecutionOutcome::BlobGasExhausted(transaction));
         }
 
         // validate before executing
@@ -299,7 +303,7 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
             &env,
         ) {
             warn!(target: "backend", "Skipping invalid tx execution [{:?}] {}", transaction.hash(), err);
-            return Some(TransactionExecutionOutcome::Invalid(transaction, err))
+            return Some(TransactionExecutionOutcome::Invalid(transaction, err));
         }
 
         let nonce = account.nonce;
@@ -412,6 +416,10 @@ pub fn new_evm_with_inspector<DB: revm::Database>(
     handler.append_handler_register_plain(revm::inspector_handle_register);
     if odyssey {
         handler.append_handler_register_plain(odyssey_handler_register);
+    }
+
+    if handler.is_seismic() {
+        handler.append_handler_register_plain(seismic_handle_register);
     }
 
     let context = revm::Context::new(revm::EvmContext::new_with_env(db, env), inspector);

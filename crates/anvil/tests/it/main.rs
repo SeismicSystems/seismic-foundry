@@ -11,11 +11,13 @@ mod gas;
 mod genesis;
 mod ipc;
 mod logs;
-mod optimism;
+// mod optimism;
 mod otterscan;
 mod proof;
 mod pubsub;
 mod revert;
+#[cfg(feature = "seismic")]
+mod seismic;
 mod sign;
 mod state;
 mod traces;

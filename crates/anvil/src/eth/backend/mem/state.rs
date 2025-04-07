@@ -12,6 +12,7 @@ use foundry_evm::{
         primitives::{AccountInfo, Bytecode, HashMap},
     },
 };
+use revm::primitives::FlaggedStorage;
 
 pub fn build_root(values: impl IntoIterator<Item = (Nibbles, Vec<u8>)>) -> B256 {
     let mut builder = HashBuilder::default();
@@ -27,16 +28,18 @@ pub fn state_root(accounts: &HashMap<Address, DbAccount>) -> B256 {
 }
 
 /// Builds storage root from the given storage
-pub fn storage_root(storage: &HashMap<U256, U256>) -> B256 {
+pub fn storage_root(storage: &HashMap<U256, FlaggedStorage>) -> B256 {
     build_root(trie_storage(storage))
 }
 
 /// Builds iterator over stored key-value pairs ready for storage trie root calculation.
-pub fn trie_storage(storage: &HashMap<U256, U256>) -> Vec<(Nibbles, Vec<u8>)> {
+pub fn trie_storage(storage: &HashMap<U256, FlaggedStorage>) -> Vec<(Nibbles, Vec<u8>)> {
     let mut storage = storage
         .iter()
         .map(|(key, value)| {
-            let data = alloy_rlp::encode(value);
+            // TODO: support FlaggedStorage
+            let value_u256: U256 = value.into();
+            let data = alloy_rlp::encode(value_u256);
             (Nibbles::unpack(keccak256(key.to_be_bytes::<32>())), data)
         })
         .collect::<Vec<_>>();
@@ -60,7 +63,7 @@ pub fn trie_accounts(accounts: &HashMap<Address, DbAccount>) -> Vec<(Nibbles, Ve
 }
 
 /// Returns the RLP for this account.
-pub fn trie_account_rlp(info: &AccountInfo, storage: &HashMap<U256, U256>) -> Vec<u8> {
+pub fn trie_account_rlp(info: &AccountInfo, storage: &HashMap<U256, FlaggedStorage>) -> Vec<u8> {
     let mut out: Vec<u8> = Vec::new();
     let list: [&dyn Encodable; 4] =
         [&info.nonce, &info.balance, &storage_root(storage), &info.code_hash];
@@ -109,13 +112,17 @@ where
                     *account,
                     new_account_state
                         .iter()
-                        .map(|(key, value)| ((*key).into(), (*value).into()))
+                        .map(|(key, value)| {
+                            let value_u256: U256 = (*value).into();
+                            ((*key).into(), value_u256.into())
+                        })
                         .collect(),
                 )?;
             }
             (None, Some(account_state_diff)) => {
                 for (key, value) in account_state_diff.iter() {
-                    cache_db.insert_account_storage(*account, (*key).into(), (*value).into())?;
+                    let value_u256: U256 = (*value).into();
+                    cache_db.insert_account_storage(*account, (*key).into(), value_u256.into())?;
                 }
             }
         };

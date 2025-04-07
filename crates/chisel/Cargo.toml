@@ -17,7 +17,7 @@ repository.workspace = true
 workspace = true
 
 [[bin]]
-name = "chisel"
+name = "schisel"
 path = "bin/main.rs"
 
 [build-dependencies]

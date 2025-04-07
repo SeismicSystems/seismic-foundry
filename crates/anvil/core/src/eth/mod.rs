@@ -12,7 +12,6 @@ use alloy_rpc_types::{
     BlockId, BlockNumberOrTag as BlockNumber, Filter, Index,
 };
 use alloy_serde::WithOtherFields;
-
 pub mod block;
 pub mod proof;
 pub mod subscription;
@@ -44,6 +43,12 @@ pub struct Params<T: Default> {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "method", content = "params"))]
 pub enum EthRequest {
+    #[cfg_attr(
+        feature = "serde",
+        serde(rename = "seismic_getTeePublicKey", with = "empty_params")
+    )]
+    SeismicGetTeePublicKey(()),
+
     #[cfg_attr(feature = "serde", serde(rename = "web3_clientVersion", with = "empty_params"))]
     Web3ClientVersion(()),
 
@@ -174,11 +179,11 @@ pub enum EthRequest {
     EthSendTransaction(Box<WithOtherFields<TransactionRequest>>),
 
     #[cfg_attr(feature = "serde", serde(rename = "eth_sendRawTransaction", with = "sequence"))]
-    EthSendRawTransaction(Bytes),
+    EthSendRawTransaction(alloy_rpc_types::SeismicRawTxRequest),
 
     #[cfg_attr(feature = "serde", serde(rename = "eth_call"))]
     EthCall(
-        WithOtherFields<TransactionRequest>,
+        alloy_rpc_types::SeismicCallRequest,
         #[cfg_attr(feature = "serde", serde(default))] Option<BlockId>,
         #[cfg_attr(feature = "serde", serde(default))] Option<StateOverride>,
     ),
