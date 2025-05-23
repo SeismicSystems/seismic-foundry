@@ -2,7 +2,7 @@
 
 use crate::{
     etherscan::EtherscanVerificationProvider,
-    provider::{VerificationProvider, VerificationProviderType},
+    provider::{VerificationContext, VerificationProvider, VerificationProviderType},
     utils::is_host_only,
     RetryArgs,
 };
@@ -10,6 +10,7 @@ use alloy_primitives::Address;
 use alloy_provider::Provider;
 use clap::{Parser, ValueHint};
 use eyre::Result;
+use foundry_block_explorers::EtherscanApiVersion;
 use foundry_cli::{
     opts::{EtherscanOpts, RpcOpts},
     utils::{self, LoadConfig},
@@ -23,13 +24,11 @@ use revm_primitives::HashSet;
 use semver::BuildMetadata;
 use std::path::PathBuf;
 
-use crate::provider::VerificationContext;
-
 /// Verification provider arguments
 #[derive(Clone, Debug, Parser)]
 pub struct VerifierArgs {
     /// The contract verification provider to use.
-    #[arg(long, help_heading = "Verifier options", default_value = "etherscan", value_enum)]
+    #[arg(long, help_heading = "Verifier options", default_value = "sourcify", value_enum)]
     pub verifier: VerificationProviderType,
 
     /// The verifier API KEY, if using a custom provider.
@@ -39,14 +38,19 @@ pub struct VerifierArgs {
     /// The verifier URL, if using a custom provider.
     #[arg(long, help_heading = "Verifier options", env = "VERIFIER_URL")]
     pub verifier_url: Option<String>,
+
+    /// The verifier API version, if using a custom provider.
+    #[arg(long, help_heading = "Verifier options", env = "VERIFIER_API_VERSION")]
+    pub verifier_api_version: Option<EtherscanApiVersion>,
 }
 
 impl Default for VerifierArgs {
     fn default() -> Self {
         Self {
-            verifier: VerificationProviderType::Etherscan,
+            verifier: VerificationProviderType::Sourcify,
             verifier_api_key: None,
             verifier_url: None,
+            verifier_api_version: None,
         }
     }
 }
@@ -180,6 +184,10 @@ impl figment::Provider for VerifyArgs {
             dict.insert("etherscan_api_key".into(), api_key.as_str().into());
         }
 
+        if let Some(api_version) = &self.verifier.verifier_api_version {
+            dict.insert("etherscan_api_version".into(), api_version.to_string().into());
+        }
+
         Ok(figment::value::Map::from([(Config::selected_profile(), dict)]))
     }
 }
@@ -187,7 +195,7 @@ impl figment::Provider for VerifyArgs {
 impl VerifyArgs {
     /// Run the verify command to submit the contract's source code for verification on etherscan
     pub async fn run(mut self) -> Result<()> {
-        let config = self.load_config_emit_warnings();
+        let config = self.load_config()?;
 
         if self.guess_constructor_args && config.get_rpc_url().is_none() {
             eyre::bail!(
@@ -221,6 +229,9 @@ impl VerifyArgs {
 
         let verifier_url = self.verifier.verifier_url.clone();
         sh_println!("Start verifying contract `{}` deployed on {chain}", self.address)?;
+        if let Some(version) = &self.evm_version {
+            sh_println!("EVM version: {version}")?;
+        }
         if let Some(version) = &self.compiler_version {
             sh_println!("Compiler version: {version}")?;
         }
@@ -232,7 +243,7 @@ impl VerifyArgs {
                 sh_println!("Constructor args: {args}")?
             }
         }
-        self.verifier.verifier.client(&self.etherscan.key())?.verify(self, context).await.map_err(|err| {
+        self.verifier.verifier.client(self.etherscan.key().as_deref())?.verify(self, context).await.map_err(|err| {
             if let Some(verifier_url) = verifier_url {
                  match Url::parse(&verifier_url) {
                     Ok(url) => {
@@ -256,13 +267,13 @@ impl VerifyArgs {
 
     /// Returns the configured verification provider
     pub fn verification_provider(&self) -> Result<Box<dyn VerificationProvider>> {
-        self.verifier.verifier.client(&self.etherscan.key())
+        self.verifier.verifier.client(self.etherscan.key().as_deref())
     }
 
     /// Resolves [VerificationContext] object either from entered contract name or by trying to
     /// match bytecode located at given address.
     pub async fn resolve_context(&self) -> Result<VerificationContext> {
-        let mut config = self.load_config_emit_warnings();
+        let mut config = self.load_config()?;
         config.libraries.extend(self.libraries.clone());
 
         let project = config.project()?;
@@ -429,7 +440,7 @@ impl VerifyCheckArgs {
             "Checking verification status on {}",
             self.etherscan.chain.unwrap_or_default()
         )?;
-        self.verifier.verifier.client(&self.etherscan.key())?.check(self).await
+        self.verifier.verifier.client(self.etherscan.key().as_deref())?.check(self).await
     }
 }
 
@@ -441,7 +452,16 @@ impl figment::Provider for VerifyCheckArgs {
     fn data(
         &self,
     ) -> Result<figment::value::Map<figment::Profile, figment::value::Dict>, figment::Error> {
-        self.etherscan.data()
+        let mut dict = self.etherscan.dict();
+        if let Some(api_key) = &self.etherscan.key {
+            dict.insert("etherscan_api_key".into(), api_key.as_str().into());
+        }
+
+        if let Some(api_version) = &self.etherscan.api_version {
+            dict.insert("etherscan_api_version".into(), api_version.to_string().into());
+        }
+
+        Ok(figment::value::Map::from([(Config::selected_profile(), dict)]))
     }
 }
 

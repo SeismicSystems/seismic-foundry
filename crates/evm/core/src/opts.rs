@@ -1,5 +1,5 @@
 use super::fork::environment;
-use crate::{constants::DEFAULT_CREATE2_DEPLOYER, fork::CreateFork};
+use crate::{constants::DEFAULT_CREATE2_DEPLOYER, fork::CreateFork, Env};
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::{network::AnyRpcBlock, Provider};
 use eyre::WrapErr;
@@ -134,7 +134,7 @@ impl EvmOpts {
         )
         .await
         .wrap_err_with(|| {
-            let mut msg = "Could not instantiate forked environment".to_string();
+            let mut msg = "could not instantiate forked environment".to_string();
             if let Ok(url) = Url::parse(fork_url) {
                 if let Some(provider) = url.host() {
                     write!(msg, " with provider {provider}").unwrap();
@@ -156,7 +156,7 @@ impl EvmOpts {
         cfg.disable_eip3607 = true;
         cfg.disable_block_gas_limit = self.disable_block_gas_limit;
 
-        revm::primitives::Env {
+        Env {
             block: BlockEnv {
                 number: U256::from(self.env.block_number),
                 coinbase: self.env.block_coinbase,

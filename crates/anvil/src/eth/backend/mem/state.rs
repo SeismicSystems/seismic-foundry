@@ -82,7 +82,19 @@ where
     D: DatabaseRef<Error = DatabaseError>,
 {
     let mut cache_db = CacheDB::new(state);
-    for (account, account_overrides) in overrides.iter() {
+    apply_cached_db_state_override(overrides, &mut cache_db)?;
+    Ok(cache_db)
+}
+
+/// Applies the given state overrides to the given CacheDB
+pub fn apply_cached_db_state_override<D>(
+    overrides: StateOverride,
+    cache_db: &mut CacheDB<D>,
+) -> Result<(), BlockchainError>
+where
+    D: DatabaseRef<Error = DatabaseError>,
+{
+    for (account, account_overrides) in &overrides {
         let mut account_info = cache_db.basic_ref(*account)?.unwrap_or_default();
 
         if let Some(nonce) = account_overrides.nonce {
@@ -127,5 +139,5 @@ where
             }
         };
     }
-    Ok(cache_db)
+    Ok(())
 }

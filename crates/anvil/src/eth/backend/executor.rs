@@ -8,15 +8,16 @@ use crate::{
     mem::inspector::Inspector,
     PrecompileFactory,
 };
-use alloy_consensus::{constants::EMPTY_WITHDRAWALS, Receipt, ReceiptWithBloom};
-use alloy_eips::{eip2718::Encodable2718, eip7685::EMPTY_REQUESTS_HASH};
+use alloy_consensus::{
+    constants::EMPTY_WITHDRAWALS, proofs::calculate_receipt_root, Receipt, ReceiptWithBloom,
+};
+use alloy_eips::eip7685::EMPTY_REQUESTS_HASH;
 use alloy_primitives::{Bloom, BloomInput, Log, B256};
 use anvil_core::eth::{
     block::{Block, BlockInfo, PartialHeader},
     transaction::{
         DepositReceipt, PendingTransaction, TransactionInfo, TypedReceipt, TypedTransaction,
     },
-    trie,
 };
 use foundry_evm::{
     backend::DatabaseError,
@@ -30,9 +31,7 @@ use foundry_evm::{
     traces::CallTraceNode,
     utils::odyssey_handler_register,
 };
-use revm::{
-    db::WrapDatabaseRef, primitives::MAX_BLOB_GAS_PER_BLOCK, seismic::seismic_handle_register,
-};
+use revm::db::WrapDatabaseRef;
 use std::sync::Arc;
 
 /// Represents an executed transaction (transacted on the DB)
@@ -59,7 +58,7 @@ impl ExecutedTransaction {
         let status_code = u8::from(self.exit_reason as u8 <= InstructionResult::SelfDestruct as u8);
         let receipt_with_bloom: ReceiptWithBloom = Receipt {
             status: (status_code == 1).into(),
-            cumulative_gas_used: *cumulative_gas_used as u128,
+            cumulative_gas_used: *cumulative_gas_used,
             logs,
         }
         .into();
@@ -111,6 +110,7 @@ pub struct TransactionExecutor<'a, Db: ?Sized, V: TransactionValidator> {
     pub enable_steps_tracing: bool,
     pub odyssey: bool,
     pub print_logs: bool,
+    pub print_traces: bool,
     /// Precompiles to inject to the EVM.
     pub precompile_factory: Option<Arc<dyn PrecompileFactory>>,
 }
@@ -214,8 +214,7 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
             transactions.push(transaction.pending_transaction.transaction.clone());
         }
 
-        let receipts_root =
-            trie::ordered_trie_root(receipts.iter().map(Encodable2718::encoded_2718));
+        let receipts_root = calculate_receipt_root(&receipts);
 
         let partial_header = PartialHeader {
             parent_hash,
@@ -292,8 +291,8 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
         let max_blob_gas = self.blob_gas_used.saturating_add(
             transaction.pending_transaction.transaction.transaction.blob_gas().unwrap_or(0),
         );
-        if max_blob_gas > MAX_BLOB_GAS_PER_BLOCK {
-            return Some(TransactionExecutionOutcome::BlobGasExhausted(transaction));
+        if max_blob_gas > alloy_eips::eip4844::MAX_DATA_GAS_PER_BLOCK {
+            return Some(TransactionExecutionOutcome::BlobGasExhausted(transaction))
         }
 
         // validate before executing
@@ -315,6 +314,9 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
         }
         if self.print_logs {
             inspector = inspector.with_log_collector();
+        }
+        if self.print_traces {
+            inspector = inspector.with_trace_printer();
         }
 
         let exec_result = {
@@ -349,6 +351,10 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
                 }
             }
         };
+
+        if self.print_traces {
+            inspector.print_traces();
+        }
         inspector.print_logs();
 
         let (exit_reason, gas_used, out, logs) = match exec_result {
@@ -419,7 +425,7 @@ pub fn new_evm_with_inspector<DB: revm::Database>(
     }
 
     if handler.is_seismic() {
-        handler.append_handler_register_plain(seismic_handle_register);
+        handler.append_handler_register_plain(revm::seismic::seismic_handle_register);
     }
 
     let context = revm::Context::new(revm::EvmContext::new_with_env(db, env), inspector);

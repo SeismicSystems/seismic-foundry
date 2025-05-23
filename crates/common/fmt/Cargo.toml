@@ -30,6 +30,8 @@ revm-primitives.workspace = true
 comfy-table.workspace = true
 yansi.workspace = true
 
+alloy-eip7702.workspace = true
+
 [dev-dependencies]
 foundry-macros.workspace = true
 similar-asserts.workspace = true

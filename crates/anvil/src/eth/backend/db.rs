@@ -420,6 +420,7 @@ impl SerializableState {
     }
 
     /// This is used as the clap `value_parser` implementation
+    #[allow(dead_code)]
     pub(crate) fn parse(path: &str) -> Result<Self, String> {
         Self::load(path).map_err(|err| err.to_string())
     }
@@ -459,7 +460,7 @@ impl From<Block> for SerializableBlock {
         Self {
             header: block.header,
             transactions: block.transactions.into_iter().map(Into::into).collect(),
-            ommers: block.ommers.into_iter().map(Into::into).collect(),
+            ommers: block.ommers.into_iter().collect(),
         }
     }
 }
@@ -469,7 +470,7 @@ impl From<SerializableBlock> for Block {
         Self {
             header: block.header,
             transactions: block.transactions.into_iter().map(Into::into).collect(),
-            ommers: block.ommers.into_iter().map(Into::into).collect(),
+            ommers: block.ommers.into_iter().collect(),
         }
     }
 }

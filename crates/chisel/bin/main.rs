@@ -1,111 +1,9 @@
-//! Chisel CLI
-//!
-//! This module contains the core readline loop for the Chisel CLI as well as the
-//! executable's `main` function.
+//! The `chisel` CLI: a fast, utilitarian, and verbose Solidity REPL.
 
-use chisel::{
-    history::chisel_history_file,
-    prelude::{ChiselCommand, ChiselDispatcher, DispatchResult, SolidityHelper},
-};
-use clap::{Parser, Subcommand};
-use eyre::Context;
-use foundry_cli::{
-    handler,
-    opts::{CoreBuildArgs, GlobalOpts},
-    utils::{self, LoadConfig},
-};
-use foundry_common::{evm::EvmArgs, fs};
-use foundry_config::{
-    figment::{
-        value::{Dict, Map},
-        Metadata, Profile, Provider,
-    },
-    Config,
-};
-use rustyline::{config::Configurer, error::ReadlineError, Editor};
-use std::path::PathBuf;
-use tracing::debug;
-use yansi::Paint;
+use chisel::args::run;
 
-#[macro_use]
-extern crate foundry_common;
-
-#[cfg(all(feature = "jemalloc", unix))]
 #[global_allocator]
-static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
-
-// Loads project's figment and merges the build cli arguments into it
-foundry_config::merge_impl_figment_convert!(Chisel, opts, evm_args);
-
-const VERSION_MESSAGE: &str = concat!(
-    env!("CARGO_PKG_VERSION"),
-    " (",
-    env!("VERGEN_GIT_SHA"),
-    " ",
-    env!("VERGEN_BUILD_TIMESTAMP"),
-    ")"
-);
-
-/// Fast, utilitarian, and verbose Solidity REPL.
-#[derive(Debug, Parser)]
-#[command(name = "chisel", version = VERSION_MESSAGE)]
-pub struct Chisel {
-    /// Include the global options.
-    #[command(flatten)]
-    pub global: GlobalOpts,
-
-    #[command(subcommand)]
-    pub cmd: Option<ChiselSubcommand>,
-
-    /// Path to a directory containing Solidity files to import, or path to a single Solidity file.
-    ///
-    /// These files will be evaluated before the top-level of the
-    /// REPL, therefore functioning as a prelude
-    #[arg(long, help_heading = "REPL options")]
-    pub prelude: Option<PathBuf>,
-
-    /// Disable the default `Vm` import.
-    #[arg(long, help_heading = "REPL options", long_help = format!(
-        "Disable the default `Vm` import.\n\n\
-         The import is disabled by default if the Solc version is less than {}.",
-        chisel::session_source::MIN_VM_VERSION
-    ))]
-    pub no_vm: bool,
-
-    #[command(flatten)]
-    pub opts: CoreBuildArgs,
-
-    #[command(flatten)]
-    pub evm_args: EvmArgs,
-}
-
-/// Chisel binary subcommands
-#[derive(Debug, Subcommand)]
-pub enum ChiselSubcommand {
-    /// List all cached sessions
-    List,
-
-    /// Load a cached session
-    Load {
-        /// The ID of the session to load.
-        id: String,
-    },
-
-    /// View the source of a cached session
-    View {
-        /// The ID of the session to load.
-        id: String,
-    },
-
-    /// Clear all cached chisel sessions from the cache directory
-    ClearCache,
-
-    /// Simple evaluation of a command without entering the REPL
-    Eval {
-        /// The command to be evaluated.
-        command: String,
-    },
-}
+static ALLOC: foundry_cli::utils::Allocator = foundry_cli::utils::new_allocator();
 
 fn main() {
     if let Err(err) = run() {
@@ -113,6 +11,7 @@ fn main() {
         std::process::exit(1);
     }
 }
+<<<<<<< HEAD
 
 fn run() -> eyre::Result<()> {
     handler::install();
@@ -333,3 +232,5 @@ mod tests {
         Chisel::command().debug_assert();
     }
 }
+=======
+>>>>>>> 39f524d6f01f1edddcfccddac4b14611a8300326

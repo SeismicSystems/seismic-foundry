@@ -119,11 +119,10 @@ async fn can_get_block_by_number() {
 
     provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
-    let block = provider.get_block(BlockId::number(1), true.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::number(1)).full().await.unwrap().unwrap();
     assert_eq!(block.transactions.len(), 1);
 
-    let block =
-        provider.get_block(BlockId::hash(block.header.hash), true.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::hash(block.header.hash)).full().await.unwrap().unwrap();
     assert_eq!(block.transactions.len(), 1);
 }
 
@@ -138,7 +137,7 @@ async fn can_get_pending_block() {
 
     let provider = connect_pubsub_with_wallet(&handle.http_endpoint(), signer).await;
 
-    let block = provider.get_block(BlockId::pending(), false.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::pending()).await.unwrap().unwrap();
     assert_eq!(block.header.number, 1);
 
     let num = provider.get_block_number().await.unwrap();
@@ -153,12 +152,12 @@ async fn can_get_pending_block() {
     let num = provider.get_block_number().await.unwrap();
     assert_eq!(num, 0);
 
-    let block = provider.get_block(BlockId::pending(), false.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::pending()).await.unwrap().unwrap();
     assert_eq!(block.header.number, 1);
     assert_eq!(block.transactions.len(), 1);
     assert_eq!(block.transactions, BlockTransactions::Hashes(vec![*pending.tx_hash()]));
 
-    let block = provider.get_block(BlockId::pending(), true.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::pending()).full().await.unwrap().unwrap();
     assert_eq!(block.header.number, 1);
     assert_eq!(block.transactions.len(), 1);
 }

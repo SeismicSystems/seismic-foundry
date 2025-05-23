@@ -105,6 +105,10 @@ impl figment::Provider for VerifyBytecodeArgs {
             dict.insert("etherscan_api_key".into(), api_key.as_str().into());
         }
 
+        if let Some(api_version) = &self.verifier.verifier_api_version {
+            dict.insert("etherscan_api_version".into(), api_version.to_string().into());
+        }
+
         if let Some(block) = &self.block {
             dict.insert("block".into(), figment::value::Value::serialize(block)?);
         }
@@ -121,7 +125,7 @@ impl VerifyBytecodeArgs {
     /// bytecode.
     pub async fn run(mut self) -> Result<()> {
         // Setup
-        let config = self.load_config_emit_warnings();
+        let config = self.load_config()?;
         let provider = utils::get_provider(&config)?;
 
         // If chain is not set, we try to get it from the RPC.
@@ -136,12 +140,8 @@ impl VerifyBytecodeArgs {
         self.etherscan.key = config.get_etherscan_config_with_chain(Some(chain))?.map(|c| c.key);
 
         // Etherscan client
-        let etherscan = EtherscanVerificationProvider.client(
-            self.etherscan.chain.unwrap_or_default(),
-            self.verifier.verifier_url.as_deref(),
-            self.etherscan.key().as_deref(),
-            &config,
-        )?;
+        let etherscan =
+            EtherscanVerificationProvider.client(&self.etherscan, &self.verifier, &config)?;
 
         // Get the bytecode at the address, bailing if it doesn't exist.
         let code = provider.get_code_at(self.address).await?;
@@ -243,7 +243,7 @@ impl VerifyBytecodeArgs {
             .await?;
 
             env.block.number = U256::ZERO; // Genesis block
-            let genesis_block = provider.get_block(gen_blk_num.into(), true.into()).await?;
+            let genesis_block = provider.get_block(gen_blk_num.into()).full().await?;
 
             // Setup genesis tx and env.
             let deployer = Address::with_last_byte(0x1);
@@ -290,7 +290,7 @@ impl VerifyBytecodeArgs {
             .await?;
 
             let match_type = crate::utils::match_bytecodes(
-                &deployed_bytecode.original_bytes(),
+                deployed_bytecode.original_byte_slice(),
                 &onchain_runtime_code,
                 &constructor_args,
                 true,
@@ -336,8 +336,8 @@ impl VerifyBytecodeArgs {
             );
         };
 
-        let mut transaction: TransactionRequest = match transaction.inner.inner {
-            AnyTxEnvelope::Ethereum(tx) => tx.into(),
+        let mut transaction: TransactionRequest = match transaction.inner.inner.inner() {
+            AnyTxEnvelope::Ethereum(tx) => tx.clone().into(),
             AnyTxEnvelope::Unknown(_) => unreachable!("Unknown transaction type"),
         };
 
@@ -445,7 +445,7 @@ impl VerifyBytecodeArgs {
             )
             .await?;
             env.block.number = U256::from(simulation_block);
-            let block = provider.get_block(simulation_block.into(), true.into()).await?;
+            let block = provider.get_block(simulation_block.into()).full().await?;
 
             // Workaround for the NonceTooHigh issue as we're not simulating prior txs of the same
             // block.
@@ -500,7 +500,7 @@ impl VerifyBytecodeArgs {
 
             // Compare the onchain runtime bytecode with the runtime code from the fork.
             let match_type = crate::utils::match_bytecodes(
-                &fork_runtime_code.original_bytes(),
+                fork_runtime_code.original_byte_slice(),
                 &onchain_runtime_code,
                 &constructor_args,
                 true,
