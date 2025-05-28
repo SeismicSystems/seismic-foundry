@@ -1,16 +1,17 @@
-use alloy_primitives::{map::AddressHashMap, B256, U256};
-use revm::{
-    primitives::{Env, HashMap},
-    JournaledState,
+use super::JournaledState;
+use crate::Env;
+use alloy_primitives::{
+    map::{AddressHashMap, HashMap},
+    B256, U256,
 };
-use revm_primitives::{AccountInfo, FlaggedStorage};
+use revm::state::AccountInfo;
 use serde::{Deserialize, Serialize};
 
 /// A minimal abstraction of a state at a certain point in time
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct StateSnapshot {
     pub accounts: AddressHashMap<AccountInfo>,
-    pub storage: AddressHashMap<HashMap<U256, FlaggedStorage>>,
+    pub storage: AddressHashMap<HashMap<U256, revm::primitives::FlaggedStorage>>,
     pub block_hashes: HashMap<U256, B256>,
 }
 

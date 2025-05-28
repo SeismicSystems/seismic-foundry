@@ -119,11 +119,10 @@ async fn can_get_block_by_number() {
 
     provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
-    let block = provider.get_block(BlockId::number(1), true.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::number(1)).full().await.unwrap().unwrap();
     assert_eq!(block.transactions.len(), 1);
 
-    let block =
-        provider.get_block(BlockId::hash(block.header.hash), true.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::hash(block.header.hash)).full().await.unwrap().unwrap();
     assert_eq!(block.transactions.len(), 1);
 }
 
@@ -138,7 +137,7 @@ async fn can_get_pending_block() {
 
     let provider = connect_pubsub_with_wallet(&handle.http_endpoint(), signer).await;
 
-    let block = provider.get_block(BlockId::pending(), false.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::pending()).await.unwrap().unwrap();
     assert_eq!(block.header.number, 1);
 
     let num = provider.get_block_number().await.unwrap();
@@ -153,12 +152,12 @@ async fn can_get_pending_block() {
     let num = provider.get_block_number().await.unwrap();
     assert_eq!(num, 0);
 
-    let block = provider.get_block(BlockId::pending(), false.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::pending()).await.unwrap().unwrap();
     assert_eq!(block.header.number, 1);
     assert_eq!(block.transactions.len(), 1);
     assert_eq!(block.transactions, BlockTransactions::Hashes(vec![*pending.tx_hash()]));
 
-    let block = provider.get_block(BlockId::pending(), true.into()).await.unwrap().unwrap();
+    let block = provider.get_block(BlockId::pending()).full().await.unwrap().unwrap();
     assert_eq!(block.header.number, 1);
     assert_eq!(block.transactions.len(), 1);
 }
@@ -245,7 +244,7 @@ async fn can_call_on_pending_block() {
         let block_number = BlockNumberOrTag::Number(anvil_block_number as u64);
         let block = api.block_by_number(block_number).await.unwrap().unwrap();
 
-        let Multicall::getCurrentBlockTimestampReturn { timestamp: ret_timestamp, .. } = contract
+        let ret_timestamp = contract
             .getCurrentBlockTimestamp()
             .block(BlockId::number(anvil_block_number as u64))
             .call()
@@ -253,7 +252,7 @@ async fn can_call_on_pending_block() {
             .unwrap();
         assert_eq!(block.header.timestamp, ret_timestamp.to::<u64>());
 
-        let Multicall::getCurrentBlockGasLimitReturn { gaslimit: ret_gas_limit, .. } = contract
+        let ret_gas_limit = contract
             .getCurrentBlockGasLimit()
             .block(BlockId::number(anvil_block_number as u64))
             .call()
@@ -261,7 +260,7 @@ async fn can_call_on_pending_block() {
             .unwrap();
         assert_eq!(block.header.gas_limit, ret_gas_limit.to::<u64>());
 
-        let Multicall::getCurrentBlockCoinbaseReturn { coinbase: ret_coinbase, .. } = contract
+        let ret_coinbase = contract
             .getCurrentBlockCoinbase()
             .block(BlockId::number(anvil_block_number as u64))
             .call()
@@ -306,7 +305,7 @@ async fn can_call_with_undersized_max_fee_per_gas() {
         ))
         .await
         .unwrap();
-    assert_eq!(**output, B256::ZERO.to_vec());
+    assert_eq!(last_sender, Address::ZERO);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -331,8 +330,7 @@ async fn can_call_with_state_override() {
     let balance = U256::from(42u64);
     let mut overrides = AddressHashMap::default();
     overrides.insert(account, AccountOverride { balance: Some(balance), ..Default::default() });
-    let result =
-        multicall_contract.getEthBalance(account).state(overrides).call().await.unwrap().balance;
+    let result = multicall_contract.getEthBalance(account).state(overrides).call().await.unwrap();
     assert_eq!(result, balance);
 
     // Test the `state_diff` account override
@@ -349,16 +347,16 @@ async fn can_call_with_state_override() {
     );
 
     let last_sender =
-        simple_storage_contract.lastSender().state(HashMap::default()).call().await.unwrap()._0;
+        simple_storage_contract.lastSender().state(HashMap::default()).call().await.unwrap();
     // No `sender` set without override
     assert_eq!(last_sender, Address::ZERO);
 
     let last_sender =
-        simple_storage_contract.lastSender().state(overrides.clone()).call().await.unwrap()._0;
+        simple_storage_contract.lastSender().state(overrides.clone()).call().await.unwrap();
     // `sender` *is* set with override
     assert_eq!(last_sender, account);
 
-    let value = simple_storage_contract.getValue().state(overrides).call().await.unwrap()._0;
+    let value = simple_storage_contract.getValue().state(overrides).call().await.unwrap();
     // `value` *is not* changed with state-diff
     assert_eq!(value, init_value);
 
@@ -376,11 +374,11 @@ async fn can_call_with_state_override() {
     );
 
     let last_sender =
-        simple_storage_contract.lastSender().state(overrides.clone()).call().await.unwrap()._0;
+        simple_storage_contract.lastSender().state(overrides.clone()).call().await.unwrap();
     // `sender` *is* set with override
     assert_eq!(last_sender, account);
 
-    let value = simple_storage_contract.getValue().state(overrides).call().await.unwrap()._0;
+    let value = simple_storage_contract.getValue().state(overrides).call().await.unwrap();
     // `value` *is* changed with state
     assert_eq!(value, "");
 }

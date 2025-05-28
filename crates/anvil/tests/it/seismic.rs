@@ -1,5 +1,5 @@
 use alloy_consensus::{
-    transaction::{TxSeismic, TxSeismicElements},
+    transaction::{TxSeismic, seismic_alloy_consensus::TxSeismicElements},
     TxEnvelope,
 };
 use alloy_dyn_abi::EventExt;
@@ -69,11 +69,11 @@ pub fn get_encryption_nonce() -> U96 {
     U96::MAX
 }
 
-pub fn get_seismic_elements() -> TxSeismicElements {
+pub fn get_seismic_elements() -> seismic_alloy_consensus::TxSeismicElements {
     let encryption_sk = get_encryption_private_key();
     let encryption_pk = PublicKey::from_secret_key_global(&encryption_sk);
     let encryption_nonce = get_encryption_nonce();
-    TxSeismicElements { encryption_pubkey: encryption_pk, encryption_nonce, message_version: 0 }
+    seismic_alloy_consensus::TxSeismicElements { encryption_pubkey: encryption_pk, encryption_nonce, message_version: 0 }
 }
 
 pub fn get_encryption_private_key() -> SecretKey {

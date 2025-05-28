@@ -9,8 +9,9 @@ use alloy_rpc_types::BlockId;
 use foundry_fork_db::{BlockchainDb, DatabaseError, SharedBackend};
 use parking_lot::Mutex;
 use revm::{
-    db::{CacheDB, DatabaseRef},
-    primitives::{Account, AccountInfo, Bytecode, FlaggedStorage},
+    bytecode::Bytecode,
+    database::{CacheDB, DatabaseRef},
+    state::{Account, AccountInfo},
     Database, DatabaseCommit,
 };
 use std::sync::Arc;
@@ -163,7 +164,7 @@ impl Database for ForkedDatabase {
         Database::code_by_hash(&mut self.cache_db, code_hash)
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
+    fn storage(&mut self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         Database::storage(&mut self.cache_db, address, index)
     }
 
@@ -183,7 +184,7 @@ impl DatabaseRef for ForkedDatabase {
         self.cache_db.code_by_hash_ref(code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(&self.cache_db, address, index)
     }
 
@@ -208,8 +209,9 @@ pub struct ForkDbStateSnapshot {
 }
 
 impl ForkDbStateSnapshot {
-    fn get_storage(&self, address: Address, index: U256) -> Option<FlaggedStorage> {
+    fn get_storage(&self, address: Address, index: U256) -> Option<revm::primitives::FlaggedStorage> {
         self.local
+            .cache
             .accounts
             .get(&address)
             .and_then(|account| account.storage.get(&index))
@@ -225,7 +227,7 @@ impl DatabaseRef for ForkDbStateSnapshot {
     type Error = DatabaseError;
 
     fn basic_ref(&self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
-        match self.local.accounts.get(&address) {
+        match self.local.cache.accounts.get(&address) {
             Some(account) => Ok(Some(account.info.clone())),
             None => {
                 let mut acc = self.state_snapshot.accounts.get(&address).cloned();
@@ -242,8 +244,8 @@ impl DatabaseRef for ForkDbStateSnapshot {
         self.local.code_by_hash_ref(code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
-        match self.local.accounts.get(&address) {
+    fn storage_ref(&self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+        match self.local.cache.accounts.get(&address) {
             Some(account) => match account.storage.get(&index) {
                 Some(entry) => Ok(*entry),
                 None => match self.get_storage(address, index) {
@@ -267,7 +269,6 @@ impl DatabaseRef for ForkDbStateSnapshot {
 }
 
 #[cfg(test)]
-#[allow(clippy::needless_return)]
 mod tests {
     use super::*;
     use crate::backend::BlockchainDbMeta;
@@ -280,11 +281,7 @@ mod tests {
     async fn fork_db_insert_basic_default() {
         let rpc = foundry_test_utils::rpc::next_http_rpc_endpoint();
         let provider = get_http_provider(rpc.clone());
-        let meta = BlockchainDbMeta {
-            cfg_env: Default::default(),
-            block_env: Default::default(),
-            hosts: BTreeSet::from([rpc]),
-        };
+        let meta = BlockchainDbMeta { block_env: Default::default(), hosts: BTreeSet::from([rpc]) };
         let db = BlockchainDb::new(meta, None);
 
         let backend = SharedBackend::spawn_backend(Arc::new(provider), db.clone(), None).await;
