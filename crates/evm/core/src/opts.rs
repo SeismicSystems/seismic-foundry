@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
 
-use foundry_common::AnyRpcBlock;
+use seismic_foundry_prelude::AnyRpcBlock;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvmOpts {

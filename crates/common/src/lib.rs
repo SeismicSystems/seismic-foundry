@@ -42,6 +42,3 @@ pub use io::{shell, stdin, Shell};
 pub use traits::*;
 pub use transactions::*;
 pub use utils::*;
-
-mod seismic;
-pub use seismic::{TransactionRequest, RpcTransaction, AnyRpcTransaction, AnyRpcBlock};

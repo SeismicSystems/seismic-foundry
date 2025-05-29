@@ -23,9 +23,7 @@ use std::{
 };
 use url::ParseError;
 
-// this is super misleading, but we do this
-// to reduce merge conflicts when pulling from upstream
-use seismic_alloy_network::{Seismic as AnyNetwork};
+use seismic_foundry_prelude::AnyNetwork;
 
 /// The assumed block time for unknown chains.
 /// We assume that these are chains have a faster block time.

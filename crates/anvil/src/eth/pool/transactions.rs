@@ -6,7 +6,7 @@ use alloy_primitives::{
 use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
 use parking_lot::RwLock;
 use std::{cmp::Ordering, collections::BTreeSet, fmt, str::FromStr, sync::Arc, time::Instant};
-use foundry_common::AnyRpcTransaction;
+use seismic_foundry_prelude::AnyRpcTransaction;
 
 /// A unique identifying marker for a transaction
 pub type TxMarker = Vec<u8>;
