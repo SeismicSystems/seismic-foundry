@@ -97,6 +97,7 @@ use revm::{
     interpreter::{return_ok, return_revert, InstructionResult},
     primitives::eip7702::PER_EMPTY_ACCOUNT_COST,
 };
+use yansi::Paint;
 use std::{future::Future, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 
@@ -1154,7 +1155,7 @@ impl EthApi {
 
     async fn seismic_call(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        request: WithOtherFields<seismic_alloy_consensus::SeismicTransactionRequest>,
         block_number: Option<BlockId>,
         overrides: EvmOverrides,
     ) -> Result<Bytes> {
@@ -1199,18 +1200,18 @@ impl EthApi {
         &self,
         request: impl Into<seismic_alloy_rpc_types::SeismicCallRequest>,
         block_number: Option<BlockId>,
-        overrides: Option<StateOverride>,
+        overrides: Option<EvmOverrides>,
     ) -> Result<Bytes> {
         match request.into() {
             seismic_alloy_rpc_types::SeismicCallRequest::TransactionRequest(mut tx) => {
-                let user_provided_from = tx.from;
+                let user_provided_from = tx.inner.from;
 
-                tx.from = None;
-                tx.gas_price = None; // preventing InsufficientFunds error
-                tx.max_fee_per_gas = None; // preventing InsufficientFunds error
-                tx.max_priority_fee_per_gas = None; // preventing InsufficientFunds error
-                tx.max_fee_per_blob_gas = None; // preventing InsufficientFunds error
-                tx.value = None; // preventing InsufficientFunds error
+                tx.inner.from = None;
+                tx.inner.gas_price = None; // preventing InsufficientFunds error
+                tx.inner.max_fee_per_gas = None; // preventing InsufficientFunds error
+                tx.inner.max_priority_fee_per_gas = None; // preventing InsufficientFunds error
+                tx.inner.max_fee_per_blob_gas = None; // preventing InsufficientFunds error
+                tx.inner.value = None; // preventing InsufficientFunds error
 
                 match self.seismic_call(tx, block_number, overrides).await {
                     Ok(bytes) => Ok(bytes),
@@ -3195,7 +3196,7 @@ impl EthApi {
 
     fn build_typed_tx_request(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        request: WithOtherFields<seismic_alloy_consensus::SeismicTransactionRequest>,
         nonce: u64,
     ) -> Result<TypedTransactionRequest> {
         let chain_id = request.chain_id.unwrap_or_else(|| self.chain_id());

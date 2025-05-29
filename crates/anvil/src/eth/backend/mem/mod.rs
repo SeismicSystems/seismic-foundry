@@ -1440,14 +1440,14 @@ impl Backend {
         request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_request: Option<BlockRequest>,
-        overrides: Option<StateOverride>,
+        overrides: Option<EvmOverrides>,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         self.with_database_at(block_request, |state, block| {
             let block_number = block.number.to::<u64>();
             let (exit, out, gas, state) = match overrides {
                 None => self.seismic_call_with_state(state.as_dyn(), request, fee_details, block),
                 Some(overrides) => {
-                    let state = state::apply_state_override(overrides.into_iter().collect(), state)?;
+                    let state = state::apply_state_overrides(overrides.into_iter().collect(), state)?;
                     self.seismic_call_with_state(state.as_dyn(), request, fee_details, block)
                 },
             }?;
@@ -1465,28 +1465,31 @@ impl Backend {
     ///  - `nonce` check is skipped if `request.nonce` is None
     fn build_call_env(
         &self,
-        request: WithOtherFields<seismic_alloy_rpc_types::TransactionRequest>,
+        request: WithOtherFields<seismic_alloy_rpc_types::SeismicTransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
     ) -> Env {
-        let WithOtherFields::<seismic_alloy_rpc_types::TransactionRequest> {
+        let WithOtherFields::<seismic_alloy_rpc_types::SeismicTransactionRequest> {
             inner:
-                seismic_alloy_rpc_types::TransactionRequest {
-                    from,
-                    to,
-                    gas,
-                    value,
-                    input,
-                    access_list,
-                    blob_versioned_hashes,
-                    authorization_list,
-                    nonce,
-                    sidecar: _,
-                    chain_id,
-                    transaction_type,
-                    max_fee_per_gas,
-                    max_priority_fee_per_gas,
-                    .. // Rest of the gas fees related fields are taken from `fee_details`
+                seismic_alloy_rpc_types::SeismicTransactionRequest {
+                    inner: TransactionRequest {
+                        from,
+                        to,
+                        gas,
+                        value,
+                        input,
+                        access_list,
+                        blob_versioned_hashes,
+                        authorization_list,
+                        nonce,
+                        sidecar: _,
+                        chain_id,
+                        transaction_type,
+                        max_fee_per_gas,
+                        max_priority_fee_per_gas,
+                        .. // Rest of the gas fees related fields are taken from `fee_details`
+                    },
+                    seismic_elements,
                 },
             other,
         } = request;
@@ -2965,7 +2968,8 @@ impl Backend {
                 .with_proof_retainer(ProofRetainer::new(vec![Nibbles::unpack(keccak256(address))]));
 
             for (key, account) in trie_accounts(db) {
-                builder.add_leaf(key, &account);
+                // TODO: do accounts have private/public?
+                builder.add_leaf(key, &account, false);
             }
 
             let _ = builder.root();
@@ -3218,7 +3222,6 @@ impl TransactionValidator for Backend {
             }
 
             // Ensure the tx does not exceed the max blobs per block.
-<<<<<<< HEAD
             if blob_count > MAX_BLOBS_PER_BLOCK {
                 return Err(InvalidTransactionError::TooManyBlobs(MAX_BLOBS_PER_BLOCK, blob_count));
             }
@@ -3226,18 +3229,6 @@ impl TransactionValidator for Backend {
             // Check for any blob validation errors
             if let Err(err) = tx.validate(env.cfg.kzg_settings.get()) {
                 return Err(InvalidTransactionError::BlobTransactionValidationError(err));
-=======
-            let max_blob_count = self.blob_params().max_blob_count as usize;
-            if blob_count > max_blob_count {
-                return Err(InvalidTransactionError::TooManyBlobs(blob_count, max_blob_count))
-            }
-
-            // Check for any blob validation errors if not impersonating.
-            if !self.skip_blob_validation(Some(*pending.sender())) {
-                if let Err(err) = tx.validate(EnvKzgSettings::default().get()) {
-                    return Err(InvalidTransactionError::BlobTransactionValidationError(err))
-                }
->>>>>>> 3c0b3df8f8ef8800a10912ce5a9dcd9eb7e971ff
             }
         }
 
@@ -3404,15 +3395,12 @@ pub fn transaction_build(
             let new_signed = Signed::new_unchecked(t, sig, hash);
             AnyTxEnvelope::Ethereum(TxEnvelope::Eip7702(new_signed))
         }
-<<<<<<< HEAD
         TxEnvelope::Seismic(signed_tx) => {
             let (tx, signature, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(tx, signature, hash);
             AnyTxEnvelope::Ethereum(TxEnvelope::Seismic(new_signed))
         }
         _ => unreachable!("unknown tx type"),
-=======
->>>>>>> 3c0b3df8f8ef8800a10912ce5a9dcd9eb7e971ff
     };
 
     let tx = Transaction {
@@ -3441,8 +3429,8 @@ pub fn prove_storage(storage: &HashMap<U256, FlaggedStorage>, keys: &[B256]) -> 
 
     let mut builder = HashBuilder::default().with_proof_retainer(ProofRetainer::new(keys.clone()));
 
-    for (key, value) in trie_storage(storage) {
-        builder.add_leaf(key, &value);
+    for (key, value, is_private) in trie_storage(storage) {
+        builder.add_leaf(key, &value, is_private);
     }
 
     let _ = builder.root();

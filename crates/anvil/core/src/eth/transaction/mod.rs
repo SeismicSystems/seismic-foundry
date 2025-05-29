@@ -5,15 +5,15 @@ use alloy_consensus::{
         Recovered, TxEip7702,
     },
     Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559, TxEip2930,
-    TxEnvelope as AlloyTxEnvelope, TxLegacy, TxReceipt, Typed2718,
+    TxLegacy, TxReceipt, Typed2718,
 };
 use seismic_alloy_consensus::SeismicTxEnvelope as TxEnvelope;
-use alloy_network::{AnyReceiptEnvelope, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope};
+use alloy_network::{AnyReceiptEnvelope, AnyTransactionReceipt, AnyTxEnvelope};
 use alloy_primitives::{Address, Bloom, Bytes, Log, Signature, TxHash, TxKind, B256, U256, U64};
 use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
 use alloy_rpc_types::{
     request::TransactionRequest, trace::otterscan::OtsReceipt, AccessList, ConversionError,
-    Transaction as AlloyRpcTransaction, TransactionReceipt,
+    TransactionReceipt,
 };
 use alloy_serde::{OtherFields, WithOtherFields};
 use bytes::BufMut;
@@ -28,9 +28,8 @@ use std::{
     ops::{Deref, Mul},
 };
 
-use alloy_eips::Encodable2718;
-
-type SeismicRpcTransaction = AlloyRpcTransaction<TxEnvelope>;
+use alloy_eips::{Encodable2718, Decodable2718};
+use crate::{AnyRpcTransaction, RpcTransaction};
 
 pub trait SeismicCompatible:
     Encodable
@@ -642,9 +641,9 @@ impl PendingTransaction {
                     seismic_elements,
                 } = &tx.tx();
 
-                TxEnv {
+                OpTransaction::new(TxEnv {
                     caller,
-                    transact_to: transact_to(&to),
+                    kind: transact_to(to),
                     // these two have already been validated in TransactionValidator,
                     // so we simply unwrap here
                     data: seismic_elements
@@ -653,13 +652,13 @@ impl PendingTransaction {
                     chain_id: Some(*chain_id),
                     nonce: *nonce,
                     value: *value,
-                    gas_price: U256::from(*gas_price),
+                    gas_price: *gas_price,
                     gas_priority_fee: None,
                     gas_limit: *gas_limit,
-                    access_list: vec![],
-                    tx_type: Some(tx.tx().ty() as isize),
+                    access_list: vec![].into(),
+                    tx_type: seismic_alloy_consensus::TxSeismic::TX_TYPE,
                     ..Default::default()
-                }
+                })
             }
         }
     }
@@ -724,15 +723,17 @@ impl TryFrom<AnyRpcTransaction> for TypedTransaction {
 
     fn try_from(value: AnyRpcTransaction) -> Result<Self, Self::Error> {
         let WithOtherFields { inner, .. } = value.0;
+        /*
         let from = inner.inner.signer();
+        */
         match inner.inner.into_inner() {
-            AnyTxEnvelope::Ethereum(tx) => match tx {
-                TxEnvelope::Legacy(tx) => Ok(Self::Legacy(tx)),
-                TxEnvelope::Eip2930(tx) => Ok(Self::EIP2930(tx)),
-                TxEnvelope::Eip1559(tx) => Ok(Self::EIP1559(tx)),
-                TxEnvelope::Eip4844(tx) => Ok(Self::EIP4844(tx)),
-                TxEnvelope::Eip7702(tx) => Ok(Self::EIP7702(tx)),
-            },
+            seismic_alloy_consensus::SeismicTxEnvelope::Legacy(tx) => Ok(Self::Legacy(tx)),
+            seismic_alloy_consensus::SeismicTxEnvelope::Eip2930(tx) => Ok(Self::EIP2930(tx)),
+            seismic_alloy_consensus::SeismicTxEnvelope::Eip1559(tx) => Ok(Self::EIP1559(tx)),
+            seismic_alloy_consensus::SeismicTxEnvelope::Eip4844(tx) => Ok(Self::EIP4844(tx)),
+            seismic_alloy_consensus::SeismicTxEnvelope::Eip7702(tx) => Ok(Self::EIP7702(tx)),
+            seismic_alloy_consensus::SeismicTxEnvelope::Seismic(tx) => Ok(Self::Seismic(tx)),
+            /*
             AnyTxEnvelope::Unknown(mut tx) => {
                 // Try to convert to deposit transaction
                 if tx.ty() == DEPOSIT_TX_TYPE_ID {
@@ -749,6 +750,7 @@ impl TryFrom<AnyRpcTransaction> for TypedTransaction {
 
                 Err(ConversionError::Custom("UnknownTxType".to_string()))
             }
+            */
         }
     }
 }
@@ -816,7 +818,7 @@ impl TypedTransaction {
             Self::EIP4844(_) => Some(3),
             Self::EIP7702(_) => Some(4),
             Self::Deposit(_) => Some(0x7E),
-            Self::Seismic(_) => Some(TxSeismic::TX_TYPE),
+            Self::Seismic(_) => Some(seismic_alloy_consensus::TxSeismic::TX_TYPE),
         }
     }
 
@@ -1903,8 +1905,8 @@ mod tests {
             U256::from_str("0x779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3")
                 .unwrap();
 
-        let signature = PrimitiveSignature::new(r, s, true);
-        let signed_tx: Signed<TxSeismic> = orig_decoded_tx.into_signed(signature);
+        let signature = Signature::new(r, s, true);
+        let signed_tx: Signed<seismic_alloy_consensus::TxSeismic> = orig_decoded_tx.into_signed(signature);
 
         let signed_tt = TypedTransaction::Seismic(signed_tx);
 

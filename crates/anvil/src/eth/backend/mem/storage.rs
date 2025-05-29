@@ -528,7 +528,6 @@ impl MinedTransaction {
             block_hash: Some(self.block_hash),
             block_number: Some(self.block_number),
             base_fee: None,
-            tx_type: self.info.tx_type,
         })
     }
 
@@ -571,7 +570,7 @@ impl MinedTransaction {
                         return match tracer_config.into_call_config() {
                             Ok(call_config) => {
                                 let mut frame = GethTraceBuilder::new(self.info.traces.clone())
-                                    .geth_call_traces(call_config, self.receipt.cumulative_gas_used())
+                                    .geth_call_traces(call_config, self.receipt.cumulative_gas_used());
                                 
                                 frame.tx_type = self.info.tx_type.unwrap_or_default();
                                 if frame.tx_type ==
