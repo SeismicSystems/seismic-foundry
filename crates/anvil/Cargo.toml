@@ -27,6 +27,7 @@ secp256k1 = { version = "0.29", default-features = false, features = [
 bytes.workspace = true
 k256.workspace = true
 seismic-alloy-rpc-types.workspace = true
+seismic-alloy-consensus.workspace = true
 seismic-enclave.workspace = true
 
 # foundry internal

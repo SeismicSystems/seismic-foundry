@@ -59,10 +59,10 @@ use alloy_primitives::{
 };
 use alloy_rpc_types::{
     anvil::Forking,
-    request::TransactionRequest,
     serde_helpers::JsonStorageKey,
     simulate::{SimBlock, SimCallResult, SimulatePayload, SimulatedBlock},
     state::EvmOverrides,
+    transaction::{TransactionRequest as AlloyTransactionRequest},
     trace::{
         filter::TraceFilter,
         geth::{
@@ -131,6 +131,7 @@ use std::{
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
 
+use seismic_alloy_rpc_types::SeismicTransactionRequest as TransactionRequest;
 use super::executor::new_evm_with_inspector_ref;
 
 pub mod cache;
@@ -1465,14 +1466,14 @@ impl Backend {
     ///  - `nonce` check is skipped if `request.nonce` is None
     fn build_call_env(
         &self,
-        request: WithOtherFields<seismic_alloy_rpc_types::SeismicTransactionRequest>,
+        request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
     ) -> Env {
-        let WithOtherFields::<seismic_alloy_rpc_types::SeismicTransactionRequest> {
+        let WithOtherFields::<TransactionRequest> {
             inner:
-                seismic_alloy_rpc_types::SeismicTransactionRequest {
-                    inner: TransactionRequest {
+                TransactionRequest {
+                    inner: AlloyTransactionRequest {
                         from,
                         to,
                         gas,
@@ -1489,7 +1490,7 @@ impl Backend {
                         max_priority_fee_per_gas,
                         .. // Rest of the gas fees related fields are taken from `fee_details`
                     },
-                    seismic_elements,
+                    seismic_elements: _,
                 },
             other,
         } = request;
@@ -1538,7 +1539,7 @@ impl Backend {
         let data = input.into_input().unwrap_or_default();
         let data = match request.inner.seismic_elements {
             Some(seismic_elements) => seismic_elements
-                .server_decrypt(&MockEnclaveClient::new(), &data)
+                .server_decrypt(&seismic_enclave::MockEnclaveClient::new(), &data)
                 .expect("failed to decrypt seismic elements"),
             None => data,
         };
@@ -1864,7 +1865,7 @@ impl Backend {
     pub fn seismic_call_with_state(
         &self,
         state: &dyn DatabaseRef<Error = DatabaseError>,
-        request: WithOtherFields<TransactionRequest>,
+        request: WithOtherFields<seismic_alloy_rpc_types::SeismicTransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
@@ -1874,7 +1875,7 @@ impl Backend {
         let output_data = out
             .map(|plaintext_output| match seismic_elements {
                 Some(seismic_elements) => seismic_elements
-                    .server_encrypt(&MockEnclaveClient::new(), &plaintext_output.data())
+                    .server_encrypt(&seismic_enclave::MockEnclaveClient::new(), &plaintext_output.data())
                     .map_err(|e| {
                         BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                     })

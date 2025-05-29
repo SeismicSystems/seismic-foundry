@@ -3,7 +3,6 @@ use alloy_primitives::{Address, Bytes, TxHash, B256, B64, U256};
 use alloy_rpc_types::{
     anvil::{Forking, MineOptions},
     pubsub::{Params as SubscriptionParams, SubscriptionKind},
-    request::TransactionRequest,
     simulate::SimulatePayload,
     state::StateOverride,
     trace::{
@@ -16,6 +15,8 @@ use alloy_serde::WithOtherFields;
 use foundry_common::serde_helpers::{
     deserialize_number, deserialize_number_opt, deserialize_number_seq,
 };
+
+use seismic_alloy_rpc_types::SeismicTransactionRequest as TransactionRequest;
 
 pub mod block;
 pub mod subscription;

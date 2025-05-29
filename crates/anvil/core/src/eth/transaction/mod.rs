@@ -8,7 +8,7 @@ use alloy_consensus::{
     TxLegacy, TxReceipt, Typed2718,
 };
 use seismic_alloy_consensus::SeismicTxEnvelope as TxEnvelope;
-use alloy_network::{AnyReceiptEnvelope, AnyTransactionReceipt, AnyTxEnvelope};
+use alloy_network::{AnyReceiptEnvelope, AnyTransactionReceipt};
 use alloy_primitives::{Address, Bloom, Bytes, Log, Signature, TxHash, TxKind, B256, U256, U64};
 use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
 use alloy_rpc_types::{

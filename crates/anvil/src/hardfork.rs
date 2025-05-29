@@ -253,7 +253,7 @@ impl From<SeismicHardfork> for SpecId {
     fn from(fork: SeismicHardfork) -> Self {
         match fork {
             SeismicHardfork::Mercury => Self::MERCURY,
-            SeismicHardfork::Latest => Self::LATEST,
+            SeismicHardfork::Latest => Self::MERCURY,
         }
     }
 }

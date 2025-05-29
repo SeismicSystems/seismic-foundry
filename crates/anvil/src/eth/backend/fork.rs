@@ -13,7 +13,7 @@ use alloy_provider::{
     Provider,
 };
 use alloy_rpc_types::{
-    request::TransactionRequest,
+    request::{TransactionRequest as AlloyTransactionRequest},
     simulate::{SimulatePayload, SimulatedBlock},
     trace::{
         geth::{GethDebugTracingOptions, GethTrace},
@@ -33,6 +33,8 @@ use parking_lot::{
 use revm::context_interface::block::BlobExcessGasAndPrice;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock as AsyncRwLock;
+
+use seismic_alloy_rpc_types::SeismicTransactionRequest as TransactionRequest;
 
 /// Represents a fork of a remote client
 ///
@@ -193,6 +195,7 @@ impl ClientFork {
         block: Option<BlockNumber>,
     ) -> Result<Bytes, TransportError> {
         let block = block.unwrap_or(BlockNumber::Latest);
+        // TODO: seismic provider
         let res = self.provider().call(request.clone()).block(block.into()).await?;
 
         Ok(res)
@@ -221,6 +224,7 @@ impl ClientFork {
         block: Option<BlockNumber>,
     ) -> Result<u128, TransportError> {
         let block = block.unwrap_or_default();
+        // TODO: seismic provider
         let res = self.provider().estimate_gas(request.clone()).block(block.into()).await?;
 
         Ok(res as u128)
@@ -232,6 +236,7 @@ impl ClientFork {
         request: &WithOtherFields<TransactionRequest>,
         block: Option<BlockNumber>,
     ) -> Result<AccessListResult, TransportError> {
+        // TODO: seismic provider
         self.provider().create_access_list(request).block_id(block.unwrap_or_default().into()).await
     }
 

@@ -37,7 +37,7 @@ use alloy_consensus::{
     Account,
 };
 use alloy_dyn_abi::TypedData;
-use alloy_eips::{eip2718::Encodable2718, eip712::Decodable712};
+use alloy_eips::{eip2718::Encodable2718};
 use alloy_network::{
     eip2718::Decodable2718, AnyRpcBlock, AnyRpcTransaction, BlockResponse, Ethereum, NetworkWallet,
     TransactionBuilder, TransactionResponse,
@@ -54,7 +54,7 @@ use alloy_rpc_types::{
     anvil::{
         ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
     },
-    request::TransactionRequest,
+    request::{TransactionRequest as AlloyTransactionRequest},
     simulate::{SimulatePayload, SimulatedBlock},
     state::{AccountOverride, EvmOverrides, StateOverridesBuilder},
     trace::{
@@ -97,9 +97,11 @@ use revm::{
     interpreter::{return_ok, return_revert, InstructionResult},
     primitives::eip7702::PER_EMPTY_ACCOUNT_COST,
 };
+use seismic_enclave::rpc::SyncEnclaveApiClient;
 use yansi::Paint;
 use std::{future::Future, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use foundry_common::TransactionRequest;
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -174,7 +176,7 @@ impl EthApi {
         trace!(target: "rpc::api", "executing eth request");
         let response = match request.clone() {
             EthRequest::SeismicGetTeePublicKey(()) => {
-                let result = MockEnclaveClient::new()
+                let result = seismic_enclave::MockEnclaveClient::new()
                     .get_public_key()
                     .map_err(|e| BlockchainError::Internal(e.to_string()));
                 result.to_rpc_result()
@@ -1007,7 +1009,7 @@ impl EthApi {
     ) -> Result<String> {
         node_info!("eth_signTransaction");
 
-        let from = request.from.map(Ok).unwrap_or_else(|| {
+        let from = request.inner.inner.from.map(Ok).unwrap_or_else(|| {
             self.accounts()?.first().cloned().ok_or(BlockchainError::NoSignerAvailable)
         })?;
 
@@ -1036,7 +1038,7 @@ impl EthApi {
     ) -> Result<TxHash> {
         node_info!("eth_sendTransaction");
 
-        let from = request.from.map(Ok).unwrap_or_else(|| {
+        let from = request.inner.inner.from.map(Ok).unwrap_or_else(|| {
             self.accounts()?.first().cloned().ok_or(BlockchainError::NoSignerAvailable)
         })?;
         let (nonce, on_chain_nonce) = self.request_nonce(&request, from).await?;
@@ -1116,10 +1118,11 @@ impl EthApi {
     /// Handler for ETH RPC call: `eth_sendRawTransaction`
     pub async fn send_signed_typed_data_tx(
         &self,
-        td: alloy_eips::eip712::TypedDataRequest,
+        td: seismic_alloy_consensus::TypedDataRequest,
     ) -> Result<TxHash> {
         node_info!("eth_sendRawTransaction via eth_signTypedData");
 
+        // TODO: make this work
         let transaction = TypedTransaction::decode_712(&td).map_err(|e| {
             BlockchainError::Message(format!(
                 "Failed to decode typed data into seismic tx: {:?}",
@@ -1155,7 +1158,7 @@ impl EthApi {
 
     async fn seismic_call(
         &self,
-        request: WithOtherFields<seismic_alloy_consensus::SeismicTransactionRequest>,
+        seismic_request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
         overrides: EvmOverrides,
     ) -> Result<Bytes> {
@@ -1170,11 +1173,12 @@ impl EthApi {
                             "not available on past forked blocks".to_string(),
                         ));
                     }
-                    return Ok(fork.call(&request, Some(number.into())).await?)
+                    return Ok(fork.call(&seismic_request, Some(number.into())).await?)
                 }
             }
         }
 
+        let request = seismic_request.clone().inner.inner;
         let fees = FeeDetails::new(
             request.gas_price,
             request.max_fee_per_gas,
@@ -1186,7 +1190,7 @@ impl EthApi {
         let block_request = self.block_request(block_number).await?;
         self.on_blocking_task(|this| async move {
             let (exit, out, gas, _) =
-                this.backend.seismic_call(request, fees, Some(block_request), overrides).await?;
+                this.backend.seismic_call(seismic_request, fees, Some(block_request), Some(overrides)).await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })
@@ -1200,7 +1204,7 @@ impl EthApi {
         &self,
         request: impl Into<seismic_alloy_rpc_types::SeismicCallRequest>,
         block_number: Option<BlockId>,
-        overrides: Option<EvmOverrides>,
+        overrides: EvmOverrides,
     ) -> Result<Bytes> {
         match request.into() {
             seismic_alloy_rpc_types::SeismicCallRequest::TransactionRequest(mut tx) => {
@@ -1350,7 +1354,7 @@ impl EthApi {
                 ensure_return_ok(exit, &out)?;
 
                 // execute again but with access list set
-                request.access_list = Some(access_list.clone());
+                request.inner.inner.access_list = Some(access_list.clone());
 
                 let (exit, out, gas_used, _) = self.backend.call_with_state(
                     &state,
@@ -1791,12 +1795,13 @@ impl EthApi {
     /// Handler for RPC call: `debug_traceCall`
     pub async fn debug_trace_call(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        seismic_request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
         opts: GethDebugTracingCallOptions,
     ) -> Result<GethTrace> {
         node_info!("debug_traceCall");
         let block_request = self.block_request(block_number).await?;
+        let request = seismic_request.clone().inner.inner;
         let fees = FeeDetails::new(
             request.gas_price,
             request.max_fee_per_gas,
@@ -1806,7 +1811,7 @@ impl EthApi {
         .or_zero_fees();
 
         let result: std::result::Result<GethTrace, BlockchainError> =
-            self.backend.call_with_tracing(request, fees, Some(block_request), opts).await;
+            self.backend.call_with_tracing(seismic_request, fees, Some(block_request), opts).await;
         result
     }
 
@@ -2599,7 +2604,7 @@ impl EthApi {
     ) -> Result<TxHash> {
         node_info!("eth_sendUnsignedTransaction");
         // either use the impersonated account of the request's `from` field
-        let from = request.from.ok_or(BlockchainError::NoSignerAvailable)?;
+        let from = request.inner.inner.from.ok_or(BlockchainError::NoSignerAvailable)?;
 
         let (nonce, on_chain_nonce) = self.request_nonce(&request, from).await?;
 
@@ -2728,10 +2733,11 @@ impl EthApi {
 
     pub async fn wallet_send_transaction(
         &self,
-        mut request: WithOtherFields<TransactionRequest>,
+        mut seismic_request: WithOtherFields<TransactionRequest>,
     ) -> Result<TxHash> {
         node_info!("wallet_sendTransaction");
 
+        let request = seismic_request.clone().inner.inner;
         // Validate the request
         // reject transactions that have a non-zero value to prevent draining the executor.
         if request.value.is_some_and(|val| val > U256::ZERO) {
@@ -2794,13 +2800,13 @@ impl EthApi {
 
         let nonce = self.get_transaction_count(from, Some(BlockId::latest())).await?;
 
-        request.nonce = Some(nonce);
+        seismic_request.set_nonce(nonce);
 
         let chain_id = self.chain_id();
 
-        request.chain_id = Some(chain_id);
+        seismic_request.set_chain_id(chain_id);
 
-        request.from = Some(from);
+        seismic_request.set_from(from);
 
         let gas_limit_fut =
             self.estimate_gas(request.clone(), Some(BlockId::latest()), EvmOverrides::default());
@@ -2948,12 +2954,13 @@ impl EthApi {
     /// This will execute the transaction request and find the best gas limit via binary search.
     fn do_estimate_gas_with_state(
         &self,
-        mut request: WithOtherFields<TransactionRequest>,
+        mut seismic_request: WithOtherFields<TransactionRequest>,
         state: &dyn DatabaseRef<Error = DatabaseError>,
         block_env: BlockEnv,
     ) -> Result<u128> {
         // If the request is a simple native token transfer we can optimize
         // We assume it's a transfer if we have no input data.
+        let request = seismic_request.clone().inner.inner;
         let to = request.to.as_ref().and_then(TxKind::to);
 
         // check certain fields to see if the request could be a simple transfer
@@ -3029,7 +3036,7 @@ impl EthApi {
         // transaction requires to succeed
 
         // Get the starting lowest gas needed depending on the transaction kind.
-        let mut lowest_gas_limit = determine_base_gas_by_kind(&request);
+        let mut lowest_gas_limit = determine_base_gas_by_kind(&seismic_request);
 
         // pick a point that's close to the estimated gas
         let mut mid_gas_limit =
@@ -3037,7 +3044,8 @@ impl EthApi {
 
         // Binary search for the ideal gas limit
         while (highest_gas_limit - lowest_gas_limit) > 1 {
-            request.gas = Some(mid_gas_limit as u64);
+            seismic_request.set_gas_limit(mid_gas_limit as u64);
+            let request = seismic_request.clone().inner.inner;
             let ethres = self.backend.call_with_state(
                 &state,
                 request.clone(),

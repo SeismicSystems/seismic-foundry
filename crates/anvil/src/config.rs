@@ -1424,6 +1424,7 @@ async fn derive_block_and_transactions(
                 .ok_or_else(|| eyre::eyre!("failed to get fork transaction by hash"))?;
             let transaction_block_number = transaction.block_number.unwrap();
 
+            // TODO: seismic provider
             // Get the block pertaining to the fork transaction
             let transaction_block = provider
                 .get_block_by_number(transaction_block_number.into())

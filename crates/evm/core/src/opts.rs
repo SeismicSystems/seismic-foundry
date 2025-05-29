@@ -5,7 +5,7 @@ use crate::{
     EvmEnv,
 };
 use alloy_primitives::{Address, B256, U256};
-use alloy_provider::{network::AnyRpcBlock, Provider};
+use alloy_provider::{Provider};
 use eyre::WrapErr;
 use foundry_common::{provider::ProviderBuilder, ALCHEMY_FREE_TIER_CUPS};
 use foundry_config::{Chain, Config, GasLimit};
@@ -13,6 +13,8 @@ use revm::context::{BlockEnv, TxEnv};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
+
+use foundry_common::AnyRpcBlock;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvmOpts {
@@ -143,6 +145,7 @@ impl EvmOpts {
             }
             msg
         })
+        .map(|(env, block)| (env, AnyRpcBlock(alloy_serde::WithOtherFields::new(block))))
     }
 
     /// Returns the `revm::Env` configured with only local settings
