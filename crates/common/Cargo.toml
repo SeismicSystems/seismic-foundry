@@ -13,6 +13,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+seismic-foundry-prelude.workspace = true
+
 foundry-block-explorers = { workspace = true, features = ["foundry-compilers"] }
 foundry-common-fmt.workspace = true
 foundry-compilers.workspace = true

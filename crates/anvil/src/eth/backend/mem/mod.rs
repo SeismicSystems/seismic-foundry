@@ -2000,7 +2000,7 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u64, AccessList), BlockchainError> {
         let mut inspector =
-            AccessListInspector::new(request.access_list.clone().unwrap_or_default());
+            AccessListInspector::new(request.inner.inner.access_list.clone().unwrap_or_default());
 
         let env = self.build_call_env(request, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);

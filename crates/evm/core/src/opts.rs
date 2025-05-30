@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
 
-use seismic_foundry_prelude::AnyRpcBlock;
+use seismic_foundry_prelude::{AnyRpcBlock, AnyRpcTransaction};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvmOpts {
@@ -126,7 +126,7 @@ impl EvmOpts {
         let provider = ProviderBuilder::new(fork_url)
             .compute_units_per_second(self.get_compute_units_per_second())
             .build()?;
-        environment(
+        let (env, block) = environment(
             &provider,
             self.memory_limit,
             self.env.gas_price.map(|v| v as u128),
@@ -144,8 +144,16 @@ impl EvmOpts {
                 }
             }
             msg
-        })
-        .map(|(env, block)| (env, AnyRpcBlock(alloy_serde::WithOtherFields::new(block))))
+        })?;
+        /*
+        expected struct 
+        `alloy_rpc_types::Block<seismic_foundry_prelude::AnyRpcTransaction, alloy_rpc_types::Header<AnyHeader>>`
+        `alloy_rpc_types::Block<alloy_rpc_types::Transaction<seismic_alloy_consensus::transaction::envelope::SeismicTxEnvelope>, alloy_rpc_types::Header<alloy_consensus::Header>>`
+         */
+        // .map(|(env, block)| (env, )
+        let b1 = block.clone();
+        let b = AnyRpcBlock(alloy_serde::WithOtherFields::new(block));
+        Ok((env, b))
     }
 
     /// Returns the `revm::Env` configured with only local settings

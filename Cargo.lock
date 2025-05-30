@@ -4287,6 +4287,7 @@ dependencies = [
  "num-format",
  "path-slash",
  "reqwest",
+ "seismic-foundry-prelude",
  "semver 1.0.26",
  "serde",
  "serde_json",
@@ -8662,7 +8663,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-consensus"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=4a00be0#4a00be0fbea6daa4e0345ef078d270b8a7c8186f"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=7f00693#7f006934076e7d5116cedf447506966198038781"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -8683,7 +8684,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-network"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=4a00be0#4a00be0fbea6daa4e0345ef078d270b8a7c8186f"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=7f00693#7f006934076e7d5116cedf447506966198038781"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -8698,7 +8699,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-provider"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=4a00be0#4a00be0fbea6daa4e0345ef078d270b8a7c8186f"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=7f00693#7f006934076e7d5116cedf447506966198038781"
 dependencies = [
  "alloy-primitives",
 ]
@@ -8706,7 +8707,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-rpc-types"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=4a00be0#4a00be0fbea6daa4e0345ef078d270b8a7c8186f"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=7f00693#7f006934076e7d5116cedf447506966198038781"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -8763,8 +8764,12 @@ dependencies = [
 [[package]]
 name = "seismic-foundry-prelude"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=4a00be0#4a00be0fbea6daa4e0345ef078d270b8a7c8186f"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=7f00693#7f006934076e7d5116cedf447506966198038781"
 dependencies = [
+ "alloy-consensus",
+ "alloy-eip7702",
+ "alloy-network-primitives",
+ "alloy-primitives",
  "alloy-rpc-types",
  "alloy-rpc-types-eth",
  "alloy-serde",
