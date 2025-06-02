@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
 
-use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction};
+use seismic_prelude::foundry::AnyRpcBlock;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvmOpts {
@@ -126,7 +126,7 @@ impl EvmOpts {
         let provider = ProviderBuilder::new(fork_url)
             .compute_units_per_second(self.get_compute_units_per_second())
             .build()?;
-        let (env, block) = environment(
+        environment(
             &provider,
             self.memory_limit,
             self.env.gas_price.map(|v| v as u128),
@@ -144,10 +144,7 @@ impl EvmOpts {
                 }
             }
             msg
-        })?;
-        // TODO: these should automatically work
-        let block = AnyRpcBlock(alloy_serde::WithOtherFields::new(block));
-        Ok((env, block))
+        })
     }
 
     /// Returns the `revm::Env` configured with only local settings

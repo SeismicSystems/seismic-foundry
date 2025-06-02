@@ -5,7 +5,7 @@ use alloy_network::{
         EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID, EIP7702_TX_TYPE_ID,
         LEGACY_TX_TYPE_ID,
     },
-    AnyTxEnvelope, TransactionResponse,
+    TransactionResponse,
 };
 use alloy_primitives::{Address, Selector, TxKind, B256, U256};
 use alloy_provider::{network::BlockResponse, Network};
@@ -16,6 +16,8 @@ use revm::primitives::hardfork::SpecId;
 pub use revm::state::EvmState as StateChangeset;
 
 use crate::EnvMut;
+
+use seismic_prelude::foundry::AnyTxEnvelope;
 
 /// Depending on the configured chain id and block number this should apply any specific changes
 ///

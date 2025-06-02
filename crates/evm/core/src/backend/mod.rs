@@ -11,9 +11,9 @@ use crate::{
 use alloy_consensus::Typed2718;
 use alloy_evm::Evm;
 use alloy_genesis::GenesisAccount;
-use alloy_network::{AnyRpcBlock, AnyTxEnvelope, TransactionResponse};
+use alloy_network::TransactionResponse;
 use alloy_primitives::{keccak256, uint, Address, TxKind, B256, U256};
-use alloy_rpc_types::{BlockNumberOrTag, Transaction, TransactionRequest};
+use alloy_rpc_types::{BlockNumberOrTag, Transaction};
 use eyre::Context;
 use foundry_common::{is_known_system_sender, SYSTEM_TRANSACTION_TYPE};
 pub use foundry_fork_db::{cache::BlockchainDbMeta, BlockchainDb, SharedBackend};
@@ -32,6 +32,8 @@ use std::{
     collections::{BTreeMap, HashMap, HashSet},
     time::Instant,
 };
+
+use seismic_prelude::foundry::{AnyRpcBlock, AnyTxEnvelope};
 
 mod diagnostic;
 pub use diagnostic::RevertDiagnostic;
@@ -848,7 +850,7 @@ impl Backend {
         let tx = fork.db.db.get_transaction(transaction)?;
 
         // get the block number we need to fork
-        if let Some(tx_block) = tx.block_number {
+        if let Some(tx_block) = tx.0.inner().block_number {
             let block = fork.db.db.get_full_block(tx_block)?;
 
             // we need to subtract 1 here because we want the state before the transaction
@@ -885,7 +887,7 @@ impl Backend {
         for tx in full_block.inner.transactions.txns() {
             // System transactions such as on L2s don't contain any pricing info so we skip them
             // otherwise this would cause reverts
-            if is_known_system_sender(tx.inner().inner.signer()) ||
+            if is_known_system_sender(tx.0.inner().inner.signer()) ||
                 tx.ty() == SYSTEM_TRANSACTION_TYPE
             {
                 trace!(tx=?tx.tx_hash(), "skipping system transaction");
@@ -894,12 +896,12 @@ impl Backend {
 
             if tx.tx_hash() == tx_hash {
                 // found the target transaction
-                return Ok(Some(tx.inner.clone()))
+                return Ok(Some(tx.0.inner().clone()))
             }
             trace!(tx=?tx.tx_hash(), "committing transaction");
 
             commit_transaction(
-                &tx.inner,
+                &tx.0.inner(),
                 &mut env.as_env_mut(),
                 journaled_state,
                 fork,
@@ -1285,7 +1287,7 @@ impl DatabaseExt for Backend {
 
         let fork = self.inner.get_fork_by_id_mut(id)?;
         commit_transaction(
-            &tx.inner,
+            &tx.0.inner(),
             &mut env.as_env_mut(),
             journaled_state,
             fork,

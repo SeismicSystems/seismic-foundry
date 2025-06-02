@@ -1,9 +1,10 @@
 //! Commonly used constants.
 
 use alloy_consensus::Typed2718;
-use alloy_network::AnyTxEnvelope;
 use alloy_primitives::{address, Address, Signature, B256};
 use std::time::Duration;
+
+use seismic_prelude::foundry::AnyTxEnvelope;
 
 /// The dev chain-id, inherited from hardhat
 pub const DEV_CHAIN_ID: u64 = 31337;
