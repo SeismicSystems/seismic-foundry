@@ -9,10 +9,10 @@ use crate::{
 };
 use alloy_primitives::{hex, Address, Bytes, TxKind, U256};
 use alloy_provider::{
-    network::{AnyTxEnvelope, TransactionBuilder},
+    network::{TransactionBuilder},
     Provider,
 };
-use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionInput, TransactionRequest};
+use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionInput};
 use clap::{Parser, ValueHint};
 use eyre::{Context, OptionExt, Result};
 use foundry_cli::{
@@ -26,6 +26,9 @@ use foundry_evm::{constants::DEFAULT_CREATE2_DEPLOYER, utils::configure_tx_req_e
 use foundry_evm_core::AsEnvMut;
 use revm::state::AccountInfo;
 use std::path::PathBuf;
+
+
+use seismic_prelude::foundry::{AnyTxEnvelope, TransactionRequest};
 
 impl_figment_convert!(VerifyBytecodeArgs);
 
@@ -255,12 +258,12 @@ impl VerifyBytecodeArgs {
 
             if let Some(ref block) = genesis_block {
                 configure_env_block(&mut env.as_env_mut(), block);
-                gen_tx_req.max_fee_per_gas = block.header.base_fee_per_gas.map(|g| g as u128);
-                gen_tx_req.gas = Some(block.header.gas_limit);
-                gen_tx_req.gas_price = block.header.base_fee_per_gas.map(|g| g as u128);
+                gen_tx_req.inner.max_fee_per_gas = block.header.base_fee_per_gas.map(|g| g as u128);
+                gen_tx_req.inner.gas = Some(block.header.gas_limit);
+                gen_tx_req.inner.gas_price = block.header.base_fee_per_gas.map(|g| g as u128);
             }
 
-            configure_tx_req_env(&mut env.as_env_mut(), &gen_tx_req.clone().into(), None)
+            configure_tx_req_env(&mut env.as_env_mut(), &gen_tx_req, None)
                 .wrap_err("Failed to configure tx request env")?;
 
             // Seed deployer account with funds
@@ -275,7 +278,7 @@ impl VerifyBytecodeArgs {
                 &mut executor,
                 &env,
                 config.evm_spec_id(),
-                gen_tx_req.to,
+                gen_tx_req.inner.to,
             )?;
 
             // Compare runtime bytecode
@@ -335,20 +338,21 @@ impl VerifyBytecodeArgs {
             );
         };
 
-        let mut transaction: TransactionRequest = match transaction.inner.inner() {
+        let mut transaction: TransactionRequest = match transaction.0.inner.inner.inner() {
             AnyTxEnvelope::Ethereum(tx) => tx.clone().into(),
+            AnyTxEnvelope::Seismic(tx) => tx.clone().into(),
             AnyTxEnvelope::Unknown(_) => unreachable!("Unknown transaction type"),
         };
 
         // Extract creation code from creation tx input.
         let maybe_creation_code =
             if receipt.to.is_none() && receipt.contract_address == Some(self.address) {
-                match &transaction.input.input {
+                match &transaction.inner.input.input {
                     Some(input) => &input[..],
                     None => unreachable!("creation tx input is None"),
                 }
             } else if receipt.to == Some(DEFAULT_CREATE2_DEPLOYER) {
-                match &transaction.input.input {
+                match &transaction.inner.input.input {
                     Some(input) => &input[32..],
                     None => unreachable!("creation tx input is None"),
                 }
@@ -428,7 +432,7 @@ impl VerifyBytecodeArgs {
                     .await.or_else(|e| eyre::bail!("Couldn't fetch transaction from RPC: {:?}", e))?.ok_or_else(|| {
                         eyre::eyre!("Transaction not found for hash {}", creation_data.transaction_hash)
                     })?
-                    .block_number.ok_or_else(|| {
+                    .0.inner.block_number.ok_or_else(|| {
                         eyre::eyre!("Failed to get block number of the contract creation tx, specify using the --block flag")
                     })?
                 }
@@ -453,7 +457,7 @@ impl VerifyBytecodeArgs {
             // Use `transaction.from` instead of `creation_data.contract_creator` to resolve
             // blockscout creation data discrepancy in case of CREATE2.
             let prev_block_nonce = provider
-                .get_transaction_count(transaction.from.unwrap())
+                .get_transaction_count(transaction.inner.from.unwrap())
                 .block_id(prev_block_id)
                 .await?;
             transaction.set_nonce(prev_block_nonce);
@@ -465,26 +469,26 @@ impl VerifyBytecodeArgs {
             // Replace the `input` with local creation code in the creation tx.
             if let Some(TxKind::Call(to)) = transaction.kind() {
                 if to == DEFAULT_CREATE2_DEPLOYER {
-                    let mut input = transaction.input.input.unwrap()[..32].to_vec(); // Salt
+                    let mut input = transaction.inner.input.input.unwrap()[..32].to_vec(); // Salt
                     input.extend_from_slice(&local_bytecode_vec);
-                    transaction.input = TransactionInput::both(Bytes::from(input));
+                    transaction.inner.input = TransactionInput::both(Bytes::from(input));
 
                     // Deploy default CREATE2 deployer
                     executor.deploy_create2_deployer()?;
                 }
             } else {
-                transaction.input = TransactionInput::both(Bytes::from(local_bytecode_vec));
+                transaction.inner.input = TransactionInput::both(Bytes::from(local_bytecode_vec));
             }
 
             // configure_req__env(&mut env, &transaction.inner);
-            configure_tx_req_env(&mut env.as_env_mut(), &transaction.clone().into(), None)
+            configure_tx_req_env(&mut env.as_env_mut(), &transaction, None)
                 .wrap_err("Failed to configure tx request env")?;
 
             let fork_address = crate::utils::deploy_contract(
                 &mut executor,
                 &env,
                 config.evm_spec_id(),
-                transaction.to,
+                transaction.inner.to,
             )?;
 
             // State committed using deploy_with_env, now get the runtime bytecode from the db.

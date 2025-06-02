@@ -412,9 +412,9 @@ impl EtherscanVerificationProvider {
             .ok_or_eyre("Couldn't fetch transaction receipt from RPC")?;
 
         let maybe_creation_code = if receipt.contract_address == Some(args.address) {
-            transaction.inner.inner.input()
+            transaction.0.inner.input()
         } else if transaction.to() == Some(DEFAULT_CREATE2_DEPLOYER) {
-            &transaction.inner.inner.input()[32..]
+            &transaction.0.inner.input()[32..]
         } else {
             eyre::bail!("Fetching of constructor arguments is not supported for contracts created by contracts")
         };

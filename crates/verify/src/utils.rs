@@ -1,7 +1,7 @@
 use crate::{bytecode::VerifyBytecodeArgs, types::VerificationType};
 use alloy_dyn_abi::DynSolValue;
 use alloy_primitives::{Address, Bytes, TxKind};
-use alloy_provider::{network::AnyRpcBlock, Provider};
+use alloy_provider::{Provider};
 use alloy_rpc_types::BlockId;
 use clap::ValueEnum;
 use eyre::{OptionExt, Result};
@@ -24,6 +24,8 @@ use revm::{bytecode::Bytecode, database::Database, primitives::hardfork::SpecId}
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
+
+use seismic_prelude::foundry::AnyRpcBlock;
 
 /// Enum to represent the type of bytecode being verified
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, ValueEnum)]

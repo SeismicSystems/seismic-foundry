@@ -4102,7 +4102,7 @@ dependencies = [
  "regex",
  "reqwest",
  "revm",
- "seismic-alloy-rpc-types",
+ "seismic-prelude",
  "semver 1.0.26",
  "serde",
  "serde_json",
