@@ -1115,7 +1115,7 @@ impl Config {
                 }
             }
         }
-    
+
         if let Some(solc) = &self.solc {
             let solc = match solc {
                 SolcReq::Version(version) => {

@@ -37,7 +37,7 @@ use alloy_consensus::{
     Account,
 };
 use alloy_dyn_abi::TypedData;
-use alloy_eips::{eip2718::Encodable2718};
+use alloy_eips::eip2718::Encodable2718;
 use alloy_network::{
     eip2718::Decodable2718, AnyRpcBlock, AnyRpcTransaction, BlockResponse, Ethereum, NetworkWallet,
     TransactionBuilder, TransactionResponse,
@@ -54,7 +54,7 @@ use alloy_rpc_types::{
     anvil::{
         ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
     },
-    request::{TransactionRequest as AlloyTransactionRequest},
+    request::TransactionRequest as AlloyTransactionRequest,
     simulate::{SimulatePayload, SimulatedBlock},
     state::{AccountOverride, EvmOverrides, StateOverridesBuilder},
     trace::{
@@ -82,7 +82,7 @@ use anvil_core::{
     types::{ReorgOptions, TransactionData},
 };
 use anvil_rpc::{error::RpcError, response::ResponseResult};
-use foundry_common::provider::ProviderBuilder;
+use foundry_common::{provider::ProviderBuilder, TransactionRequest};
 use foundry_evm::{backend::DatabaseError, decode::RevertDecoder};
 use futures::{
     channel::{mpsc::Receiver, oneshot},
@@ -98,10 +98,9 @@ use revm::{
     primitives::eip7702::PER_EMPTY_ACCOUNT_COST,
 };
 use seismic_enclave::rpc::SyncEnclaveApiClient;
-use yansi::Paint;
 use std::{future::Future, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
-use foundry_common::TransactionRequest;
+use yansi::Paint;
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -271,9 +270,9 @@ impl EthApi {
                 }
             },
             EthRequest::EthCall(call, block, state_override, block_overrides) => self
-            .call(call, block, EvmOverrides::new(state_override, block_overrides))
-            .await
-            .to_rpc_result(),
+                .call(call, block, EvmOverrides::new(state_override, block_overrides))
+                .await
+                .to_rpc_result(),
 
             EthRequest::EthSimulateV1(simulation, block) => {
                 self.simulate_v1(simulation, block).await.to_rpc_result()
@@ -1189,8 +1188,10 @@ impl EthApi {
 
         let block_request = self.block_request(block_number).await?;
         self.on_blocking_task(|this| async move {
-            let (exit, out, gas, _) =
-                this.backend.seismic_call(seismic_request, fees, Some(block_request), Some(overrides)).await?;
+            let (exit, out, gas, _) = this
+                .backend
+                .seismic_call(seismic_request, fees, Some(block_request), Some(overrides))
+                .await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })
@@ -1244,11 +1245,12 @@ impl EthApi {
                         e
                     ))
                 })?;
-                let tx = seismic_alloy_rpc_types::TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
-                    BlockchainError::Message(
-                        "Failed to decode bytes to transaction request".to_string(),
-                    )
-                })?;
+                let tx = seismic_alloy_rpc_types::TransactionRequest::try_from(typed_tx.clone())
+                    .map_err(|_| {
+                        BlockchainError::Message(
+                            "Failed to decode bytes to transaction request".to_string(),
+                        )
+                    })?;
 
                 let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
                     "Can only make signedCall with Seismic Transactions".to_string(),
@@ -1266,11 +1268,12 @@ impl EthApi {
             seismic_alloy_rpc_types::SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
                     .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
-                let tx = seismic_alloy_rpc_types::TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
-                    BlockchainError::Message(
-                        "Failed to decode bytes to transaction request".to_string(),
-                    )
-                })?;
+                let tx = seismic_alloy_rpc_types::TransactionRequest::try_from(typed_tx.clone())
+                    .map_err(|_| {
+                        BlockchainError::Message(
+                            "Failed to decode bytes to transaction request".to_string(),
+                        )
+                    })?;
 
                 let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
                     "Can only make signedCall with Seismic Transactions".to_string(),

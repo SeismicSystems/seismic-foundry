@@ -1514,7 +1514,11 @@ impl DatabaseRef for Backend {
         }
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         if let Some(db) = self.active_fork_db() {
             DatabaseRef::storage_ref(db, address, index)
         } else {
@@ -1559,7 +1563,11 @@ impl Database for Backend {
         }
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+    fn storage(
+        &mut self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         if let Some(db) = self.active_fork_db_mut() {
             Ok(Database::storage(db, address, index)?)
         } else {

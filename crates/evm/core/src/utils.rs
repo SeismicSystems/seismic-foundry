@@ -109,24 +109,25 @@ pub fn configure_tx_req_env(
     impersonated_from: Option<Address>,
 ) -> eyre::Result<()> {
     let seismic_alloy_rpc_types::SeismicTransactionRequest {
-        inner: TransactionRequest {
-            nonce,
-            from,
-            to,
-            value,
-            gas_price,
-            gas,
-            max_fee_per_gas,
-            max_priority_fee_per_gas,
-            max_fee_per_blob_gas,
-            ref input,
-            chain_id,
-            ref blob_versioned_hashes,
-            ref access_list,
-            transaction_type,
-            ref authorization_list,
-            sidecar: _,
-        },
+        inner:
+            TransactionRequest {
+                nonce,
+                from,
+                to,
+                value,
+                gas_price,
+                gas,
+                max_fee_per_gas,
+                max_priority_fee_per_gas,
+                max_fee_per_blob_gas,
+                ref input,
+                chain_id,
+                ref blob_versioned_hashes,
+                ref access_list,
+                transaction_type,
+                ref authorization_list,
+                sidecar: _,
+            },
         seismic_elements: _,
     } = *tx;
 

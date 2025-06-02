@@ -5,8 +5,8 @@ use alloy_primitives::{
 };
 use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
 use parking_lot::RwLock;
-use std::{cmp::Ordering, collections::BTreeSet, fmt, str::FromStr, sync::Arc, time::Instant};
 use seismic_prelude::foundry::AnyRpcTransaction;
+use std::{cmp::Ordering, collections::BTreeSet, fmt, str::FromStr, sync::Arc, time::Instant};
 
 /// A unique identifying marker for a transaction
 pub type TxMarker = Vec<u8>;

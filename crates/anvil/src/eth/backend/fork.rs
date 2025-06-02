@@ -13,7 +13,7 @@ use alloy_provider::{
     Provider,
 };
 use alloy_rpc_types::{
-    request::{TransactionRequest as AlloyTransactionRequest},
+    request::TransactionRequest as AlloyTransactionRequest,
     simulate::{SimulatePayload, SimulatedBlock},
     trace::{
         geth::{GethDebugTracingOptions, GethTrace},

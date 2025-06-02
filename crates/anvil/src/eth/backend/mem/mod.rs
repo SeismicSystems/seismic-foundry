@@ -62,7 +62,6 @@ use alloy_rpc_types::{
     serde_helpers::JsonStorageKey,
     simulate::{SimBlock, SimCallResult, SimulatePayload, SimulatedBlock},
     state::EvmOverrides,
-    transaction::{TransactionRequest as AlloyTransactionRequest},
     trace::{
         filter::TraceFilter,
         geth::{
@@ -71,6 +70,7 @@ use alloy_rpc_types::{
         },
         parity::LocalizedTransactionTrace,
     },
+    transaction::TransactionRequest as AlloyTransactionRequest,
     AccessList, Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions,
     EIP1186AccountProofResponse as AccountProof, EIP1186StorageProof as StorageProof, Filter,
     Header as AlloyHeader, Index, Log, Transaction, TransactionReceipt,
@@ -131,8 +131,8 @@ use std::{
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
 
-use seismic_alloy_rpc_types::SeismicTransactionRequest as TransactionRequest;
 use super::executor::new_evm_with_inspector_ref;
+use seismic_alloy_rpc_types::SeismicTransactionRequest as TransactionRequest;
 
 pub mod cache;
 pub mod fork_db;
@@ -1875,7 +1875,10 @@ impl Backend {
         let output_data = out
             .map(|plaintext_output| match seismic_elements {
                 Some(seismic_elements) => seismic_elements
-                    .server_encrypt(&seismic_enclave::MockEnclaveClient::new(), &plaintext_output.data())
+                    .server_encrypt(
+                        &seismic_enclave::MockEnclaveClient::new(),
+                        &plaintext_output.data(),
+                    )
                     .map_err(|e| {
                         BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                     })

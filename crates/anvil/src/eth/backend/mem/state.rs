@@ -10,9 +10,9 @@ use revm::{
     bytecode::Bytecode,
     context::BlockEnv,
     database::{CacheDB, DatabaseRef, DbAccount},
+    primitives::FlaggedStorage,
     state::AccountInfo,
 };
-use revm::primitives::FlaggedStorage;
 
 pub fn build_root(values: impl IntoIterator<Item = (Nibbles, Vec<u8>, bool)>) -> B256 {
     let mut builder = HashBuilder::default();

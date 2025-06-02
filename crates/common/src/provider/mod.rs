@@ -7,7 +7,7 @@ use crate::{
 };
 use alloy_provider::{
     fillers::{ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller},
-    network::{EthereumWallet},
+    network::EthereumWallet,
     Identity, ProviderBuilder as AlloyProviderBuilder, RootProvider,
 };
 use alloy_rpc_client::ClientBuilder;

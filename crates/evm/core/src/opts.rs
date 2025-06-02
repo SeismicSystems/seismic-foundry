@@ -5,7 +5,7 @@ use crate::{
     EvmEnv,
 };
 use alloy_primitives::{Address, B256, U256};
-use alloy_provider::{Provider};
+use alloy_provider::Provider;
 use eyre::WrapErr;
 use foundry_common::{provider::ProviderBuilder, ALCHEMY_FREE_TIER_CUPS};
 use foundry_config::{Chain, Config, GasLimit};

@@ -302,7 +302,11 @@ impl DatabaseRef for CowBackend<'_> {
         DatabaseRef::code_by_hash_ref(self.backend.as_ref(), code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(self.backend.as_ref(), address, index)
     }
 
@@ -322,7 +326,11 @@ impl Database for CowBackend<'_> {
         DatabaseRef::code_by_hash_ref(self, code_hash)
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+    fn storage(
+        &mut self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(self, address, index)
     }
 
