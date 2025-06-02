@@ -29,7 +29,7 @@ k256.workspace = true
 seismic-alloy-rpc-types.workspace = true
 seismic-alloy-consensus.workspace = true
 seismic-enclave.workspace = true
-seismic-foundry-prelude.workspace = true
+seismic-prelude.workspace = true
 
 # foundry internal
 anvil-core = { path = "core" }

@@ -24,7 +24,7 @@ use revm::{
 };
 use std::{borrow::Cow, collections::BTreeMap};
 
-use seismic_foundry_prelude::TransactionRequest;
+use seismic_prelude::foundry::TransactionRequest;
 
 /// A wrapper around `Backend` that ensures only `revm::DatabaseRef` functions are called.
 ///

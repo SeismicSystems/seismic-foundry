@@ -173,7 +173,7 @@ seismic-alloy-consensus = "0.0.1"
 seismic-alloy-network = "0.0.1"
 seismic-alloy-rpc-types = "0.0.1"
 seismic-alloy-provider = "0.0.1"
-seismic-foundry-prelude = "0.0.1"
+seismic-prelude = "0.0.1"
 seismic-revm = "1.0.0"
 seismic-enclave = "0.1.0"
 
@@ -369,11 +369,11 @@ zip-extract = "=0.2.1"
 # and instead use our local version
 seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "3f47bf1"}
 
-seismic-alloy-consensus = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "7f00693" }
-seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "7f00693" }
-seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "7f00693" }
-seismic-alloy-rpc-types = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "7f00693" }
-seismic-foundry-prelude = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "7f00693" }
+seismic-alloy-consensus = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "ec4e741" }
+seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "ec4e741" }
+seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "ec4e741" }
+seismic-alloy-rpc-types = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "ec4e741" }
+seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "ec4e741" }
 
 foundry-fork-db = { git = "https://github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "9c7f679" }
 

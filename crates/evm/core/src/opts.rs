@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
 
-use seismic_foundry_prelude::{AnyRpcBlock, AnyRpcTransaction};
+use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvmOpts {
@@ -145,15 +145,9 @@ impl EvmOpts {
             }
             msg
         })?;
-        /*
-        expected struct 
-        `alloy_rpc_types::Block<seismic_foundry_prelude::AnyRpcTransaction, alloy_rpc_types::Header<AnyHeader>>`
-        `alloy_rpc_types::Block<alloy_rpc_types::Transaction<seismic_alloy_consensus::transaction::envelope::SeismicTxEnvelope>, alloy_rpc_types::Header<alloy_consensus::Header>>`
-         */
-        // .map(|(env, block)| (env, )
-        let b1 = block.clone();
-        let b = AnyRpcBlock(alloy_serde::WithOtherFields::new(block));
-        Ok((env, b))
+        // TODO: these should automatically work
+        let block = AnyRpcBlock(alloy_serde::WithOtherFields::new(block));
+        Ok((env, block))
     }
 
     /// Returns the `revm::Env` configured with only local settings
