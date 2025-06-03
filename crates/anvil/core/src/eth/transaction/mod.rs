@@ -7,12 +7,11 @@ use alloy_consensus::{
     Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559, TxEip2930,
     TxLegacy, TxReceipt, Typed2718,
 };
-use alloy_network::{AnyReceiptEnvelope, AnyTransactionReceipt};
 use alloy_primitives::{Address, Bloom, Bytes, Log, Signature, TxHash, TxKind, B256, U256, U64};
 use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
 use alloy_rpc_types::{
     trace::otterscan::OtsReceipt, AccessList, ConversionError,
-    TransactionReceipt, TransactionRequest as AlloyTransactionRequest,
+    TransactionRequest as AlloyTransactionRequest,
 };
 use alloy_serde::{OtherFields, WithOtherFields};
 use bytes::BufMut;
@@ -28,8 +27,10 @@ use std::{
     ops::{Deref, Mul},
 };
 
-use seismic_prelude::foundry::{TxEnvelope, TransactionRequest, RpcTransaction};
 use alloy_eips::{Decodable2718, Encodable2718};
+use seismic_prelude::foundry::{
+    AnyTransactionReceipt, RpcTransaction, TransactionRequest, TxEnvelope, AnyReceiptEnvelope, TransactionReceipt
+};
 
 pub trait SeismicCompatible:
     Encodable
@@ -742,8 +743,8 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
 //             AnyTxEnvelope::Unknown(mut tx) => {
 //                 // Try to convert to deposit transaction
 //                 if tx.ty() == DEPOSIT_TX_TYPE_ID {
-//                     tx.inner.fields.insert("from".to_string(), serde_json::to_value(from).unwrap());
-//                     let deposit_tx =
+//                     tx.inner.fields.insert("from".to_string(),
+// serde_json::to_value(from).unwrap());                     let deposit_tx =
 //                         tx.inner.fields.deserialize_into::<TxDeposit>().map_err(|e| {
 //                             ConversionError::Custom(format!(
 //                                 "Failed to deserialize deposit tx: {e}"
@@ -1588,7 +1589,7 @@ impl alloy_eips::Decodable2718 for TypedReceipt {
     }
 }
 
-pub type ReceiptResponse = TransactionReceipt<TypedReceipt<Receipt<alloy_rpc_types::Log>>>;
+pub type ReceiptResponse = TransactionReceipt; // AlloyTransactionReceipt<TypedReceipt<Receipt<alloy_rpc_types::Log>>>;
 
 pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<ReceiptResponse> {
     let WithOtherFields {
@@ -1605,9 +1606,9 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
                 to,
                 blob_gas_price,
                 blob_gas_used,
-                inner: AnyReceiptEnvelope { inner: receipt_with_bloom, r#type },
+                inner,
             },
-        other,
+        other: _,
     } = receipt;
 
     Some(TransactionReceipt {
@@ -1622,29 +1623,7 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
         to,
         blob_gas_price,
         blob_gas_used,
-        inner: match r#type {
-            0x00 => TypedReceipt::Legacy(receipt_with_bloom),
-            0x01 => TypedReceipt::EIP2930(receipt_with_bloom),
-            0x02 => TypedReceipt::EIP1559(receipt_with_bloom),
-            0x03 => TypedReceipt::EIP4844(receipt_with_bloom),
-            0x7E => TypedReceipt::Deposit(DepositReceipt {
-                inner: receipt_with_bloom,
-                deposit_nonce: other
-                    .get_deserialized::<U64>("depositNonce")
-                    .transpose()
-                    .ok()?
-                    .map(|v| v.to()),
-                deposit_receipt_version: other
-                    .get_deserialized::<U64>("depositReceiptVersion")
-                    .transpose()
-                    .ok()?
-                    .map(|v| v.to()),
-            }),
-            seismic_alloy_consensus::TxSeismic::TX_TYPE => {
-                TypedReceipt::Seismic(receipt_with_bloom)
-            }
-            _ => return None,
-        },
+        inner,
     })
 }
 

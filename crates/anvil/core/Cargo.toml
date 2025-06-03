@@ -14,7 +14,7 @@ workspace = true
 
 [dependencies]
 derive_more.workspace = true
-# seismic-alloy-rpc-types.workspace = true
+seismic-alloy-rpc-types.workspace = true
 seismic-alloy-consensus.workspace = true
 seismic-enclave.workspace = true
 seismic-prelude.workspace = true

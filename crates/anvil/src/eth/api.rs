@@ -39,7 +39,7 @@ use alloy_consensus::{
 use alloy_dyn_abi::TypedData;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_network::{
-    eip2718::Decodable2718, AnyRpcBlock, AnyRpcTransaction, BlockResponse, Ethereum, NetworkWallet,
+    eip2718::Decodable2718, BlockResponse, Ethereum, NetworkWallet,
     TransactionBuilder, TransactionResponse,
 };
 use alloy_primitives::{
@@ -54,7 +54,6 @@ use alloy_rpc_types::{
     anvil::{
         ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
     },
-    request::TransactionRequest as AlloyTransactionRequest,
     simulate::{SimulatePayload, SimulatedBlock},
     state::{AccountOverride, EvmOverrides, StateOverridesBuilder},
     trace::{
@@ -64,7 +63,8 @@ use alloy_rpc_types::{
     },
     txpool::{TxpoolContent, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus},
     AccessList, AccessListResult, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions,
-    EIP1186AccountProofResponse, FeeHistory, Filter, FilteredParams, Index, Log, Work,
+    EIP1186AccountProofResponse, FeeHistory, Filter, FilteredParams, Index, Log,
+    TransactionRequest as AlloyTransactionRequest, Work,
 };
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::{sol, SolCall, SolValue};
@@ -82,7 +82,7 @@ use anvil_core::{
     types::{ReorgOptions, TransactionData},
 };
 use anvil_rpc::{error::RpcError, response::ResponseResult};
-use foundry_common::{provider::ProviderBuilder, TransactionRequest};
+use foundry_common::provider::ProviderBuilder;
 use foundry_evm::{backend::DatabaseError, decode::RevertDecoder};
 use futures::{
     channel::{mpsc::Receiver, oneshot},
@@ -97,10 +97,13 @@ use revm::{
     interpreter::{return_ok, return_revert, InstructionResult},
     primitives::eip7702::PER_EMPTY_ACCOUNT_COST,
 };
+use seismic_alloy_consensus::Decodable712;
 use seismic_enclave::rpc::SyncEnclaveApiClient;
 use std::{future::Future, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use yansi::Paint;
+
+use seismic_prelude::foundry::{TransactionRequest, AnyRpcBlock, AnyRpcTransaction};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -1014,11 +1017,11 @@ impl EthApi {
 
         let (nonce, _) = self.request_nonce(&request, from).await?;
 
-        if request.gas.is_none() {
+        if request.inner.inner.gas.is_none() {
             // estimate if not provided
             if let Ok(gas) = self.estimate_gas(request.clone(), None, EvmOverrides::default()).await
             {
-                request.gas = Some(gas.to());
+                request.inner.inner.gas = Some(gas.to());
             }
         }
 
@@ -1042,11 +1045,11 @@ impl EthApi {
         })?;
         let (nonce, on_chain_nonce) = self.request_nonce(&request, from).await?;
 
-        if request.gas.is_none() {
+        if request.inner.inner.gas.is_none() {
             // estimate if not provided
             if let Ok(gas) = self.estimate_gas(request.clone(), None, EvmOverrides::default()).await
             {
-                request.gas = Some(gas.to());
+                request.inner.inner.gas = Some(gas.to());
             }
         }
 
@@ -1218,7 +1221,7 @@ impl EthApi {
                 tx.inner.max_fee_per_blob_gas = None; // preventing InsufficientFunds error
                 tx.inner.value = None; // preventing InsufficientFunds error
 
-                match self.seismic_call(tx, block_number, overrides).await {
+                match self.seismic_call(WithOtherFields::new(tx), block_number, overrides).await {
                     Ok(bytes) => Ok(bytes),
                     Err(original_err) => {
                         // Only attach a custom message if user tried to set `from` != zero
@@ -1245,12 +1248,11 @@ impl EthApi {
                         e
                     ))
                 })?;
-                let tx = seismic_alloy_rpc_types::TransactionRequest::try_from(typed_tx.clone())
-                    .map_err(|_| {
-                        BlockchainError::Message(
-                            "Failed to decode bytes to transaction request".to_string(),
-                        )
-                    })?;
+                let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
+                    BlockchainError::Message(
+                        "Failed to decode bytes to transaction request".to_string(),
+                    )
+                })?;
 
                 let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
                     "Can only make signedCall with Seismic Transactions".to_string(),
@@ -1261,19 +1263,18 @@ impl EthApi {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
                 let mut request = WithOtherFields::new(tx);
-                request.inner.from = Some(sender);
+                request.inner.inner.from = Some(sender);
 
                 self.seismic_call(request, block_number, overrides).await
             }
             seismic_alloy_rpc_types::SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
                     .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
-                let tx = seismic_alloy_rpc_types::TransactionRequest::try_from(typed_tx.clone())
-                    .map_err(|_| {
-                        BlockchainError::Message(
-                            "Failed to decode bytes to transaction request".to_string(),
-                        )
-                    })?;
+                let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
+                    BlockchainError::Message(
+                        "Failed to decode bytes to transaction request".to_string(),
+                    )
+                })?;
 
                 let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
                     "Can only make signedCall with Seismic Transactions".to_string(),
@@ -1284,7 +1285,7 @@ impl EthApi {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
                 let mut request = WithOtherFields::new(tx);
-                request.inner.from = Some(sender);
+                request.inner.inner.from = Some(sender);
                 self.seismic_call(request, block_number, overrides).await
             }
         }
@@ -2024,11 +2025,12 @@ impl EthApi {
         }
 
         let calldata = IERC20::balanceOfCall { target: address }.abi_encode();
-        let tx = TransactionRequest::default().with_to(token_address).with_input(calldata.clone());
+        let tx =
+            AlloyTransactionRequest::default().with_to(token_address).with_input(calldata.clone());
 
         // first collect all the slots that are used by the balanceOf call
         let access_list_result =
-            self.create_access_list(WithOtherFields::new(tx.clone()), None).await?;
+            self.create_access_list(WithOtherFields::new(tx.clone().into()), None).await?;
         let access_list = access_list_result.access_list;
 
         // now we can iterate over all the accessed slots and try to find the one that contains the
@@ -2048,7 +2050,7 @@ impl EthApi {
                 let evm_override = EvmOverrides::state(Some(state_override));
 
                 let Ok(result) =
-                    self.call(WithOtherFields::new(tx.clone()), None, evm_override).await
+                    self.call(WithOtherFields::new(tx.clone().into()), None, evm_override).await
                 else {
                     // overriding this slot failed
                     continue;
@@ -2337,7 +2339,11 @@ impl EthApi {
                         // Estimate gas
                         if tx_req.gas.is_none() {
                             if let Ok(gas) = self
-                                .estimate_gas(tx_req.clone(), None, EvmOverrides::default())
+                                .estimate_gas(
+                                    WithOtherFields::new(tx_req.inner.clone().into()),
+                                    None,
+                                    EvmOverrides::default(),
+                                )
                                 .await
                             {
                                 tx_req.gas = Some(gas.to());
@@ -2345,7 +2351,10 @@ impl EthApi {
                         }
 
                         // Build typed transaction request
-                        let typed = self.build_typed_tx_request(tx_req, *curr_nonce)?;
+                        let typed = self.build_typed_tx_request(
+                            WithOtherFields::new(tx_req.inner.into()),
+                            *curr_nonce,
+                        )?;
 
                         // Increment nonce
                         *curr_nonce += 1;
@@ -2811,8 +2820,11 @@ impl EthApi {
 
         seismic_request.set_from(from);
 
-        let gas_limit_fut =
-            self.estimate_gas(request.clone(), Some(BlockId::latest()), EvmOverrides::default());
+        let gas_limit_fut = self.estimate_gas(
+            seismic_request.clone(),
+            Some(BlockId::latest()),
+            EvmOverrides::default(),
+        );
 
         let fees_fut = self.fee_history(
             U256::from(EIP1559_FEE_ESTIMATION_PAST_BLOCKS),
@@ -2825,15 +2837,16 @@ impl EthApi {
         let gas_limit = gas_limit?;
         let fees = fees?;
 
-        request.gas = Some(gas_limit.to());
+        seismic_request.inner.inner.gas = Some(gas_limit.to());
 
         let base_fee = fees.latest_block_base_fee().unwrap_or_default();
 
         let estimation = eip1559_default_estimator(base_fee, &fees.reward.unwrap_or_default());
 
-        request.max_fee_per_gas = Some(estimation.max_fee_per_gas);
-        request.max_priority_fee_per_gas = Some(estimation.max_priority_fee_per_gas);
-        request.gas_price = None;
+        seismic_request.inner.inner.max_fee_per_gas = Some(estimation.max_fee_per_gas);
+        seismic_request.inner.inner.max_priority_fee_per_gas =
+            Some(estimation.max_priority_fee_per_gas);
+        seismic_request.inner.inner.gas_price = None;
 
         let envelope = request.build(&wallet).await.map_err(|_| WalletError::InternalError)?;
 
@@ -3016,8 +3029,12 @@ impl EthApi {
         call_to_estimate.gas = Some(highest_gas_limit as u64);
 
         // execute the call without writing to db
-        let ethres =
-            self.backend.call_with_state(&state, call_to_estimate, fees.clone(), block_env.clone());
+        let ethres = self.backend.call_with_state(
+            &state,
+            WithOtherFields::new(call_to_estimate.into()),
+            fees.clone(),
+            block_env.clone(),
+        );
 
         let gas_used = match ethres.try_into()? {
             GasEstimationCallResult::Success(gas) => Ok(gas),
@@ -3051,7 +3068,7 @@ impl EthApi {
             let request = seismic_request.clone().inner.inner;
             let ethres = self.backend.call_with_state(
                 &state,
-                request.clone(),
+                WithOtherFields::new(request.clone().into()),
                 fees.clone(),
                 block_env.clone(),
             );
@@ -3207,7 +3224,7 @@ impl EthApi {
 
     fn build_typed_tx_request(
         &self,
-        request: WithOtherFields<seismic_alloy_consensus::SeismicTransactionRequest>,
+        request: WithOtherFields<TransactionRequest>,
         nonce: u64,
     ) -> Result<TypedTransactionRequest> {
         let chain_id = request.chain_id.unwrap_or_else(|| self.chain_id());
@@ -3374,7 +3391,7 @@ impl EthApi {
     ) -> Result<(u64, u64)> {
         let highest_nonce =
             self.get_transaction_count(from, Some(BlockId::Number(BlockNumber::Pending))).await?;
-        let nonce = request.nonce.unwrap_or(highest_nonce);
+        let nonce = request.inner.nonce.unwrap_or(highest_nonce);
 
         Ok((nonce, highest_nonce))
     }

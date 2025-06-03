@@ -33,6 +33,7 @@ use crate::{
     },
     ForkChoice, NodeConfig, PrecompileFactory,
 };
+use alloy_eips::eip4844::MAX_BLOBS_PER_BLOCK;
 use alloy_chains::NamedChain;
 use alloy_consensus::{
     proofs::{calculate_receipt_root, calculate_transaction_root},
@@ -50,8 +51,7 @@ use alloy_eips::{
 };
 use alloy_evm::{eth::EthEvmContext, precompiles::PrecompilesMap, Database, Evm};
 use alloy_network::{
-    AnyHeader, AnyRpcBlock, AnyRpcHeader, AnyRpcTransaction, AnyTxEnvelope, AnyTxType,
-    EthereumWallet, UnknownTxEnvelope, UnknownTypedTransaction,
+    AnyHeader, AnyRpcHeader, AnyTxType, EthereumWallet, UnknownTxEnvelope, UnknownTypedTransaction
 };
 use alloy_primitives::{
     address, hex, keccak256, logs_bloom, map::HashMap, utils::Unit, Address, Bytes, TxHash, TxKind,
@@ -60,7 +60,7 @@ use alloy_primitives::{
 use alloy_rpc_types::{
     anvil::Forking,
     serde_helpers::JsonStorageKey,
-    simulate::{SimBlock, SimCallResult, SimulatePayload, SimulatedBlock},
+    simulate::{SimCallResult, SimulatedBlock},
     state::EvmOverrides,
     trace::{
         filter::TraceFilter,
@@ -132,7 +132,8 @@ use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
 
 use super::executor::new_evm_with_inspector_ref;
-use seismic_alloy_rpc_types::SeismicTransactionRequest as TransactionRequest;
+
+use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, TransactionRequest, SimBlock, SimulatePayload};
 
 pub mod cache;
 pub mod fork_db;
@@ -1441,16 +1442,19 @@ impl Backend {
         request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_request: Option<BlockRequest>,
-        overrides: Option<EvmOverrides>,
+        overrides: EvmOverrides,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
-        self.with_database_at(block_request, |state, block| {
-            let block_number = block.number.to::<u64>();
-            let (exit, out, gas, state) = match overrides {
-                None => self.seismic_call_with_state(state.as_dyn(), request, fee_details, block),
-                Some(overrides) => {
-                    let state = state::apply_state_overrides(overrides.into_iter().collect(), state)?;
-                    self.seismic_call_with_state(state.as_dyn(), request, fee_details, block)
-                },
+        self.with_database_at(block_request, |state, mut block| {
+            let block_number = block.number;
+            let (exit, out, gas, state) = {
+                let mut cache_db = CacheDB::new(state);
+                if let Some(state_overrides) = overrides.state {
+                    state::apply_state_overrides(state_overrides.into_iter().collect(), &mut cache_db)?;
+                }
+                if let Some(block_overrides) = overrides.block {
+                    state::apply_block_overrides(*block_overrides, &mut cache_db, &mut block);
+                }
+                self.seismic_call_with_state(cache_db.as_dyn(), request, fee_details, block)
             }?;
             trace!(target: "backend", "seismic call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
             Ok((exit, out, gas, state))

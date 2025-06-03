@@ -48,15 +48,15 @@ pub fn trie_storage(storage: &HashMap<U256, FlaggedStorage>) -> Vec<(Nibbles, Ve
 }
 
 /// Builds iterator over stored key-value pairs ready for account trie root calculation.
-pub fn trie_accounts(accounts: &HashMap<Address, DbAccount>) -> Vec<(Nibbles, Vec<u8>)> {
+pub fn trie_accounts(accounts: &HashMap<Address, DbAccount>) -> Vec<(Nibbles, Vec<u8>, bool)> {
     let mut accounts = accounts
         .iter()
         .map(|(address, account)| {
             let data = trie_account_rlp(&account.info, &account.storage);
-            (Nibbles::unpack(keccak256(*address)), data)
+            (Nibbles::unpack(keccak256(*address)), data, false)
         })
         .collect::<Vec<_>>();
-    accounts.sort_by(|(key1, _), (key2, _)| key1.cmp(key2));
+    accounts.sort_by(|(key1, _, _), (key2, _, _)| key1.cmp(key2));
 
     accounts
 }
@@ -119,7 +119,8 @@ where
             }
             (None, Some(account_state_diff)) => {
                 for (key, value) in account_state_diff {
-                    cache_db.insert_account_storage(*account, (*key).into(), (*value).into())?;
+                    let value_u256: U256 = (*value).into();
+                    cache_db.insert_account_storage(*account, (*key).into(), value_u256.into())?;
                 }
             }
         };

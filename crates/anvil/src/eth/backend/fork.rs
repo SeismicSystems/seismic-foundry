@@ -3,7 +3,7 @@
 use crate::eth::{backend::db::Db, error::BlockchainError, pool::transactions::PoolTransaction};
 use alloy_consensus::Account;
 use alloy_eips::eip2930::AccessListResult;
-use alloy_network::{AnyRpcBlock, AnyRpcTransaction, BlockResponse, TransactionResponse};
+use alloy_network::{BlockResponse, TransactionResponse};
 use alloy_primitives::{
     map::{FbHashMap, HashMap},
     Address, Bytes, StorageValue, B256, U256,
@@ -34,7 +34,7 @@ use revm::context_interface::block::BlobExcessGasAndPrice;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock as AsyncRwLock;
 
-use seismic_alloy_rpc_types::SeismicTransactionRequest as TransactionRequest;
+use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, TransactionRequest};
 
 /// Represents a fork of a remote client
 ///

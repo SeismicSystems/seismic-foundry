@@ -16,7 +16,7 @@ use foundry_common::serde_helpers::{
     deserialize_number, deserialize_number_opt, deserialize_number_seq,
 };
 
-use seismic_alloy_rpc_types::SeismicTransactionRequest as TransactionRequest;
+use seismic_prelude::foundry::TransactionRequest;
 
 pub mod block;
 pub mod subscription;

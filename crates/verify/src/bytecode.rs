@@ -8,10 +8,7 @@ use crate::{
     verify::VerifierArgs,
 };
 use alloy_primitives::{hex, Address, Bytes, TxKind, U256};
-use alloy_provider::{
-    network::{TransactionBuilder},
-    Provider,
-};
+use alloy_provider::{network::TransactionBuilder, Provider};
 use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionInput};
 use clap::{Parser, ValueHint};
 use eyre::{Context, OptionExt, Result};
@@ -26,7 +23,6 @@ use foundry_evm::{constants::DEFAULT_CREATE2_DEPLOYER, utils::configure_tx_req_e
 use foundry_evm_core::AsEnvMut;
 use revm::state::AccountInfo;
 use std::path::PathBuf;
-
 
 use seismic_prelude::foundry::{AnyTxEnvelope, TransactionRequest};
 
