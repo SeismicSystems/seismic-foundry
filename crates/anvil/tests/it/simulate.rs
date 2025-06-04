@@ -9,7 +9,7 @@ use alloy_rpc_types::{
 use anvil::{spawn, NodeConfig};
 use foundry_test_utils::rpc;
 
-use seismic_prelude::foundry::{SimulatePayload, SimBlock};
+use seismic_prelude::foundry::{SimBlock, SimulatePayload};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_fork_simulate_v1() {

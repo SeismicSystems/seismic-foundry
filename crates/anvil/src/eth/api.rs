@@ -39,8 +39,8 @@ use alloy_consensus::{
 use alloy_dyn_abi::TypedData;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_network::{
-    eip2718::Decodable2718, BlockResponse, Ethereum, NetworkWallet,
-    TransactionBuilder, TransactionResponse,
+    eip2718::Decodable2718, BlockResponse, Ethereum, NetworkWallet, TransactionBuilder,
+    TransactionResponse,
 };
 use alloy_primitives::{
     map::{HashMap, HashSet},
@@ -54,7 +54,7 @@ use alloy_rpc_types::{
     anvil::{
         ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
     },
-    simulate::{SimulatedBlock},
+    simulate::SimulatedBlock,
     state::{AccountOverride, EvmOverrides, StateOverridesBuilder},
     trace::{
         filter::TraceFilter,
@@ -103,7 +103,9 @@ use std::{future::Future, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use yansi::Paint;
 
-use seismic_prelude::foundry::{TransactionRequest, AnyRpcBlock, AnyRpcTransaction, SimulatePayload};
+use seismic_prelude::foundry::{
+    AnyRpcBlock, AnyRpcTransaction, SimulatePayload, TransactionRequest,
+};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));

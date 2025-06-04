@@ -121,7 +121,6 @@ impl fmt::Debug for PoolTransaction {
 impl TryFrom<AnyRpcTransaction> for PoolTransaction {
     type Error = eyre::Error;
     fn try_from(value: AnyRpcTransaction) -> Result<Self, Self::Error> {
-        // TODO: impl this
         let typed_transaction = TypedTransaction::try_from(value)?;
         let pending_transaction = PendingTransaction::new(typed_transaction)?;
         Ok(Self {

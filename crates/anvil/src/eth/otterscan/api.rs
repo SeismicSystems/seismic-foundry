@@ -4,11 +4,7 @@ use crate::eth::{
     EthApi,
 };
 use alloy_consensus::Transaction as TransactionTrait;
-use alloy_network::{
-    BlockResponse,
-    TransactionResponse,
-    AnyHeader, AnyRpcHeader,
-};
+use alloy_network::{AnyHeader, AnyRpcHeader, BlockResponse, TransactionResponse};
 use alloy_primitives::{Address, Bytes, B256, U256};
 use alloy_rpc_types::{
     trace::{

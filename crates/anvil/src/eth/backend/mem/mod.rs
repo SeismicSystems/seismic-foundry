@@ -33,10 +33,12 @@ use crate::{
     },
     ForkChoice, NodeConfig, PrecompileFactory,
 };
-use alloy_eips::eip4844::{MAX_BLOBS_PER_BLOCK_DENCUN};
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    proofs::{calculate_receipt_root, calculate_transaction_root}, transaction::Recovered, Account, BlockHeader, EnvKzgSettings, EthereumTxEnvelope, Header, Receipt, ReceiptWithBloom, Signed, Transaction as TransactionTrait
+    proofs::{calculate_receipt_root, calculate_transaction_root},
+    transaction::Recovered,
+    Account, BlockHeader, EnvKzgSettings, EthereumTxEnvelope, Header, Receipt, ReceiptWithBloom,
+    Signed, Transaction as TransactionTrait,
 };
 use alloy_eips::{
     eip1559::BaseFeeParams,
@@ -44,11 +46,12 @@ use alloy_eips::{
         EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID, EIP7702_TX_TYPE_ID,
         LEGACY_TX_TYPE_ID,
     },
+    eip4844::MAX_BLOBS_PER_BLOCK_DENCUN,
     eip7840::BlobParams,
 };
 use alloy_evm::{eth::EthEvmContext, precompiles::PrecompilesMap, Database, Evm};
 use alloy_network::{
-    AnyHeader, AnyRpcHeader, AnyTxType, EthereumWallet, UnknownTxEnvelope, UnknownTypedTransaction
+    AnyHeader, AnyRpcHeader, AnyTxType, EthereumWallet, UnknownTxEnvelope, UnknownTypedTransaction,
 };
 use alloy_primitives::{
     address, hex, keccak256, logs_bloom, map::HashMap, utils::Unit, Address, Bytes, TxHash, TxKind,
@@ -130,7 +133,10 @@ use tokio::sync::RwLock as AsyncRwLock;
 
 use super::executor::new_evm_with_inspector_ref;
 
-use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, TxEnvelope, TransactionRequest, SimBlock, SimulatePayload, TransactionReceipt};
+use seismic_prelude::foundry::{
+    AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, SimBlock, SimulatePayload, TransactionReceipt,
+    TransactionRequest, TxEnvelope,
+};
 
 pub mod cache;
 pub mod fork_db;
@@ -2818,20 +2824,21 @@ impl Backend {
             TypedReceipt::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         };
 
-        let inner: alloy_rpc_types::TransactionReceipt<TypedReceipt<Receipt<Log>>> = TransactionReceipt {
-            inner: inner,
-            transaction_hash: info.transaction_hash,
-            transaction_index: Some(info.transaction_index),
-            block_number: Some(block.header.number),
-            gas_used: info.gas_used,
-            contract_address: info.contract_address,
-            effective_gas_price,
-            block_hash: Some(block_hash),
-            from: info.from,
-            to: info.to,
-            blob_gas_price: Some(blob_gas_price),
-            blob_gas_used,
-        };
+        let inner: alloy_rpc_types::TransactionReceipt<TypedReceipt<Receipt<Log>>> =
+            TransactionReceipt {
+                inner,
+                transaction_hash: info.transaction_hash,
+                transaction_index: Some(info.transaction_index),
+                block_number: Some(block.header.number),
+                gas_used: info.gas_used,
+                contract_address: info.contract_address,
+                effective_gas_price,
+                block_hash: Some(block_hash),
+                from: info.from,
+                to: info.to,
+                blob_gas_price: Some(blob_gas_price),
+                blob_gas_used,
+            };
 
         Some(MinedTransactionReceipt { inner, out: info.out.map(|o| o.0.into()) })
     }
@@ -3228,7 +3235,10 @@ impl TransactionValidator for Backend {
 
             // Ensure the tx does not exceed the max blobs per block.
             if blob_count > MAX_BLOBS_PER_BLOCK_DENCUN {
-                return Err(InvalidTransactionError::TooManyBlobs(MAX_BLOBS_PER_BLOCK_DENCUN, blob_count));
+                return Err(InvalidTransactionError::TooManyBlobs(
+                    MAX_BLOBS_PER_BLOCK_DENCUN,
+                    blob_count,
+                ));
             }
 
             // Check for any blob validation errors
@@ -3347,8 +3357,7 @@ pub fn transaction_build(
         }
     }
 
-    // TODO(christian): fix
-    let mut transaction: Transaction<AnyTxEnvelope> = eth_transaction.clone().into();
+    let mut transaction: Transaction<TxEnvelope> = eth_transaction.clone().into();
 
     let effective_gas_price = if !eth_transaction.is_dynamic_fee() {
         transaction.effective_gas_price(base_fee)
@@ -3373,9 +3382,8 @@ pub fn transaction_build(
     // `BYPASS_SIGNATURE` which would result in different hashes
     // Note: for impersonated transactions this only concerns pending transactions because
     // there's // no `info` yet.
-    let hash = tx_hash.unwrap_or(Into::<TxEnvelope>::into(*envelope.inner()).tx_hash());
+    let hash = tx_hash.unwrap_or(envelope.inner().tx_hash());
 
-    // TODO(christian): fix
     let envelope = match envelope.into_inner().into() {
         TxEnvelope::Legacy(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
@@ -3431,7 +3439,10 @@ pub fn transaction_build(
 /// `storage_key` is the hash of the desired storage key, meaning
 /// this will only work correctly under a secure trie.
 /// `storage_key` == keccak(key)
-pub fn prove_storage(storage: &HashMap<U256, alloy_primitives::FlaggedStorage>, keys: &[B256]) -> Vec<Vec<Bytes>> {
+pub fn prove_storage(
+    storage: &HashMap<U256, alloy_primitives::FlaggedStorage>,
+    keys: &[B256],
+) -> Vec<Vec<Bytes>> {
     let keys: Vec<_> = keys.iter().map(|key| Nibbles::unpack(keccak256(key))).collect();
 
     let mut builder = HashBuilder::default().with_proof_retainer(ProofRetainer::new(keys.clone()));

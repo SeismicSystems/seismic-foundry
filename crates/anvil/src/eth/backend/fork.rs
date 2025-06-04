@@ -14,7 +14,7 @@ use alloy_provider::{
 };
 use alloy_rpc_types::{
     request::TransactionRequest as AlloyTransactionRequest,
-    simulate::{SimulatedBlock},
+    simulate::SimulatedBlock,
     trace::{
         geth::{GethDebugTracingOptions, GethTrace},
         parity::LocalizedTransactionTrace as Trace,
@@ -34,7 +34,9 @@ use revm::context_interface::block::BlobExcessGasAndPrice;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock as AsyncRwLock;
 
-use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, TransactionRequest, SimulatePayload};
+use seismic_prelude::foundry::{
+    AnyRpcBlock, AnyRpcTransaction, SimulatePayload, TransactionRequest,
+};
 
 /// Represents a fork of a remote client
 ///

@@ -15,7 +15,7 @@ use foundry_common::serde_helpers::{
     deserialize_number, deserialize_number_opt, deserialize_number_seq,
 };
 
-use seismic_prelude::foundry::{TransactionRequest, SimulatePayload};
+use seismic_prelude::foundry::{SimulatePayload, TransactionRequest};
 
 pub mod block;
 pub mod subscription;

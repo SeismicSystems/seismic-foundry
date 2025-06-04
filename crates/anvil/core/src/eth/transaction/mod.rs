@@ -4,8 +4,8 @@ use alloy_consensus::{
         eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
         Recovered, TxEip7702,
     },
-    Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559, TxEip2930,
-    TxLegacy, TxReceipt, Typed2718,
+    EthereumTxEnvelope, Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559,
+    TxEip2930, TxLegacy, TxReceipt, Typed2718,
 };
 use alloy_primitives::{Address, Bloom, Bytes, Log, Signature, TxHash, TxKind, B256, U256, U64};
 use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
@@ -29,7 +29,8 @@ use std::{
 
 use alloy_eips::{Decodable2718, Encodable2718};
 use seismic_prelude::foundry::{
-    AnyTransactionReceipt, RpcTransaction, TransactionRequest, TxEnvelope, AnyReceiptEnvelope, TransactionReceipt
+    AnyReceiptEnvelope, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, RpcTransaction,
+    TransactionReceipt, TransactionRequest, TxEnvelope,
 };
 
 pub trait SeismicCompatible:
@@ -689,77 +690,26 @@ pub enum TypedTransaction {
     Seismic(Signed<seismic_alloy_consensus::TxSeismic>),
 }
 
-/// This is a function that demotes TypedTransaction to TransactionRequest for greater flexibility
-/// over the type.
-///
-/// This function is purely for convenience and specific use cases, e.g. RLP encoded transactions
-/// decode to TypedTransactions where the API over TypedTransctions is quite strict.
-impl TryFrom<TypedTransaction> for TransactionRequest {
+impl TryFrom<AnyRpcTransaction> for TypedTransaction {
     type Error = ConversionError;
 
-    fn try_from(value: TypedTransaction) -> Result<Self, Self::Error> {
-        let from =
-            value.recover().map_err(|_| ConversionError::Custom("InvalidSignature".to_string()))?;
-        let essentials = value.essentials();
-        let tx_type = value.r#type();
-
-        Ok(Self {
-            inner: AlloyTransactionRequest {
-                from: Some(from),
-                to: Some(value.kind()),
-                gas_price: essentials.gas_price,
-                max_fee_per_gas: essentials.max_fee_per_gas,
-                max_priority_fee_per_gas: essentials.max_priority_fee_per_gas,
-                max_fee_per_blob_gas: essentials.max_fee_per_blob_gas,
-                gas: Some(essentials.gas_limit),
-                value: Some(essentials.value),
-                input: essentials.input.into(),
-                nonce: Some(essentials.nonce),
-                chain_id: essentials.chain_id,
-                transaction_type: tx_type,
-                ..Default::default()
+    fn try_from(value: AnyRpcTransaction) -> Result<Self, Self::Error> {
+        let WithOtherFields { inner, .. } = value.0;
+        match inner.inner.into_inner() {
+            AnyTxEnvelope::Ethereum(eth_tx) => match eth_tx {
+                EthereumTxEnvelope::Legacy(tx) => Ok(TypedTransaction::Legacy(tx)),
+                EthereumTxEnvelope::Eip2930(tx) => Ok(TypedTransaction::EIP2930(tx)),
+                EthereumTxEnvelope::Eip1559(tx) => Ok(TypedTransaction::EIP1559(tx)),
+                EthereumTxEnvelope::Eip4844(tx) => Ok(TypedTransaction::EIP4844(tx)),
+                EthereumTxEnvelope::Eip7702(tx) => Ok(TypedTransaction::EIP7702(tx)),
             },
-            seismic_elements: value.seismic_elements(),
-        })
+            AnyTxEnvelope::Seismic(tx) => Ok(TypedTransaction::Seismic(tx)),
+            AnyTxEnvelope::Unknown(_) => {
+                Err(ConversionError::Custom("UnknownTxType".to_string()))
+            }
+        }
     }
 }
-
-// impl TryFrom<AnyRpcTransaction> for TypedTransaction {
-//     type Error = ConversionError;
-
-//     fn try_from(value: AnyRpcTransaction) -> Result<Self, Self::Error> {
-//         let WithOtherFields { inner, .. } = value.0;
-//         /*
-//         let from = inner.inner.signer();
-//         */
-//         match inner.inner.into_inner() {
-//             seismic_alloy_consensus::SeismicTxEnvelope::Legacy(tx) => Ok(Self::Legacy(tx)),
-//             seismic_alloy_consensus::SeismicTxEnvelope::Eip2930(tx) => Ok(Self::EIP2930(tx)),
-//             seismic_alloy_consensus::SeismicTxEnvelope::Eip1559(tx) => Ok(Self::EIP1559(tx)),
-//             seismic_alloy_consensus::SeismicTxEnvelope::Eip4844(tx) => Ok(Self::EIP4844(tx)),
-//             seismic_alloy_consensus::SeismicTxEnvelope::Eip7702(tx) => Ok(Self::EIP7702(tx)),
-//             seismic_alloy_consensus::SeismicTxEnvelope::Seismic(tx) => Ok(Self::Seismic(tx)),
-//             /*
-//             AnyTxEnvelope::Unknown(mut tx) => {
-//                 // Try to convert to deposit transaction
-//                 if tx.ty() == DEPOSIT_TX_TYPE_ID {
-//                     tx.inner.fields.insert("from".to_string(),
-// serde_json::to_value(from).unwrap());                     let deposit_tx =
-//                         tx.inner.fields.deserialize_into::<TxDeposit>().map_err(|e| {
-//                             ConversionError::Custom(format!(
-//                                 "Failed to deserialize deposit tx: {e}"
-//                             ))
-//                         })?;
-
-//                     return Ok(Self::Deposit(deposit_tx));
-//                 };
-
-//                 Err(ConversionError::Custom("UnknownTxType".to_string()))
-//             }
-//             */
-//         }
-//     }
-// }
 
 impl TypedTransaction {
     /// Returns true if the transaction uses dynamic fees: EIP1559, EIP4844 or EIP7702
