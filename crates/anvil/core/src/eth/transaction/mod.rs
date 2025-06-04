@@ -690,6 +690,36 @@ pub enum TypedTransaction {
     Seismic(Signed<seismic_alloy_consensus::TxSeismic>),
 }
 
+impl TryFrom<TypedTransaction> for TransactionRequest {
+    type Error = ConversionError;
+
+    fn try_from(value: TypedTransaction) -> Result<Self, Self::Error> {
+        let from =
+            value.recover().map_err(|_| ConversionError::Custom("InvalidSignature".to_string()))?;
+        let essentials = value.essentials();
+        let tx_type = value.r#type();
+
+        Ok(Self {
+            inner: AlloyTransactionRequest {
+                from: Some(from),
+                to: Some(value.kind()),
+                gas_price: essentials.gas_price,
+                max_fee_per_gas: essentials.max_fee_per_gas,
+                max_priority_fee_per_gas: essentials.max_priority_fee_per_gas,
+                max_fee_per_blob_gas: essentials.max_fee_per_blob_gas,
+                gas: Some(essentials.gas_limit),
+                value: Some(essentials.value),
+                input: essentials.input.into(),
+                nonce: Some(essentials.nonce),
+                chain_id: essentials.chain_id,
+                transaction_type: tx_type,
+                ..Default::default()
+            },
+            seismic_elements: value.seismic_elements(),
+        })
+    }
+}
+
 impl TryFrom<AnyRpcTransaction> for TypedTransaction {
     type Error = ConversionError;
 
