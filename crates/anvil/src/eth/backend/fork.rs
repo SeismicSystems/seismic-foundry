@@ -13,7 +13,6 @@ use alloy_provider::{
     Provider,
 };
 use alloy_rpc_types::{
-    request::TransactionRequest as AlloyTransactionRequest,
     simulate::SimulatedBlock,
     trace::{
         geth::{GethDebugTracingOptions, GethTrace},
@@ -206,10 +205,10 @@ impl ClientFork {
     /// Sends `eth_simulateV1`
     pub async fn simulate_v1(
         &self,
-        request: &SimulatePayload,
-        block: Option<BlockNumber>,
+        _request: &SimulatePayload,
+        _block: Option<BlockNumber>,
     ) -> Result<Vec<SimulatedBlock<AnyRpcBlock>>, TransportError> {
-        unimplemented!();
+        unimplemented!("TODO: implement seismic simulate");
         /*
         // TODO(christian): need to implement a separate simulate call for seismic tx,
         // because otherwise we need to re-fork alloy...

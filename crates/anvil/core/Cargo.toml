@@ -13,7 +13,6 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-derive_more.workspace = true
 seismic-alloy-rpc-types.workspace = true
 seismic-alloy-consensus.workspace = true
 seismic-enclave.workspace = true
@@ -37,7 +36,7 @@ alloy-eips.workspace = true
 alloy-consensus = { workspace = true, features = ["k256", "kzg"] }
 alloy-dyn-abi = { workspace = true, features = ["std", "eip712", "seismic"] }
 op-alloy-consensus = { workspace = true, features = ["serde"] }
-alloy-network.workspace = true
+# alloy-network.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 bytes.workspace = true
