@@ -1,6 +1,6 @@
 use alloy_network::{Ethereum, EthereumWallet};
 use alloy_provider::{
-    fillers::{ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller},
+    fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller},
     Identity, RootProvider,
 };
 use foundry_common::provider::{
