@@ -6,6 +6,9 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![allow(elided_lifetimes_in_paths)] // Cheats context uses 3 lifetimes
 
+// TODO: we probably need to wire this in...
+use seismic_revm as _;
+
 #[macro_use]
 extern crate foundry_common;
 
