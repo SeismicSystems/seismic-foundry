@@ -209,6 +209,8 @@ impl ClientFork {
         request: &SimulatePayload,
         block: Option<BlockNumber>,
     ) -> Result<Vec<SimulatedBlock<AnyRpcBlock>>, TransportError> {
+        unimplemented!();
+        /*
         // TODO(christian): need to implement a separate simulate call for seismic tx,
         // because otherwise we need to re-fork alloy...
         let mut simulate_call = self.provider().simulate(request);
@@ -219,6 +221,7 @@ impl ClientFork {
         let res = simulate_call.await?;
 
         Ok(res)
+        */
     }
 
     /// Sends `eth_estimateGas`

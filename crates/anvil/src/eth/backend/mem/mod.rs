@@ -3415,7 +3415,6 @@ pub fn transaction_build(
             let new_signed = Signed::new_unchecked(tx, signature, hash);
             AnyTxEnvelope::Seismic(new_signed)
         }
-        _ => unreachable!("unknown tx type"),
     };
 
     let tx = Transaction {
