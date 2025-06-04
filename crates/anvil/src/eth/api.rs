@@ -97,14 +97,13 @@ use revm::{
     interpreter::{return_ok, return_revert, InstructionResult},
     primitives::eip7702::PER_EMPTY_ACCOUNT_COST,
 };
-use seismic_alloy_consensus::Decodable712;
 use seismic_enclave::rpc::SyncEnclaveApiClient;
 use std::{future::Future, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use yansi::Paint;
 
 use seismic_prelude::foundry::{
-    AnyRpcBlock, AnyRpcTransaction, SimulatePayload, TransactionRequest,
+    AnyRpcBlock, AnyRpcTransaction, SimulatePayload, TransactionRequest, Decodable712,
 };
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
