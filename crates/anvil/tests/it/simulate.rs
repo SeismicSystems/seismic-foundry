@@ -3,12 +3,13 @@
 use alloy_primitives::{address, TxKind, U256};
 use alloy_rpc_types::{
     request::TransactionRequest,
-    simulate::{SimBlock, SimulatePayload},
     state::{AccountOverride, StateOverridesBuilder},
     BlockOverrides,
 };
 use anvil::{spawn, NodeConfig};
 use foundry_test_utils::rpc;
+
+use seismic_prelude::foundry::{SimulatePayload, SimBlock};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_fork_simulate_v1() {

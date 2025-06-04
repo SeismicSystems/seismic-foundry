@@ -33,13 +33,10 @@ use crate::{
     },
     ForkChoice, NodeConfig, PrecompileFactory,
 };
-use alloy_eips::eip4844::MAX_BLOBS_PER_BLOCK;
+use alloy_eips::eip4844::{MAX_BLOBS_PER_BLOCK_DENCUN};
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    proofs::{calculate_receipt_root, calculate_transaction_root},
-    transaction::Recovered,
-    Account, BlockHeader, EnvKzgSettings, Header, Receipt, ReceiptWithBloom, Signed,
-    Transaction as TransactionTrait, TxEnvelope,
+    proofs::{calculate_receipt_root, calculate_transaction_root}, transaction::Recovered, Account, BlockHeader, EnvKzgSettings, EthereumTxEnvelope, Header, Receipt, ReceiptWithBloom, Signed, Transaction as TransactionTrait
 };
 use alloy_eips::{
     eip1559::BaseFeeParams,
@@ -73,7 +70,7 @@ use alloy_rpc_types::{
     transaction::TransactionRequest as AlloyTransactionRequest,
     AccessList, Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions,
     EIP1186AccountProofResponse as AccountProof, EIP1186StorageProof as StorageProof, Filter,
-    Header as AlloyHeader, Index, Log, Transaction, TransactionReceipt,
+    Header as AlloyHeader, Index, Log, Transaction,
 };
 use alloy_serde::{OtherFields, WithOtherFields};
 use alloy_signer::Signature;
@@ -133,7 +130,7 @@ use tokio::sync::RwLock as AsyncRwLock;
 
 use super::executor::new_evm_with_inspector_ref;
 
-use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, TransactionRequest, SimBlock, SimulatePayload};
+use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, TxEnvelope, TransactionRequest, SimBlock, SimulatePayload, TransactionReceipt};
 
 pub mod cache;
 pub mod fork_db;
@@ -1660,7 +1657,8 @@ impl Backend {
                 }
 
                 // execute all calls in that block
-                for (req_idx, request) in calls.into_iter().enumerate() {
+                for (req_idx, seismic_request) in calls.into_iter().enumerate() {
+                    let request = seismic_request.inner.clone();
                     let fee_details = FeeDetails::new(
                         request.gas_price,
                         request.max_fee_per_gas,
@@ -1670,7 +1668,7 @@ impl Backend {
                     .or_zero_fees();
 
                     let mut env = self.build_call_env(
-                        WithOtherFields::new(request.clone()),
+                        WithOtherFields::new(seismic_request.clone()),
                         fee_details,
                         block_env.clone(),
                     );
@@ -1716,7 +1714,7 @@ impl Backend {
                     // create the transaction from a request
                     let from = request.from.unwrap_or_default();
                     let request =
-                        transaction_request_to_typed(WithOtherFields::new(request)).unwrap();
+                        transaction_request_to_typed(WithOtherFields::new(seismic_request)).unwrap();
                     let tx = build_typed_transaction(
                         request,
                         Signature::new(Default::default(), Default::default(), false),
@@ -2806,7 +2804,7 @@ impl Backend {
         let receipt_with_bloom =
             ReceiptWithBloom { receipt, logs_bloom: tx_receipt.as_receipt_with_bloom().logs_bloom };
 
-        let inner = match tx_receipt {
+        let inner: TypedReceipt<Receipt<Log>> = match tx_receipt {
             TypedReceipt::EIP1559(_) => TypedReceipt::EIP1559(receipt_with_bloom),
             TypedReceipt::Legacy(_) => TypedReceipt::Legacy(receipt_with_bloom),
             TypedReceipt::EIP2930(_) => TypedReceipt::EIP2930(receipt_with_bloom),
@@ -2820,8 +2818,8 @@ impl Backend {
             TypedReceipt::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         };
 
-        let inner = TransactionReceipt {
-            inner,
+        let inner: alloy_rpc_types::TransactionReceipt<TypedReceipt<Receipt<Log>>> = TransactionReceipt {
+            inner: inner,
             transaction_hash: info.transaction_hash,
             transaction_index: Some(info.transaction_index),
             block_number: Some(block.header.number),
@@ -2975,9 +2973,8 @@ impl Backend {
             let mut builder = HashBuilder::default()
                 .with_proof_retainer(ProofRetainer::new(vec![Nibbles::unpack(keccak256(address))]));
 
-            for (key, account) in trie_accounts(db) {
-                // TODO: do accounts have private/public?
-                builder.add_leaf(key, &account, false);
+            for (key, account, is_private) in trie_accounts(db) {
+                builder.add_leaf(key, &account, is_private);
             }
 
             let _ = builder.root();
@@ -3230,12 +3227,12 @@ impl TransactionValidator for Backend {
             }
 
             // Ensure the tx does not exceed the max blobs per block.
-            if blob_count > MAX_BLOBS_PER_BLOCK {
-                return Err(InvalidTransactionError::TooManyBlobs(MAX_BLOBS_PER_BLOCK, blob_count));
+            if blob_count > MAX_BLOBS_PER_BLOCK_DENCUN {
+                return Err(InvalidTransactionError::TooManyBlobs(MAX_BLOBS_PER_BLOCK_DENCUN, blob_count));
             }
 
             // Check for any blob validation errors
-            if let Err(err) = tx.validate(env.cfg.kzg_settings.get()) {
+            if let Err(err) = tx.validate(EnvKzgSettings::default().get()) {
                 return Err(InvalidTransactionError::BlobTransactionValidationError(err));
             }
         }
@@ -3273,7 +3270,7 @@ impl TransactionValidator for Backend {
             let inner = seismic_tx.tx();
             let _decrypted_data = inner
                 .seismic_elements
-                .server_decrypt(&MockEnclaveClient::new(), &inner.input)
+                .server_decrypt(&seismic_enclave::MockEnclaveClient::new(), &inner.input)
                 .map_err(|_e| {
                     InvalidTransactionError::SeismicDecryptionFailed(format!(
                         "Failed to decrypt seismic calldata"
@@ -3350,7 +3347,8 @@ pub fn transaction_build(
         }
     }
 
-    let mut transaction: Transaction = eth_transaction.clone().into();
+    // TODO(christian): fix
+    let mut transaction: Transaction<AnyTxEnvelope> = eth_transaction.clone().into();
 
     let effective_gas_price = if !eth_transaction.is_dynamic_fee() {
         transaction.effective_gas_price(base_fee)
@@ -3375,38 +3373,39 @@ pub fn transaction_build(
     // `BYPASS_SIGNATURE` which would result in different hashes
     // Note: for impersonated transactions this only concerns pending transactions because
     // there's // no `info` yet.
-    let hash = tx_hash.unwrap_or(*envelope.tx_hash());
+    let hash = tx_hash.unwrap_or(Into::<TxEnvelope>::into(*envelope.inner()).tx_hash());
 
-    let envelope = match envelope.into_inner() {
+    // TODO(christian): fix
+    let envelope = match envelope.into_inner().into() {
         TxEnvelope::Legacy(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Legacy(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Legacy(new_signed))
         }
         TxEnvelope::Eip1559(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Eip1559(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip1559(new_signed))
         }
         TxEnvelope::Eip2930(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Eip2930(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip2930(new_signed))
         }
         TxEnvelope::Eip4844(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Eip4844(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip4844(new_signed))
         }
         TxEnvelope::Eip7702(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Eip7702(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip7702(new_signed))
         }
         TxEnvelope::Seismic(signed_tx) => {
             let (tx, signature, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(tx, signature, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Seismic(new_signed))
+            AnyTxEnvelope::Seismic(new_signed)
         }
         _ => unreachable!("unknown tx type"),
     };
@@ -3432,7 +3431,7 @@ pub fn transaction_build(
 /// `storage_key` is the hash of the desired storage key, meaning
 /// this will only work correctly under a secure trie.
 /// `storage_key` == keccak(key)
-pub fn prove_storage(storage: &HashMap<U256, FlaggedStorage>, keys: &[B256]) -> Vec<Vec<Bytes>> {
+pub fn prove_storage(storage: &HashMap<U256, alloy_primitives::FlaggedStorage>, keys: &[B256]) -> Vec<Vec<Bytes>> {
     let keys: Vec<_> = keys.iter().map(|key| Nibbles::unpack(keccak256(key))).collect();
 
     let mut builder = HashBuilder::default().with_proof_retainer(ProofRetainer::new(keys.clone()));

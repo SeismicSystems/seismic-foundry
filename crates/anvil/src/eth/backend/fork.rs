@@ -14,7 +14,7 @@ use alloy_provider::{
 };
 use alloy_rpc_types::{
     request::TransactionRequest as AlloyTransactionRequest,
-    simulate::{SimulatePayload, SimulatedBlock},
+    simulate::{SimulatedBlock},
     trace::{
         geth::{GethDebugTracingOptions, GethTrace},
         parity::LocalizedTransactionTrace as Trace,
@@ -34,7 +34,7 @@ use revm::context_interface::block::BlobExcessGasAndPrice;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock as AsyncRwLock;
 
-use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, TransactionRequest};
+use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, TransactionRequest, SimulatePayload};
 
 /// Represents a fork of a remote client
 ///
@@ -207,6 +207,8 @@ impl ClientFork {
         request: &SimulatePayload,
         block: Option<BlockNumber>,
     ) -> Result<Vec<SimulatedBlock<AnyRpcBlock>>, TransportError> {
+        // TODO(christian): need to implement a separate simulate call for seismic tx,
+        // because otherwise we need to re-fork alloy...
         let mut simulate_call = self.provider().simulate(request);
         if let Some(n) = block {
             simulate_call = simulate_call.number(n.as_number().unwrap());

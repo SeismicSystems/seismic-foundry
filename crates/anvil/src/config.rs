@@ -17,7 +17,7 @@ use crate::{
 };
 use alloy_consensus::BlockHeader;
 use alloy_genesis::Genesis;
-use alloy_network::{AnyNetwork, TransactionResponse};
+use alloy_network::{TransactionResponse};
 use alloy_primitives::{hex, map::HashMap, utils::Unit, BlockNumber, TxHash, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::{Block, BlockNumberOrTag};
@@ -61,6 +61,8 @@ use std::{
 };
 use tokio::sync::RwLock as TokioRwLock;
 use yansi::Paint;
+
+use seismic_prelude::foundry::AnyNetwork;
 
 pub use foundry_common::version::SHORT_VERSION as VERSION_MESSAGE;
 
@@ -1422,7 +1424,7 @@ async fn derive_block_and_transactions(
                 .get_transaction_by_hash(transaction_hash.0.into())
                 .await?
                 .ok_or_else(|| eyre::eyre!("failed to get fork transaction by hash"))?;
-            let transaction_block_number = transaction.block_number.unwrap();
+            let transaction_block_number = transaction.0.block_number.unwrap();
 
             // TODO: seismic provider
             // Get the block pertaining to the fork transaction

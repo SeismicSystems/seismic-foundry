@@ -54,7 +54,7 @@ use alloy_rpc_types::{
     anvil::{
         ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
     },
-    simulate::{SimulatePayload, SimulatedBlock},
+    simulate::{SimulatedBlock},
     state::{AccountOverride, EvmOverrides, StateOverridesBuilder},
     trace::{
         filter::TraceFilter,
@@ -103,7 +103,7 @@ use std::{future::Future, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use yansi::Paint;
 
-use seismic_prelude::foundry::{TransactionRequest, AnyRpcBlock, AnyRpcTransaction};
+use seismic_prelude::foundry::{TransactionRequest, AnyRpcBlock, AnyRpcTransaction, SimulatePayload};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -558,7 +558,7 @@ impl EthApi {
         match self.pool.get_transaction(hash) {
             Some(tx) => Ok(Some(tx.transaction.encoded_2718().into())),
             None => match self.backend.transaction_by_hash(hash).await? {
-                Some(tx) => Ok(Some(tx.inner.inner.encoded_2718().into())),
+                Some(tx) => Ok(Some(tx.inner().inner.encoded_2718().into())),
                 None => Ok(None),
             },
         }
@@ -1193,7 +1193,7 @@ impl EthApi {
         self.on_blocking_task(|this| async move {
             let (exit, out, gas, _) = this
                 .backend
-                .seismic_call(seismic_request, fees, Some(block_request), Some(overrides))
+                .seismic_call(seismic_request, fees, Some(block_request), overrides)
                 .await?;
             trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
@@ -2543,13 +2543,13 @@ impl EthApi {
                                 if let Some(reason) =
                                     RevertDecoder::new().maybe_decode(&output, None)
                                 {
-                                    tx.other.insert(
+                                    tx.0.other.insert(
                                         "revertReason".to_string(),
                                         serde_json::to_value(reason).expect("Infallible"),
                                     );
                                 }
                             }
-                            tx.other.insert(
+                            tx.0.other.insert(
                                 "output".to_string(),
                                 serde_json::to_value(output).expect("Infallible"),
                             );
@@ -3224,9 +3224,10 @@ impl EthApi {
 
     fn build_typed_tx_request(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        seismic_request: WithOtherFields<TransactionRequest>,
         nonce: u64,
     ) -> Result<TypedTransactionRequest> {
+        let request = seismic_request.clone().inner.inner;
         let chain_id = request.chain_id.unwrap_or_else(|| self.chain_id());
         let max_fee_per_gas = request.max_fee_per_gas;
         let max_fee_per_blob_gas = request.max_fee_per_blob_gas;
@@ -3235,7 +3236,7 @@ impl EthApi {
         let gas_limit = request.gas.unwrap_or_else(|| self.backend.gas_limit());
         let from = request.from;
 
-        let request = match transaction_request_to_typed(request) {
+        let request = match transaction_request_to_typed(seismic_request) {
             Some(TypedTransactionRequest::Legacy(mut m)) => {
                 m.nonce = nonce;
                 m.chain_id = Some(chain_id);
@@ -3521,8 +3522,6 @@ impl TryFrom<Result<(InstructionResult, Option<Output>, u128, State)>> for GasEs
 
                 InstructionResult::Revert => Ok(Self::Revert(output.map(|o| o.into_data()))),
 
-                InstructionResult::InvalidPublicStorageAccess |
-                InstructionResult::InvalidPrivateStorageAccess |
                 InstructionResult::OutOfGas |
                 InstructionResult::MemoryOOG |
                 InstructionResult::MemoryLimitOOG |

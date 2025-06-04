@@ -1589,7 +1589,7 @@ impl alloy_eips::Decodable2718 for TypedReceipt {
     }
 }
 
-pub type ReceiptResponse = TransactionReceipt; // AlloyTransactionReceipt<TypedReceipt<Receipt<alloy_rpc_types::Log>>>;
+pub type ReceiptResponse = TransactionReceipt<TypedReceipt<Receipt<alloy_rpc_types::Log>>>;
 
 pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<ReceiptResponse> {
     let WithOtherFields {
@@ -1623,7 +1623,14 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
         to,
         blob_gas_price,
         blob_gas_used,
-        inner,
+        inner: match inner {
+            AnyReceiptEnvelope::Legacy(r) => TypedReceipt::Legacy(r),
+            AnyReceiptEnvelope::Eip2930(r) => TypedReceipt::EIP2930(r),
+            AnyReceiptEnvelope::Eip1559(r) => TypedReceipt::EIP1559(r),
+            AnyReceiptEnvelope::Eip4844(r) => TypedReceipt::EIP4844(r),
+            AnyReceiptEnvelope::Eip7702(r) => TypedReceipt::EIP7702(r),
+            AnyReceiptEnvelope::Seismic(r) => TypedReceipt::Seismic(r),
+        },
     })
 }
 
