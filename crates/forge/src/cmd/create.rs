@@ -2,10 +2,9 @@ use crate::cmd::install;
 use alloy_chains::Chain;
 use alloy_dyn_abi::{DynSolValue, JsonAbiExt, Specifier};
 use alloy_json_abi::{Constructor, JsonAbi};
-use alloy_network::{AnyNetwork, AnyTransactionReceipt, EthereumWallet, TransactionBuilder};
+use alloy_network::{EthereumWallet, TransactionBuilder};
 use alloy_primitives::{hex, Address, Bytes};
 use alloy_provider::{PendingTransactionError, Provider, ProviderBuilder};
-use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use alloy_signer::Signer;
 use alloy_transport::TransportError;
@@ -34,6 +33,8 @@ use foundry_config::{
 };
 use serde_json::json;
 use std::{borrow::Borrow, marker::PhantomData, path::PathBuf, sync::Arc, time::Duration};
+
+use seismic_prelude::foundry::{AnyNetwork, AnyTransactionReceipt, TransactionRequest};
 
 merge_impl_figment_convert!(CreateArgs, build, eth);
 

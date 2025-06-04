@@ -1,7 +1,7 @@
 use crate::abi::VendingMachine;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{bytes, U256};
-use alloy_provider::{Provider, SeismicSignedProvider, SendableTx};
+use alloy_provider::{Provider, SendableTx};
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
@@ -15,8 +15,8 @@ async fn test_deploy_reverting() {
     let sender = handle.dev_accounts().next().unwrap();
 
     let code = bytes!("5f5ffd"); // PUSH0 PUSH0 REVERT
-    let tx = TransactionRequest::default().from(sender).with_deploy_code(code);
-    let tx = WithOtherFields::new(tx);
+    let tx = TransactionRequest::default().with_from(sender).with_deploy_code(code);
+    let tx = WithOtherFields::new(tx.into());
 
     // Calling/estimating gas fails early.
     let err = provider.call(tx.clone()).await.unwrap_err();
@@ -70,6 +70,7 @@ async fn test_solc_revert_example() {
     let provider = handle.http_provider();
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
+    // TODO: impl/use SeismicSignedProvider
     let seismic_provider = SeismicSignedProvider::new(wallet.clone().into(), node_url);
 
     let contract = VendingMachine::deploy(&provider).await.unwrap();

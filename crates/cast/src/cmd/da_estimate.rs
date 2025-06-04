@@ -37,7 +37,21 @@ impl DAEstimateArgs {
         let mut da_estimate = 0;
         for tx in block.into_transactions_iter() {
             // try to convert into opstack transaction
-            let tx = OpTxEnvelope::try_from(tx)?;
+            let tx: seismic_prelude::foundry::AnyTxEnvelope = tx.into();
+            let tx: seismic_prelude::foundry::TxEnvelope = tx.into();
+            let tx = match tx {
+                seismic_prelude::foundry::TxEnvelope::Legacy(tx) => OpTxEnvelope::Legacy(tx),
+                seismic_prelude::foundry::TxEnvelope::Eip2930(tx) => OpTxEnvelope::Eip2930(tx),
+                seismic_prelude::foundry::TxEnvelope::Eip1559(tx) => OpTxEnvelope::Eip1559(tx),
+                seismic_prelude::foundry::TxEnvelope::Eip4844(_) => {
+                    panic!("EIP-4844 transactions are not supported for DA estimates")
+                }
+                seismic_prelude::foundry::TxEnvelope::Eip7702(tx) => OpTxEnvelope::Eip7702(tx),
+                seismic_prelude::foundry::TxEnvelope::Seismic(_) => {
+                    panic!("Seismic transactions are not supported for DA estimates")
+                }
+            };
+            // let tx = OpTxEnvelope::try_from(tx)?;
             da_estimate += op_alloy_flz::tx_estimated_size_fjord(&tx.encoded_2718());
         }
 

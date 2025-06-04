@@ -3,10 +3,7 @@
 use alloy_consensus::{
     Eip658Value, Receipt, ReceiptWithBloom, Transaction as TxTrait, TxEnvelope, TxType, Typed2718,
 };
-use alloy_network::{
-    AnyHeader, AnyReceiptEnvelope, AnyRpcBlock, AnyRpcTransaction, AnyTransactionReceipt,
-    AnyTxEnvelope, ReceiptResponse,
-};
+use alloy_network::{AnyHeader, AnyReceiptEnvelope as AlloyAnyReceiptEnvelope, ReceiptResponse};
 use alloy_primitives::{hex, Address, Bloom, Bytes, FixedBytes, Uint, I256, U256, U64, U8};
 use alloy_rpc_types::{
     AccessListItem, Block, BlockTransactions, Header, Log, Transaction, TransactionReceipt,
@@ -14,6 +11,10 @@ use alloy_rpc_types::{
 use alloy_serde::{OtherFields, WithOtherFields};
 use revm::context_interface::transaction::SignedAuthorization;
 use serde::Deserialize;
+
+use seismic_prelude::foundry::{
+    AnyReceiptEnvelope, AnyRpcBlock, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope,
+};
 
 /// length of the name column for pretty formatting `{:>20}{value}`
 const NAME_COLUMN_LEN: usize = 20usize;
@@ -176,20 +177,18 @@ impl UIfmt for AnyTransactionReceipt {
                     gas_used,
                     contract_address,
                     effective_gas_price,
-                    inner:
-                        AnyReceiptEnvelope {
-                            r#type: transaction_type,
-                            inner:
-                                ReceiptWithBloom {
-                                    receipt: Receipt { status, cumulative_gas_used, logs },
-                                    logs_bloom,
-                                },
-                        },
+                    inner,
                     blob_gas_price,
                     blob_gas_used,
                 },
             other,
         } = self;
+
+        let cumulative_gas_used = inner.cumulative_gas_used();
+        let logs = inner.logs();
+        let logs_bloom = inner.logs_bloom();
+        let status = inner.status();
+        let transaction_type = inner.tx_type();
 
         let mut pretty = format!(
             "
@@ -512,9 +511,30 @@ type                 {}
                     tx.inner.fields.pretty(),
                 )
             }
+            Self::Seismic(tx) => tx.pretty(),
         }
     }
 }
+
+impl UIfmt for alloy_consensus::Signed<seismic_prelude::foundry::TxSeismic> {
+    fn pretty(&self) -> String {
+        let (tx_seismic, signature, hash) = self.clone().into_parts();
+        let legacy_tx = tx_seismic.to_legacy_tx();
+        let legacy_signed = alloy_consensus::Signed::new_unchecked(legacy_tx, signature, hash);
+        let legacy_envelope = TxEnvelope::Legacy(legacy_signed);
+        let legacy_pretty = legacy_envelope.pretty();
+        let seismic_elements_pretty = format!(
+            "encryptionNonce: {}
+            encryptionPubkey: {}
+            messageVersion: {}",
+            tx_seismic.seismic_elements.encryption_pubkey,
+            tx_seismic.seismic_elements.encryption_nonce,
+            tx_seismic.seismic_elements.message_version
+        );
+        format!("{}\n{}", legacy_pretty, seismic_elements_pretty)
+    }
+}
+
 impl UIfmt for Transaction {
     fn pretty(&self) -> String {
         match &self.inner.inner() {

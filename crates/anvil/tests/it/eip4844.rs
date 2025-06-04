@@ -37,7 +37,7 @@ async fn can_send_eip4844_transaction() {
         .with_blob_sidecar(sidecar)
         .value(U256::from(5));
 
-    let mut tx = WithOtherFields::new(tx);
+    let mut tx = WithOtherFields::new(tx.into());
 
     tx.populate_blob_hashes();
 
@@ -75,7 +75,7 @@ async fn can_send_multiple_blobs_in_one_tx() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar);
-    let mut tx = WithOtherFields::new(tx);
+    let mut tx = WithOtherFields::new(tx.into());
 
     tx.populate_blob_hashes();
 
@@ -113,7 +113,7 @@ async fn cannot_exceed_six_blobs() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar);
-    let mut tx = WithOtherFields::new(tx);
+    let mut tx = WithOtherFields::new(tx.into());
 
     tx.populate_blob_hashes();
 
@@ -153,7 +153,7 @@ async fn can_mine_blobs_when_exceeds_max_blobs() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar);
-    let mut tx = WithOtherFields::new(tx);
+    let mut tx = WithOtherFields::new(tx.into());
 
     tx.populate_blob_hashes();
 
@@ -224,7 +224,7 @@ async fn can_correctly_estimate_blob_gas_with_recommended_fillers() {
     let sidecar = sidecar.build().unwrap();
 
     let tx = TransactionRequest::default().with_to(bob).with_blob_sidecar(sidecar);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     // Send the transaction and wait for the broadcast.
     let pending_tx = provider.send_transaction(tx).await.unwrap();
@@ -270,7 +270,7 @@ async fn can_correctly_estimate_blob_gas_with_recommended_fillers_with_signer() 
     let sidecar = sidecar.build().unwrap();
 
     let tx = TransactionRequest::default().with_to(bob).with_blob_sidecar(sidecar);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     // Send the transaction and wait for the broadcast.
     let pending_tx = provider.send_transaction(tx).await.unwrap();
@@ -332,7 +332,7 @@ async fn can_bypass_sidecar_requirement() {
     };
 
     let receipt = provider
-        .send_transaction(WithOtherFields::new(tx))
+        .send_transaction(WithOtherFields::new(tx.into()))
         .await
         .unwrap()
         .get_receipt()

@@ -180,7 +180,7 @@ async fn test_fork_load_state() {
 
     let value = Unit::ETHER.wei().saturating_mul(U256::from(1)); // 1 ether
     let tx = TransactionRequest::default().with_to(alice).with_value(value).with_from(bob);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -216,7 +216,7 @@ async fn test_fork_load_state() {
     // Send another tx to check if the state is preserved
 
     let tx = TransactionRequest::default().with_to(alice).with_value(value).with_from(bob);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -231,7 +231,7 @@ async fn test_fork_load_state() {
         .with_value(value)
         .with_from(bob)
         .with_nonce(nonce_bob);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -294,7 +294,7 @@ async fn computes_next_base_fee_after_loading_state() {
 
     let value = Unit::ETHER.wei().saturating_mul(U256::from(1)); // 1 ether
     let tx = TransactionRequest::default().with_to(alice).with_value(value).with_from(bob);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let _receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 

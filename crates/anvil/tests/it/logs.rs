@@ -130,7 +130,7 @@ async fn get_all_events() {
         .collect::<Result<Vec<_>, _>>()
         .unwrap()
         .into_iter()
-        .flat_map(|receipt| receipt.unwrap().inner.inner.inner.receipt.logs)
+        .flat_map(|receipt| receipt.unwrap().inner.inner.logs().iter().cloned().collect::<Vec<_>>())
         .collect::<Vec<_>>();
 
     assert_eq!(receipt_logs.len(), logs.len());

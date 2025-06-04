@@ -3,9 +3,8 @@ use crate::{
     Cast,
 };
 use alloy_ens::NameOrAddress;
-use alloy_network::{AnyNetwork, EthereumWallet};
+use alloy_network::EthereumWallet;
 use alloy_provider::{Provider, ProviderBuilder};
-use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use alloy_signer::Signer;
 use clap::Parser;
@@ -16,6 +15,8 @@ use foundry_cli::{
     utils::LoadConfig,
 };
 use std::{path::PathBuf, str::FromStr};
+
+use seismic_prelude::foundry::{AnyNetwork, TransactionRequest};
 
 /// CLI arguments for `cast send`.
 #[derive(Debug, Parser)]

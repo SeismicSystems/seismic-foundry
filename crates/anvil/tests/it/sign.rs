@@ -300,7 +300,7 @@ async fn can_sign_transaction() {
         .to(to)
         .value(U256::from(1001u64))
         .from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     // sign it via the eth_signTransaction API
     let signed_tx = api.sign_transaction(tx).await.unwrap();
 
@@ -314,7 +314,7 @@ async fn rejects_different_chain_id() {
     let provider = http_provider_with_signer(&handle.http_endpoint(), EthereumWallet::from(wallet));
 
     let tx = TransactionRequest::default().to(Address::random()).value(U256::from(100));
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let res = provider.send_transaction(tx).await;
     let err = res.unwrap_err();
     assert!(err.to_string().contains("does not match the signer's"), "{}", err.to_string());
@@ -327,7 +327,7 @@ async fn rejects_invalid_chain_id() {
     let wallet = wallet.with_chain_id(Some(99u64));
     let provider = http_provider_with_signer(&handle.http_endpoint(), EthereumWallet::from(wallet));
     let tx = TransactionRequest::default().to(Address::random()).value(U256::from(100u64));
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let res = provider.send_transaction(tx).await;
     let _err = res.unwrap_err();
 }

@@ -23,7 +23,7 @@ async fn geth_txpool() {
         .with_from(account)
         .with_value(value)
         .with_gas_price(gas_price);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     // send a few transactions
     let mut txs = Vec::new();

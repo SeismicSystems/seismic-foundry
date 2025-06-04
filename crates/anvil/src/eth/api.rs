@@ -2322,7 +2322,7 @@ impl EthApi {
 
                     TransactionData::JSON(req) => {
                         let mut tx_req = WithOtherFields::new(req);
-                        let from = tx_req.from.map(Ok).unwrap_or_else(|| {
+                        let from = tx_req.inner.inner.from.map(Ok).unwrap_or_else(|| {
                             self.accounts()?
                                 .first()
                                 .cloned()
@@ -2339,7 +2339,7 @@ impl EthApi {
                         );
 
                         // Estimate gas
-                        if tx_req.gas.is_none() {
+                        if tx_req.inner.inner.gas.is_none() {
                             if let Ok(gas) = self
                                 .estimate_gas(
                                     WithOtherFields::new(tx_req.inner.clone().into()),
@@ -2348,7 +2348,7 @@ impl EthApi {
                                 )
                                 .await
                             {
-                                tx_req.gas = Some(gas.to());
+                                tx_req.inner.inner.gas = Some(gas.to());
                             }
                         }
 

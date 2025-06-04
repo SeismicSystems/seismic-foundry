@@ -33,7 +33,7 @@ async fn can_send_eip7702_tx() {
         .with_input(logger_bytecode);
 
     let receipt = provider
-        .send_transaction(WithOtherFields::new(tx))
+        .send_transaction(WithOtherFields::new(tx.into()))
         .await
         .unwrap()
         .get_receipt()
@@ -102,7 +102,7 @@ async fn can_send_eip7702_request() {
         .with_input(logger_bytecode);
 
     let receipt = provider
-        .send_transaction(WithOtherFields::new(tx))
+        .send_transaction(WithOtherFields::new(tx.into()))
         .await
         .unwrap()
         .get_receipt()

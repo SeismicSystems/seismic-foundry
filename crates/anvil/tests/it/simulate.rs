@@ -35,7 +35,7 @@ async fn test_fork_simulate_v1() {
         block_state_calls: vec![SimBlock {
             block_overrides,
             state_overrides,
-            calls: vec![tx_request],
+            calls: vec![tx_request.into()],
         }],
         trace_transfers: true,
         validation: false,

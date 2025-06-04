@@ -16,6 +16,7 @@ workspace = true
 
 [dependencies]
 seismic-revm.workspace = true
+seismic-prelude.workspace = true
 
 foundry-cheatcodes-spec.workspace = true
 foundry-common.workspace = true

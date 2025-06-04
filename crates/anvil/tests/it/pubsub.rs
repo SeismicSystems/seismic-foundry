@@ -140,10 +140,12 @@ async fn test_sub_logs_impersonated() {
     let data = contract.setValue("Next Message".to_string());
     let data = data.calldata().clone();
 
-    let tx =
-        TransactionRequest::default().from(impersonate).to(*contract.address()).with_input(data);
+    let tx = TransactionRequest::default()
+        .with_from(impersonate)
+        .with_to(*contract.address())
+        .with_input(data);
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let provider = handle.http_provider();
 
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();

@@ -30,7 +30,7 @@ use alloy_primitives::{
     Address, Bytes, Log, TxKind, B256, U256,
 };
 use alloy_rpc_types::{
-    request::{TransactionInput, TransactionRequest},
+    request::{TransactionInput, TransactionRequest as AlloyTransactionRequest},
     AccessList,
 };
 use alloy_sol_types::{SolCall, SolInterface, SolValue};
@@ -71,6 +71,8 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
+
+use seismic_prelude::foundry::TransactionRequest;
 
 mod utils;
 
@@ -741,13 +743,20 @@ impl Cheatcodes {
                     self.broadcastable_transactions.push_back(BroadcastableTransaction {
                         rpc: ecx.journaled_state.database.active_fork_url(),
                         transaction: TransactionRequest {
-                            from: Some(broadcast.new_origin),
-                            to: None,
-                            value: Some(input.value()),
-                            input: TransactionInput::new(input.init_code()),
-                            nonce: Some(account.info.nonce),
-                            gas: if is_fixed_gas_limit { Some(input.gas_limit()) } else { None },
-                            ..Default::default()
+                            inner: AlloyTransactionRequest {
+                                from: Some(broadcast.new_origin),
+                                to: None,
+                                value: Some(input.value()),
+                                input: TransactionInput::new(input.init_code()),
+                                nonce: Some(account.info.nonce),
+                                gas: if is_fixed_gas_limit {
+                                    Some(input.gas_limit())
+                                } else {
+                                    None
+                                },
+                                ..Default::default()
+                            },
+                            seismic_elements: None,
                         }
                         .into(),
                     });
@@ -1126,14 +1135,17 @@ impl Cheatcodes {
                         ecx.journaled_state.inner.state().get_mut(&broadcast.new_origin).unwrap();
 
                     let mut tx_req = TransactionRequest {
-                        from: Some(broadcast.new_origin),
-                        to: Some(TxKind::from(Some(call.target_address))),
-                        value: call.transfer_value(),
-                        input,
-                        nonce: Some(account.info.nonce),
-                        chain_id: Some(ecx.cfg.chain_id),
-                        gas: if is_fixed_gas_limit { Some(call.gas_limit) } else { None },
-                        ..Default::default()
+                        inner: AlloyTransactionRequest {
+                            from: Some(broadcast.new_origin),
+                            to: Some(TxKind::from(Some(call.target_address))),
+                            value: call.transfer_value(),
+                            input,
+                            nonce: Some(account.info.nonce),
+                            chain_id: Some(ecx.cfg.chain_id),
+                            gas: if is_fixed_gas_limit { Some(call.gas_limit) } else { None },
+                            ..Default::default()
+                        },
+                        seismic_elements: None,
                     };
 
                     match (self.active_delegation.take(), self.active_blob_sidecar.take()) {
@@ -1149,19 +1161,19 @@ impl Cheatcodes {
                             });
                         }
                         (Some(auth_list), None) => {
-                            tx_req.authorization_list = Some(vec![auth_list]);
-                            tx_req.sidecar = None;
+                            tx_req.inner.authorization_list = Some(vec![auth_list]);
+                            tx_req.inner.sidecar = None;
 
                             // Increment nonce to reflect the signed authorization.
                             account.info.nonce += 1;
                         }
                         (None, Some(blob_sidecar)) => {
                             tx_req.set_blob_sidecar(blob_sidecar);
-                            tx_req.authorization_list = None;
+                            tx_req.inner.authorization_list = None;
                         }
                         (None, None) => {
-                            tx_req.sidecar = None;
-                            tx_req.authorization_list = None;
+                            tx_req.inner.sidecar = None;
+                            tx_req.inner.authorization_list = None;
                         }
                     }
 

@@ -3,13 +3,10 @@ use alloy_consensus::{SidecarBuilder, SignableTransaction, SimpleCoder};
 use alloy_dyn_abi::ErrorExt;
 use alloy_ens::NameOrAddress;
 use alloy_json_abi::Function;
-use alloy_network::{
-    AnyNetwork, AnyTypedTransaction, TransactionBuilder, TransactionBuilder4844,
-    TransactionBuilder7702,
-};
+use alloy_network::{TransactionBuilder, TransactionBuilder4844, TransactionBuilder7702};
 use alloy_primitives::{hex, Address, Bytes, TxKind, U256};
 use alloy_provider::Provider;
-use alloy_rpc_types::{AccessList, Authorization, TransactionInput, TransactionRequest};
+use alloy_rpc_types::{AccessList, Authorization, TransactionInput};
 use alloy_serde::WithOtherFields;
 use alloy_signer::Signer;
 use alloy_transport::TransportError;
@@ -25,6 +22,8 @@ use foundry_wallets::{WalletOpts, WalletSigner};
 use itertools::Itertools;
 use serde_json::value::RawValue;
 use std::fmt::Write;
+
+use seismic_prelude::foundry::{AnyNetwork, AnyTypedTransaction, TransactionRequest};
 
 /// Different sender kinds used by [`CastTxBuilder`].
 #[expect(clippy::large_enum_variant)]
@@ -257,7 +256,7 @@ impl<P: Provider<AnyNetwork>> CastTxBuilder<P, ToState> {
         };
 
         if self.state.to.is_none() && code.is_none() {
-            let has_value = self.tx.value.is_some_and(|v| !v.is_zero());
+            let has_value = self.tx.inner.inner.value.is_some_and(|v| !v.is_zero());
             let has_auth = self.auth.is_some();
             // We only allow user to omit the recipient address if transaction is an EIP-7702 tx
             // without a value.
@@ -325,17 +324,18 @@ impl<P: Provider<AnyNetwork>> CastTxBuilder<P, InputState> {
 
         // we set both fields to the same value because some nodes only accept the legacy `data` field: <https://github.com/foundry-rs/foundry/issues/7764#issuecomment-2210453249>
         let input = Bytes::copy_from_slice(&self.state.input);
-        self.tx.input = TransactionInput { input: Some(input.clone()), data: Some(input) };
+        self.tx.inner.inner.input =
+            TransactionInput { input: Some(input.clone()), data: Some(input) };
 
         self.tx.set_from(from);
         self.tx.set_chain_id(self.chain.id());
 
-        let tx_nonce = if let Some(nonce) = self.tx.nonce {
+        let tx_nonce = if let Some(nonce) = self.tx.inner.inner.nonce {
             nonce
         } else {
             let nonce = self.provider.get_transaction_count(from).await?;
             if fill {
-                self.tx.nonce = Some(nonce);
+                self.tx.inner.inner.nonce = Some(nonce);
             }
             nonce
         };
@@ -366,31 +366,34 @@ impl<P: Provider<AnyNetwork>> CastTxBuilder<P, InputState> {
             return Ok((self.tx, self.state.func));
         }
 
-        if self.legacy && self.tx.gas_price.is_none() {
-            self.tx.gas_price = Some(self.provider.get_gas_price().await?);
+        if self.legacy && self.tx.inner.inner.gas_price.is_none() {
+            self.tx.inner.inner.gas_price = Some(self.provider.get_gas_price().await?);
         }
 
-        if self.blob && self.tx.max_fee_per_blob_gas.is_none() {
-            self.tx.max_fee_per_blob_gas = Some(self.provider.get_blob_base_fee().await?)
+        if self.blob && self.tx.inner.inner.max_fee_per_blob_gas.is_none() {
+            self.tx.inner.inner.max_fee_per_blob_gas =
+                Some(self.provider.get_blob_base_fee().await?)
         }
 
         if !self.legacy &&
-            (self.tx.max_fee_per_gas.is_none() || self.tx.max_priority_fee_per_gas.is_none())
+            (self.tx.inner.inner.max_fee_per_gas.is_none() ||
+                self.tx.inner.inner.max_priority_fee_per_gas.is_none())
         {
             let estimate = self.provider.estimate_eip1559_fees().await?;
 
             if !self.legacy {
-                if self.tx.max_fee_per_gas.is_none() {
-                    self.tx.max_fee_per_gas = Some(estimate.max_fee_per_gas);
+                if self.tx.inner.inner.max_fee_per_gas.is_none() {
+                    self.tx.inner.inner.max_fee_per_gas = Some(estimate.max_fee_per_gas);
                 }
 
-                if self.tx.max_priority_fee_per_gas.is_none() {
-                    self.tx.max_priority_fee_per_gas = Some(estimate.max_priority_fee_per_gas);
+                if self.tx.inner.inner.max_priority_fee_per_gas.is_none() {
+                    self.tx.inner.inner.max_priority_fee_per_gas =
+                        Some(estimate.max_priority_fee_per_gas);
                 }
             }
         }
 
-        if self.tx.gas.is_none() {
+        if self.tx.inner.inner.gas.is_none() {
             self.estimate_gas().await?;
         }
 
@@ -401,7 +404,7 @@ impl<P: Provider<AnyNetwork>> CastTxBuilder<P, InputState> {
     async fn estimate_gas(&mut self) -> Result<()> {
         match self.provider.estimate_gas(self.tx.clone()).await {
             Ok(estimated) => {
-                self.tx.gas = Some(estimated);
+                self.tx.inner.inner.gas = Some(estimated);
                 Ok(())
             }
             Err(err) => {
@@ -461,7 +464,7 @@ where
         let sidecar = coder.build()?;
 
         self.tx.set_blob_sidecar(sidecar);
-        self.tx.populate_blob_hashes();
+        self.tx.inner.inner.populate_blob_hashes();
 
         Ok(self)
     }

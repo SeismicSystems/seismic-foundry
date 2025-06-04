@@ -9,7 +9,7 @@ use alloy_primitives::{
     map::{AddressHashMap, B256HashMap, HashMap},
     Address, ChainId, B256, U256,
 };
-use alloy_provider::{Provider, SeismicSignedProvider, SendableTx};
+use alloy_provider::{Provider, SendableTx};
 use alloy_rpc_types::{
     request::TransactionRequest, state::AccountOverride, BlockId, BlockNumberOrTag,
     BlockTransactions,
@@ -115,7 +115,7 @@ async fn can_get_block_by_number() {
 
     // send a dummy transaction
     let tx = TransactionRequest::default().with_from(from).with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
@@ -279,6 +279,7 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
     let provider = http_provider_with_signer(&handle.http_endpoint(), signer.clone());
+    // TODO: impl/use SeismicSignedProvider
     let seismic_provider = SeismicSignedProvider::new(signer.clone(), node_url);
 
     api.anvil_set_auto_mine(true).await.unwrap();

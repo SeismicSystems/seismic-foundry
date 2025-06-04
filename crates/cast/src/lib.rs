@@ -6,7 +6,6 @@ use alloy_consensus::TxEnvelope;
 use alloy_dyn_abi::{DynSolType, DynSolValue, FunctionExt};
 use alloy_ens::NameOrAddress;
 use alloy_json_abi::Function;
-use alloy_network::{AnyNetwork, AnyRpcTransaction};
 use alloy_primitives::{
     hex,
     utils::{keccak256, ParseUnits, Unit},
@@ -17,9 +16,7 @@ use alloy_provider::{
     PendingTransactionBuilder, Provider,
 };
 use alloy_rlp::Decodable;
-use alloy_rpc_types::{
-    state::StateOverride, BlockId, BlockNumberOrTag, Filter, TransactionRequest,
-};
+use alloy_rpc_types::{state::StateOverride, BlockId, BlockNumberOrTag, Filter};
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use base::{Base, NumberWithBase, ToBase};
@@ -50,6 +47,8 @@ use tokio::signal::ctrl_c;
 
 use foundry_common::abi::encode_function_args_packed;
 pub use foundry_evm::*;
+
+use seismic_prelude::foundry::{AnyNetwork, AnyRpcTransaction, TransactionRequest};
 
 pub mod args;
 pub mod cmd;
@@ -165,7 +164,7 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
                     // ensure the address is a contract
                     if res.is_empty() {
                         // check that the recipient is a contract that can be called
-                        if let Some(TxKind::Call(addr)) = req.to {
+                        if let Some(TxKind::Call(addr)) = req.inner.inner.to {
                             if let Ok(code) = self
                                 .provider
                                 .get_code_at(addr)
@@ -176,7 +175,7 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
                                     eyre::bail!("contract {addr:?} does not have any code")
                                 }
                             }
-                        } else if Some(TxKind::Create) == req.to {
+                        } else if Some(TxKind::Create) == req.inner.inner.to {
                             eyre::bail!("tx req is a contract deployment");
                         } else {
                             eyre::bail!("recipient is None");
@@ -789,9 +788,9 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
         };
 
         Ok(if raw {
-            format!("0x{}", hex::encode(tx.inner.inner.encoded_2718()))
+            format!("0x{}", hex::encode(tx.inner().inner.encoded_2718()))
         } else if let Some(field) = field {
-            get_pretty_tx_attr(&tx.inner, field.as_str())
+            get_pretty_tx_attr(&tx.inner(), field.as_str())
                 .ok_or_else(|| eyre::eyre!("invalid tx field: {}", field.to_string()))?
         } else if shell::is_json() {
             // to_value first to sort json object keys

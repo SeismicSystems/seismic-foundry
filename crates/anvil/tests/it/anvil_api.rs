@@ -95,7 +95,7 @@ async fn can_impersonate_account() {
     assert_eq!(balance, funding);
 
     let tx = TransactionRequest::default().with_from(impersonate).with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let res = provider.send_transaction(tx.clone()).await;
     res.unwrap_err();
@@ -134,7 +134,7 @@ async fn can_auto_impersonate_account() {
     assert_eq!(balance, funding);
 
     let tx = TransactionRequest::default().with_from(impersonate).with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let res = provider.send_transaction(tx.clone()).await;
     res.unwrap_err();
@@ -175,7 +175,7 @@ async fn can_impersonate_contract() {
     api.anvil_set_balance(impersonate, U256::from(1e18 as u64)).await.unwrap();
 
     let tx = TransactionRequest::default().with_from(impersonate).to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let res = provider.send_transaction(tx.clone()).await;
     res.unwrap_err();
@@ -245,7 +245,7 @@ async fn can_impersonate_multiple_accounts() {
     api.anvil_set_balance(impersonate1, funding).await.unwrap();
 
     let tx = TransactionRequest::default().with_from(impersonate0).to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     api.anvil_impersonate_account(impersonate0).await.unwrap();
     api.anvil_impersonate_account(impersonate1).await.unwrap();
@@ -555,7 +555,7 @@ async fn test_get_transaction_receipt() {
     let to = Address::random();
     let val = U256::from(1337);
     let tx = TransactionRequest::default().with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let receipt = provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
@@ -652,7 +652,7 @@ async fn can_remove_pool_transactions() {
     let to = Address::random();
     let val = U256::from(1337);
     let tx = TransactionRequest::default().with_from(sender).with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     provider.send_transaction(tx.with_from(from)).await.unwrap().register().await.unwrap();
 
@@ -679,14 +679,14 @@ async fn test_reorg() {
             .to(accounts[0].address())
             .value(U256::from(i))
             .from(accounts[1].address());
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         api.send_transaction(tx).await.unwrap();
 
         let tx = TransactionRequest::default()
             .to(accounts[1].address())
             .value(U256::from(i))
             .from(accounts[2].address());
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         api.send_transaction(tx).await.unwrap();
     }
 
@@ -725,7 +725,7 @@ async fn test_reorg() {
             .to(accounts[0].address())
             .value(U256::from(i))
             .from(accounts[1].address());
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         api.send_transaction(tx).await.unwrap();
     }
 
