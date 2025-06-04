@@ -20,6 +20,8 @@ use futures::join;
 use std::time::Duration;
 use url::Url;
 
+use seismic_prelude::foundry::tx_builder;
+
 #[tokio::test(flavor = "multi_thread")]
 async fn can_get_block_number() {
     let (api, handle) = spawn(NodeConfig::test()).await;
@@ -114,7 +116,7 @@ async fn can_get_block_by_number() {
     let val = handle.genesis_balance().checked_div(U256::from(2)).unwrap();
 
     // send a dummy transaction
-    let tx = TransactionRequest::default().with_from(from).with_to(to).with_value(val);
+    let tx = tx_builder().with_from(from).with_to(to).with_value(val);
     let tx = WithOtherFields::new(tx.into());
 
     provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
@@ -296,6 +298,7 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     assert!(undersized_max_fee_per_gas < latest_block_base_fee_per_gas);
 
     let last_sender_tx = simple_storage_contract.lastSender().into_transaction_request();
+    let last_sender = last_sender_tx.from().unwrap();
     let raw_input = last_sender_tx.input().unwrap();
     let output = seismic_provider
         .seismic_call(SendableTx::Builder(

@@ -23,6 +23,8 @@ use foundry_test_utils::rpc::{self, next_http_rpc_endpoint, next_rpc_endpoint};
 use futures::StreamExt;
 use std::{sync::Arc, thread::sleep, time::Duration};
 
+use seismic_prelude::foundry::tx_builder;
+
 const BLOCK_NUMBER: u64 = 14_608_400u64;
 const DEAD_BALANCE_AT_BLOCK_NUMBER: u128 = 12_556_069_338_441_120_059_867u128;
 
@@ -404,7 +406,7 @@ async fn test_fork_state_snapshotting_blocks() {
     let amount = handle.genesis_balance().checked_div(U256::from(2u64)).unwrap();
 
     // send the transaction
-    let tx = TransactionRequest::default().to(to).value(amount).from(from);
+    let tx = tx_builder().with_to(to).with_value(amount).with_from(from);
     let tx = WithOtherFields::new(tx.into());
     let _ = provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
@@ -574,7 +576,7 @@ async fn test_fork_timestamp() {
         TransactionRequest::default().to(Address::random()).value(U256::from(1337u64)).from(from);
     let tx = WithOtherFields::new(tx.into());
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 
     let block = provider.get_block(BlockId::latest()).await.unwrap().unwrap();
@@ -701,7 +703,7 @@ async fn test_fork_nft_set_approve_all() {
     let tx = WithOtherFields::new(tx.into());
     api.anvil_impersonate_account(owner).await.unwrap();
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 
     // transfer: impersonate real owner and transfer nft
@@ -716,7 +718,7 @@ async fn test_fork_nft_set_approve_all() {
         .with_input(call.calldata().to_owned());
     let tx = WithOtherFields::new(tx.into());
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 
     let real_owner = nouns.ownerOf(token_id).call().await.unwrap();
@@ -777,7 +779,7 @@ async fn test_fork_can_send_opensea_tx() {
     let tx = WithOtherFields::new(tx.into());
 
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 }
 
@@ -869,7 +871,7 @@ async fn test_fork_call() {
                 to: Some(TxKind::from(to)),
                 input: input.into(),
                 ..Default::default()
-            }),
+            }.into()),
             None,
             EvmOverrides::default(),
         )
@@ -1010,7 +1012,7 @@ async fn can_impersonate_in_fork() {
     // fund the impersonated account
     api.anvil_set_balance(token_holder, U256::from(1e18)).await.unwrap();
 
-    let tx = TransactionRequest::default().from(token_holder).to(to).value(val);
+    let tx = tx_builder().with_from(token_holder).with_to(to).with_value(val);
     let tx = WithOtherFields::new(tx.into());
     let res = provider.send_transaction(tx.clone()).await;
     res.unwrap_err();
@@ -1019,7 +1021,7 @@ async fn can_impersonate_in_fork() {
 
     let res = provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
     assert_eq!(res.from, token_holder);
-    let status = res.inner.inner.inner.receipt.status.coerce_status();
+    let status = res.inner.inner.status();
     assert!(status);
 
     let balance = provider.get_balance(to).await.unwrap();
@@ -1147,7 +1149,7 @@ async fn test_fork_reset_moonbeam() {
     let tx = WithOtherFields::new(tx.into());
     api.anvil_impersonate_account(from).await.unwrap();
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 
     // reset to check timestamp works after resetting
@@ -1162,7 +1164,7 @@ async fn test_fork_reset_moonbeam() {
         TransactionRequest::default().to(Address::random()).value(U256::from(1337u64)).from(from);
     let tx = WithOtherFields::new(tx.into());
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 }
 
@@ -1312,7 +1314,7 @@ async fn test_fork_execution_reverted() {
                 to: Some(TxKind::from(address!("0xFd6CC4F251eaE6d02f9F7B41D1e80464D3d2F377"))),
                 input: TransactionInput::new(bytes!("8f283b3c")),
                 ..Default::default()
-            }),
+            }.into()),
             Some(target.into()),
             EvmOverrides::default(),
         )
@@ -1381,7 +1383,7 @@ async fn test_immutable_fork_transaction_hash() {
         (expected_transactions[2], address!("0x4f07d669d76ed9a17799fc4c04c4005196240940")),
     ] {
         let tx = api.backend.mined_transaction_by_hash(expected.0).unwrap();
-        assert_eq!(tx.inner.inner.signer(), expected.1);
+        assert_eq!(tx.inner().inner.signer(), expected.1);
     }
 
     // Validate the order of transactions in the new block
@@ -1454,7 +1456,8 @@ async fn test_reset_dev_account_nonce() {
                 .from(address)
                 .to(address)
                 .nonce(nonce_after)
-                .gas_limit(21000),
+                .gas_limit(21000)
+                .into(),
         ))
         .await
         .unwrap()

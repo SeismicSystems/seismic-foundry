@@ -1,9 +1,9 @@
 //! Helper trait and functions to format Ethereum types.
 
 use alloy_consensus::{
-    Eip658Value, Receipt, ReceiptWithBloom, Transaction as TxTrait, TxEnvelope, TxType, Typed2718,
+    Eip658Value, Transaction as TxTrait, TxEnvelope, TxType, Typed2718,
 };
-use alloy_network::{AnyHeader, AnyReceiptEnvelope as AlloyAnyReceiptEnvelope, ReceiptResponse};
+use alloy_network::{AnyHeader, ReceiptResponse};
 use alloy_primitives::{hex, Address, Bloom, Bytes, FixedBytes, Uint, I256, U256, U64, U8};
 use alloy_rpc_types::{
     AccessListItem, Block, BlockTransactions, Header, Log, Transaction, TransactionReceipt,
@@ -13,7 +13,7 @@ use revm::context_interface::transaction::SignedAuthorization;
 use serde::Deserialize;
 
 use seismic_prelude::foundry::{
-    AnyReceiptEnvelope, AnyRpcBlock, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope,
+    AnyRpcBlock, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope,
 };
 
 /// length of the name column for pretty formatting `{:>20}{value}`

@@ -160,7 +160,7 @@ impl ScriptTransactionBuilder {
         if !self.transaction.is_fixed_gas_limit {
             if let Some(unsigned) = self.transaction.transaction.as_unsigned_mut() {
                 // We inflate the gas used by the user specified percentage
-                unsigned.gas = Some(result.gas_used * gas_estimate_multiplier / 100);
+                unsigned.inner.inner.gas = Some(result.gas_used * gas_estimate_multiplier / 100);
             }
         }
 

@@ -15,6 +15,7 @@ use alloy_sol_types::SolValue;
 use anvil::{spawn, EthereumHardfork, NodeConfig};
 use eyre::Ok;
 use futures::{future::join_all, FutureExt, StreamExt};
+use seismic_prelude::foundry::tx_builder;
 use std::{str::FromStr, time::Duration};
 use tokio::time::timeout;
 
@@ -123,7 +124,7 @@ async fn can_respect_nonces() {
 
     let tx = TransactionRequest::default().to(to).value(amount).from(from).nonce(nonce);
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     // send with the actual nonce which is mined immediately
     let tx = provider.send_transaction(tx).await.unwrap();
 
@@ -156,7 +157,7 @@ async fn can_replace_transaction() {
     let gas_price = provider.get_gas_price().await.unwrap();
     let amount = handle.genesis_balance().checked_div(U256::from(3u64)).unwrap();
 
-    let tx = TransactionRequest::default().to(to).value(amount).from(from).nonce(nonce);
+    let tx = tx_builder().with_to(to).with_value(amount).with_from(from).with_nonce(nonce);
 
     let mut tx = WithOtherFields::new(tx.into());
 
@@ -202,8 +203,7 @@ async fn can_reject_too_high_gas_limits() {
     let gas_limit = api.gas_limit().to::<u64>();
     let amount = handle.genesis_balance().checked_div(U256::from(3u64)).unwrap();
 
-    let tx =
-        TransactionRequest::default().to(to).value(amount).from(from).with_gas_limit(gas_limit);
+    let tx = tx_builder().with_to(to).with_value(amount).with_from(from).with_gas_limit(gas_limit);
 
     let mut tx = WithOtherFields::new(tx.into());
 
@@ -268,7 +268,7 @@ async fn can_reject_underpriced_replacement() {
     let gas_price = provider.get_gas_price().await.unwrap();
     let amount = handle.genesis_balance().checked_div(U256::from(3u64)).unwrap();
 
-    let tx = TransactionRequest::default().to(to).value(amount).from(from).nonce(nonce);
+    let tx = tx_builder().with_to(to).with_value(amount).with_from(from).with_nonce(nonce);
 
     let mut tx = WithOtherFields::new(tx.into());
 
@@ -561,11 +561,11 @@ async fn can_handle_multiple_concurrent_transfers_with_same_nonce() {
     let nonce = provider.get_transaction_count(from).await.unwrap();
 
     // explicitly set the nonce
-    let tx = TransactionRequest::default()
-        .to(to)
-        .value(U256::from(100))
-        .from(from)
-        .nonce(nonce)
+    let tx = tx_builder()
+        .with_to(to)
+        .with_value(U256::from(100))
+        .with_from(from)
+        .with_nonce(nonce)
         .with_gas_limit(21000);
 
     let tx = WithOtherFields::new(tx.into());
@@ -603,17 +603,17 @@ async fn can_handle_multiple_concurrent_deploys_with_same_nonce() {
 
     let greeter_calldata = greeter.calldata();
 
-    let tx = TransactionRequest::default()
-        .from(from)
+    let tx = tx_builder()
+        .with_from(from)
         .with_input(greeter_calldata.to_owned())
-        .nonce(nonce)
+        .with_nonce(nonce)
         .with_gas_limit(300_000);
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     for _ in 0..10 {
         let provider = provider.clone();
-        let tx = tx.clone().into();
+        let tx = tx.clone();
         let task = tokio::task::spawn(async move {
             Ok(provider.send_transaction(tx).await?.get_receipt().await.unwrap())
         });
@@ -644,20 +644,20 @@ async fn can_handle_multiple_concurrent_transactions_with_same_nonce() {
 
     let deploy = Greeter::deploy_builder(provider.clone(), "Hello World!".to_string());
     let deploy_calldata = deploy.calldata();
-    let deploy_tx = TransactionRequest::default()
-        .from(from)
+    let deploy_tx = tx_builder()
+        .with_from(from)
         .with_input(deploy_calldata.to_owned())
-        .nonce(nonce)
+        .with_nonce(nonce)
         .with_gas_limit(300_000);
     let deploy_tx = WithOtherFields::new(deploy_tx.into());
 
     let set_greeting = greeter_contract.setGreeting("Hello".to_string());
     let set_greeting_calldata = set_greeting.calldata();
 
-    let set_greeting_tx = TransactionRequest::default()
-        .from(from)
+    let set_greeting_tx = tx_builder()
+        .with_from(from)
         .with_input(set_greeting_calldata.to_owned())
-        .nonce(nonce)
+        .with_nonce(nonce)
         .with_gas_limit(300_000);
     let set_greeting_tx = WithOtherFields::new(set_greeting_tx.into());
 
@@ -1101,7 +1101,7 @@ async fn estimates_gas_on_pending_by_default() {
     let recipient = Address::random();
 
     let tx = TransactionRequest::default().from(sender).to(recipient).value(U256::from(1e18));
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let _pending = provider.send_transaction(tx).await.unwrap();
 
@@ -1110,7 +1110,7 @@ async fn estimates_gas_on_pending_by_default() {
         .to(sender)
         .value(U256::from(1e10))
         .input(Bytes::from(vec![0x42]).into());
-    api.estimate_gas(WithOtherFields::new(tx), None, EvmOverrides::default()).await.unwrap();
+    api.estimate_gas(WithOtherFields::new(tx.into()), None, EvmOverrides::default()).await.unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -1251,7 +1251,7 @@ async fn test_reject_eip1559_pre_london() {
         .with_max_fee_per_gas(gas_price)
         .with_max_priority_fee_per_gas(gas_price);
 
-    let unsup_tx = WithOtherFields::new(unsup_tx);
+    let unsup_tx = WithOtherFields::new(unsup_tx.into());
 
     let unsupported = provider.send_transaction(unsup_tx).await.unwrap_err().to_string();
     assert!(unsupported.contains("not supported by the current hardfork"), "{unsupported}");

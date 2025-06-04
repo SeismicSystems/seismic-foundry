@@ -1,7 +1,5 @@
 //! Wrappers for transactions.
 
-use std::any::Any;
-
 use alloy_consensus::{transaction::SignerRecoverable, Transaction, TxEnvelope};
 use alloy_eips::eip7702::SignedAuthorization;
 use alloy_primitives::{Address, TxKind, U256};

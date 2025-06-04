@@ -9,7 +9,7 @@ use crate::{
 };
 use alloy_primitives::{hex, Address, Bytes, TxKind, U256};
 use alloy_provider::{network::TransactionBuilder, Provider};
-use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionInput};
+use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionInput, TransactionRequest as AlloyTransactionRequest};
 use clap::{Parser, ValueHint};
 use eyre::{Context, OptionExt, Result};
 use foundry_cli::{
@@ -247,10 +247,11 @@ impl VerifyBytecodeArgs {
 
             // Setup genesis tx and env.
             let deployer = Address::with_last_byte(0x1);
-            let mut gen_tx_req = TransactionRequest::default()
+            let mut gen_tx_req: TransactionRequest = AlloyTransactionRequest::default()
                 .with_from(deployer)
                 .with_input(Bytes::from(local_bytecode_vec))
-                .into_create();
+                .into_create()
+                .into();
 
             if let Some(ref block) = genesis_block {
                 configure_env_block(&mut env.as_env_mut(), block);
@@ -456,14 +457,14 @@ impl VerifyBytecodeArgs {
                 .get_transaction_count(transaction.inner.from.unwrap())
                 .block_id(prev_block_id)
                 .await?;
-            transaction.set_nonce(prev_block_nonce);
+            transaction.inner.set_nonce(prev_block_nonce);
 
             if let Some(ref block) = block {
                 configure_env_block(&mut env.as_env_mut(), block)
             }
 
             // Replace the `input` with local creation code in the creation tx.
-            if let Some(TxKind::Call(to)) = transaction.kind() {
+            if let Some(TxKind::Call(to)) = transaction.inner.kind() {
                 if to == DEFAULT_CREATE2_DEPLOYER {
                     let mut input = transaction.inner.input.input.unwrap()[..32].to_vec(); // Salt
                     input.extend_from_slice(&local_bytecode_vec);

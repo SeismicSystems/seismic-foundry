@@ -7,7 +7,7 @@ use alloy_consensus::{
     EthereumTxEnvelope, Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559,
     TxEip2930, TxLegacy, TxReceipt, Typed2718,
 };
-use alloy_primitives::{Address, Bloom, Bytes, Log, Signature, TxHash, TxKind, B256, U256, U64};
+use alloy_primitives::{Address, Bloom, Bytes, Log, Signature, TxHash, TxKind, B256, U256};
 use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
 use alloy_rpc_types::{
     trace::otterscan::OtsReceipt, AccessList, ConversionError,

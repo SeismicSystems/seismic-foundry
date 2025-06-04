@@ -23,6 +23,8 @@ path = "tests/ui.rs"
 harness = false
 
 [dependencies]
+seismic-prelude.workspace = true
+
 # lib
 foundry-block-explorers = { workspace = true, features = ["foundry-compilers"] }
 foundry-common.workspace = true
