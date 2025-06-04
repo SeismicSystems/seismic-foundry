@@ -704,9 +704,7 @@ impl TryFrom<AnyRpcTransaction> for TypedTransaction {
                 EthereumTxEnvelope::Eip7702(tx) => Ok(TypedTransaction::EIP7702(tx)),
             },
             AnyTxEnvelope::Seismic(tx) => Ok(TypedTransaction::Seismic(tx)),
-            AnyTxEnvelope::Unknown(_) => {
-                Err(ConversionError::Custom("UnknownTxType".to_string()))
-            }
+            AnyTxEnvelope::Unknown(_) => Err(ConversionError::Custom("UnknownTxType".to_string())),
         }
     }
 }
