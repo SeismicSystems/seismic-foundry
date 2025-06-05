@@ -4,7 +4,7 @@ use crate::{
     utils::http_provider_with_signer,
 };
 use alloy_eips::BlockId;
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::{TransactionBuilder};
 use alloy_primitives::{
     hex::{self, FromHex},
     Address, Bytes, U256,
@@ -28,6 +28,8 @@ use alloy_rpc_types::{
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{spawn, EthereumHardfork, NodeConfig};
+
+use seismic_prelude::foundry::EthereumWallet;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_transfer_parity_traces() {

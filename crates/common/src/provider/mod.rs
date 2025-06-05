@@ -7,7 +7,6 @@ use crate::{
 };
 use alloy_provider::{
     fillers::{ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller},
-    network::EthereumWallet,
     Identity, ProviderBuilder as AlloyProviderBuilder, RootProvider,
 };
 use alloy_rpc_client::ClientBuilder;
@@ -23,9 +22,7 @@ use std::{
 };
 use url::ParseError;
 
-// this is super misleading, but we do this
-// to reduce merge conflicts when pulling from upstream
-use seismic_prelude::foundry::AnyNetwork;
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet};
 
 /// The assumed block time for unknown chains.
 /// We assume that these are chains have a faster block time.

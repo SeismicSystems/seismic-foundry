@@ -7,7 +7,7 @@ use alloy_sol_types::sol;
 use anvil::{spawn, NodeConfig};
 use url::Url;
 
-use seismic_prelude::foundry::tx_builder;
+use seismic_prelude::foundry::{tx_builder, sfoundry_signed_provider};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deploy_reverting() {
@@ -71,8 +71,7 @@ async fn test_solc_revert_example() {
     let provider = handle.http_provider();
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
-    // TODO: impl/use SeismicSignedProvider
-    let seismic_provider = SeismicSignedProvider::new(wallet.clone().into(), node_url);
+    let seismic_provider = sfoundry_signed_provider(wallet.clone().into(), node_url);
 
     let contract = VendingMachine::deploy(&provider).await.unwrap();
     let tx = contract.buy(U256::from(100)).into_transaction_request();

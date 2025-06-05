@@ -1,7 +1,7 @@
 //! tests for subscriptions
 
 use crate::utils::{connect_pubsub, connect_pubsub_with_wallet};
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::{TransactionBuilder};
 use alloy_primitives::{Address, U256};
 use alloy_provider::Provider;
 use alloy_pubsub::Subscription;
@@ -10,6 +10,8 @@ use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{spawn, NodeConfig};
 use futures::StreamExt;
+
+use seismic_prelude::foundry::EthereumWallet;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_sub_new_heads() {

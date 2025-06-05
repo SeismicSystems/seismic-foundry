@@ -4,7 +4,7 @@ use crate::{
     abi::{Multicall, SimpleStorage},
     utils::{connect_pubsub_with_wallet, http_provider_with_signer},
 };
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::{TransactionBuilder};
 use alloy_primitives::{
     map::{AddressHashMap, B256HashMap, HashMap},
     Address, ChainId, B256, U256,
@@ -20,7 +20,7 @@ use futures::join;
 use std::time::Duration;
 use url::Url;
 
-use seismic_prelude::foundry::tx_builder;
+use seismic_prelude::foundry::{sfoundry_signed_provider, tx_builder, EthereumWallet};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_get_block_number() {
@@ -147,9 +147,9 @@ async fn can_get_pending_block() {
 
     api.anvil_set_auto_mine(false).await.unwrap();
 
-    let tx = TransactionRequest::default().with_from(from).with_to(to).with_value(U256::from(100));
+    let tx = tx_builder().with_from(from).with_to(to).with_value(U256::from(100)).into();
 
-    let pending = provider.send_transaction(tx.clone()).await.unwrap().register().await.unwrap();
+    let pending = provider.send_transaction(tx.clone().into()).await.unwrap().register().await.unwrap();
 
     let num = provider.get_block_number().await.unwrap();
     assert_eq!(num, 0);
@@ -246,7 +246,7 @@ async fn can_call_on_pending_block() {
         let block_number = BlockNumberOrTag::Number(anvil_block_number as u64);
         let block = api.block_by_number(block_number).await.unwrap().unwrap();
 
-        let ret_timestamp = contract
+        let ret_timestamp: alloy_primitives::Uint<256, 4> = contract
             .getCurrentBlockTimestamp()
             .block(BlockId::number(anvil_block_number as u64))
             .call()
@@ -281,8 +281,7 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
     let provider = http_provider_with_signer(&handle.http_endpoint(), signer.clone());
-    // TODO: impl/use SeismicSignedProvider
-    let seismic_provider = SeismicSignedProvider::new(signer.clone(), node_url);
+    let seismic_provider = sfoundry_signed_provider(signer.clone(), node_url);
 
     api.anvil_set_auto_mine(true).await.unwrap();
 

@@ -5,7 +5,7 @@ use crate::{
 use alloy_chains::Chain;
 use alloy_consensus::TxEnvelope;
 use alloy_eips::{eip2718::Encodable2718, BlockId};
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::{TransactionBuilder};
 use alloy_primitives::{
     map::{AddressHashMap, AddressHashSet},
     utils::format_units,
@@ -26,7 +26,7 @@ use futures::{future::join_all, StreamExt};
 use itertools::Itertools;
 use std::{cmp::Ordering, sync::Arc};
 
-use seismic_prelude::foundry::{AnyNetwork, TransactionRequest};
+use seismic_prelude::foundry::{AnyNetwork, TransactionRequest, EthereumWallet};
 
 pub async fn estimate_gas<P: Provider<AnyNetwork>>(
     tx: &mut WithOtherFields<TransactionRequest>,

@@ -2,7 +2,7 @@ use crate::{
     abi::{Greeter, Multicall, SimpleStorage},
     utils::{connect_pubsub, http_provider_with_signer},
 };
-use alloy_network::{EthereumWallet, TransactionBuilder, TransactionResponse};
+use alloy_network::{TransactionBuilder, TransactionResponse};
 use alloy_primitives::{address, hex, map::B256HashSet, Address, Bytes, FixedBytes, U256};
 use alloy_provider::{Provider, WsConnect};
 use alloy_rpc_types::{
@@ -18,6 +18,8 @@ use futures::{future::join_all, FutureExt, StreamExt};
 use seismic_prelude::foundry::tx_builder;
 use std::{str::FromStr, time::Duration};
 use tokio::time::timeout;
+
+use seismic_prelude::foundry::EthereumWallet;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_transfer_eth() {

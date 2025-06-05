@@ -2,7 +2,7 @@
 
 use crate::utils::{http_provider, http_provider_with_signer};
 use alloy_eips::eip2718::Encodable2718;
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::{TransactionBuilder};
 use alloy_primitives::{b256, Address, TxHash, TxKind, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
@@ -10,6 +10,8 @@ use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
 use op_alloy_consensus::TxDeposit;
 use op_alloy_rpc_types::OpTransactionFields;
+
+use seismic_prelude::foundry::EthereumWallet;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deposits_not_supported_if_optimism_disabled() {

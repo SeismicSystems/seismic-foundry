@@ -6,7 +6,7 @@ use crate::{
     utils::http_provider_with_signer,
 };
 use alloy_consensus::{SignableTransaction, TxEip1559};
-use alloy_network::{EthereumWallet, TransactionBuilder, TxSignerSync};
+use alloy_network::{TransactionBuilder, TxSignerSync};
 use alloy_primitives::{address, fixed_bytes, utils::Unit, Address, Bytes, TxKind, U256};
 use alloy_provider::{ext::TxPoolApi, Provider};
 use alloy_rpc_types::{
@@ -37,7 +37,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use seismic_prelude::foundry::tx_builder;
+use seismic_prelude::foundry::{tx_builder, EthereumWallet};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_set_gas_price() {

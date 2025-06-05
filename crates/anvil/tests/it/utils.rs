@@ -1,4 +1,3 @@
-use alloy_network::{Ethereum, EthereumWallet};
 use alloy_provider::{
     fillers::{
         BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
@@ -8,6 +7,8 @@ use alloy_provider::{
 use foundry_common::provider::{
     get_http_provider, ProviderBuilder, RetryProvider, RetryProviderWithSigner,
 };
+
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet};
 
 pub fn http_provider(http_endpoint: &str) -> RetryProvider {
     get_http_provider(http_endpoint)
@@ -44,12 +45,12 @@ type PubsubSigner = FillProvider<
         >,
         WalletFiller<EthereumWallet>,
     >,
-    RootProvider,
-    Ethereum,
+    RootProvider<AnyNetwork>,
+    AnyNetwork,
 >;
 
 pub async fn connect_pubsub_with_wallet(conn_str: &str, wallet: EthereumWallet) -> PubsubSigner {
-    alloy_provider::ProviderBuilder::new().wallet(wallet).connect(conn_str).await.unwrap()
+    alloy_provider::ProviderBuilder::new_with_network().wallet(wallet).connect(conn_str).await.unwrap()
 }
 
 pub async fn ipc_provider_with_wallet(

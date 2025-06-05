@@ -1,14 +1,14 @@
 //! Gas related tests
 
 use crate::utils::http_provider_with_signer;
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::{TransactionBuilder};
 use alloy_primitives::{uint, Address, U256, U64};
 use alloy_provider::Provider;
 use alloy_rpc_types::{BlockId, TransactionRequest};
 use alloy_serde::WithOtherFields;
 use anvil::{eth::fees::INITIAL_BASE_FEE, spawn, NodeConfig};
 
-use seismic_prelude::foundry::tx_builder;
+use seismic_prelude::foundry::{tx_builder, EthereumWallet};
 
 const GAS_TRANSFER: u64 = 21_000;
 

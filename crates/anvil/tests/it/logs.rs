@@ -4,12 +4,13 @@ use crate::{
     abi::SimpleStorage::{self},
     utils::{http_provider_with_signer, ws_provider_with_signer},
 };
-use alloy_network::EthereumWallet;
 use alloy_primitives::{map::B256HashSet, B256};
 use alloy_provider::Provider;
 use alloy_rpc_types::{BlockNumberOrTag, Filter};
 use anvil::{spawn, NodeConfig};
 use futures::StreamExt;
+
+use seismic_prelude::foundry::EthereumWallet;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_past_events() {

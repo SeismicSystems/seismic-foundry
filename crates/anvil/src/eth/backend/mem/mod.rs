@@ -51,7 +51,7 @@ use alloy_eips::{
 };
 use alloy_evm::{eth::EthEvmContext, precompiles::PrecompilesMap, Database, Evm};
 use alloy_network::{
-    AnyHeader, AnyRpcHeader, AnyTxType, EthereumWallet, UnknownTxEnvelope, UnknownTypedTransaction,
+    AnyHeader, AnyRpcHeader, AnyTxType, UnknownTxEnvelope, UnknownTypedTransaction,
 };
 use alloy_primitives::{
     address, hex, keccak256, logs_bloom, map::HashMap, utils::Unit, Address, Bytes, TxHash, TxKind,
@@ -135,7 +135,7 @@ use super::executor::new_evm_with_inspector_ref;
 
 use seismic_prelude::foundry::{
     AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, SimBlock, SimulatePayload, TransactionReceipt,
-    TransactionRequest, TxEnvelope,
+    TransactionRequest, TxEnvelope, EthereumWallet
 };
 
 pub mod cache;

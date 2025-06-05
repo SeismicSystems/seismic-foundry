@@ -1,12 +1,13 @@
 use crate::utils::http_provider_with_signer;
 use alloy_dyn_abi::TypedData;
-use alloy_network::EthereumWallet;
 use alloy_primitives::{Address, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use alloy_signer::Signer;
 use anvil::{spawn, NodeConfig};
+
+use seismic_prelude::foundry::EthereumWallet;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_sign_typed_data() {

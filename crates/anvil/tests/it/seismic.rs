@@ -5,15 +5,14 @@ use alloy_consensus::{
 use alloy_dyn_abi::EventExt;
 use alloy_eips::eip712::TypedDataRequest;
 use alloy_json_abi::{Event, EventParam};
-use alloy_network::{Ethereum, EthereumWallet, TransactionBuilder};
+use alloy_network::{Ethereum, TransactionBuilder};
 use alloy_primitives::{
     aliases::{B96, U96},
     hex::{self, FromHex},
     Bytes, IntoLogData, TxKind, B256, U256,
 };
 use alloy_provider::{
-    layers::seismic::test_utils, Provider, SeismicSignedProvider, SeismicUnsignedProvider,
-    SendableTx,
+    layers::seismic::test_utils, Provider, SendableTx,
 };
 use alloy_rpc_types::{SeismicCallRequest, TransactionInput, TransactionRequest};
 use alloy_serde::WithOtherFields;
@@ -23,6 +22,9 @@ use anvil::{spawn, NodeConfig};
 use secp256k1::{PublicKey, SecretKey};
 use seismic_enclave::aes_decrypt;
 use std::{fs, str::FromStr};
+
+use seismic_prelude::foundry::{EthereumWallet, SeismicSignedProvider, SeismicUnsignedProvider};
+use seismic_provider::test_utils;
 
 // common utils
 pub const TEST_PRECOMPILES_BYTECODE_PATH: &str = "/tests/it/seismic_precompiles_test_bytecode.txt";
