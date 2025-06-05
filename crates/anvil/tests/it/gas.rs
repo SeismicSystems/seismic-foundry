@@ -1,10 +1,10 @@
 //! Gas related tests
 
 use crate::utils::http_provider_with_signer;
-use alloy_network::{TransactionBuilder};
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{uint, Address, U256, U64};
 use alloy_provider::Provider;
-use alloy_rpc_types::{BlockId, TransactionRequest};
+use alloy_rpc_types::BlockId;
 use alloy_serde::WithOtherFields;
 use anvil::{eth::fees::INITIAL_BASE_FEE, spawn, NodeConfig};
 

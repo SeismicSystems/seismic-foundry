@@ -134,8 +134,8 @@ use tokio::sync::RwLock as AsyncRwLock;
 use super::executor::new_evm_with_inspector_ref;
 
 use seismic_prelude::foundry::{
-    AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, SimBlock, SimulatePayload, TransactionReceipt,
-    TransactionRequest, TxEnvelope, EthereumWallet
+    AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, SimBlock, SimulatePayload,
+    TransactionReceipt, TransactionRequest, TxEnvelope,
 };
 
 pub mod cache;

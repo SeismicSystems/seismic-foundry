@@ -50,7 +50,11 @@ type PubsubSigner = FillProvider<
 >;
 
 pub async fn connect_pubsub_with_wallet(conn_str: &str, wallet: EthereumWallet) -> PubsubSigner {
-    alloy_provider::ProviderBuilder::new_with_network().wallet(wallet).connect(conn_str).await.unwrap()
+    alloy_provider::ProviderBuilder::new_with_network()
+        .wallet(wallet)
+        .connect(conn_str)
+        .await
+        .unwrap()
 }
 
 pub async fn ipc_provider_with_wallet(

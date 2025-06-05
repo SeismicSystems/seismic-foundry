@@ -1,7 +1,7 @@
 //! tests for subscriptions
 
 use crate::utils::{connect_pubsub, connect_pubsub_with_wallet};
-use alloy_network::{TransactionBuilder};
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{Address, U256};
 use alloy_provider::Provider;
 use alloy_pubsub::Subscription;

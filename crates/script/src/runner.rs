@@ -2,7 +2,7 @@ use super::{ScriptConfig, ScriptResult};
 use crate::build::ScriptPredeployLibraries;
 use alloy_eips::eip7702::SignedAuthorization;
 use alloy_primitives::{Address, Bytes, TxKind, U256};
-use alloy_rpc_types::{TransactionRequest as AlloyTransactionRequest};
+use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
 use eyre::Result;
 use foundry_cheatcodes::BroadcastableTransaction;
 use foundry_config::Config;
@@ -78,10 +78,10 @@ impl ScriptRunner {
                     transaction: TransactionRequest {
                         inner: AlloyTransactionRequest {
                             from: Some(self.evm_opts.sender),
-                                input: code.clone().into(),
-                                nonce: Some(sender_nonce + library_transactions.len() as u64),
-                                ..Default::default()
-                            },
+                            input: code.clone().into(),
+                            nonce: Some(sender_nonce + library_transactions.len() as u64),
+                            ..Default::default()
+                        },
                         seismic_elements: None,
                     }
                     .into(),

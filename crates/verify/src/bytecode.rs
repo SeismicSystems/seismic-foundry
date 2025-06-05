@@ -9,7 +9,9 @@ use crate::{
 };
 use alloy_primitives::{hex, Address, Bytes, TxKind, U256};
 use alloy_provider::{network::TransactionBuilder, Provider};
-use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionInput, TransactionRequest as AlloyTransactionRequest};
+use alloy_rpc_types::{
+    BlockId, BlockNumberOrTag, TransactionInput, TransactionRequest as AlloyTransactionRequest,
+};
 use clap::{Parser, ValueHint};
 use eyre::{Context, OptionExt, Result};
 use foundry_cli::{

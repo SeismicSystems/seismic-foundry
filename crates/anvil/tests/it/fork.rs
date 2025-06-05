@@ -867,11 +867,14 @@ async fn test_fork_call() {
 
     let res1 = api
         .call(
-            WithOtherFields::new(TransactionRequest {
-                to: Some(TxKind::from(to)),
-                input: input.into(),
-                ..Default::default()
-            }.into()),
+            WithOtherFields::new(
+                TransactionRequest {
+                    to: Some(TxKind::from(to)),
+                    input: input.into(),
+                    ..Default::default()
+                }
+                .into(),
+            ),
             None,
             EvmOverrides::default(),
         )
@@ -1310,11 +1313,14 @@ async fn test_fork_execution_reverted() {
 
     let resp = api
         .call(
-            WithOtherFields::new(TransactionRequest {
-                to: Some(TxKind::from(address!("0xFd6CC4F251eaE6d02f9F7B41D1e80464D3d2F377"))),
-                input: TransactionInput::new(bytes!("8f283b3c")),
-                ..Default::default()
-            }.into()),
+            WithOtherFields::new(
+                TransactionRequest {
+                    to: Some(TxKind::from(address!("0xFd6CC4F251eaE6d02f9F7B41D1e80464D3d2F377"))),
+                    input: TransactionInput::new(bytes!("8f283b3c")),
+                    ..Default::default()
+                }
+                .into(),
+            ),
             Some(target.into()),
             EvmOverrides::default(),
         )

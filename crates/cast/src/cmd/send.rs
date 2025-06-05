@@ -15,7 +15,7 @@ use foundry_cli::{
 };
 use std::{path::PathBuf, str::FromStr};
 
-use seismic_prelude::foundry::{AnyNetwork, TransactionRequest, EthereumWallet};
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, TransactionRequest};
 
 /// CLI arguments for `cast send`.
 #[derive(Debug, Parser)]

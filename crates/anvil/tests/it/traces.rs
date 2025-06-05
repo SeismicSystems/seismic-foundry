@@ -4,7 +4,7 @@ use crate::{
     utils::http_provider_with_signer,
 };
 use alloy_eips::BlockId;
-use alloy_network::{TransactionBuilder};
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{
     hex::{self, FromHex},
     Address, Bytes, U256,

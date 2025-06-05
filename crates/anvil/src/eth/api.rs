@@ -39,8 +39,7 @@ use alloy_consensus::{
 use alloy_dyn_abi::TypedData;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_network::{
-    eip2718::Decodable2718, BlockResponse, NetworkWallet, TransactionBuilder,
-    TransactionResponse,
+    eip2718::Decodable2718, BlockResponse, NetworkWallet, TransactionBuilder, TransactionResponse,
 };
 use alloy_primitives::{
     map::{HashMap, HashSet},
@@ -103,7 +102,7 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use yansi::Paint;
 
 use seismic_prelude::foundry::{
-    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SimulatePayload, TransactionRequest
+    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SimulatePayload, TransactionRequest,
 };
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -2849,7 +2848,8 @@ impl EthApi {
             Some(estimation.max_priority_fee_per_gas);
         seismic_request.inner.inner.gas_price = None;
 
-        let envelope = seismic_request.build(&wallet).await.map_err(|_| WalletError::InternalError)?;
+        let envelope =
+            seismic_request.build(&wallet).await.map_err(|_| WalletError::InternalError)?;
 
         self.send_raw_transaction(envelope.encoded_2718().into()).await
     }
