@@ -747,17 +747,17 @@ impl Backend {
     ///
     /// We need to track these mainly to prevent issues when switching between different evms
     pub(crate) fn initialize(&mut self, env: &Env) {
-        self.set_caller(env.tx.caller);
-        self.set_spec_id(env.evm_env.cfg_env.spec);
+        self.set_caller(env.tx.base.caller);
+        self.set_spec_id(env.evm_env.cfg_env.spec.into());
 
-        let test_contract = match env.tx.kind {
+        let test_contract = match env.tx.base.kind {
             TxKind::Call(to) => to,
             TxKind::Create => {
                 let nonce = self
-                    .basic_ref(env.tx.caller)
+                    .basic_ref(env.tx.base.caller)
                     .map(|b| b.unwrap_or_default().nonce)
                     .unwrap_or_default();
-                env.tx.caller.create(nonce)
+                env.tx.base.caller.create(nonce)
             }
         };
         self.set_test_contract(test_contract);
@@ -964,7 +964,7 @@ impl DatabaseExt for Backend {
                     // there might be the case where the snapshot was created during `setUp` with
                     // another caller, so we need to ensure the caller account is present in the
                     // journaled state and database
-                    let caller = current.tx.caller;
+                    let caller = current.tx.base.caller;
                     journaled_state.state.entry(caller).or_insert_with(|| {
                         let caller_account = current_state
                             .state
@@ -1071,8 +1071,8 @@ impl DatabaseExt for Backend {
         if let Some(active) = self.active_fork_mut() {
             active.journaled_state = active_journaled_state.clone();
 
-            let caller = env.tx.caller;
-            let caller_account = active.journaled_state.state.get(&env.tx.caller).cloned();
+            let caller = env.tx.base.caller;
+            let caller_account = active.journaled_state.state.get(&env.tx.base.caller).cloned();
             let target_fork = self.inner.get_fork_mut(idx);
 
             // depth 0 will be the default value when the fork was created
@@ -1137,11 +1137,11 @@ impl DatabaseExt for Backend {
             // another edge case where a fork is created and selected during setup with not
             // necessarily the same caller as for the test, however we must always
             // ensure that fork's state contains the current sender
-            let caller = env.tx.caller;
+            let caller = env.tx.base.caller;
             fork.journaled_state.state.entry(caller).or_insert_with(|| {
                 let caller_account = active_journaled_state
                     .state
-                    .get(&env.tx.caller)
+                    .get(&env.tx.base.caller)
                     .map(|acc| acc.info.clone())
                     .unwrap_or_default();
 
@@ -1865,7 +1865,7 @@ impl Default for BackendInner {
 pub(crate) fn update_current_env_with_fork_env(current: &mut EnvMut<'_>, fork: Env) {
     *current.block = fork.evm_env.block_env;
     *current.cfg = fork.evm_env.cfg_env;
-    current.tx.chain_id = fork.tx.chain_id;
+    current.tx.base.chain_id = fork.tx.base.chain_id;
 }
 
 /// Clones the data of the given `accounts` from the `active` database into the `fork_db`

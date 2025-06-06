@@ -41,13 +41,13 @@ use foundry_evm::{
 };
 use foundry_evm_core::AsEnvMut;
 use itertools::Itertools;
-use op_revm::OpTransaction;
+// use op_revm::OpTransaction;
 use parking_lot::RwLock;
 use rand_08::thread_rng;
 use revm::{
-    context::{BlockEnv, CfgEnv, TxEnv},
+    context::{BlockEnv, TxEnv},
     context_interface::block::BlobExcessGasAndPrice,
-    primitives::hardfork::SpecId,
+    primitives::hardfork::SpecId as RevmSpecId,
 };
 use serde_json::{json, Value};
 use std::{
@@ -62,9 +62,10 @@ use std::{
 use tokio::sync::RwLock as TokioRwLock;
 use yansi::Paint;
 
-use seismic_prelude::foundry::AnyNetwork;
-
 pub use foundry_common::version::SHORT_VERSION as VERSION_MESSAGE;
+
+use foundry_evm_core::evm::{CfgEnv, SeismicTransaction as OpTransaction, SpecId};
+use seismic_prelude::foundry::AnyNetwork;
 
 /// Default port the rpc will open
 pub const NODE_PORT: u16 = 8545;
@@ -291,7 +292,7 @@ Chain ID
             );
         }
 
-        if (SpecId::from(self.get_hardfork()) as u8) < (SpecId::LONDON as u8) {
+        if (RevmSpecId::from(self.get_hardfork()) as u8) < (RevmSpecId::LONDON as u8) {
             let _ = write!(
                 s,
                 r#"
@@ -1046,7 +1047,8 @@ impl NodeConfig {
         // configure the revm environment
 
         let mut cfg = CfgEnv::default();
-        cfg.spec = self.get_hardfork().into();
+        // cfg.spec = self.get_hardfork().into();
+        cfg.spec = SpecId::MERCURY;
 
         cfg.chain_id = self.get_chain_id();
         cfg.limit_contract_code_size = self.code_size_limit;
@@ -1208,7 +1210,10 @@ impl NodeConfig {
                     provider.get_chain_id().await.wrap_err("failed to fetch network chain ID")?;
                 if alloy_chains::NamedChain::Mainnet == chain_id {
                     let hardfork: EthereumHardfork = fork_block_number.into();
+                    /*
                     env.evm_env.cfg_env.spec = hardfork.into();
+                    */
+                    env.evm_env.cfg_env.spec = SpecId::MERCURY;
                     self.hardfork = Some(ChainHardfork::Ethereum(hardfork));
                 }
                 Some(U256::from(chain_id))

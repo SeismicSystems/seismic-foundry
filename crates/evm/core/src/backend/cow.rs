@@ -18,13 +18,14 @@ use revm::{
     bytecode::Bytecode,
     context_interface::result::ResultAndState,
     database::DatabaseRef,
-    primitives::{hardfork::SpecId, HashMap as Map},
+    primitives::HashMap as Map,
     state::{Account, AccountInfo},
     Database, DatabaseCommit,
 };
 use std::{borrow::Cow, collections::BTreeMap};
 
 use seismic_prelude::foundry::TransactionRequest;
+use seismic_revm::SeismicSpecId as SpecId;
 
 /// A wrapper around `Backend` that ensures only `revm::DatabaseRef` functions are called.
 ///

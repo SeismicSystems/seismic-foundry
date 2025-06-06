@@ -16,6 +16,7 @@ workspace = true
 [dependencies]
 seismic-alloy-rpc-types.workspace = true
 seismic-prelude.workspace = true
+seismic-revm.workspace = true
 
 foundry-cheatcodes-spec.workspace = true
 foundry-common.workspace = true

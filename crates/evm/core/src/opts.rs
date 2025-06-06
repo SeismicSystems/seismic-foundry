@@ -9,11 +9,12 @@ use alloy_provider::Provider;
 use eyre::WrapErr;
 use foundry_common::{provider::ProviderBuilder, ALCHEMY_FREE_TIER_CUPS};
 use foundry_config::{Chain, Config, GasLimit};
-use revm::context::{BlockEnv, TxEnv};
+use revm::context::{BlockEnv, TxEnv as RevmTxEnv};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
 
+use crate::env::TxEnv;
 use seismic_prelude::foundry::AnyRpcBlock;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -169,12 +170,12 @@ impl EvmOpts {
                     ..Default::default()
                 },
             },
-            tx: TxEnv {
+            tx: TxEnv::new(RevmTxEnv {
                 gas_price: self.env.gas_price.unwrap_or_default().into(),
                 gas_limit: self.gas_limit(),
                 caller: self.sender,
                 ..Default::default()
-            },
+            }),
         }
     }
 

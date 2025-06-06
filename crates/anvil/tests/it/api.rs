@@ -10,10 +10,7 @@ use alloy_primitives::{
     Address, ChainId, B256, U256,
 };
 use alloy_provider::{Provider, SendableTx};
-use alloy_rpc_types::{
-    state::AccountOverride, BlockId, BlockNumberOrTag,
-    BlockTransactions,
-};
+use alloy_rpc_types::{state::AccountOverride, BlockId, BlockNumberOrTag, BlockTransactions};
 use alloy_serde::WithOtherFields;
 use anvil::{eth::api::CLIENT_VERSION, spawn, NodeConfig, CHAIN_ID};
 use futures::join;

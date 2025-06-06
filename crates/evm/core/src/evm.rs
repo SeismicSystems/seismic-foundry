@@ -4,21 +4,17 @@ use crate::{
     backend::DatabaseExt, constants::DEFAULT_CREATE2_DEPLOYER_CODEHASH, Env, InspectorExt,
 };
 use alloy_consensus::constants::KECCAK_EMPTY;
-use alloy_evm::{
-    eth::EthEvmContext,
-    precompiles::{DynPrecompile, PrecompilesMap},
-    Evm, EvmEnv,
-};
+use alloy_evm::{precompiles::DynPrecompile, Evm, EvmEnv};
 use alloy_primitives::{Address, Bytes, U256};
 use foundry_fork_db::DatabaseError;
 use revm::{
     context::{
         result::{EVMError, HaltReason, ResultAndState},
-        BlockEnv, CfgEnv, ContextTr, CreateScheme, Evm as RevmEvm, JournalTr, LocalContext, TxEnv,
+        BlockEnv, ContextTr, CreateScheme, JournalTr, LocalContext,
     },
     handler::{
-        instructions::EthInstructions, EthFrame, EthPrecompiles, FrameInitOrResult, FrameResult,
-        Handler, ItemOrResult, MainnetHandler,
+        EthFrame, EthPrecompiles, FrameInitOrResult, FrameResult, Handler, ItemOrResult,
+        MainnetHandler,
     },
     inspector::InspectorHandler,
     interpreter::{
@@ -27,9 +23,18 @@ use revm::{
         InterpreterResult,
     },
     precompile::{secp256r1::P256VERIFY, PrecompileSpecId, Precompiles},
-    primitives::hardfork::SpecId,
     Context, ExecuteEvm, Journal,
 };
+
+// TODO: add to prelude
+pub use crate::{CfgEnv, TxEnv};
+pub use seismic_revm::{
+    instructions::instruction_provider::SeismicInstructions as EthInstructions,
+    precompiles::SeismicPrecompiles, SeismicChain, SeismicContext as EthEvmContext,
+    SeismicEvm as RevmEvm, SeismicSpecId as SpecId, SeismicTransaction,
+};
+type PrecompileCtx<'db> = EthEvmContext<&'db mut dyn DatabaseExt>;
+type SeismicFoundryPrecompiles<'db> = SeismicPrecompiles<PrecompileCtx<'db>>;
 
 pub fn new_evm_with_inspector<'i, 'db, I: InspectorExt + ?Sized>(
     db: &'db mut dyn DatabaseExt,
@@ -39,13 +44,13 @@ pub fn new_evm_with_inspector<'i, 'db, I: InspectorExt + ?Sized>(
     let ctx = EthEvmContext {
         journaled_state: {
             let mut journal = Journal::new(db);
-            journal.set_spec_id(env.evm_env.cfg_env.spec);
+            journal.set_spec_id(env.evm_env.cfg_env.spec.into_eth_spec());
             journal
         },
         block: env.evm_env.block_env,
         cfg: env.evm_env.cfg_env,
         tx: env.tx,
-        chain: (),
+        chain: SeismicChain::default(),
         local: LocalContext::default(),
         error: Ok(()),
     };
@@ -85,24 +90,30 @@ pub fn new_evm_with_existing_context<'a>(
     evm
 }
 
+#[allow(unused_variables)]
+fn apply_precompile<'db, F>(p: &mut SeismicPrecompiles<PrecompileCtx<'db>>, address: &Address, f: F)
+where
+    F: FnOnce(Option<DynPrecompile>) -> Option<DynPrecompile>,
+{
+    todo!("Find a way to add this precompile to SeismicPrecompiles")
+}
+
 /// Conditionally inject additional precompiles into the EVM context.
 fn inject_precompiles(evm: &mut FoundryEvm<'_, impl InspectorExt>) {
     if evm.inspector().is_odyssey() {
-        evm.precompiles_mut().apply_precompile(P256VERIFY.address(), |_| {
+        apply_precompile(evm.precompiles_mut(), P256VERIFY.address(), |_| {
             Some(DynPrecompile::from(P256VERIFY.precompile()))
         });
     }
 }
 
 /// Get the precompiles for the given spec.
-fn get_precompiles(spec: SpecId) -> PrecompilesMap {
-    PrecompilesMap::from_static(
-        EthPrecompiles {
-            precompiles: Precompiles::new(PrecompileSpecId::from_spec_id(spec)),
-            spec,
-        }
-        .precompiles,
-    )
+fn get_precompiles(spec: SpecId) -> &'static Precompiles {
+    let spec = spec.into_eth_spec();
+    // PrecompilesMap::from_static(
+    EthPrecompiles { precompiles: Precompiles::new(PrecompileSpecId::from_spec_id(spec)), spec }
+        .precompiles
+    // )
 }
 
 /// Get the call inputs for the CREATE2 factory.
@@ -132,7 +143,7 @@ pub struct FoundryEvm<'db, I: InspectorExt> {
         EthEvmContext<&'db mut dyn DatabaseExt>,
         I,
         EthInstructions<EthInterpreter, EthEvmContext<&'db mut dyn DatabaseExt>>,
-        PrecompilesMap,
+        SeismicPrecompiles<EthEvmContext<&'db mut dyn DatabaseExt>>,
     >,
 }
 
@@ -155,7 +166,7 @@ impl<I: InspectorExt> FoundryEvm<'_, I> {
 }
 
 impl<'db, I: InspectorExt> Evm for FoundryEvm<'db, I> {
-    type Precompiles = PrecompilesMap;
+    type Precompiles = SeismicFoundryPrecompiles<'db>;
     type Inspector = I;
     type DB = &'db mut dyn DatabaseExt;
     type Error = EVMError<DatabaseError>;
@@ -164,31 +175,31 @@ impl<'db, I: InspectorExt> Evm for FoundryEvm<'db, I> {
     type Tx = TxEnv;
 
     fn chain_id(&self) -> u64 {
-        self.inner.ctx.cfg.chain_id
+        self.inner.0.ctx.cfg.chain_id
     }
 
     fn block(&self) -> &BlockEnv {
-        &self.inner.block
+        &self.inner.0.block
     }
 
     fn db_mut(&mut self) -> &mut Self::DB {
-        self.inner.db()
+        self.inner.0.db()
     }
 
     fn precompiles(&self) -> &Self::Precompiles {
-        &self.inner.precompiles
+        &self.inner.0.precompiles
     }
 
     fn precompiles_mut(&mut self) -> &mut Self::Precompiles {
-        &mut self.inner.precompiles
+        &mut self.inner.0.precompiles
     }
 
     fn inspector(&self) -> &Self::Inspector {
-        &self.inner.inspector
+        &self.inner.0.inspector
     }
 
     fn inspector_mut(&mut self) -> &mut Self::Inspector {
-        &mut self.inner.inspector
+        &mut self.inner.0.inspector
     }
 
     fn set_inspector_enabled(&mut self, _enabled: bool) {
@@ -200,7 +211,7 @@ impl<'db, I: InspectorExt> Evm for FoundryEvm<'db, I> {
         tx: Self::Tx,
     ) -> Result<ResultAndState<Self::HaltReason>, Self::Error> {
         let mut handler = FoundryHandler::<_>::default();
-        self.inner.set_tx(tx);
+        self.inner.0.set_tx(tx);
         handler.inspect_run(&mut self.inner)
     }
 
@@ -217,23 +228,30 @@ impl<'db, I: InspectorExt> Evm for FoundryEvm<'db, I> {
     where
         Self: Sized,
     {
-        let Context { block: block_env, cfg: cfg_env, journaled_state, .. } = self.inner.ctx;
+        let Context { block: block_env, cfg: cfg_env, journaled_state, .. } = self.inner.0.ctx;
 
         (journaled_state.database, EvmEnv { block_env, cfg_env })
     }
 }
 
 impl<'db, I: InspectorExt> Deref for FoundryEvm<'db, I> {
-    type Target = Context<BlockEnv, TxEnv, CfgEnv, &'db mut dyn DatabaseExt>;
+    type Target = Context<
+        BlockEnv,
+        TxEnv,
+        CfgEnv,
+        &'db mut dyn DatabaseExt,
+        Journal<&'db mut (dyn DatabaseExt)>,
+        SeismicChain,
+    >;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner.ctx
+        &self.inner.0.ctx
     }
 }
 
 impl<I: InspectorExt> DerefMut for FoundryEvm<'_, I> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner.ctx
+        &mut self.inner.0.ctx
     }
 }
 
@@ -244,7 +262,7 @@ pub struct FoundryHandler<'db, I: InspectorExt> {
             EthEvmContext<&'db mut dyn DatabaseExt>,
             I,
             EthInstructions<EthInterpreter, EthEvmContext<&'db mut dyn DatabaseExt>>,
-            PrecompilesMap,
+            SeismicPrecompiles<EthEvmContext<&'db mut dyn DatabaseExt>>,
         >,
         EVMError<DatabaseError>,
         EthFrame<
@@ -252,7 +270,7 @@ pub struct FoundryHandler<'db, I: InspectorExt> {
                 EthEvmContext<&'db mut dyn DatabaseExt>,
                 I,
                 EthInstructions<EthInterpreter, EthEvmContext<&'db mut dyn DatabaseExt>>,
-                PrecompilesMap,
+                SeismicPrecompiles<EthEvmContext<&'db mut dyn DatabaseExt>>,
             >,
             EVMError<DatabaseError>,
             EthInterpreter,
@@ -272,7 +290,7 @@ impl<'db, I: InspectorExt> Handler for FoundryHandler<'db, I> {
         EthEvmContext<&'db mut dyn DatabaseExt>,
         I,
         EthInstructions<EthInterpreter, EthEvmContext<&'db mut dyn DatabaseExt>>,
-        PrecompilesMap,
+        SeismicPrecompiles<EthEvmContext<&'db mut dyn DatabaseExt>>,
     >;
     type Error = EVMError<DatabaseError>;
     type Frame = EthFrame<
@@ -280,7 +298,7 @@ impl<'db, I: InspectorExt> Handler for FoundryHandler<'db, I> {
             EthEvmContext<&'db mut dyn DatabaseExt>,
             I,
             EthInstructions<EthInterpreter, EthEvmContext<&'db mut dyn DatabaseExt>>,
-            PrecompilesMap,
+            SeismicPrecompiles<EthEvmContext<&'db mut dyn DatabaseExt>>,
         >,
         EVMError<DatabaseError>,
         EthInterpreter,
@@ -296,7 +314,7 @@ impl<'db, I: InspectorExt> Handler for FoundryHandler<'db, I> {
         let result = if self
             .create2_overrides
             .last()
-            .is_some_and(|(depth, _)| *depth == evm.journal().depth)
+            .is_some_and(|(depth, _)| *depth == evm.0.journal().depth)
         {
             let (_, call_inputs) = self.create2_overrides.pop().unwrap();
             let FrameResult::Call(mut result) = result else {
@@ -342,23 +360,23 @@ impl<I: InspectorExt> InspectorHandler for FoundryHandler<'_, I> {
 
         let CreateScheme::Create2 { salt } = inputs.scheme else { return Ok(frame_or_result) };
 
-        if !evm.inspector.should_use_create2_factory(&mut evm.ctx, inputs) {
+        if !evm.0.inspector.should_use_create2_factory(&mut evm.0.ctx, inputs) {
             return Ok(frame_or_result)
         }
 
         let gas_limit = inputs.gas_limit;
 
         // Get CREATE2 deployer.
-        let create2_deployer = evm.inspector.create2_deployer();
+        let create2_deployer = evm.0.inspector.create2_deployer();
 
         // Generate call inputs for CREATE2 factory.
         let call_inputs = get_create2_factory_call_inputs(salt, inputs, create2_deployer);
 
         // Push data about current override to the stack.
-        self.create2_overrides.push((evm.journal().depth(), call_inputs.clone()));
+        self.create2_overrides.push((evm.0.journal().depth(), call_inputs.clone()));
 
         // Sanity check that CREATE2 deployer exists.
-        let code_hash = evm.journal().load_account(create2_deployer)?.info.code_hash;
+        let code_hash = evm.0.journal().load_account(create2_deployer)?.info.code_hash;
         if code_hash == KECCAK_EMPTY {
             return Ok(ItemOrResult::Result(FrameResult::Call(CallOutcome {
                 result: InterpreterResult {

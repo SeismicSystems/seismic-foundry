@@ -18,7 +18,6 @@ pub extern crate foundry_cheatcodes_spec as spec;
 #[macro_use]
 extern crate tracing;
 
-use alloy_evm::eth::EthEvmContext;
 use alloy_primitives::Address;
 use foundry_evm_core::backend::DatabaseExt;
 use spec::Status;
@@ -64,6 +63,8 @@ pub use test::expect::ExpectedCallTracker;
 mod toml;
 
 mod utils;
+
+use seismic_revm::SeismicContext as EthEvmContext;
 
 /// Cheatcode implementation.
 pub(crate) trait Cheatcode: CheatcodeDef + DynCheatcode {

@@ -39,7 +39,7 @@ use foundry_compilers::{
     RestrictionsWithVersion, VyperLanguage,
 };
 use regex::Regex;
-use revm::primitives::hardfork::SpecId;
+// use revm::primitives::hardfork::SpecId;
 use semver::Version;
 use serde::{Deserialize, Serialize, Serializer};
 use std::{
@@ -125,6 +125,8 @@ use bind_json::BindJsonConfig;
 
 mod compilation;
 pub use compilation::{CompilationRestrictions, SettingsOverrides};
+
+use seismic_revm::SeismicSpecId as SpecId;
 
 /// Foundry configuration
 ///

@@ -22,7 +22,6 @@ use crate::{
     Vm::{self, AccountAccess},
 };
 use alloy_consensus::BlobTransactionSidecar;
-use alloy_evm::eth::EthEvmContext;
 use alloy_network::TransactionBuilder4844;
 use alloy_primitives::{
     hex,
@@ -72,7 +71,9 @@ use std::{
     sync::Arc,
 };
 
+use foundry_evm_core::TxEnv;
 use seismic_prelude::foundry::TransactionRequest;
+use seismic_revm::{SeismicChain, SeismicContext as EthEvmContext};
 
 mod utils;
 
@@ -144,7 +145,7 @@ where
             database: &mut *ccx.ecx.journaled_state.database as &mut dyn DatabaseExt,
         },
         local: LocalContext::default(),
-        chain: (),
+        chain: SeismicChain::default(),
         error,
     };
 
@@ -152,11 +153,11 @@ where
 
     let res = f(&mut evm)?;
 
-    ccx.ecx.journaled_state.inner = evm.inner.ctx.journaled_state.inner;
-    ccx.ecx.block = evm.inner.ctx.block;
-    ccx.ecx.tx = evm.inner.ctx.tx;
-    ccx.ecx.cfg = evm.inner.ctx.cfg;
-    ccx.ecx.error = evm.inner.ctx.error;
+    ccx.ecx.journaled_state.inner = evm.inner.0.ctx.journaled_state.inner;
+    ccx.ecx.block = evm.inner.0.ctx.block;
+    ccx.ecx.tx = evm.inner.0.ctx.tx;
+    ccx.ecx.cfg = evm.inner.0.ctx.cfg;
+    ccx.ecx.error = evm.inner.0.ctx.error;
 
     Ok(res)
 }

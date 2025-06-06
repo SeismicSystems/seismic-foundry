@@ -17,7 +17,7 @@ use alloy_serde::{OtherFields, WithOtherFields};
 use bytes::BufMut;
 use foundry_evm::traces::CallTraceNode;
 use op_alloy_consensus::{TxDeposit, DEPOSIT_TX_TYPE_ID};
-use op_revm::{transaction::deposit::DepositTransactionParts, OpTransaction};
+use op_revm::transaction::deposit::DepositTransactionParts;
 use revm::{context::TxEnv, interpreter::InstructionResult};
 
 use serde::{Deserialize, Serialize};
@@ -32,6 +32,7 @@ use seismic_prelude::foundry::{
     AnyReceiptEnvelope, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, RpcTransaction,
     TransactionReceipt, TransactionRequest, TxEnvelope,
 };
+use seismic_revm::SeismicTransaction as OpTransaction;
 
 pub trait SeismicCompatible:
     Encodable
@@ -613,6 +614,7 @@ impl PendingTransaction {
                     ..
                 } = tx;
 
+                #[allow(unused_variables)]
                 let base = TxEnv {
                     caller,
                     kind: transact_to(to),
@@ -628,13 +630,15 @@ impl PendingTransaction {
                     ..Default::default()
                 };
 
+                #[allow(unused_variables)]
                 let deposit = DepositTransactionParts {
                     source_hash: *source_hash,
                     mint: *mint,
                     is_system_transaction: *is_system_transaction,
                 };
 
-                OpTransaction { base, deposit, enveloped_tx: None }
+                // OpTransaction { base, deposit, enveloped_tx: None }
+                unimplemented!("Unsupported; keep the rest of the code so diff is small")
             }
             TypedTransaction::Seismic(tx) => {
                 let seismic_alloy_consensus::TxSeismic {

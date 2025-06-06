@@ -20,11 +20,12 @@ use foundry_evm::{
     traces::TraceMode, Env, EnvMut,
 };
 use reqwest::Url;
-use revm::{bytecode::Bytecode, database::Database, primitives::hardfork::SpecId};
+use revm::{bytecode::Bytecode, database::Database};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
+use foundry_evm_core::evm::SpecId;
 use seismic_prelude::foundry::AnyRpcBlock;
 
 /// Enum to represent the type of bytecode being verified

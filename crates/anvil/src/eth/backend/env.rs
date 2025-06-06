@@ -1,8 +1,11 @@
-use alloy_evm::EvmEnv;
+use alloy_evm::EvmEnv as AlloyEvmEnv;
 use foundry_evm::EnvMut;
-use foundry_evm_core::AsEnvMut;
-use op_revm::OpTransaction;
-use revm::context::{BlockEnv, CfgEnv, TxEnv};
+use foundry_evm_core::{evm::SpecId, AsEnvMut};
+use revm::context::{BlockEnv, TxEnv};
+
+// TODO: use prelude
+use foundry_evm_core::evm::{CfgEnv, SeismicTransaction as OpTransaction};
+type EvmEnv = AlloyEvmEnv<SpecId>;
 
 /// Helper container type for [`EvmEnv`] and [`OpTransaction<TxEnd>`].
 #[derive(Clone, Debug, Default)]
@@ -24,7 +27,7 @@ impl AsEnvMut for Env {
         EnvMut {
             block: &mut self.evm_env.block_env,
             cfg: &mut self.evm_env.cfg_env,
-            tx: &mut self.tx.base,
+            tx: &mut self.tx,
         }
     }
 }
