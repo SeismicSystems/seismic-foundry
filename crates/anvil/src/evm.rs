@@ -39,7 +39,7 @@ mod tests {
     use alloy_primitives::{address, Address, Bytes, TxKind, U256};
     use foundry_evm_core::either_evm::EitherEvm;
     use itertools::Itertools;
-    use op_revm::{precompiles::OpPrecompiles, L1BlockInfo, OpContext, OpSpecId, OpTransaction};
+    use op_revm::{precompiles::OpPrecompiles, L1BlockInfo, OpContext};
     use revm::{
         context::{CfgEnv, Evm as RevmEvm, JournalTr, LocalContext, TxEnv},
         database::{EmptyDB, EmptyDBTyped},
@@ -53,6 +53,8 @@ mod tests {
         primitives::hardfork::SpecId,
         Journal,
     };
+
+    use foundry_evm_core::evm::{SeismicTransaction as OpTransaction, SeismicChain,  SpecId as OpSpecId};
 
     use crate::{inject_precompiles, PrecompileFactory};
 
@@ -91,12 +93,11 @@ mod tests {
     {
         let eth_env = foundry_evm::Env {
             evm_env: EvmEnv { block_env: Default::default(), cfg_env: CfgEnv::new_with_spec(spec) },
-            // TODO: impl into for this
             tx: TxEnv {
                 kind: TxKind::Call(PRECOMPILE_ADDR),
                 data: PAYLOAD.into(),
                 ..Default::default()
-            },
+            }.into(),
         };
 
         let eth_evm_context = EthEvmContext {

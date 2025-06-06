@@ -271,7 +271,7 @@ impl Backend {
             let env = env.read();
             Blockchain::new(
                 &env,
-                env.evm_env.cfg_env.spec,
+                env.evm_env.cfg_env.spec.into_eth_spec(),
                 fees.is_eip1559().then(|| fees.base_fee()),
                 genesis.timestamp,
                 genesis.number,
@@ -522,7 +522,7 @@ impl Backend {
     }
 
     pub fn precompiles(&self) -> Vec<Address> {
-        get_precompiles_for(self.env.read().evm_env.cfg_env.spec)
+        get_precompiles_for(self.env.read().evm_env.cfg_env.spec.into_eth_spec())
     }
 
     /// Resets the fork to a fresh state
@@ -786,7 +786,7 @@ impl Backend {
 
     /// Returns [`BlobParams`] corresponding to the current spec.
     pub fn blob_params(&self) -> BlobParams {
-        if self.env.read().evm_env.cfg_env.spec >= SpecId::PRAGUE {
+        if self.env.read().evm_env.cfg_env.spec.into_eth_spec() >= SpecId::PRAGUE {
             BlobParams::prague()
         } else {
             BlobParams::cancun()
@@ -1137,10 +1137,12 @@ impl Backend {
         let mut env = self.next_env();
         env.tx = tx.pending_transaction.to_revm_tx_env();
 
+        /*
         if env.is_optimism {
             env.tx.enveloped_tx =
                 Some(alloy_rlp::encode(&tx.pending_transaction.transaction.transaction).into());
         }
+        */
 
         let db = self.db.read().await;
         let mut inspector = self.build_inspector();

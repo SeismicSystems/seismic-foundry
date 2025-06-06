@@ -663,8 +663,7 @@ impl Executor {
                     ..self.env().evm_env.block_env.clone()
                 },
             },
-            // TODO: implement into
-            tx: TxEnv::new(RevmTxEnv {
+            tx: RevmTxEnv {
                 caller,
                 kind,
                 data,
@@ -675,7 +674,7 @@ impl Executor {
                 gas_limit: self.gas_limit,
                 chain_id: Some(self.env().evm_env.cfg_env.chain_id),
                 ..self.env().tx.base.clone()
-            }),
+            }.into(),
         }
     }
 

@@ -28,7 +28,7 @@ use foundry_evm::{backend::DatabaseError, traces::CallTraceNode};
 use foundry_evm_core::either_evm::EitherEvm;
 use op_revm::{precompiles::OpPrecompiles, L1BlockInfo, OpContext};
 use revm::{
-    context::{Block as RevmBlock, BlockEnv, CfgEnv, Evm as RevmEvm, JournalTr, LocalContext},
+    context::{Block as RevmBlock, BlockEnv, JournalTr, LocalContext},
     context_interface::result::{EVMError, ExecutionResult, Output},
     database::WrapDatabaseRef,
     handler::{instructions::EthInstructions, EthPrecompiles},
@@ -38,6 +38,8 @@ use revm::{
     Database, DatabaseRef, Inspector, Journal,
 };
 use std::sync::Arc;
+
+use foundry_evm_core::evm::{CfgEnv};
 
 /// Represents an executed transaction (transacted on the DB)
 #[derive(Debug)]
