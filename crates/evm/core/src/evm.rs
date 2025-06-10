@@ -31,10 +31,11 @@ pub use crate::{CfgEnv, TxEnv};
 pub use seismic_revm::{
     instructions::instruction_provider::SeismicInstructions as EthInstructions,
     precompiles::SeismicPrecompiles, SeismicChain, SeismicContext as EthEvmContext,
-    SeismicEvm as RevmEvm, SeismicSpecId as SpecId, SeismicTransaction,
+    SeismicEvm as RevmEvm, SeismicHaltReason as OpHaltReason, SeismicSpecId as SpecId,
+    SeismicTransaction,
 };
-type PrecompileCtx<'db> = EthEvmContext<&'db mut dyn DatabaseExt>;
-type SeismicFoundryPrecompiles<'db> = SeismicPrecompiles<PrecompileCtx<'db>>;
+pub type PrecompileCtx<'db> = EthEvmContext<&'db mut dyn DatabaseExt>;
+pub type SeismicFoundryPrecompiles<'db> = SeismicPrecompiles<PrecompileCtx<'db>>;
 
 pub fn new_evm_with_inspector<'i, 'db, I: InspectorExt + ?Sized>(
     db: &'db mut dyn DatabaseExt,
@@ -110,10 +111,14 @@ fn inject_precompiles(evm: &mut FoundryEvm<'_, impl InspectorExt>) {
 /// Get the precompiles for the given spec.
 fn get_precompiles(spec: SpecId) -> &'static Precompiles {
     let spec = spec.into_eth_spec();
-    // PrecompilesMap::from_static(
-    EthPrecompiles { precompiles: Precompiles::new(PrecompileSpecId::from_spec_id(spec)), spec }
-        .precompiles
-    // )
+    /*
+    PrecompilesMap::from_static(
+    */
+        EthPrecompiles { precompiles: Precompiles::new(PrecompileSpecId::from_spec_id(spec)), spec }
+            .precompiles
+    /*
+    )
+    */
 }
 
 /// Get the call inputs for the CREATE2 factory.

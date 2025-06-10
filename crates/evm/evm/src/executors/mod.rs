@@ -59,7 +59,7 @@ pub use invariant::InvariantExecutor;
 mod trace;
 pub use trace::TracingExecutor;
 
-use foundry_evm_core::evm::{SpecId, TxEnv};
+use foundry_evm_core::evm::SpecId;
 
 sol! {
     interface ITest {
@@ -674,7 +674,8 @@ impl Executor {
                 gas_limit: self.gas_limit,
                 chain_id: Some(self.env().evm_env.cfg_env.chain_id),
                 ..self.env().tx.base.clone()
-            }.into(),
+            }
+            .into(),
         }
     }
 

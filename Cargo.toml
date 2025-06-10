@@ -169,6 +169,7 @@ trezor-client.opt-level = "z"
 [workspace.dependencies]
 # Seismic-specific deps
 alloy-rpc-types-eth = { version = "1.0.5", default-features = true }
+alloy-seismic-evm = "0.9.1"
 seismic-alloy-consensus = "0.0.1"
 seismic-alloy-network = "0.0.1"
 seismic-alloy-rpc-types = "0.0.1"
@@ -369,20 +370,20 @@ zip-extract = "=0.2.1"
 # and instead use our local version
 seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "3f47bf1"}
 
-seismic-alloy-consensus = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "1edf4ac" }
-seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "1edf4ac" }
-seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "1edf4ac" }
-seismic-alloy-rpc-types = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "1edf4ac" }
-seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "1edf4ac" }
+seismic-alloy-consensus = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "cc0e5f3" }
+seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "cc0e5f3" }
+seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "cc0e5f3" }
+seismic-alloy-rpc-types = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "cc0e5f3" }
+seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-op-alloy.git", rev = "cc0e5f3" }
 
 foundry-fork-db = { git = "https://github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "42bcda0" }
 
 # seismic-revm
-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e1af9ce4" }
-revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e1af9ce4" }
-revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e1af9ce4" }
-op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e1af9ce4" }
-seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e1af9ce4" }
+revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "963a6050" }
+revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "963a6050" }
+revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "963a6050" }
+op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "963a6050" }
+seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "963a6050" }
 
 # seismic-revm-inspectors
 revm-inspectors = { git = "https://github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "cebb097" }
@@ -404,7 +405,8 @@ foundry-compilers-artifacts-vyper = { git = "https://github.com/SeismicSystems/s
 foundry-compilers-core = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "cde8c42" }
 
 # alloy-evm
-alloy-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "b4221d8" }
-alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "b4221d8" }
+alloy-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "8230891" }
+alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "8230891" }
+alloy-seismic-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "8230891" }
 
 alloy-trie = { git = "https://github.com/SeismicSystems/seismic-trie.git", rev = "f3a74a3" }

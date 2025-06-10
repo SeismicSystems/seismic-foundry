@@ -49,7 +49,7 @@ use alloy_eips::{
     eip4844::MAX_BLOBS_PER_BLOCK_DENCUN,
     eip7840::BlobParams,
 };
-use alloy_evm::{eth::EthEvmContext, precompiles::PrecompilesMap, Database, Evm};
+use alloy_evm::{eth::EthEvmContext, Database, Evm};
 use alloy_network::{
     AnyHeader, AnyRpcHeader, AnyTxType, UnknownTxEnvelope, UnknownTypedTransaction,
 };
@@ -82,9 +82,8 @@ use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
-        has_optimism_fields, transaction_request_to_typed, DepositReceipt,
-        MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse, TransactionInfo,
-        TypedReceipt, TypedTransaction,
+        transaction_request_to_typed, DepositReceipt, MaybeImpersonatedTransaction,
+        PendingTransaction, ReceiptResponse, TransactionInfo, TypedReceipt, TypedTransaction,
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
 };
@@ -99,12 +98,10 @@ use foundry_evm::{
     inspectors::AccessListInspector,
     traces::TracingInspectorConfig,
 };
-use foundry_evm_core::either_evm::EitherEvm;
+use foundry_evm_core::{either_evm::EitherEvm, evm::SeismicPrecompiles};
 use futures::channel::mpsc::{unbounded, UnboundedSender};
 use op_alloy_consensus::DEPOSIT_TX_TYPE_ID;
-use op_revm::{
-    transaction::deposit::DepositTransactionParts, OpContext, OpHaltReason, OpTransaction,
-};
+use op_revm::OpContext;
 use parking_lot::{Mutex, RwLock};
 use revm::{
     context::{Block as RevmBlock, BlockEnv, TxEnv},
@@ -115,11 +112,12 @@ use revm::{
     database::{CacheDB, DatabaseRef, WrapDatabaseRef},
     interpreter::InstructionResult,
     precompile::secp256r1::P256VERIFY,
-    primitives::{hardfork::SpecId, KECCAK_EMPTY},
+    primitives::{hardfork::SpecId as RevmSpecId, KECCAK_EMPTY},
     state::AccountInfo,
     DatabaseCommit, Inspector,
 };
 use revm_inspectors::transfer::TransferInspector;
+use seismic_revm::SeismicContext;
 use std::{
     collections::BTreeMap,
     io::{Read, Write},
@@ -133,6 +131,7 @@ use tokio::sync::RwLock as AsyncRwLock;
 
 use super::executor::new_evm_with_inspector_ref;
 
+use foundry_evm_core::evm::{OpHaltReason, SeismicTransaction as OpTransaction, SpecId};
 use seismic_prelude::foundry::{
     AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, SimBlock, SimulatePayload,
     TransactionReceipt, TransactionRequest, TxEnvelope,
@@ -756,27 +755,27 @@ impl Backend {
 
     /// Returns true for post London
     pub fn is_eip1559(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::LONDON as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::LONDON as u8)
     }
 
     /// Returns true for post Merge
     pub fn is_eip3675(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::MERGE as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::MERGE as u8)
     }
 
     /// Returns true for post Berlin
     pub fn is_eip2930(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::BERLIN as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::BERLIN as u8)
     }
 
     /// Returns true for post Cancun
     pub fn is_eip4844(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::CANCUN as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::CANCUN as u8)
     }
 
     /// Returns true for post Prague
     pub fn is_eip7702(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::PRAGUE as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::PRAGUE as u8)
     }
 
     /// Returns true if op-stack deposits are active
@@ -786,7 +785,7 @@ impl Backend {
 
     /// Returns [`BlobParams`] corresponding to the current spec.
     pub fn blob_params(&self) -> BlobParams {
-        if self.env.read().evm_env.cfg_env.spec.into_eth_spec() >= SpecId::PRAGUE {
+        if self.env.read().evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::PRAGUE {
             BlobParams::prague()
         } else {
             BlobParams::cancun()
@@ -1105,11 +1104,14 @@ impl Backend {
     ) -> EitherEvm<
         WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>,
         &'db mut I,
-        PrecompilesMap,
+        SeismicPrecompiles<
+            SeismicContext<WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>>,
+        >,
     >
     where
         I: Inspector<EthEvmContext<WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>>>
-            + Inspector<OpContext<WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>>>,
+            + Inspector<OpContext<WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>>>
+            + Inspector<SeismicContext<WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>>>,
         WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>:
             Database<Error = DatabaseError>,
     {
@@ -1501,7 +1503,7 @@ impl Backend {
                     },
                     seismic_elements: _,
                 },
-            other,
+            other: _,
         } = request;
 
         let tx_type = transaction_type.unwrap_or_else(|| {
@@ -1594,6 +1596,7 @@ impl Backend {
             env.evm_env.cfg_env.disable_base_fee = true;
         }
 
+        /*
         // Deposit transaction?
         if transaction_type == Some(DEPOSIT_TX_TYPE_ID) && has_optimism_fields(&other) {
             let deposit = DepositTransactionParts {
@@ -1612,6 +1615,7 @@ impl Backend {
             };
             env.tx.deposit = deposit;
         }
+        */
 
         env
     }
@@ -3157,7 +3161,7 @@ impl TransactionValidator for Backend {
             if chain_id.to::<u64>() != tx_chain_id {
                 if let Some(legacy) = tx.as_legacy() {
                     // <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md>
-                    if env.evm_env.cfg_env.spec >= SpecId::SPURIOUS_DRAGON &&
+                    if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::SPURIOUS_DRAGON &&
                         legacy.tx().chain_id.is_none()
                     {
                         warn!(target: "backend", ?chain_id, ?tx_chain_id, "incompatible EIP155-based V");
@@ -3194,7 +3198,7 @@ impl TransactionValidator for Backend {
             return Err(InvalidTransactionError::NonceTooLow);
         }
 
-        if env.evm_env.cfg_env.spec >= SpecId::LONDON {
+        if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::LONDON {
             if tx.gas_price() < env.evm_env.block_env.basefee.into() && !is_deposit_tx {
                 warn!(target: "backend", "max fee per gas={}, too low, block basefee={}",tx.gas_price(),  env.evm_env.block_env.basefee);
                 return Err(InvalidTransactionError::FeeCapTooLow);
@@ -3211,7 +3215,9 @@ impl TransactionValidator for Backend {
         }
 
         // EIP-4844 Cancun hard fork validation steps
-        if env.evm_env.cfg_env.spec >= SpecId::CANCUN && tx.transaction.is_eip4844() {
+        if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::CANCUN &&
+            tx.transaction.is_eip4844()
+        {
             // Light checks first: see if the blob fee cap is too low.
             if let Some(max_fee_per_blob_gas) = tx.essentials().max_fee_per_blob_gas {
                 if let Some(blob_gas_and_price) = &env.evm_env.block_env.blob_excess_gas_and_price {
@@ -3478,6 +3484,10 @@ pub fn is_arbitrum(chain_id: u64) -> bool {
 pub fn op_haltreason_to_instruction_result(op_reason: OpHaltReason) -> InstructionResult {
     match op_reason {
         OpHaltReason::Base(eth_h) => eth_h.into(),
+        /*
         OpHaltReason::FailedDeposit => InstructionResult::Stop,
+        */
+        OpHaltReason::InvalidPrivateStorageAccess => InstructionResult::Stop,
+        OpHaltReason::InvalidPublicStorageAccess => InstructionResult::Stop,
     }
 }

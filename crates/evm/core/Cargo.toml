@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 seismic-alloy-rpc-types.workspace = true
+alloy-seismic-evm.workspace = true
 seismic-prelude.workspace = true
 seismic-revm.workspace = true
 
@@ -54,7 +55,7 @@ revm = { workspace = true, features = [
 ] }
 revm-inspectors.workspace = true
 op-revm.workspace = true
-alloy-op-evm.workspace = true
+# alloy-op-evm.workspace = true
 
 auto_impl.workspace = true
 eyre.workspace = true

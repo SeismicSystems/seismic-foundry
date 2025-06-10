@@ -71,7 +71,6 @@ use std::{
     sync::Arc,
 };
 
-use foundry_evm_core::TxEnv;
 use seismic_prelude::foundry::TransactionRequest;
 use seismic_revm::{SeismicChain, SeismicContext as EthEvmContext};
 

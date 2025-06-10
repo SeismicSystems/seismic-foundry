@@ -15,8 +15,7 @@ use alloy_consensus::{
     constants::EMPTY_WITHDRAWALS, proofs::calculate_receipt_root, Receipt, ReceiptWithBloom,
 };
 use alloy_eips::{eip7685::EMPTY_REQUESTS_HASH, eip7840::BlobParams};
-use alloy_evm::{eth::EthEvmContext, precompiles::PrecompilesMap, EthEvm, Evm};
-use alloy_op_evm::OpEvm;
+use alloy_evm::{eth::EthEvmContext, Evm};
 use alloy_primitives::{Bloom, BloomInput, Log, B256};
 use anvil_core::eth::{
     block::{Block, BlockInfo, PartialHeader},
@@ -25,13 +24,12 @@ use anvil_core::eth::{
     },
 };
 use foundry_evm::{backend::DatabaseError, traces::CallTraceNode};
-use foundry_evm_core::either_evm::EitherEvm;
-use op_revm::{precompiles::OpPrecompiles, L1BlockInfo, OpContext};
+use foundry_evm_core::{either_evm::EitherEvm, evm::SeismicChain};
+use op_revm::OpContext;
 use revm::{
     context::{Block as RevmBlock, BlockEnv, JournalTr, LocalContext},
     context_interface::result::{EVMError, ExecutionResult, Output},
     database::WrapDatabaseRef,
-    handler::{instructions::EthInstructions, EthPrecompiles},
     interpreter::InstructionResult,
     precompile::{secp256r1::P256VERIFY, PrecompileSpecId, Precompiles},
     primitives::hardfork::SpecId,
@@ -39,7 +37,10 @@ use revm::{
 };
 use std::sync::Arc;
 
-use foundry_evm_core::evm::{CfgEnv};
+use foundry_evm_core::evm::{
+    CfgEnv, EthEvmContext as SeismicContext, EthInstructions as SeismicInstructions,
+    RevmEvm as SeismicEvm, SeismicPrecompiles, SeismicTransaction,
+};
 
 /// Represents an executed transaction (transacted on the DB)
 #[derive(Debug)]
@@ -140,15 +141,15 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
         let difficulty = self.block_env.difficulty;
         let beneficiary = self.block_env.beneficiary;
         let timestamp = self.block_env.timestamp;
-        let base_fee = if self.cfg_env.spec.is_enabled_in(SpecId::LONDON) {
+        let base_fee = if self.cfg_env.spec.into_eth_spec().is_enabled_in(SpecId::LONDON) {
             Some(self.block_env.basefee)
         } else {
             None
         };
 
-        let is_shanghai = self.cfg_env.spec >= SpecId::SHANGHAI;
-        let is_cancun = self.cfg_env.spec >= SpecId::CANCUN;
-        let is_prague = self.cfg_env.spec >= SpecId::PRAGUE;
+        let is_shanghai = self.cfg_env.spec.into_eth_spec() >= SpecId::SHANGHAI;
+        let is_cancun = self.cfg_env.spec.into_eth_spec() >= SpecId::CANCUN;
+        let is_prague = self.cfg_env.spec.into_eth_spec() >= SpecId::PRAGUE;
         let excess_blob_gas = if is_cancun { self.block_env.blob_excess_gas() } else { None };
         let mut cumulative_blob_gas_used = if is_cancun { Some(0u64) } else { None };
 
@@ -160,22 +161,22 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
                 }
                 TransactionExecutionOutcome::Exhausted(tx) => {
                     trace!(target: "backend",  tx_gas_limit = %tx.pending_transaction.transaction.gas_limit(), ?tx,  "block gas limit exhausting, skipping transaction");
-                    continue;
+                    continue
                 }
                 TransactionExecutionOutcome::BlobGasExhausted(tx) => {
                     trace!(target: "backend",  blob_gas = %tx.pending_transaction.transaction.blob_gas().unwrap_or_default(), ?tx,  "block blob gas limit exhausting, skipping transaction");
-                    continue;
+                    continue
                 }
                 TransactionExecutionOutcome::Invalid(tx, _) => {
                     trace!(target: "backend", ?tx,  "skipping invalid transaction");
                     invalid.push(tx);
-                    continue;
+                    continue
                 }
                 TransactionExecutionOutcome::DatabaseError(_, err) => {
                     // Note: this is only possible in forking mode, if for example a rpc request
                     // failed
                     trace!(target: "backend", ?err,  "Failed to execute transaction due to database error");
-                    continue;
+                    continue
                 }
             };
             if is_cancun {
@@ -215,7 +216,7 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
                 out: out.map(Output::into_data),
                 nonce: tx.nonce,
                 gas_used: tx.gas_used,
-                tx_type: transaction.pending_transaction.transaction.r#type().map(|t| t as isize),
+                tx_type: Some(transaction.tx_type() as isize),
             };
 
             transaction_infos.push(info);
@@ -253,11 +254,14 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
     }
 
     fn env_for(&self, tx: &PendingTransaction) -> Env {
+        #[allow(unused_mut)]
         let mut tx_env = tx.to_revm_tx_env();
 
+        /*
         if self.optimism {
             tx_env.enveloped_tx = Some(alloy_rlp::encode(&tx.transaction.transaction).into());
         }
+        */
 
         Env::new(self.cfg_env.clone(), self.block_env.clone(), tx_env, self.optimism)
     }
@@ -288,8 +292,8 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
             Ok(account) => account,
             Err(err) => return Some(TransactionExecutionOutcome::DatabaseError(transaction, err)),
         };
-
         let env = self.env_for(&transaction.pending_transaction);
+
         // check that we comply with the block's gas limit, if not disabled
         let max_gas = self.gas_used.saturating_add(env.tx.base.gas_limit);
         if !env.evm_env.cfg_env.disable_block_gas_limit && max_gas > env.evm_env.block_env.gas_limit
@@ -429,11 +433,35 @@ pub fn new_evm_with_inspector<DB, I>(
     db: DB,
     env: &Env,
     inspector: I,
-) -> EitherEvm<DB, I, PrecompilesMap>
+) -> EitherEvm<DB, I, SeismicPrecompiles<SeismicContext<DB>>>
 where
     DB: Database<Error = DatabaseError>,
     I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>>,
 {
+    let spec = env.evm_env.cfg_env.spec;
+    let eth_context = SeismicContext {
+        journaled_state: {
+            let mut journal = Journal::new(db);
+            journal.set_spec_id(spec.into_eth_spec());
+            journal
+        },
+        block: env.evm_env.block_env.clone(),
+        cfg: env.evm_env.cfg_env.clone(),
+        tx: SeismicTransaction::new(env.tx.base.clone()),
+        chain: SeismicChain::default(),
+        local: LocalContext::default(),
+        error: Ok(()),
+    };
+
+    let eth_precompiles = Precompiles::new(PrecompileSpecId::from_spec_id(spec.into_eth_spec()));
+    let eth_evm = SeismicEvm::new_with_inspector(
+        eth_context,
+        inspector,
+        SeismicInstructions::default(),
+        eth_precompiles,
+    );
+    EitherEvm::Seismic(alloy_seismic_evm::SeismicEvm::new(eth_evm, true))
+    /*
     if env.is_optimism {
         let op_cfg = env.evm_env.cfg_env.clone().with_spec(op_revm::OpSpecId::ISTHMUS);
         let op_context = OpContext {
@@ -491,10 +519,10 @@ where
         );
 
         let eth = EthEvm::new(eth_evm, true);
-        // TODO(christian): use seismic EVM
 
         EitherEvm::Eth(eth)
     }
+    */
 }
 
 /// Creates a new EVM with the given inspector and wraps the database in a `WrapDatabaseRef`.
@@ -502,7 +530,11 @@ pub fn new_evm_with_inspector_ref<'db, DB, I>(
     db: &'db DB,
     env: &Env,
     inspector: &'db mut I,
-) -> EitherEvm<WrapDatabaseRef<&'db DB>, &'db mut I, PrecompilesMap>
+) -> EitherEvm<
+    WrapDatabaseRef<&'db DB>,
+    &'db mut I,
+    SeismicPrecompiles<SeismicContext<WrapDatabaseRef<&'db DB>>>,
+>
 where
     DB: DatabaseRef<Error = DatabaseError> + 'db + ?Sized,
     I: Inspector<EthEvmContext<WrapDatabaseRef<&'db DB>>>

@@ -26,7 +26,7 @@ use foundry_evm::{
 };
 use foundry_linking::{LinkOutput, Linker};
 use rayon::prelude::*;
-use revm::primitives::hardfork::SpecId;
+// use revm::primitives::hardfork::SpecId;
 use std::{
     borrow::Borrow,
     collections::BTreeMap,
@@ -41,6 +41,8 @@ pub struct TestContract {
     pub abi: JsonAbi,
     pub bytecode: Bytes,
 }
+
+use foundry_evm_core::evm::SpecId;
 
 pub type DeployableContracts = BTreeMap<ArtifactId, TestContract>;
 

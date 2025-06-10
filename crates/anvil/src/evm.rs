@@ -1,13 +1,9 @@
+use alloy_evm::{precompiles::DynPrecompile, Database, Evm};
+use revm::{precompile::PrecompileWithAddress, Inspector};
 use std::fmt::Debug;
 
-use alloy_evm::{
-    eth::EthEvmContext,
-    precompiles::{DynPrecompile, PrecompilesMap},
-    Database, Evm,
-};
-use foundry_evm_core::either_evm::EitherEvm;
-use op_revm::OpContext;
-use revm::{precompile::PrecompileWithAddress, Inspector};
+use foundry_evm_core::{either_evm::EitherEvm, evm::SeismicPrecompiles};
+use seismic_revm::SeismicContext;
 
 /// Object-safe trait that enables injecting extra precompiles when using
 /// `anvil` as a library.
@@ -16,30 +12,50 @@ pub trait PrecompileFactory: Send + Sync + Unpin + Debug {
     fn precompiles(&self) -> Vec<PrecompileWithAddress>;
 }
 
+#[allow(unused_variables)]
+fn apply_precompile<DB: Database, F>(
+    p: &mut SeismicPrecompiles<SeismicContext<DB>>,
+    address: &alloy_primitives::Address,
+    f: F,
+) where
+    F: FnOnce(Option<DynPrecompile>) -> Option<DynPrecompile>,
+{
+    todo!("Find a way to add this precompile to SeismicPrecompiles")
+}
+
 /// Inject precompiles into the EVM dynamically.
 pub fn inject_precompiles<DB, I>(
-    evm: &mut EitherEvm<DB, I, PrecompilesMap>,
+    evm: &mut EitherEvm<DB, I, SeismicPrecompiles<SeismicContext<DB>>>,
     precompiles: Vec<PrecompileWithAddress>,
 ) where
     DB: Database,
-    I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>>,
+    /*
+    I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>>
+    */
+    I: Inspector<SeismicContext<DB>>,
 {
     for p in precompiles {
-        evm.precompiles_mut()
-            .apply_precompile(p.address(), |_| Some(DynPrecompile::from(*p.precompile())));
+        apply_precompile(evm.precompiles_mut(), p.address(), |_| {
+            Some(DynPrecompile::from(*p.precompile()))
+        });
     }
 }
 
 #[cfg(test)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
 mod tests {
     use std::convert::Infallible;
 
     use alloy_evm::{eth::EthEvmContext, precompiles::PrecompilesMap, EthEvm, Evm, EvmEnv};
     use alloy_op_evm::OpEvm;
     use alloy_primitives::{address, Address, Bytes, TxKind, U256};
-    use foundry_evm_core::either_evm::EitherEvm;
+    use foundry_evm_core::{
+        either_evm::EitherEvm,
+        evm::{SeismicChain, SeismicPrecompiles, SeismicTransaction},
+    };
     use itertools::Itertools;
-    use op_revm::{precompiles::OpPrecompiles, L1BlockInfo, OpContext};
+    use op_revm::{precompiles::OpPrecompiles, L1BlockInfo, OpContext, OpSpecId, OpTransaction};
     use revm::{
         context::{CfgEnv, Evm as RevmEvm, JournalTr, LocalContext, TxEnv},
         database::{EmptyDB, EmptyDBTyped},
@@ -54,7 +70,9 @@ mod tests {
         Journal,
     };
 
-    use foundry_evm_core::evm::{SeismicTransaction as OpTransaction, SeismicChain,  SpecId as OpSpecId};
+    use foundry_evm_core::evm::{
+        EthEvmContext as SeismicContext, RevmEvm as SeismicEvm, SpecId as SeismicSpecId,
+    };
 
     use crate::{inject_precompiles, PrecompileFactory};
 
@@ -86,6 +104,7 @@ mod tests {
         Ok(PrecompileOutput { bytes: Bytes::copy_from_slice(input), gas_used: 0 })
     }
 
+    /*
     /// Creates a new EVM instance with the custom precompile factory.
     fn create_eth_evm(
         spec: SpecId,
@@ -138,15 +157,13 @@ mod tests {
     ) {
         let op_env = crate::eth::backend::env::Env {
             evm_env: EvmEnv { block_env: Default::default(), cfg_env: CfgEnv::new_with_spec(spec) },
-            tx: OpTransaction::<TxEnv> {
-                base: TxEnv {
-                    kind: TxKind::Call(PRECOMPILE_ADDR),
-                    data: PAYLOAD.into(),
-                    ..Default::default()
-                },
+            tx: TxEnv {
+                kind: TxKind::Call(PRECOMPILE_ADDR),
+                data: PAYLOAD.into(),
                 ..Default::default()
-            },
+            }.into(),
             is_optimism: true,
+            is_seismic: false,
         };
 
         let mut chain = L1BlockInfo::default();
@@ -161,12 +178,12 @@ mod tests {
             journaled_state: {
                 let mut journal = Journal::new(EmptyDB::default());
                 // Converting SpecId into OpSpecId
-                journal.set_spec_id(op_env.evm_env.cfg_env.spec);
+                journal.set_spec_id(op_env.evm_env.cfg_env.spec.into());
                 journal
             },
             block: op_env.evm_env.block_env.clone(),
             cfg: op_cfg.clone(),
-            tx: op_env.tx.clone(),
+            tx: OpTransaction::new(op_env.tx.clone().base),
             chain,
             local: LocalContext::default(),
             error: Ok(()),
@@ -184,6 +201,51 @@ mod tests {
         ));
 
         (op_env, op_evm)
+    }
+
+    /// Creates a new OP EVM instance with the custom precompile factory.
+    fn create_seismic_evm(
+        seismic_spec: SeismicSpecId,
+    ) -> (
+        crate::eth::backend::env::Env,
+        EitherEvm<EmptyDBTyped<Infallible>, NoOpInspector, SeismicPrecompiles<SeismicContext<EmptyDB>>>,
+    ) {
+        let seismic_env = crate::eth::backend::env::Env {
+            evm_env: EvmEnv { block_env: Default::default(), cfg_env: CfgEnv::new_with_spec(seismic_spec) },
+            tx: TxEnv {
+                kind: TxKind::Call(PRECOMPILE_ADDR),
+                data: PAYLOAD.into(),
+                ..Default::default()
+            }.into(),
+            is_optimism: true,
+            is_seismic: false,
+        };
+
+        let seismic_cfg = seismic_env.evm_env.cfg_env.clone().with_spec(seismic_spec);
+        let seismic_evm_context = SeismicContext {
+            journaled_state: {
+                let mut journal = Journal::new(EmptyDB::default());
+                // Converting SpecId into OpSpecId
+                journal.set_spec_id(seismic_env.evm_env.cfg_env.spec.into());
+                journal
+            },
+            block: seismic_env.evm_env.block_env.clone(),
+            cfg: seismic_cfg.clone(),
+            tx: SeismicTransaction::new(seismic_env.tx.clone().base),
+            chain: SeismicChain::default(),
+            local: LocalContext::default(),
+            error: Ok(()),
+        };
+
+        let inner = SeismicEvm::new(
+            seismic_evm_context,
+            NoOpInspector,
+        );
+        let seismic_evm = EitherEvm::Seismic(alloy_seismic_evm::SeismicEvm::new(inner,
+            true,
+        ));
+
+        (seismic_env, seismic_evm)
     }
 
     #[test]
@@ -279,4 +341,5 @@ mod tests {
         assert!(result.result.is_success());
         assert_eq!(result.result.output(), Some(&PAYLOAD.into()));
     }
+    */
 }

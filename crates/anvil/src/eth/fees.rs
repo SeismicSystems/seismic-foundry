@@ -47,6 +47,7 @@ pub fn default_elasticity() -> f64 {
 /// Stores the fee related information
 #[derive(Clone, Debug)]
 pub struct FeeManager {
+    #[allow(dead_code)]
     /// Hardfork identifier
     spec_id: SpecId,
     /// Tracks the base fee for the next block post London

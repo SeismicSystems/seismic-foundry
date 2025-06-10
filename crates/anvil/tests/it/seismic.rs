@@ -160,18 +160,19 @@ async fn test_seismic_transaction_rpc() {
     let deployer = handle.dev_accounts().next().unwrap();
     let network_pubkey = provider.get_tee_pubkey().await.unwrap();
 
+    println!("network_pubkey: {:?}", network_pubkey);
+
     let plaintext_bytecode = test_utils::ContractTestContext::get_deploy_input_plaintext();
 
+    let req = tx_builder()
+        .with_from(deployer)
+        .with_kind(TxKind::Create)
+        .with_input(plaintext_bytecode.clone())
+        .into();
+    println!("req: {:?}", req);
     // send a send_raw_transaction bytes
     let contract_address = provider
-        .send_transaction(
-            tx_builder()
-                .with_from(deployer)
-                .with_kind(TxKind::Create)
-                .with_input(plaintext_bytecode.clone())
-                .into()
-                .into(),
-        )
+        .send_transaction(req.into())
         .await
         .unwrap()
         .get_receipt()
@@ -181,6 +182,8 @@ async fn test_seismic_transaction_rpc() {
         .unwrap();
     let code = provider.get_code_at(contract_address).await.unwrap();
     assert_eq!(code, test_utils::ContractTestContext::get_code());
+
+    println!("code: {:?}", code);
 
     // send a call bytes
     let res = provider
