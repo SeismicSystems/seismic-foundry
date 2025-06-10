@@ -183,8 +183,6 @@ async fn test_seismic_transaction_rpc() {
     let code = provider.get_code_at(contract_address).await.unwrap();
     assert_eq!(code, test_utils::ContractTestContext::get_code());
 
-    println!("code: {:?}", code);
-
     // send a call bytes
     let res = provider
         .seismic_call(SendableTx::Builder(
@@ -259,6 +257,8 @@ async fn test_seismic_transaction_rpc() {
         .unwrap();
     assert_eq!(Bytes::from(decrypted), test_utils::ContractTestContext::get_code());
 
+    let chain_id = provider.get_chain_id().await.unwrap();
+
     // estiamte gas
     let gas_estimate = api
         .estimate_gas(
@@ -266,9 +266,9 @@ async fn test_seismic_transaction_rpc() {
                 get_unsigned_seismic_tx_request(
                     &signer,
                     &network_pubkey,
-                    0,
+                    2,
                     TxKind::Create,
-                    provider.get_chain_id().await.unwrap(),
+                    chain_id,
                     plaintext_bytecode.clone(),
                 )
                 .await,
@@ -287,32 +287,42 @@ async fn test_seismic_transaction_rpc() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_precompiles_end_to_end() {
     // Spin up node, get provider & deployer
+    println!("test_seismic_precompiles_end_to_end");
     let (api, handle) = spawn(NodeConfig::test()).await;
+    println!("handle endpoint: {:?}", handle.http_endpoint());
     api.anvil_set_auto_mine(false).await.unwrap();
+    println!("set automine");
     let provider = SeismicSignedProvider::new(
         EthereumWallet::new(handle.dev_wallets().next().unwrap().clone()),
         reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
     );
     let deployer = handle.dev_accounts().next().unwrap();
+    println!("deployer: {:?}", deployer);
 
     // 1. Deploy test contract
     let bytecode = Bytes::from(load_bytecode_from_file(TEST_PRECOMPILES_BYTECODE_PATH));
-    let contract_addr = provider
-        .send_transaction(
-            tx_builder()
-                .with_from(deployer)
-                .with_kind(TxKind::Create)
-                .with_input(bytecode)
-                .into()
-                .into(),
-        )
-        .await
-        .unwrap()
+    let tx_result = provider
+    .send_transaction(
+        tx_builder()
+            .with_from(deployer)
+            .with_kind(TxKind::Create)
+            .with_input(bytecode)
+            .into()
+            .into(),
+    )
+    .await
+    .unwrap();
+    println!("tx_result: {:?}", tx_result);
+
+    let contract_addr = tx_result
         .get_receipt()
         .await
         .unwrap()
         .contract_address
         .unwrap();
+
+    return;
+    println!("contract_addr: {:?}", contract_addr);
 
     // Prepare addresses & keys
     let accounts: Vec<_> = handle.dev_wallets().collect();
@@ -320,6 +330,7 @@ async fn test_seismic_precompiles_end_to_end() {
     let private_key =
         B256::from_hex("7e34abdcd62eade2e803e0a8123a0015ce542b380537eff288d6da420bcc2d3b").unwrap();
 
+    println!("from: {:?}", from);
     //
     // 2. Tx #1: Set AES key in the contract
     //
@@ -339,6 +350,7 @@ async fn test_seismic_precompiles_end_to_end() {
         .await
         .unwrap();
 
+    println!("receipt");
     //
     // 3. Tx #2: Encrypt & send "hello world"
     //

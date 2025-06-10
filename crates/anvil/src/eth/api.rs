@@ -1090,6 +1090,8 @@ impl EthApi {
         let transaction = TypedTransaction::decode_2718(&mut data)
             .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
 
+        println!("transaction: {:?}", transaction);
+
         self.ensure_typed_transaction_supported(&transaction)?;
 
         let pending_transaction = PendingTransaction::new(transaction)?;
@@ -3026,13 +3028,13 @@ impl EthApi {
             }
         }
 
-        let mut call_to_estimate = request.clone();
+        let mut call_to_estimate = seismic_request.clone();
         call_to_estimate.gas = Some(highest_gas_limit as u64);
 
         // execute the call without writing to db
         let ethres = self.backend.call_with_state(
             &state,
-            WithOtherFields::new(call_to_estimate.into()),
+            call_to_estimate,
             fees.clone(),
             block_env.clone(),
         );
