@@ -1040,16 +1040,16 @@ impl EthApi {
     ) -> Result<TxHash> {
         node_info!("eth_sendTransaction");
 
-        let from = request.inner.inner.from.map(Ok).unwrap_or_else(|| {
+        let from = request.from.map(Ok).unwrap_or_else(|| {
             self.accounts()?.first().cloned().ok_or(BlockchainError::NoSignerAvailable)
         })?;
         let (nonce, on_chain_nonce) = self.request_nonce(&request, from).await?;
 
-        if request.inner.inner.gas.is_none() {
+        if request.gas.is_none() {
             // estimate if not provided
             if let Ok(gas) = self.estimate_gas(request.clone(), None, EvmOverrides::default()).await
             {
-                request.inner.inner.gas = Some(gas.to());
+                request.gas = Some(gas.to());
             }
         }
 
@@ -1089,8 +1089,6 @@ impl EthApi {
 
         let transaction = TypedTransaction::decode_2718(&mut data)
             .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
-
-        println!("transaction: {:?}", transaction);
 
         self.ensure_typed_transaction_supported(&transaction)?;
 
@@ -1462,8 +1460,10 @@ impl EthApi {
         node_info!("eth_getTransactionReceipt");
         let tx = self.pool.get_transaction(hash);
         if tx.is_some() {
+            // panic!("some eth_get_transaction_receipt: {:?}", tx);
             return Ok(None);
         }
+        // panic!("backend eth_get_transaction_receipt: {:?}", hash);
         self.backend.transaction_receipt(hash).await
     }
 

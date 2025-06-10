@@ -379,11 +379,11 @@ seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-op-alloy.gi
 foundry-fork-db = { git = "https://github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "42bcda0" }
 
 # seismic-revm
-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e45cf236" }
-revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e45cf236" }
-revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e45cf236" }
-op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e45cf236" }
-seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e45cf236" }
+revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "5e305bd7" }
+revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "5e305bd7" }
+revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "5e305bd7" }
+op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "5e305bd7" }
+seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "5e305bd7" }
 
 # seismic-revm-inspectors
 revm-inspectors = { git = "https://github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "cebb097" }

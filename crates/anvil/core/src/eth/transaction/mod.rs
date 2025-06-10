@@ -1099,7 +1099,6 @@ impl TypedTransaction {
 impl Encodable for TypedTransaction {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         if !self.is_legacy() {
-            println!("Not legacy");
             Header { list: false, payload_length: self.encode_2718_len() }.encode(out);
         }
 
@@ -1109,7 +1108,6 @@ impl Encodable for TypedTransaction {
 
 impl Decodable for TypedTransaction {
     fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        println!("buf: {:?}", buf);
         let mut h_decode_copy = *buf;
         let header = alloy_rlp::Header::decode(&mut h_decode_copy)?;
 
@@ -1120,7 +1118,6 @@ impl Decodable for TypedTransaction {
 
         // Check byte after header
         let ty = *h_decode_copy.first().ok_or(alloy_rlp::Error::Custom("empty slice"))?;
-        println!("ty: {:?}", ty);
 
         if ty != 0x7E {
             Ok(TxEnvelope::decode(buf)?.into())
@@ -1150,7 +1147,6 @@ impl alloy_eips::eip2718::Encodable2718 for TypedTransaction {
     }
 
     fn encode_2718(&self, out: &mut dyn BufMut) {
-        println!("encode_2718: {:?}", self);
         match self {
             Self::Legacy(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
             Self::EIP2930(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
@@ -1183,7 +1179,6 @@ impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
     }
 
     fn fallback_decode(buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
-        println!("fallback_decode: {:?}", buf);
         match TxEnvelope::fallback_decode(buf)? {
             TxEnvelope::Legacy(tx) => Ok(Self::Legacy(tx)),
             _ => unreachable!(),
@@ -1922,11 +1917,8 @@ mod tests {
         signed_tt.encode(&mut encoded_tx);
 
         let mut buf = encoded_tx.as_ref();
-        println!("buf: {:?}", buf);
-        let ty = TypedTransaction::extract_type_byte(&mut buf);
-        println!("ty: {:?}", ty);
-        // let decoded_tx = TypedTransaction::decode_2718(&mut buf).unwrap();
+        let decoded_tx = TypedTransaction::decode(&mut buf).unwrap();
 
-        // assert_eq!(decoded_tx, signed_tt);
+        assert_eq!(decoded_tx, signed_tt);
     }
 }
