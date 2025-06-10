@@ -1,4 +1,5 @@
 use alloy_dyn_abi::EventExt;
+use alloy_eips::Decodable2718;
 use alloy_json_abi::{Event, EventParam};
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{
@@ -14,7 +15,10 @@ use alloy_serde::WithOtherFields;
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{spawn, NodeConfig};
+use bytes::Buf;
+use foundry_evm_core::evm::SeismicFoundryPrecompiles;
 use secp256k1::{PublicKey, SecretKey};
+use seismic_alloy_consensus::TxSeismicElements;
 use seismic_enclave::aes_decrypt;
 use std::{fs, str::FromStr};
 
@@ -279,14 +283,15 @@ async fn test_seismic_transaction_rpc() {
 }
 
 // Actual contract being tested:
-// https://github.com/SeismicSystems/early-builds/blob/main/encrypted_logs/src/end-to-end-mvp/EncryptedLogs.sol
+// https://github.com/SeismicSystems/early-builds/blob/main/EIP7702_experiment/end-to-end-mvp/EncryptedLogs.sol
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_precompiles_end_to_end() {
     // Spin up node, get provider & deployer
     let (api, handle) = spawn(NodeConfig::test()).await;
-    api.anvil_set_auto_mine(false).await.unwrap();
+    api.anvil_set_auto_mine(true).await.unwrap();
+    let wallet = EthereumWallet::new(handle.dev_wallets().next().unwrap().clone());
     let provider = SeismicSignedProvider::new(
-        EthereumWallet::new(handle.dev_wallets().next().unwrap().clone()),
+        wallet,
         reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
     );
     let deployer = handle.dev_accounts().next().unwrap();
@@ -303,8 +308,6 @@ async fn test_seismic_precompiles_end_to_end() {
         .send_transaction(tx_req.into())
         .await
         .unwrap();
-    
-    // return;
 
     let contract_addr = tx_result
         .get_receipt()
@@ -312,8 +315,6 @@ async fn test_seismic_precompiles_end_to_end() {
         .unwrap()
         .contract_address
         .unwrap();
-
-    // return;
 
     // Prepare addresses & keys
     let accounts: Vec<_> = handle.dev_wallets().collect();
@@ -377,7 +378,7 @@ async fn test_seismic_precompiles_end_to_end() {
     let event = Event {
         name: "EncryptedMessage".into(),
         inputs: vec![
-            EventParam { ty: "int96".into(), indexed: true, ..Default::default() },
+            EventParam { ty: "uint96".into(), indexed: true, ..Default::default() },
             EventParam { ty: "bytes".into(), indexed: false, ..Default::default() },
         ],
         anonymous: false,
@@ -403,18 +404,40 @@ async fn test_seismic_precompiles_end_to_end() {
     let call = Encryption::decryptCall { nonce, ciphertext: ciphertext.clone() };
     let unencrypted_decrypt_call = call.abi_encode();
 
+    let tx_req = tx_builder()
+        .with_from(from)
+        .with_to(contract_addr)
+        .with_input(unencrypted_decrypt_call)
+        .into();
+    /*
+    // TODO: seismic call with Builder does not work
+    let mut tx_req = tx_builder()
+        .with_from(from)
+        .with_to(contract_addr)
+        .with_input(unencrypted_decrypt_call)
+        .into();
+    tx_req.inner.transaction_type = Some(TxSeismic::TX_TYPE);
+    tx_req.seismic_elements = Some(TxSeismicElements::default());
+
+    let signed_tx = provider.sign_transaction(tx_req.into()).await.unwrap();
+    let mut buf: &[u8] = signed_tx.iter().as_slice();
+    let envelope = AnyTxEnvelope::decode_2718(&mut buf).unwrap();
+
     // Perform the read call with encryption
     let output = provider
-        .seismic_call(SendableTx::Builder(
-            tx_builder()
-                .with_from(from)
-                .with_to(contract_addr)
-                .with_input(unencrypted_decrypt_call)
-                .into()
-                .into(),
-        ))
+        .seismic_call(SendableTx::Envelope(envelope))
         .await
         .unwrap();
+
+    */
+
+    // Perform the read call with encryption
+    // TODO: seismic call with Builder does not work
+    let output = provider
+        .seismic_call(SendableTx::Builder(tx_req.into()))
+        .await
+        .unwrap();
+
 
     //
     // 5. Locally decrypt to cross-check
