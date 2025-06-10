@@ -110,7 +110,7 @@ dependencies = [
  "k256",
  "once_cell",
  "rand 0.8.5",
- "secp256k1 0.30.0",
+ "secp256k1",
  "serde",
  "serde_with",
  "thiserror 2.0.12",
@@ -1102,7 +1102,7 @@ dependencies = [
  "reqwest",
  "revm",
  "revm-inspectors",
- "secp256k1 0.29.1",
+ "secp256k1",
  "seismic-alloy-consensus",
  "seismic-alloy-rpc-types",
  "seismic-enclave",
@@ -8132,7 +8132,7 @@ dependencies = [
  "p256",
  "revm-primitives",
  "ripemd",
- "secp256k1 0.30.0",
+ "secp256k1",
  "sha2 0.10.9",
 ]
 
@@ -8608,17 +8608,6 @@ dependencies = [
 
 [[package]]
 name = "secp256k1"
-version = "0.29.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
-dependencies = [
- "rand 0.8.5",
- "secp256k1-sys",
- "serde",
-]
-
-[[package]]
-name = "secp256k1"
 version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b50c5943d326858130af85e049f2661ba3c78b26589b8ab98e65e80ae44a1252"
@@ -8677,7 +8666,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-consensus"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=dc56a8f#dc56a8fca57e20eda1f65f0cd47261218295c1d9"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=198721c#198721c4aa3b671f42b54e1a6f7451f4325c5d1a"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -8698,7 +8687,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-network"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=dc56a8f#dc56a8fca57e20eda1f65f0cd47261218295c1d9"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=198721c#198721c4aa3b671f42b54e1a6f7451f4325c5d1a"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
@@ -8719,7 +8708,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-provider"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=dc56a8f#dc56a8fca57e20eda1f65f0cd47261218295c1d9"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=198721c#198721c4aa3b671f42b54e1a6f7451f4325c5d1a"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -8738,7 +8727,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-rpc-types"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=dc56a8f#dc56a8fca57e20eda1f65f0cd47261218295c1d9"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=198721c#198721c4aa3b671f42b54e1a6f7451f4325c5d1a"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -8756,7 +8745,7 @@ dependencies = [
 [[package]]
 name = "seismic-enclave"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=3f47bf1#3f47bf193c3a62dbc4dcfdf28d789b4d8b3e61f9"
+source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=99351ff#99351ff6261772f48b9936a2a2648073defbffd5"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -8771,7 +8760,7 @@ dependencies = [
  "rand 0.9.1",
  "reqwest",
  "schnorrkel",
- "secp256k1 0.29.1",
+ "secp256k1",
  "seismic-enclave-derive",
  "serde",
  "serde_json",
@@ -8785,7 +8774,7 @@ dependencies = [
 [[package]]
 name = "seismic-enclave-derive"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=3f47bf1#3f47bf193c3a62dbc4dcfdf28d789b4d8b3e61f9"
+source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=99351ff#99351ff6261772f48b9936a2a2648073defbffd5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8795,7 +8784,7 @@ dependencies = [
 [[package]]
 name = "seismic-prelude"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=dc56a8f#dc56a8fca57e20eda1f65f0cd47261218295c1d9"
+source = "git+https://github.com/SeismicSystems/seismic-op-alloy.git?rev=198721c#198721c4aa3b671f42b54e1a6f7451f4325c5d1a"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
@@ -8825,7 +8814,7 @@ dependencies = [
  "rand_core 0.6.4",
  "revm",
  "schnorrkel",
- "secp256k1 0.30.0",
+ "secp256k1",
  "seismic-enclave",
  "serde",
  "sha2 0.10.9",
