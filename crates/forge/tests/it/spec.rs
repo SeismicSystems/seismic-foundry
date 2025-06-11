@@ -2,9 +2,11 @@
 
 use crate::{config::*, test_helpers::TEST_DATA_PARIS};
 use foundry_test_utils::Filter;
-// use revm::primitives::hardfork::SpecId;
+/*
+use revm::primitives::hardfork::SpecId;
+*/
 
-use foundry_evm_core::evm::SpecId;
+use seismic_prelude::foundry::SpecId;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_shanghai_compat() {

@@ -1,10 +1,9 @@
 use alloy_evm::EvmEnv as AlloyEvmEnv;
 use foundry_evm::EnvMut;
-use foundry_evm_core::{evm::SpecId, AsEnvMut};
+use foundry_evm_core::AsEnvMut;
 use revm::context::{BlockEnv, TxEnv};
 
-// TODO: use prelude
-use foundry_evm_core::evm::{CfgEnv, SeismicTransaction as OpTransaction};
+use seismic_prelude::foundry::{CfgEnv, OpTransaction, SpecId};
 type EvmEnv = AlloyEvmEnv<SpecId>;
 
 /// Helper container type for [`EvmEnv`] and [`OpTransaction<TxEnd>`].

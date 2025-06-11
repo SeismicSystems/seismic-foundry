@@ -7,7 +7,9 @@ use foundry_compilers::artifacts::{
     remappings::{Remapping, RemappingError},
     EvmVersion,
 };
-// use revm::primitives::hardfork::SpecId;
+/*
+use revm::primitives::hardfork::SpecId;
+*/
 use serde::{de::Error, Deserialize, Deserializer};
 use std::{
     io,
@@ -15,8 +17,7 @@ use std::{
     str::FromStr,
 };
 
-// TODO: prelude
-use seismic_revm::SeismicSpecId as SpecId;
+use seismic_prelude::foundry::SpecId;
 
 // TODO: Why do these exist separately from `Config::load`?
 

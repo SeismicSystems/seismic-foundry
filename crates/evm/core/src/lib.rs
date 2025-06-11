@@ -13,7 +13,7 @@ use backend::DatabaseExt;
 use revm::{inspector::NoOpInspector, interpreter::CreateInputs, Inspector};
 use revm_inspectors::access_list::AccessListInspector;
 
-use seismic_revm::SeismicContext as EthEvmContext;
+use seismic_prelude::foundry::EthEvmContext;
 
 #[macro_use]
 extern crate tracing;

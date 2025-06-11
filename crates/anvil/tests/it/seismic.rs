@@ -21,7 +21,7 @@ use std::{fs, str::FromStr};
 use seismic_prelude::foundry::{
     test_utils, tx_builder, AnyNetwork, AnyTxEnvelope, EthereumWallet, SeismicCallRequest,
     SeismicProviderExt, SeismicSignedProvider, SeismicUnsignedProvider, TransactionRequest,
-    TxSeismic, TypedDataRequest,
+    TxSeismic, TxSeismicElements, TypedDataRequest,
 };
 
 // common utils
@@ -69,15 +69,11 @@ pub fn get_encryption_nonce() -> U96 {
     U96::MAX
 }
 
-pub fn get_seismic_elements() -> seismic_alloy_consensus::TxSeismicElements {
+pub fn get_seismic_elements() -> TxSeismicElements {
     let encryption_sk = get_encryption_private_key();
     let encryption_pk = PublicKey::from_secret_key_global(&encryption_sk);
     let encryption_nonce = get_encryption_nonce();
-    seismic_alloy_consensus::TxSeismicElements {
-        encryption_pubkey: encryption_pk,
-        encryption_nonce,
-        message_version: 0,
-    }
+    TxSeismicElements { encryption_pubkey: encryption_pk, encryption_nonce, message_version: 0 }
 }
 
 pub fn get_encryption_private_key() -> SecretKey {

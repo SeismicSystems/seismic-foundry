@@ -13,11 +13,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-seismic-alloy-rpc-types.workspace = true
-seismic-alloy-consensus.workspace = true
 seismic-enclave.workspace = true
 seismic-prelude.workspace = true
-seismic-revm.workspace = true
 
 foundry-common.workspace = true
 foundry-evm.workspace = true

@@ -6,9 +6,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![allow(elided_lifetimes_in_paths)] // Cheats context uses 3 lifetimes
 
-// TODO: we probably need to wire this in...
-use seismic_revm as _;
-
 #[macro_use]
 extern crate foundry_common;
 
@@ -64,7 +61,7 @@ mod toml;
 
 mod utils;
 
-use seismic_revm::SeismicContext as EthEvmContext;
+use seismic_prelude::foundry::EthEvmContext;
 
 /// Cheatcode implementation.
 pub(crate) trait Cheatcode: CheatcodeDef + DynCheatcode {

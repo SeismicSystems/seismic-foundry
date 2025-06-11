@@ -126,7 +126,7 @@ use bind_json::BindJsonConfig;
 mod compilation;
 pub use compilation::{CompilationRestrictions, SettingsOverrides};
 
-use seismic_revm::SeismicSpecId as SpecId;
+use seismic_prelude::foundry::SpecId;
 
 /// Foundry configuration
 ///

@@ -17,7 +17,7 @@ pub use revm::state::EvmState as StateChangeset;
 
 use crate::EnvMut;
 
-use seismic_prelude::foundry::AnyTxEnvelope;
+use seismic_prelude::foundry::{AnyTxEnvelope, SeismicTransactionRequest};
 
 /// Depending on the configured chain id and block number this should apply any specific changes
 ///
@@ -107,10 +107,10 @@ pub fn configure_tx_env(env: &mut EnvMut<'_>, tx: &Transaction<AnyTxEnvelope>) {
 /// impersonated transaction by resetting the `env.tx.caller` field to `impersonated_from`.
 pub fn configure_tx_req_env(
     env: &mut EnvMut<'_>,
-    tx: &seismic_alloy_rpc_types::SeismicTransactionRequest,
+    tx: &SeismicTransactionRequest,
     impersonated_from: Option<Address>,
 ) -> eyre::Result<()> {
-    let seismic_alloy_rpc_types::SeismicTransactionRequest {
+    let SeismicTransactionRequest {
         inner:
             TransactionRequest {
                 nonce,

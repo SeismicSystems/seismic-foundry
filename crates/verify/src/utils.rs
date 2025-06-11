@@ -25,8 +25,7 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
-use foundry_evm_core::evm::SpecId;
-use seismic_prelude::foundry::AnyRpcBlock;
+use seismic_prelude::foundry::{AnyRpcBlock, SpecId};
 
 /// Enum to represent the type of bytecode being verified
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, ValueEnum)]

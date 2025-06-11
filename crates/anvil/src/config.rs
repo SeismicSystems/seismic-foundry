@@ -64,8 +64,7 @@ use yansi::Paint;
 
 pub use foundry_common::version::SHORT_VERSION as VERSION_MESSAGE;
 
-use foundry_evm_core::evm::{CfgEnv, SeismicTransaction as OpTransaction, SpecId};
-use seismic_prelude::foundry::AnyNetwork;
+use seismic_prelude::foundry::{AnyNetwork, CfgEnv, OpTransaction, SpecId};
 
 /// Default port the rpc will open
 pub const NODE_PORT: u16 = 8545;

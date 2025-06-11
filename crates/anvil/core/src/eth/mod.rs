@@ -15,7 +15,9 @@ use foundry_common::serde_helpers::{
     deserialize_number, deserialize_number_opt, deserialize_number_seq,
 };
 
-use seismic_prelude::foundry::{SimulatePayload, TransactionRequest};
+use seismic_prelude::foundry::{
+    SeismicCallRequest, SeismicRawTxRequest, SimulatePayload, TransactionRequest,
+};
 
 pub mod block;
 pub mod subscription;
@@ -148,11 +150,11 @@ pub enum EthRequest {
     EthSendTransaction(Box<WithOtherFields<TransactionRequest>>),
 
     #[serde(rename = "eth_sendRawTransaction", with = "sequence")]
-    EthSendRawTransaction(seismic_alloy_rpc_types::SeismicRawTxRequest),
+    EthSendRawTransaction(SeismicRawTxRequest),
 
     #[serde(rename = "eth_call")]
     EthCall(
-        seismic_alloy_rpc_types::SeismicCallRequest,
+        SeismicCallRequest,
         #[serde(default)] Option<BlockId>,
         #[serde(default)] Option<StateOverride>,
         #[serde(default)] Option<Box<BlockOverrides>>,

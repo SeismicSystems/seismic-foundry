@@ -24,7 +24,7 @@ use anvil_core::eth::{
     },
 };
 use foundry_evm::{backend::DatabaseError, traces::CallTraceNode};
-use foundry_evm_core::{either_evm::EitherEvm, evm::SeismicChain};
+use foundry_evm_core::either_evm::EitherEvm;
 use op_revm::OpContext;
 use revm::{
     context::{Block as RevmBlock, BlockEnv, JournalTr, LocalContext},
@@ -37,9 +37,9 @@ use revm::{
 };
 use std::sync::Arc;
 
-use foundry_evm_core::evm::{
-    CfgEnv, EthEvmContext as SeismicContext, EthInstructions as SeismicInstructions,
-    RevmEvm as SeismicEvm, SeismicPrecompiles, SeismicTransaction,
+use seismic_prelude::foundry::{
+    CfgEnv, RevmEvm, SeismicChain, SeismicContext, SeismicEvm, SeismicInstructions,
+    SeismicPrecompiles, SeismicTransaction,
 };
 
 /// Represents an executed transaction (transacted on the DB)
@@ -454,13 +454,13 @@ where
     };
 
     let eth_precompiles = Precompiles::new(PrecompileSpecId::from_spec_id(spec.into_eth_spec()));
-    let eth_evm = SeismicEvm::new_with_inspector(
+    let eth_evm = RevmEvm::new_with_inspector(
         eth_context,
         inspector,
         SeismicInstructions::default(),
         eth_precompiles,
     );
-    EitherEvm::Seismic(alloy_seismic_evm::SeismicEvm::new(eth_evm, true))
+    EitherEvm::Seismic(SeismicEvm::new(eth_evm, true))
     /*
     if env.is_optimism {
         let op_cfg = env.evm_env.cfg_env.clone().with_spec(op_revm::OpSpecId::ISTHMUS);

@@ -1,17 +1,13 @@
 pub use alloy_evm::EvmEnv as AlloyEvmEnv;
 use revm::{
-    context::{BlockEnv, CfgEnv as RevmCfgEnv, JournalInner, JournalTr, TxEnv as RevmTxEnv},
-    // primitives::hardfork::SpecId,
-    Context,
-    Database,
-    Journal,
-    JournalEntry,
+    context::{BlockEnv, JournalInner, JournalTr},
+    /*
+    primitives::hardfork::SpecId,
+    */
+    Context, Database, Journal, JournalEntry,
 };
 
-use seismic_revm::{SeismicSpecId, SeismicSpecId as SpecId, SeismicTransaction};
-pub type TxEnv = SeismicTransaction<RevmTxEnv>;
-pub type CfgEnv = RevmCfgEnv<SeismicSpecId>;
-pub type EvmEnv = AlloyEvmEnv<SeismicSpecId>;
+use seismic_prelude::foundry::{CfgEnv, EvmEnv, SpecId, TxEnv};
 
 /// Helper container type for [`EvmEnv`] and [`TxEnv`].
 #[derive(Clone, Debug, Default)]

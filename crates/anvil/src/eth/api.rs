@@ -102,7 +102,8 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use yansi::Paint;
 
 use seismic_prelude::foundry::{
-    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SimulatePayload, TransactionRequest,
+    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
+    SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest,
 };
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -265,10 +266,10 @@ impl EthApi {
                 self.sign_typed_data_v4(addr, &data).await.to_rpc_result()
             }
             EthRequest::EthSendRawTransaction(req) => match req {
-                seismic_alloy_rpc_types::SeismicRawTxRequest::Bytes(tx) => {
+                SeismicRawTxRequest::Bytes(tx) => {
                     self.send_raw_transaction(tx).await.to_rpc_result()
                 }
-                seismic_alloy_rpc_types::SeismicRawTxRequest::TypedData(td) => {
+                SeismicRawTxRequest::TypedData(td) => {
                     self.send_signed_typed_data_tx(td).await.to_rpc_result()
                 }
             },
@@ -1118,10 +1119,7 @@ impl EthApi {
     /// Sends signed typed data transaction, returning its hash.
     ///
     /// Handler for ETH RPC call: `eth_sendRawTransaction`
-    pub async fn send_signed_typed_data_tx(
-        &self,
-        td: seismic_alloy_consensus::TypedDataRequest,
-    ) -> Result<TxHash> {
+    pub async fn send_signed_typed_data_tx(&self, td: TypedDataRequest) -> Result<TxHash> {
         node_info!("eth_sendRawTransaction via eth_signTypedData");
 
         // TODO: make this work
@@ -1206,12 +1204,12 @@ impl EthApi {
     /// Handler for ETH RPC call: `eth_call`
     pub async fn call(
         &self,
-        request: impl Into<seismic_alloy_rpc_types::SeismicCallRequest>,
+        request: impl Into<SeismicCallRequest>,
         block_number: Option<BlockId>,
         overrides: EvmOverrides,
     ) -> Result<Bytes> {
         match request.into() {
-            seismic_alloy_rpc_types::SeismicCallRequest::TransactionRequest(mut tx) => {
+            SeismicCallRequest::TransactionRequest(mut tx) => {
                 let user_provided_from = tx.inner.from;
 
                 tx.inner.from = None;
@@ -1241,7 +1239,7 @@ impl EthApi {
                     }
                 }
             }
-            seismic_alloy_rpc_types::SeismicCallRequest::TypedData(td) => {
+            SeismicCallRequest::TypedData(td) => {
                 let typed_tx = TypedTransaction::decode_712(&td).map_err(|e| {
                     BlockchainError::Message(format!(
                         "Failed to decode typed data into seismic tx: {:?}",
@@ -1267,7 +1265,7 @@ impl EthApi {
 
                 self.seismic_call(request, block_number, overrides).await
             }
-            seismic_alloy_rpc_types::SeismicCallRequest::Bytes(bytes) => {
+            SeismicCallRequest::Bytes(bytes) => {
                 let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
                     .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
                 let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {

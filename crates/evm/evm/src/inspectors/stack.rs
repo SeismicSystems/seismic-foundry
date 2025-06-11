@@ -33,7 +33,7 @@ use std::{
     sync::Arc,
 };
 
-use foundry_evm_core::evm::EthEvmContext;
+use seismic_prelude::foundry::EthEvmContext;
 
 #[derive(Clone, Debug, Default)]
 #[must_use = "builders do nothing unless you call `build` on them"]

@@ -50,6 +50,8 @@ pub use in_memory_db::{EmptyDBWrapper, FoundryEvmInMemoryDB, MemDb};
 mod snapshot;
 pub use snapshot::{BackendStateSnapshot, RevertStateSnapshotAction, StateSnapshot};
 
+use seismic_prelude::foundry::TransactionRequest;
+
 // A `revm::Database` that is used in forking mode
 type ForkDB = CacheDB<SharedBackend>;
 
@@ -214,7 +216,7 @@ pub trait DatabaseExt: Database<Error = DatabaseError> + DatabaseCommit {
     /// Executes a given TransactionRequest, commits the new state to the DB
     fn transact_from_tx(
         &mut self,
-        transaction: &seismic_alloy_rpc_types::SeismicTransactionRequest,
+        transaction: &TransactionRequest,
         env: Env,
         journaled_state: &mut JournaledState,
         inspector: &mut dyn InspectorExt,
@@ -1299,7 +1301,7 @@ impl DatabaseExt for Backend {
 
     fn transact_from_tx(
         &mut self,
-        tx: &seismic_alloy_rpc_types::SeismicTransactionRequest,
+        tx: &TransactionRequest,
         mut env: Env,
         journaled_state: &mut JournaledState,
         inspector: &mut dyn InspectorExt,

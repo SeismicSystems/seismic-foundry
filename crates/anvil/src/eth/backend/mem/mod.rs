@@ -98,7 +98,7 @@ use foundry_evm::{
     inspectors::AccessListInspector,
     traces::TracingInspectorConfig,
 };
-use foundry_evm_core::{either_evm::EitherEvm, evm::SeismicPrecompiles};
+use foundry_evm_core::either_evm::EitherEvm;
 use futures::channel::mpsc::{unbounded, UnboundedSender};
 use op_alloy_consensus::DEPOSIT_TX_TYPE_ID;
 use op_revm::OpContext;
@@ -117,7 +117,6 @@ use revm::{
     DatabaseCommit, Inspector,
 };
 use revm_inspectors::transfer::TransferInspector;
-use seismic_revm::SeismicContext;
 use std::{
     collections::BTreeMap,
     io::{Read, Write},
@@ -131,10 +130,10 @@ use tokio::sync::RwLock as AsyncRwLock;
 
 use super::executor::new_evm_with_inspector_ref;
 
-use foundry_evm_core::evm::{OpHaltReason, SeismicTransaction as OpTransaction, SpecId};
 use seismic_prelude::foundry::{
-    AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, SimBlock, SimulatePayload,
-    TransactionReceipt, TransactionRequest, TxEnvelope,
+    AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, OpHaltReason, OpTransaction,
+    SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload, SpecId, TransactionReceipt,
+    TransactionRequest, TxEnvelope,
 };
 
 pub mod cache;
@@ -1879,7 +1878,7 @@ impl Backend {
     pub fn seismic_call_with_state(
         &self,
         state: &dyn DatabaseRef<Error = DatabaseError>,
-        request: WithOtherFields<seismic_alloy_rpc_types::SeismicTransactionRequest>,
+        request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {

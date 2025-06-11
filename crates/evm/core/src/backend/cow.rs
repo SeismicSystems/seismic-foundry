@@ -24,8 +24,7 @@ use revm::{
 };
 use std::{borrow::Cow, collections::BTreeMap};
 
-use seismic_prelude::foundry::TransactionRequest;
-use seismic_revm::SeismicSpecId as SpecId;
+use seismic_prelude::foundry::{SpecId, TransactionRequest};
 
 /// A wrapper around `Backend` that ensures only `revm::DatabaseRef` functions are called.
 ///

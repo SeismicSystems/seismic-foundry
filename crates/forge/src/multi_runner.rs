@@ -42,7 +42,7 @@ pub struct TestContract {
     pub bytecode: Bytes,
 }
 
-use foundry_evm_core::evm::SpecId;
+use seismic_prelude::foundry::SpecId;
 
 pub type DeployableContracts = BTreeMap<ArtifactId, TestContract>;
 

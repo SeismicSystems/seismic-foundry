@@ -2,7 +2,6 @@ use super::fork::environment;
 use crate::{
     constants::DEFAULT_CREATE2_DEPLOYER,
     fork::{configure_env, CreateFork},
-    EvmEnv,
 };
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::Provider;
@@ -14,8 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
 
-use crate::env::TxEnv;
-use seismic_prelude::foundry::AnyRpcBlock;
+use seismic_prelude::foundry::{AnyRpcBlock, EvmEnv, TxEnv};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvmOpts {

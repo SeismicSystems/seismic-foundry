@@ -14,7 +14,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-seismic-revm.workspace = true
+seismic-prelude.workspace = true
 
 foundry-block-explorers = { workspace = true, features = ["foundry-compilers"] }
 foundry-compilers = { workspace = true, features = ["svm-solc"] }

@@ -26,13 +26,9 @@ use revm::{
     Context, ExecuteEvm, Journal,
 };
 
-// TODO: add to prelude
-pub use crate::{CfgEnv, TxEnv};
-pub use seismic_revm::{
-    instructions::instruction_provider::SeismicInstructions as EthInstructions,
-    precompiles::SeismicPrecompiles, SeismicChain, SeismicContext as EthEvmContext,
-    SeismicEvm as RevmEvm, SeismicHaltReason as OpHaltReason, SeismicSpecId as SpecId,
-    SeismicTransaction,
+use seismic_prelude::foundry::{
+    CfgEnv, EthEvmContext, EthInstructions, RevmEvm, SeismicChain, SeismicPrecompiles, SpecId,
+    TxEnv,
 };
 pub type PrecompileCtx<'db> = EthEvmContext<&'db mut dyn DatabaseExt>;
 pub type SeismicFoundryPrecompiles<'db> = SeismicPrecompiles<PrecompileCtx<'db>>;

@@ -28,10 +28,10 @@ use std::{
 
 use alloy_eips::{Decodable2718, Encodable2718};
 use seismic_prelude::foundry::{
-    AnyReceiptEnvelope, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, RpcTransaction,
-    TransactionReceipt, TransactionRequest, TxEnvelope,
+    AnyReceiptEnvelope, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, Decodable712,
+    Eip712Result, OpTransaction, RpcTransaction, TransactionReceipt, TransactionRequest,
+    TxEnvelope, TxSeismic, TxSeismicElements, TypedDataRequest, SEISMIC_TX_TYPE_ID,
 };
-use seismic_revm::SeismicTransaction as OpTransaction;
 
 pub trait SeismicCompatible:
     Encodable
@@ -97,10 +97,10 @@ pub fn transaction_request_to_typed(
         }));
     }
 
-    if transaction_type == Some(seismic_alloy_consensus::SEISMIC_TX_TYPE_ID) {
+    if transaction_type == Some(SEISMIC_TX_TYPE_ID) {
         match seismic_elements {
             Some(seismic_elements) => {
-                let tx = seismic_alloy_consensus::TxSeismic {
+                let tx = TxSeismic {
                     nonce: nonce.unwrap_or_default(),
                     gas_price: gas_price.unwrap_or_default(),
                     gas_limit: gas.unwrap_or_default() as u64,
@@ -237,7 +237,7 @@ pub enum TypedTransactionRequest {
     EIP7702(TxEip7702),
     EIP4844(TxEip4844Variant),
     Deposit(TxDeposit),
-    Seismic(seismic_alloy_consensus::TxSeismic),
+    Seismic(TxSeismic),
 }
 
 /// A wrapper for [TypedTransaction] that allows impersonating accounts.
@@ -649,7 +649,7 @@ impl PendingTransaction {
                 unimplemented!("Unsupported; keep the rest of the code so diff is small")
             }
             TypedTransaction::Seismic(tx) => {
-                let seismic_alloy_consensus::TxSeismic {
+                let TxSeismic {
                     nonce,
                     gas_price,
                     gas_limit,
@@ -675,7 +675,7 @@ impl PendingTransaction {
                     gas_priority_fee: None,
                     gas_limit: *gas_limit,
                     access_list: vec![].into(),
-                    tx_type: seismic_alloy_consensus::TxSeismic::TX_TYPE,
+                    tx_type: TxSeismic::TX_TYPE,
                     ..Default::default()
                 })
             }
@@ -699,7 +699,7 @@ pub enum TypedTransaction {
     /// op-stack deposit transaction
     Deposit(TxDeposit),
     /// Seismic transaction
-    Seismic(Signed<seismic_alloy_consensus::TxSeismic>),
+    Seismic(Signed<TxSeismic>),
 }
 
 impl TryFrom<TypedTransaction> for TransactionRequest {
@@ -814,7 +814,7 @@ impl TypedTransaction {
             Self::EIP4844(_) => Some(3),
             Self::EIP7702(_) => Some(4),
             Self::Deposit(_) => Some(0x7E),
-            Self::Seismic(_) => Some(seismic_alloy_consensus::TxSeismic::TX_TYPE),
+            Self::Seismic(_) => Some(TxSeismic::TX_TYPE),
         }
     }
 
@@ -1081,14 +1081,14 @@ impl TypedTransaction {
     }
 
     /// If this is a seismic transaction, return it
-    pub fn seismic(self) -> Option<Signed<seismic_alloy_consensus::TxSeismic>> {
+    pub fn seismic(self) -> Option<Signed<TxSeismic>> {
         match self {
             Self::Seismic(tx) => Some(tx),
             _ => None,
         }
     }
 
-    pub fn seismic_elements(&self) -> Option<seismic_alloy_consensus::TxSeismicElements> {
+    pub fn seismic_elements(&self) -> Option<TxSeismicElements> {
         match self {
             Self::Seismic(tx) => Some(tx.tx().seismic_elements),
             _ => None,
@@ -1163,10 +1163,8 @@ impl alloy_eips::eip2718::Encodable2718 for TypedTransaction {
 
 impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
     fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
-        if ty == seismic_alloy_consensus::SEISMIC_TX_TYPE_ID {
-            return Ok(Self::Seismic(Signed::<seismic_alloy_consensus::TxSeismic>::rlp_decode(
-                buf,
-            )?));
+        if ty == SEISMIC_TX_TYPE_ID {
+            return Ok(Self::Seismic(Signed::<TxSeismic>::rlp_decode(buf)?));
         }
         if ty == 0x7E {
             return Ok(Self::Deposit(TxDeposit::decode(buf)?))
@@ -1188,10 +1186,8 @@ impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
     }
 }
 
-impl seismic_alloy_consensus::Decodable712 for TypedTransaction {
-    fn decode_712(
-        typed_data: &seismic_alloy_consensus::TypedDataRequest,
-    ) -> seismic_alloy_consensus::Eip712Result<Self> {
+impl Decodable712 for TypedTransaction {
+    fn decode_712(typed_data: &TypedDataRequest) -> Eip712Result<Self> {
         TxEnvelope::decode_712(typed_data).map(Self::from)
     }
 }
@@ -1395,7 +1391,7 @@ impl From<TypedReceipt<Receipt<alloy_rpc_types::Log>>> for OtsReceipt {
             TypedReceipt::EIP4844(_) => 0x03,
             TypedReceipt::EIP7702(_) => 0x04,
             TypedReceipt::Deposit(_) => 0x7E,
-            TypedReceipt::Seismic(_) => seismic_alloy_consensus::TxSeismic::TX_TYPE,
+            TypedReceipt::Seismic(_) => TxSeismic::TX_TYPE,
         } as u8;
         let receipt = ReceiptWithBloom::<Receipt<alloy_rpc_types::Log>>::from(value);
         let status = receipt.status();
@@ -1450,7 +1446,7 @@ impl Encodable for TypedReceipt {
                 match receipt {
                     Self::Seismic(r) => {
                         Header { list: true, payload_length: payload_len }.encode(out);
-                        seismic_alloy_consensus::SEISMIC_TX_TYPE_ID.encode(out);
+                        SEISMIC_TX_TYPE_ID.encode(out);
                         r.encode(out);
                     }
                     Self::EIP2930(r) => {
@@ -1508,7 +1504,7 @@ impl Decodable for TypedReceipt {
                 } else if receipt_type == 0x03 {
                     buf.advance(1);
                     <ReceiptWithBloom as Decodable>::decode(buf).map(TypedReceipt::EIP4844)
-                } else if receipt_type == seismic_alloy_consensus::SEISMIC_TX_TYPE_ID {
+                } else if receipt_type == SEISMIC_TX_TYPE_ID {
                     buf.advance(1);
                     <ReceiptWithBloom as Decodable>::decode(buf).map(TypedReceipt::Seismic)
                 } else if receipt_type == 0x7E {
@@ -1531,7 +1527,7 @@ impl Decodable for TypedReceipt {
 impl Typed2718 for TypedReceipt {
     fn ty(&self) -> u8 {
         match self {
-            Self::Seismic(_) => seismic_alloy_consensus::TxSeismic::TX_TYPE,
+            Self::Seismic(_) => TxSeismic::TX_TYPE,
             Self::Legacy(_) => alloy_consensus::constants::LEGACY_TX_TYPE_ID,
             Self::EIP2930(_) => alloy_consensus::constants::EIP2930_TX_TYPE_ID,
             Self::EIP1559(_) => alloy_consensus::constants::EIP1559_TX_TYPE_ID,
@@ -1573,7 +1569,7 @@ impl alloy_eips::Encodable2718 for TypedReceipt {
 
 impl alloy_eips::Decodable2718 for TypedReceipt {
     fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
-        if ty == seismic_alloy_consensus::SEISMIC_TX_TYPE_ID {
+        if ty == SEISMIC_TX_TYPE_ID {
             return Ok(Self::Seismic(Decodable::decode(buf)?));
         }
         if ty == 0x7E {
@@ -1884,19 +1880,16 @@ mod tests {
     #[test]
     fn test_seismic_tx_encoding() {
         let decrypted_input = Bytes::from_str("0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875").unwrap();
-        let orig_decoded_tx = seismic_alloy_consensus::TxSeismic {
+        let orig_decoded_tx = TxSeismic {
             chain_id: 31337u64,
             nonce: 2,
             gas_price: 1000000000,
             gas_limit: 100000,
             to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
             value: U256::from(1000000000000000u64),
-            seismic_elements: seismic_alloy_consensus::TxSeismicElements {
-                encryption_pubkey:
-                    seismic_alloy_consensus::TxSeismicElements::get_rand_encryption_keypair()
-                        .public_key(),
-                encryption_nonce:
-                    seismic_alloy_consensus::TxSeismicElements::get_rand_encryption_nonce(),
+            seismic_elements: TxSeismicElements {
+                encryption_pubkey: TxSeismicElements::get_rand_encryption_keypair().public_key(),
+                encryption_nonce: TxSeismicElements::get_rand_encryption_nonce(),
                 message_version: 0,
             },
             input: decrypted_input.clone(),
@@ -1910,8 +1903,7 @@ mod tests {
                 .unwrap();
 
         let signature = Signature::new(r, s, true);
-        let signed_tx: Signed<seismic_alloy_consensus::TxSeismic> =
-            orig_decoded_tx.into_signed(signature);
+        let signed_tx: Signed<TxSeismic> = orig_decoded_tx.into_signed(signature);
 
         let signed_tt = TypedTransaction::Seismic(signed_tx);
 

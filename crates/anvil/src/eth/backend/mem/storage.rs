@@ -579,7 +579,7 @@ impl MinedTransaction {
                                 /*
                                 frame.tx_type = self.info.tx_type.unwrap_or_default();
                                 if frame.tx_type ==
-                                    seismic_alloy_consensus::TxSeismic::TX_TYPE as isize
+                                    TxSeismic::TX_TYPE as isize
                                 {
                                     frame = frame.shield_inputs();
                                 }

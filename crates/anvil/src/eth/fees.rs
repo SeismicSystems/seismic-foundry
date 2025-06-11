@@ -23,7 +23,7 @@ use crate::eth::{
     error::BlockchainError,
 };
 
-use foundry_evm_core::evm::SpecId;
+use seismic_prelude::foundry::SpecId;
 
 /// Maximum number of entries in the fee history cache
 pub const MAX_FEE_HISTORY_CACHE_SIZE: u64 = 2048u64;

@@ -11,7 +11,7 @@ use revm::{
     DatabaseCommit, Inspector,
 };
 
-use crate::evm::{OpHaltReason, SeismicTransaction as OpTransaction, SpecId};
+use seismic_prelude::foundry::{OpHaltReason, OpTransaction, SeismicContext, SeismicEvm, SpecId};
 
 /// Alias for result type returned by [`Evm::transact`] methods.
 type EitherEvmResult<DBError, HaltReason, TxError> =
@@ -44,7 +44,7 @@ where
     /// [`OpEvm`] implementation.
     Op(OpEvm<DB, I, P>),
     */
-    Seismic(alloy_seismic_evm::SeismicEvm<DB, I, P>),
+    Seismic(SeismicEvm<DB, I, P>),
 }
 
 impl<DB, I, P> EitherEvm<DB, I, P>
@@ -55,8 +55,8 @@ where
     P: PrecompileProvider<EthEvmContext<DB>, Output = InterpreterResult>
         + PrecompileProvider<OpContext<DB>, Output = InterpreterResult>,
     */
-    I: Inspector<seismic_revm::SeismicContext<DB>>,
-    P: PrecompileProvider<seismic_revm::SeismicContext<DB>, Output = InterpreterResult>,
+    I: Inspector<SeismicContext<DB>>,
+    P: PrecompileProvider<SeismicContext<DB>, Output = InterpreterResult>,
 {
     #[allow(dead_code)]
     /// Converts the [`EthEvm::transact`] result to [`EitherEvmResult`].
@@ -109,8 +109,8 @@ where
     P: PrecompileProvider<EthEvmContext<DB>, Output = InterpreterResult>
         + PrecompileProvider<OpContext<DB>, Output = InterpreterResult>,
     */
-    I: Inspector<seismic_revm::SeismicContext<DB>>,
-    P: PrecompileProvider<seismic_revm::SeismicContext<DB>, Output = InterpreterResult>,
+    I: Inspector<SeismicContext<DB>>,
+    P: PrecompileProvider<SeismicContext<DB>, Output = InterpreterResult>,
 {
     type DB = DB;
     type Error = EVMError<DB::Error, revm::context::result::InvalidTransaction>;

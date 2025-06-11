@@ -14,7 +14,6 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-# seismic-alloy-rpc-types.workspace = true
 seismic-prelude.workspace = true
 
 foundry-config.workspace = true

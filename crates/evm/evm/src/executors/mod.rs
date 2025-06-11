@@ -27,7 +27,7 @@ use foundry_evm_core::{
     },
     decode::{RevertDecoder, SkipReason},
     utils::StateChangeset,
-    EvmEnv, InspectorExt,
+    InspectorExt,
 };
 use foundry_evm_coverage::HitMaps;
 use foundry_evm_traces::{SparsedTraceArena, TraceMode};
@@ -59,7 +59,7 @@ pub use invariant::InvariantExecutor;
 mod trace;
 pub use trace::TracingExecutor;
 
-use foundry_evm_core::evm::SpecId;
+use seismic_prelude::foundry::{EvmEnv, SpecId};
 
 sol! {
     interface ITest {

@@ -1,9 +1,9 @@
 use alloy_evm::{precompiles::DynPrecompile, Database, Evm};
+use foundry_evm_core::either_evm::EitherEvm;
 use revm::{precompile::PrecompileWithAddress, Inspector};
 use std::fmt::Debug;
 
-use foundry_evm_core::{either_evm::EitherEvm, evm::SeismicPrecompiles};
-use seismic_revm::SeismicContext;
+use seismic_prelude::foundry::{SeismicContext, SeismicPrecompiles};
 
 /// Object-safe trait that enables injecting extra precompiles when using
 /// `anvil` as a library.
@@ -50,10 +50,7 @@ mod tests {
     use alloy_evm::{eth::EthEvmContext, precompiles::PrecompilesMap, EthEvm, Evm, EvmEnv};
     use alloy_op_evm::OpEvm;
     use alloy_primitives::{address, Address, Bytes, TxKind, U256};
-    use foundry_evm_core::{
-        either_evm::EitherEvm,
-        evm::{SeismicChain, SeismicPrecompiles, SeismicTransaction},
-    };
+    use foundry_evm_core::either_evm::EitherEvm;
     use itertools::Itertools;
     use op_revm::{precompiles::OpPrecompiles, L1BlockInfo, OpContext, OpSpecId, OpTransaction};
     use revm::{
@@ -70,11 +67,12 @@ mod tests {
         Journal,
     };
 
-    use foundry_evm_core::evm::{
-        EthEvmContext as SeismicContext, RevmEvm as SeismicEvm, SpecId as SeismicSpecId,
-    };
-
     use crate::{inject_precompiles, PrecompileFactory};
+
+    use seismic_prelude::foundry::{
+        SeismicChain, SeismicContext, SeismicEvm, SeismicPrecompiles, SeismicSpecId,
+        SeismicTransaction,
+    };
 
     // A precompile activated in the `Prague` spec.
     const ETH_PRAGUE_PRECOMPILE: Address = address!("0x0000000000000000000000000000000000000011");

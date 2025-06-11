@@ -1061,7 +1061,6 @@ dependencies = [
  "alloy-rlp",
  "alloy-rpc-client",
  "alloy-rpc-types",
- "alloy-seismic-evm",
  "alloy-serde",
  "alloy-signer",
  "alloy-signer-local",
@@ -1103,11 +1102,8 @@ dependencies = [
  "revm",
  "revm-inspectors",
  "secp256k1",
- "seismic-alloy-consensus",
- "seismic-alloy-rpc-types",
  "seismic-enclave",
  "seismic-prelude",
- "seismic-revm",
  "serde",
  "serde_json",
  "tempfile",
@@ -1137,11 +1133,8 @@ dependencies = [
  "op-revm",
  "rand 0.9.1",
  "revm",
- "seismic-alloy-consensus",
- "seismic-alloy-rpc-types",
  "seismic-enclave",
  "seismic-prelude",
- "seismic-revm",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -4199,7 +4192,6 @@ dependencies = [
  "revm",
  "revm-inspectors",
  "seismic-prelude",
- "seismic-revm",
  "semver 1.0.26",
  "serde",
  "serde_json",
@@ -4468,7 +4460,7 @@ dependencies = [
  "path-slash",
  "regex",
  "reqwest",
- "seismic-revm",
+ "seismic-prelude",
  "semver 1.0.26",
  "serde",
  "serde_json",
@@ -4526,6 +4518,7 @@ dependencies = [
  "proptest",
  "revm",
  "revm-inspectors",
+ "seismic-prelude",
  "serde",
  "thiserror 2.0.12",
  "tracing",
@@ -4556,7 +4549,6 @@ dependencies = [
  "alloy-primitives",
  "alloy-provider",
  "alloy-rpc-types",
- "alloy-seismic-evm",
  "alloy-sol-types",
  "auto_impl",
  "eyre",
@@ -4572,9 +4564,7 @@ dependencies = [
  "parking_lot",
  "revm",
  "revm-inspectors",
- "seismic-alloy-rpc-types",
  "seismic-prelude",
- "seismic-revm",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -8666,7 +8656,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-consensus"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=9aa611f#9aa611f303d671ea8f51f112733373bc621fc879"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=b2ade53#b2ade5397da3e80ad8add857a72abbafb266b5bf"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -8687,7 +8677,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-network"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=9aa611f#9aa611f303d671ea8f51f112733373bc621fc879"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=b2ade53#b2ade5397da3e80ad8add857a72abbafb266b5bf"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
@@ -8710,7 +8700,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-provider"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=9aa611f#9aa611f303d671ea8f51f112733373bc621fc879"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=b2ade53#b2ade5397da3e80ad8add857a72abbafb266b5bf"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -8729,7 +8719,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-rpc-types"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=9aa611f#9aa611f303d671ea8f51f112733373bc621fc879"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=b2ade53#b2ade5397da3e80ad8add857a72abbafb266b5bf"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -8786,21 +8776,25 @@ dependencies = [
 [[package]]
 name = "seismic-prelude"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=9aa611f#9aa611f303d671ea8f51f112733373bc621fc879"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=b2ade53#b2ade5397da3e80ad8add857a72abbafb266b5bf"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
+ "alloy-evm",
  "alloy-network",
  "alloy-network-primitives",
  "alloy-primitives",
  "alloy-rpc-types",
  "alloy-rpc-types-eth",
+ "alloy-seismic-evm",
  "alloy-serde",
  "derive_more 1.0.0",
+ "revm",
  "seismic-alloy-consensus",
  "seismic-alloy-network",
  "seismic-alloy-provider",
  "seismic-alloy-rpc-types",
+ "seismic-revm",
  "serde",
 ]
 
