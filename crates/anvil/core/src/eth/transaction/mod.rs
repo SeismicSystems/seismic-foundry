@@ -1164,7 +1164,9 @@ impl alloy_eips::eip2718::Encodable2718 for TypedTransaction {
 impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
     fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
         if ty == seismic_alloy_consensus::SEISMIC_TX_TYPE_ID {
-            return Ok(Self::Seismic(Signed::<seismic_alloy_consensus::TxSeismic>::rlp_decode(buf)?));
+            return Ok(Self::Seismic(Signed::<seismic_alloy_consensus::TxSeismic>::rlp_decode(
+                buf,
+            )?));
         }
         if ty == 0x7E {
             return Ok(Self::Deposit(TxDeposit::decode(buf)?))

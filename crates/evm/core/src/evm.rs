@@ -114,8 +114,8 @@ fn get_precompiles(spec: SpecId) -> &'static Precompiles {
     /*
     PrecompilesMap::from_static(
     */
-        EthPrecompiles { precompiles: Precompiles::new(PrecompileSpecId::from_spec_id(spec)), spec }
-            .precompiles
+    EthPrecompiles { precompiles: Precompiles::new(PrecompileSpecId::from_spec_id(spec)), spec }
+        .precompiles
     /*
     )
     */

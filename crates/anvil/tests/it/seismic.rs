@@ -293,23 +293,12 @@ async fn test_seismic_precompiles_end_to_end() {
 
     // 1. Deploy test contract
     let bytecode = Bytes::from(load_bytecode_from_file(TEST_PRECOMPILES_BYTECODE_PATH));
-    let tx_req = tx_builder()
-        .with_from(deployer)
-        .with_kind(TxKind::Create)
-        .with_input(bytecode)
-        .into();
+    let tx_req =
+        tx_builder().with_from(deployer).with_kind(TxKind::Create).with_input(bytecode).into();
 
-    let tx_result = provider
-        .send_transaction(tx_req.into())
-        .await
-        .unwrap();
+    let tx_result = provider.send_transaction(tx_req.into()).await.unwrap();
 
-    let contract_addr = tx_result
-        .get_receipt()
-        .await
-        .unwrap()
-        .contract_address
-        .unwrap();
+    let contract_addr = tx_result.get_receipt().await.unwrap().contract_address.unwrap();
 
     // Prepare addresses & keys
     let accounts: Vec<_> = handle.dev_wallets().collect();
@@ -429,10 +418,7 @@ async fn test_seismic_precompiles_end_to_end() {
 
     // Perform the read call with encryption
     // TODO: seismic call with Builder does not work
-    let output = provider
-        .seismic_call(SendableTx::Builder(tx_req.into()))
-        .await
-        .unwrap();
+    let output = provider.seismic_call(SendableTx::Builder(tx_req.into())).await.unwrap();
 
     //
     // 5. Locally decrypt to cross-check

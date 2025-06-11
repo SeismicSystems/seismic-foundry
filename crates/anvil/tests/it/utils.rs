@@ -1,7 +1,5 @@
 use alloy_provider::{
-    fillers::{
-        BlobGasFiller, ChainIdFiller, FillProvider, JoinFill, NonceFiller, WalletFiller,
-    },
+    fillers::{BlobGasFiller, ChainIdFiller, FillProvider, JoinFill, NonceFiller, WalletFiller},
     Identity, RootProvider,
 };
 use foundry_common::provider::{

@@ -3032,12 +3032,8 @@ impl EthApi {
         call_to_estimate.gas = Some(highest_gas_limit as u64);
 
         // execute the call without writing to db
-        let ethres = self.backend.call_with_state(
-            &state,
-            call_to_estimate,
-            fees.clone(),
-            block_env.clone(),
-        );
+        let ethres =
+            self.backend.call_with_state(&state, call_to_estimate, fees.clone(), block_env.clone());
 
         let gas_used = match ethres.try_into()? {
             GasEstimationCallResult::Success(gas) => Ok(gas),
