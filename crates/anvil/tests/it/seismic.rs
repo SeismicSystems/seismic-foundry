@@ -1,5 +1,4 @@
 use alloy_dyn_abi::EventExt;
-use alloy_eips::Decodable2718;
 use alloy_json_abi::{Event, EventParam};
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{
@@ -15,10 +14,7 @@ use alloy_serde::WithOtherFields;
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{sol, SolCall, SolValue};
 use anvil::{spawn, NodeConfig};
-use bytes::Buf;
-use foundry_evm_core::evm::SeismicFoundryPrecompiles;
 use secp256k1::{PublicKey, SecretKey};
-use seismic_alloy_consensus::TxSeismicElements;
 use seismic_enclave::aes_decrypt;
 use std::{fs, str::FromStr};
 
@@ -198,11 +194,10 @@ async fn test_seismic_transaction_rpc() {
         .unwrap();
     assert_eq!(res, test_utils::ContractTestContext::get_code());
 
-    // send a usngiend call
+    // send a unsigned call
     let res = unsigned_provider
         .seismic_call(SendableTx::Builder(
             tx_builder()
-                .with_from(deployer)
                 .with_kind(TxKind::Create)
                 .with_input(plaintext_bytecode.clone())
                 .into()

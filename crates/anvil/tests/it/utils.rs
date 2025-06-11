@@ -1,6 +1,6 @@
 use alloy_provider::{
     fillers::{
-        BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
+        BlobGasFiller, ChainIdFiller, FillProvider, JoinFill, NonceFiller, WalletFiller,
     },
     Identity, RootProvider,
 };
@@ -8,7 +8,7 @@ use foundry_common::provider::{
     get_http_provider, ProviderBuilder, RetryProvider, RetryProviderWithSigner,
 };
 
-use seismic_prelude::foundry::{AnyNetwork, EthereumWallet};
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, GasFiller};
 
 pub fn http_provider(http_endpoint: &str) -> RetryProvider {
     get_http_provider(http_endpoint)
