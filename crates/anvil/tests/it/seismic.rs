@@ -404,11 +404,12 @@ async fn test_seismic_precompiles_end_to_end() {
     let call = Encryption::decryptCall { nonce, ciphertext: ciphertext.clone() };
     let unencrypted_decrypt_call = call.abi_encode();
 
-    let tx_req = tx_builder()
+    let mut tx_req = tx_builder()
         .with_from(from)
         .with_to(contract_addr)
         .with_input(unencrypted_decrypt_call)
         .into();
+    tx_req.inner.transaction_type = Some(TxSeismic::TX_TYPE);
     /*
     // TODO: seismic call with Builder does not work
     let mut tx_req = tx_builder()
@@ -437,7 +438,6 @@ async fn test_seismic_precompiles_end_to_end() {
         .seismic_call(SendableTx::Builder(tx_req.into()))
         .await
         .unwrap();
-
 
     //
     // 5. Locally decrypt to cross-check
