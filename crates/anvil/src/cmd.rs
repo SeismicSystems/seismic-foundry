@@ -1,12 +1,7 @@
 use crate::{
     config::{ForkChoice, DEFAULT_MNEMONIC},
     eth::{backend::db::SerializableState, pool::transactions::TransactionOrder, EthApi},
-<<<<<<< HEAD
-    hardfork::{OptimismHardfork, SeismicHardfork},
-    AccountGenerator, EthereumHardfork, NodeConfig, CHAIN_ID,
-=======
     AccountGenerator, EthereumHardfork, NodeConfig, OptimismHardfork, CHAIN_ID,
->>>>>>> 3c0b3df8f8ef8800a10912ce5a9dcd9eb7e971ff
 };
 use alloy_genesis::Genesis;
 use alloy_primitives::{utils::Unit, B256, U256};
@@ -224,8 +219,8 @@ impl NodeArgs {
             Some(hf) => {
                 if self.evm.optimism {
                     Some(OptimismHardfork::from_str(hf)?.into())
-                } else if self.evm_opts.seismic {
-                    Some(SeismicHardfork::from_str(hf)?.into())
+                } else if self.evm.seismic {
+                    Some(crate::hardfork::SeismicHardfork::from_str(hf)?.into())
                 } else {
                     Some(EthereumHardfork::from_str(hf)?.into())
                 }
@@ -234,7 +229,7 @@ impl NodeArgs {
         };
 
         Ok(NodeConfig::default()
-            .with_seismic(self.evm_opts.seismic)
+            .with_seismic(self.evm.seismic)
             .with_gas_limit(self.evm.gas_limit)
             .disable_block_gas_limit(self.evm.disable_block_gas_limit)
             .with_gas_price(self.evm.gas_price)

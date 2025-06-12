@@ -11,9 +11,9 @@ use crate::{
 use alloy_consensus::Typed2718;
 use alloy_evm::Evm;
 use alloy_genesis::GenesisAccount;
-use alloy_network::{AnyRpcBlock, AnyTxEnvelope, TransactionResponse};
+use alloy_network::TransactionResponse;
 use alloy_primitives::{keccak256, uint, Address, TxKind, B256, U256};
-use alloy_rpc_types::{BlockNumberOrTag, Transaction, TransactionRequest};
+use alloy_rpc_types::{BlockNumberOrTag, Transaction};
 use eyre::Context;
 use foundry_common::{is_known_system_sender, SYSTEM_TRANSACTION_TYPE};
 pub use foundry_fork_db::{cache::BlockchainDbMeta, BlockchainDb, SharedBackend};
@@ -33,6 +33,8 @@ use std::{
     time::Instant,
 };
 
+use seismic_prelude::foundry::{AnyRpcBlock, AnyTxEnvelope};
+
 mod diagnostic;
 pub use diagnostic::RevertDiagnostic;
 
@@ -47,6 +49,8 @@ pub use in_memory_db::{EmptyDBWrapper, FoundryEvmInMemoryDB, MemDb};
 
 mod snapshot;
 pub use snapshot::{BackendStateSnapshot, RevertStateSnapshotAction, StateSnapshot};
+
+use seismic_prelude::foundry::TransactionRequest;
 
 // A `revm::Database` that is used in forking mode
 type ForkDB = CacheDB<SharedBackend>;
@@ -212,7 +216,7 @@ pub trait DatabaseExt: Database<Error = DatabaseError> + DatabaseCommit {
     /// Executes a given TransactionRequest, commits the new state to the DB
     fn transact_from_tx(
         &mut self,
-        transaction: &seismic_alloy_rpc_types::SeismicTransactionRequest,
+        transaction: &TransactionRequest,
         env: Env,
         journaled_state: &mut JournaledState,
         inspector: &mut dyn InspectorExt,
@@ -745,17 +749,17 @@ impl Backend {
     ///
     /// We need to track these mainly to prevent issues when switching between different evms
     pub(crate) fn initialize(&mut self, env: &Env) {
-        self.set_caller(env.tx.caller);
-        self.set_spec_id(env.evm_env.cfg_env.spec);
+        self.set_caller(env.tx.base.caller);
+        self.set_spec_id(env.evm_env.cfg_env.spec.into());
 
-        let test_contract = match env.tx.kind {
+        let test_contract = match env.tx.base.kind {
             TxKind::Call(to) => to,
             TxKind::Create => {
                 let nonce = self
-                    .basic_ref(env.tx.caller)
+                    .basic_ref(env.tx.base.caller)
                     .map(|b| b.unwrap_or_default().nonce)
                     .unwrap_or_default();
-                env.tx.caller.create(nonce)
+                env.tx.base.caller.create(nonce)
             }
         };
         self.set_test_contract(test_contract);
@@ -848,7 +852,7 @@ impl Backend {
         let tx = fork.db.db.get_transaction(transaction)?;
 
         // get the block number we need to fork
-        if let Some(tx_block) = tx.block_number {
+        if let Some(tx_block) = tx.0.inner().block_number {
             let block = fork.db.db.get_full_block(tx_block)?;
 
             // we need to subtract 1 here because we want the state before the transaction
@@ -885,7 +889,7 @@ impl Backend {
         for tx in full_block.inner.transactions.txns() {
             // System transactions such as on L2s don't contain any pricing info so we skip them
             // otherwise this would cause reverts
-            if is_known_system_sender(tx.inner().inner.signer()) ||
+            if is_known_system_sender(tx.0.inner().inner.signer()) ||
                 tx.ty() == SYSTEM_TRANSACTION_TYPE
             {
                 trace!(tx=?tx.tx_hash(), "skipping system transaction");
@@ -894,12 +898,12 @@ impl Backend {
 
             if tx.tx_hash() == tx_hash {
                 // found the target transaction
-                return Ok(Some(tx.inner.clone()))
+                return Ok(Some(tx.0.inner().clone()))
             }
             trace!(tx=?tx.tx_hash(), "committing transaction");
 
             commit_transaction(
-                &tx.inner,
+                &tx.0.inner(),
                 &mut env.as_env_mut(),
                 journaled_state,
                 fork,
@@ -962,7 +966,7 @@ impl DatabaseExt for Backend {
                     // there might be the case where the snapshot was created during `setUp` with
                     // another caller, so we need to ensure the caller account is present in the
                     // journaled state and database
-                    let caller = current.tx.caller;
+                    let caller = current.tx.base.caller;
                     journaled_state.state.entry(caller).or_insert_with(|| {
                         let caller_account = current_state
                             .state
@@ -1069,8 +1073,8 @@ impl DatabaseExt for Backend {
         if let Some(active) = self.active_fork_mut() {
             active.journaled_state = active_journaled_state.clone();
 
-            let caller = env.tx.caller;
-            let caller_account = active.journaled_state.state.get(&env.tx.caller).cloned();
+            let caller = env.tx.base.caller;
+            let caller_account = active.journaled_state.state.get(&env.tx.base.caller).cloned();
             let target_fork = self.inner.get_fork_mut(idx);
 
             // depth 0 will be the default value when the fork was created
@@ -1135,11 +1139,11 @@ impl DatabaseExt for Backend {
             // another edge case where a fork is created and selected during setup with not
             // necessarily the same caller as for the test, however we must always
             // ensure that fork's state contains the current sender
-            let caller = env.tx.caller;
+            let caller = env.tx.base.caller;
             fork.journaled_state.state.entry(caller).or_insert_with(|| {
                 let caller_account = active_journaled_state
                     .state
-                    .get(&env.tx.caller)
+                    .get(&env.tx.base.caller)
                     .map(|acc| acc.info.clone())
                     .unwrap_or_default();
 
@@ -1285,7 +1289,7 @@ impl DatabaseExt for Backend {
 
         let fork = self.inner.get_fork_by_id_mut(id)?;
         commit_transaction(
-            &tx.inner,
+            &tx.0.inner(),
             &mut env.as_env_mut(),
             journaled_state,
             fork,
@@ -1297,7 +1301,7 @@ impl DatabaseExt for Backend {
 
     fn transact_from_tx(
         &mut self,
-        tx: &seismic_alloy_rpc_types::SeismicTransactionRequest,
+        tx: &TransactionRequest,
         mut env: Env,
         journaled_state: &mut JournaledState,
         inspector: &mut dyn InspectorExt,
@@ -1514,7 +1518,11 @@ impl DatabaseRef for Backend {
         }
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         if let Some(db) = self.active_fork_db() {
             DatabaseRef::storage_ref(db, address, index)
         } else {
@@ -1559,7 +1567,11 @@ impl Database for Backend {
         }
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+    fn storage(
+        &mut self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         if let Some(db) = self.active_fork_db_mut() {
             Ok(Database::storage(db, address, index)?)
         } else {
@@ -1855,7 +1867,7 @@ impl Default for BackendInner {
 pub(crate) fn update_current_env_with_fork_env(current: &mut EnvMut<'_>, fork: Env) {
     *current.block = fork.evm_env.block_env;
     *current.cfg = fork.evm_env.cfg_env;
-    current.tx.chain_id = fork.tx.chain_id;
+    current.tx.base.chain_id = fork.tx.base.chain_id;
 }
 
 /// Clones the data of the given `accounts` from the `active` database into the `fork_db`

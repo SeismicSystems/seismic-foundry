@@ -4,10 +4,7 @@ use crate::eth::{
     EthApi,
 };
 use alloy_consensus::Transaction as TransactionTrait;
-use alloy_network::{
-    AnyHeader, AnyRpcBlock, AnyRpcHeader, AnyRpcTransaction, AnyTxEnvelope, BlockResponse,
-    TransactionResponse,
-};
+use alloy_network::{AnyHeader, AnyRpcHeader, BlockResponse, TransactionResponse};
 use alloy_primitives::{Address, Bytes, B256, U256};
 use alloy_rpc_types::{
     trace::{
@@ -25,6 +22,8 @@ use alloy_rpc_types::{
 use itertools::Itertools;
 
 use futures::future::join_all;
+
+use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope};
 
 pub fn mentions_address(trace: LocalizedTransactionTrace, address: Address) -> Option<B256> {
     match (trace.trace.action, trace.trace.result) {

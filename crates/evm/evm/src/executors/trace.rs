@@ -7,8 +7,12 @@ use foundry_compilers::artifacts::EvmVersion;
 use foundry_config::{utils::evm_spec_id, Chain, Config};
 use foundry_evm_core::{backend::Backend, fork::CreateFork, opts::EvmOpts};
 use foundry_evm_traces::TraceMode;
+/*
 use revm::primitives::hardfork::SpecId;
+*/
 use std::ops::{Deref, DerefMut};
+
+use seismic_prelude::foundry::SpecId;
 
 /// A default executor with tracing enabled
 pub struct TracingExecutor {

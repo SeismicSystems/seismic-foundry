@@ -1,10 +1,11 @@
 use alloy_chains::Chain;
-use alloy_network::AnyTransactionReceipt;
 use alloy_primitives::{utils::format_units, TxHash, U256};
 use alloy_provider::{PendingTransactionBuilder, PendingTransactionError, Provider, WatchTxError};
 use eyre::{eyre, Result};
 use foundry_common::{provider::RetryProvider, retry, retry::RetryError, shell};
 use std::time::Duration;
+
+use seismic_prelude::foundry::AnyTransactionReceipt;
 
 /// Convenience enum for internal signalling of transaction status
 pub enum TxStatus {
@@ -15,7 +16,7 @@ pub enum TxStatus {
 
 impl From<AnyTransactionReceipt> for TxStatus {
     fn from(receipt: AnyTransactionReceipt) -> Self {
-        if !receipt.inner.inner.inner.receipt.status.coerce_status() {
+        if !receipt.inner.inner.status() {
             Self::Revert(receipt)
         } else {
             Self::Success(receipt)
@@ -61,7 +62,7 @@ pub fn format_receipt(chain: Chain, receipt: &AnyTransactionReceipt) -> String {
     let gas_used = receipt.gas_used;
     let gas_price = receipt.effective_gas_price;
     let block_number = receipt.block_number.unwrap_or_default();
-    let success = receipt.inner.inner.inner.receipt.status.coerce_status();
+    let success = receipt.inner.inner.status();
 
     if shell::is_json() {
         let _ = sh_println!(

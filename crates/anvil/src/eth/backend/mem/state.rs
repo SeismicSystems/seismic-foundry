@@ -10,14 +10,14 @@ use revm::{
     bytecode::Bytecode,
     context::BlockEnv,
     database::{CacheDB, DatabaseRef, DbAccount},
+    primitives::FlaggedStorage,
     state::AccountInfo,
 };
-use revm::primitives::FlaggedStorage;
 
-pub fn build_root(values: impl IntoIterator<Item = (Nibbles, Vec<u8>)>) -> B256 {
+pub fn build_root(values: impl IntoIterator<Item = (Nibbles, Vec<u8>, bool)>) -> B256 {
     let mut builder = HashBuilder::default();
-    for (key, value) in values {
-        builder.add_leaf(key, value.as_ref());
+    for (key, value, is_private) in values {
+        builder.add_leaf(key, value.as_ref(), is_private);
     }
     builder.root()
 }
@@ -33,31 +33,30 @@ pub fn storage_root(storage: &HashMap<U256, FlaggedStorage>) -> B256 {
 }
 
 /// Builds iterator over stored key-value pairs ready for storage trie root calculation.
-pub fn trie_storage(storage: &HashMap<U256, FlaggedStorage>) -> Vec<(Nibbles, Vec<u8>)> {
+pub fn trie_storage(storage: &HashMap<U256, FlaggedStorage>) -> Vec<(Nibbles, Vec<u8>, bool)> {
     let mut storage = storage
         .iter()
         .map(|(key, value)| {
-            // TODO: support FlaggedStorage
             let value_u256: U256 = value.into();
             let data = alloy_rlp::encode(value_u256);
-            (Nibbles::unpack(keccak256(key.to_be_bytes::<32>())), data)
+            (Nibbles::unpack(keccak256(key.to_be_bytes::<32>())), data, value.is_private)
         })
         .collect::<Vec<_>>();
-    storage.sort_by(|(key1, _), (key2, _)| key1.cmp(key2));
+    storage.sort_by(|(key1, _, _), (key2, _, _)| key1.cmp(key2));
 
     storage
 }
 
 /// Builds iterator over stored key-value pairs ready for account trie root calculation.
-pub fn trie_accounts(accounts: &HashMap<Address, DbAccount>) -> Vec<(Nibbles, Vec<u8>)> {
+pub fn trie_accounts(accounts: &HashMap<Address, DbAccount>) -> Vec<(Nibbles, Vec<u8>, bool)> {
     let mut accounts = accounts
         .iter()
         .map(|(address, account)| {
             let data = trie_account_rlp(&account.info, &account.storage);
-            (Nibbles::unpack(keccak256(*address)), data)
+            (Nibbles::unpack(keccak256(*address)), data, false)
         })
         .collect::<Vec<_>>();
-    accounts.sort_by(|(key1, _), (key2, _)| key1.cmp(key2));
+    accounts.sort_by(|(key1, _, _), (key2, _, _)| key1.cmp(key2));
 
     accounts
 }
@@ -120,7 +119,8 @@ where
             }
             (None, Some(account_state_diff)) => {
                 for (key, value) in account_state_diff {
-                    cache_db.insert_account_storage(*account, (*key).into(), (*value).into())?;
+                    let value_u256: U256 = (*value).into();
+                    cache_db.insert_account_storage(*account, (*key).into(), value_u256.into())?;
                 }
             }
         };

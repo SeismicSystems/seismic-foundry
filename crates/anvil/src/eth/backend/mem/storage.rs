@@ -528,7 +528,6 @@ impl MinedTransaction {
             block_hash: Some(self.block_hash),
             block_number: Some(self.block_number),
             base_fee: None,
-            tx_type: self.info.tx_type,
         })
     }
 
@@ -570,17 +569,23 @@ impl MinedTransaction {
                     GethDebugBuiltInTracerType::CallTracer => {
                         return match tracer_config.into_call_config() {
                             Ok(call_config) => {
-                                let mut frame = GethTraceBuilder::new(self.info.traces.clone())
-                                    .geth_call_traces(call_config, self.receipt.cumulative_gas_used())
-                                
+                                let frame = GethTraceBuilder::new(self.info.traces.clone())
+                                    .geth_call_traces(
+                                        call_config,
+                                        self.receipt.cumulative_gas_used(),
+                                    );
+
+                                // TODO: for shielding the trace
+                                /*
                                 frame.tx_type = self.info.tx_type.unwrap_or_default();
                                 if frame.tx_type ==
-                                    alloy_consensus::transaction::TxSeismic::TX_TYPE as isize
+                                    TxSeismic::TX_TYPE as isize
                                 {
                                     frame = frame.shield_inputs();
                                 }
+                                */
                                 Ok(frame.into())
-                            },
+                            }
                             Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
                         };
                     }

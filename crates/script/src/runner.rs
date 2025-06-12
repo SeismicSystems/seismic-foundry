@@ -2,7 +2,7 @@ use super::{ScriptConfig, ScriptResult};
 use crate::build::ScriptPredeployLibraries;
 use alloy_eips::eip7702::SignedAuthorization;
 use alloy_primitives::{Address, Bytes, TxKind, U256};
-use alloy_rpc_types::TransactionRequest;
+use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
 use eyre::Result;
 use foundry_cheatcodes::BroadcastableTransaction;
 use foundry_config::Config;
@@ -14,6 +14,8 @@ use foundry_evm::{
     traces::{TraceKind, Traces},
 };
 use std::collections::VecDeque;
+
+use seismic_prelude::foundry::TransactionRequest;
 
 /// Drives script execution
 #[derive(Debug)]
@@ -74,10 +76,13 @@ impl ScriptRunner {
                 library_transactions.push_back(BroadcastableTransaction {
                     rpc: self.evm_opts.fork_url.clone(),
                     transaction: TransactionRequest {
-                        from: Some(self.evm_opts.sender),
-                        input: code.clone().into(),
-                        nonce: Some(sender_nonce + library_transactions.len() as u64),
-                        ..Default::default()
+                        inner: AlloyTransactionRequest {
+                            from: Some(self.evm_opts.sender),
+                            input: code.clone().into(),
+                            nonce: Some(sender_nonce + library_transactions.len() as u64),
+                            ..Default::default()
+                        },
+                        seismic_elements: None,
                     }
                     .into(),
                 })
@@ -108,11 +113,14 @@ impl ScriptRunner {
                     library_transactions.push_back(BroadcastableTransaction {
                         rpc: self.evm_opts.fork_url.clone(),
                         transaction: TransactionRequest {
-                            from: Some(self.evm_opts.sender),
-                            input: calldata.into(),
-                            nonce: Some(sender_nonce + library_transactions.len() as u64),
-                            to: Some(TxKind::Call(create2_deployer)),
-                            ..Default::default()
+                            inner: AlloyTransactionRequest {
+                                from: Some(self.evm_opts.sender),
+                                input: calldata.into(),
+                                nonce: Some(sender_nonce + library_transactions.len() as u64),
+                                to: Some(TxKind::Call(create2_deployer)),
+                                ..Default::default()
+                            },
+                            seismic_elements: None,
                         }
                         .into(),
                     });

@@ -20,13 +20,14 @@ required-features = ["cli"]
 
 [dependencies]
 # Seismic's added dependencies
-secp256k1 = { version = "0.29", default-features = false, features = [
+secp256k1 = { version = "0.30", default-features = false, features = [
     "global-context",
     "recovery",
 ] }
 bytes.workspace = true
 k256.workspace = true
 seismic-enclave.workspace = true
+seismic-prelude.workspace = true
 
 # foundry internal
 anvil-core = { path = "core" }

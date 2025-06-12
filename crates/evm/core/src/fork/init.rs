@@ -1,11 +1,13 @@
-use crate::{utils::apply_chain_and_block_specific_env_changes, AsEnvMut, Env, EvmEnv};
+use crate::{utils::apply_chain_and_block_specific_env_changes, AsEnvMut, Env};
 use alloy_consensus::BlockHeader;
 use alloy_primitives::Address;
 use alloy_provider::{network::BlockResponse, Network, Provider};
 use alloy_rpc_types::BlockNumberOrTag;
 use eyre::WrapErr;
 use foundry_common::NON_ARCHIVE_NODE_WARNING;
-use revm::context::{BlockEnv, CfgEnv, TxEnv};
+
+use revm::context::{BlockEnv, TxEnv as RevmTxEnv};
+use seismic_prelude::foundry::{CfgEnv, EvmEnv, TxEnv};
 
 /// Initializes a REVM block environment based on a forked
 /// ethereum provider.
@@ -66,13 +68,13 @@ pub async fn environment<N: Network, P: Provider<N>>(
                 ..Default::default()
             },
         },
-        tx: TxEnv {
+        tx: TxEnv::new(RevmTxEnv {
             caller: origin,
             gas_price: gas_price.unwrap_or(fork_gas_price),
             chain_id: Some(override_chain_id.unwrap_or(rpc_chain_id)),
             gas_limit: block.header().gas_limit() as u64,
             ..Default::default()
-        },
+        }),
     };
 
     apply_chain_and_block_specific_env_changes::<N>(env.as_env_mut(), &block);

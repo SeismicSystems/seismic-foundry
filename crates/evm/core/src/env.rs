@@ -1,9 +1,13 @@
-pub use alloy_evm::EvmEnv;
+pub use alloy_evm::EvmEnv as AlloyEvmEnv;
 use revm::{
-    context::{BlockEnv, CfgEnv, JournalInner, JournalTr, TxEnv},
+    context::{BlockEnv, JournalInner, JournalTr},
+    /*
     primitives::hardfork::SpecId,
+    */
     Context, Database, Journal, JournalEntry,
 };
+
+use seismic_prelude::foundry::{CfgEnv, EvmEnv, SpecId, TxEnv};
 
 /// Helper container type for [`EvmEnv`] and [`TxEnv`].
 #[derive(Clone, Debug, Default)]

@@ -1,12 +1,13 @@
 use crate::abi::VendingMachine;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{bytes, U256};
-use alloy_provider::{Provider, SeismicSignedProvider, SendableTx};
-use alloy_rpc_types::TransactionRequest;
+use alloy_provider::{Provider, SendableTx};
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{spawn, NodeConfig};
 use url::Url;
+
+use seismic_prelude::foundry::{sfoundry_signed_provider, tx_builder, SeismicProviderExt};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deploy_reverting() {
@@ -15,8 +16,8 @@ async fn test_deploy_reverting() {
     let sender = handle.dev_accounts().next().unwrap();
 
     let code = bytes!("5f5ffd"); // PUSH0 PUSH0 REVERT
-    let tx = TransactionRequest::default().from(sender).with_deploy_code(code);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(sender).with_deploy_code(code);
+    let tx = WithOtherFields::new(tx.into());
 
     // Calling/estimating gas fails early.
     let err = provider.call(tx.clone()).await.unwrap_err();
@@ -70,20 +71,17 @@ async fn test_solc_revert_example() {
     let provider = handle.http_provider();
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
-    let seismic_provider = SeismicSignedProvider::new(wallet.clone().into(), node_url);
+    let seismic_provider = sfoundry_signed_provider(wallet.clone(), node_url);
 
     let contract = VendingMachine::deploy(&provider).await.unwrap();
     let tx = contract.buy(U256::from(100)).into_transaction_request();
     let input = tx.input().unwrap();
-    let err = seismic_provider
-        .seismic_call(SendableTx::Builder(
-            TransactionRequest::default()
-                .with_from(sender)
-                .with_to(*contract.address())
-                .with_input(input.clone()),
-        ))
-        .await
-        .unwrap_err();
+    let builder = tx_builder()
+        .with_from(sender)
+        .with_to(*contract.address())
+        .with_input(input.clone())
+        .into();
+    let err = seismic_provider.seismic_call(SendableTx::Builder(builder.into())).await.unwrap_err();
 
     let s = err.to_string();
     assert!(s.contains("Not enough Ether provided."), "{s:?}");

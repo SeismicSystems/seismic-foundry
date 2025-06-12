@@ -1,6 +1,5 @@
 use crate::{opts::parse_slot, Cast};
 use alloy_ens::NameOrAddress;
-use alloy_network::AnyNetwork;
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::BlockId;
@@ -33,6 +32,8 @@ use foundry_config::{
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+
+use seismic_prelude::foundry::AnyNetwork;
 
 /// The minimum Solc version for outputting storage layouts.
 ///

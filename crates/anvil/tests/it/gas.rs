@@ -1,12 +1,14 @@
 //! Gas related tests
 
 use crate::utils::http_provider_with_signer;
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{uint, Address, U256, U64};
 use alloy_provider::Provider;
-use alloy_rpc_types::{BlockId, TransactionRequest};
+use alloy_rpc_types::BlockId;
 use alloy_serde::WithOtherFields;
 use anvil::{eth::fees::INITIAL_BASE_FEE, spawn, NodeConfig};
+
+use seismic_prelude::foundry::{tx_builder, EthereumWallet};
 
 const GAS_TRANSFER: u64 = 21_000;
 
@@ -37,8 +39,8 @@ async fn test_basefee_full_block() {
 
     let provider = http_provider_with_signer(&handle.http_endpoint(), signer);
 
-    let tx = TransactionRequest::default().to(Address::random()).with_value(U256::from(1337));
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_to(Address::random()).with_value(U256::from(1337));
+    let tx = WithOtherFields::new(tx.into());
 
     provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
@@ -82,13 +84,13 @@ async fn test_basefee_half_block() {
 
     let provider = http_provider_with_signer(&handle.http_endpoint(), signer);
 
-    let tx = TransactionRequest::default().to(Address::random()).with_value(U256::from(1337));
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_to(Address::random()).with_value(U256::from(1337));
+    let tx = WithOtherFields::new(tx.into());
 
     provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
-    let tx = TransactionRequest::default().to(Address::random()).with_value(U256::from(1337));
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_to(Address::random()).with_value(U256::from(1337));
+    let tx = WithOtherFields::new(tx.into());
 
     provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
@@ -114,8 +116,8 @@ async fn test_basefee_empty_block() {
 
     let provider = http_provider_with_signer(&handle.http_endpoint(), signer);
 
-    let tx = TransactionRequest::default().with_to(Address::random()).with_value(U256::from(1337));
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_to(Address::random()).with_value(U256::from(1337));
+    let tx = WithOtherFields::new(tx.into());
 
     provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
@@ -151,8 +153,8 @@ async fn test_respect_base_fee() {
 
     let provider = handle.http_provider();
 
-    let tx = TransactionRequest::default().with_to(Address::random()).with_value(U256::from(100));
-    let mut tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_to(Address::random()).with_value(U256::from(100));
+    let mut tx = WithOtherFields::new(tx.into());
 
     let mut underpriced = tx.clone();
     underpriced.set_gas_price(base_fee - 1);
@@ -172,12 +174,12 @@ async fn test_tip_above_fee_cap() {
 
     let provider = handle.http_provider();
 
-    let tx = TransactionRequest::default()
-        .max_fee_per_gas(base_fee)
-        .max_priority_fee_per_gas(base_fee + 1)
+    let tx = tx_builder()
+        .with_max_fee_per_gas(base_fee)
+        .with_max_priority_fee_per_gas(base_fee + 1)
         .with_to(Address::random())
         .with_value(U256::from(100));
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let res = provider.send_transaction(tx.clone()).await;
     assert!(res.is_err());
@@ -197,11 +199,11 @@ async fn test_can_use_fee_history() {
         let fee_history = provider.get_fee_history(1, Default::default(), &[]).await.unwrap();
         let next_base_fee = *fee_history.base_fee_per_gas.last().unwrap();
 
-        let tx = TransactionRequest::default()
+        let tx = tx_builder()
             .with_to(Address::random())
             .with_value(U256::from(100))
             .with_gas_price(next_base_fee);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
 
         let receipt =
             provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();

@@ -14,13 +14,15 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+seismic-prelude.workspace = true
+
 foundry-block-explorers = { workspace = true, features = ["foundry-compilers"] }
 foundry-compilers = { workspace = true, features = ["svm-solc"] }
 
 alloy-chains = { workspace = true, features = ["serde"] }
 alloy-primitives = { workspace = true, features = ["serde"] }
 
-revm.workspace = true
+# revm.workspace = true
 
 solar-parse.workspace = true
 solar-interface.workspace = true

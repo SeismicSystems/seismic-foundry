@@ -12,18 +12,19 @@ use crate::{
 use alloy_evm::Evm;
 use alloy_genesis::GenesisAccount;
 use alloy_primitives::{Address, B256, U256};
-use alloy_rpc_types::TransactionRequest;
 use eyre::WrapErr;
 use foundry_fork_db::DatabaseError;
 use revm::{
     bytecode::Bytecode,
     context_interface::result::ResultAndState,
     database::DatabaseRef,
-    primitives::{hardfork::SpecId, HashMap as Map},
+    primitives::HashMap as Map,
     state::{Account, AccountInfo},
     Database, DatabaseCommit,
 };
 use std::{borrow::Cow, collections::BTreeMap};
+
+use seismic_prelude::foundry::{SpecId, TransactionRequest};
 
 /// A wrapper around `Backend` that ensures only `revm::DatabaseRef` functions are called.
 ///
@@ -203,7 +204,7 @@ impl DatabaseExt for CowBackend<'_> {
 
     fn transact_from_tx(
         &mut self,
-        transaction: &seismic_alloy_rpc_types::SeismicTransactionRequest,
+        transaction: &TransactionRequest,
         mut env: Env,
         journaled_state: &mut JournaledState,
         inspector: &mut dyn InspectorExt,
@@ -301,7 +302,11 @@ impl DatabaseRef for CowBackend<'_> {
         DatabaseRef::code_by_hash_ref(self.backend.as_ref(), code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(self.backend.as_ref(), address, index)
     }
 
@@ -321,7 +326,11 @@ impl Database for CowBackend<'_> {
         DatabaseRef::code_by_hash_ref(self, code_hash)
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+    fn storage(
+        &mut self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(self, address, index)
     }
 

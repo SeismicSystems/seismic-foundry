@@ -65,7 +65,7 @@ async fn ots_get_internal_operations_contract_transfer() {
     let amount = handle.genesis_balance().checked_div(U256::from(2u64)).unwrap();
 
     let tx = TransactionRequest::default().to(to).value(amount).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -309,7 +309,7 @@ async fn ots_get_transaction_error_no_error() {
 
     // Send a successful transaction
     let tx = TransactionRequest::default().to(Address::random()).value(U256::from(100));
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
     let res = api.ots_get_transaction_error(receipt.transaction_hash).await.unwrap();
@@ -322,7 +322,7 @@ async fn ots_get_block_details() {
     let provider = handle.http_provider();
 
     let tx = TransactionRequest::default().to(Address::random()).value(U256::from(100));
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
     let result = api.ots_get_block_details(1.into()).await.unwrap();
@@ -336,7 +336,7 @@ async fn ots_get_block_details_by_hash() {
     let provider = handle.http_provider();
 
     let tx = TransactionRequest::default().to(Address::random()).value(U256::from(100));
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
     let block_hash = receipt.block_hash.unwrap();
@@ -357,7 +357,7 @@ async fn ots_get_block_transactions() {
     for i in 0..10 {
         let tx =
             TransactionRequest::default().to(Address::random()).value(U256::from(100)).nonce(i);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         let pending_receipt =
             provider.send_transaction(tx).await.unwrap().register().await.unwrap();
         hashes.push_back(*pending_receipt.tx_hash());
@@ -395,7 +395,7 @@ async fn ots_search_transactions_before() {
     for i in 0..7 {
         let tx =
             TransactionRequest::default().to(Address::random()).value(U256::from(100)).nonce(i);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
         hashes.push(receipt.transaction_hash);
     }
@@ -430,7 +430,7 @@ async fn ots_search_transactions_after() {
     for i in 0..7 {
         let tx =
             TransactionRequest::default().to(Address::random()).value(U256::from(100)).nonce(i);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
         hashes.push_front(receipt.transaction_hash);
     }
@@ -465,14 +465,16 @@ async fn ots_get_transaction_by_sender_and_nonce() {
             .from(sender)
             .to(Address::random())
             .value(U256::from(100))
-            .nonce(0),
+            .nonce(0)
+            .into(),
     );
     let tx2 = WithOtherFields::new(
         TransactionRequest::default()
             .from(sender)
             .to(Address::random())
             .value(U256::from(100))
-            .nonce(1),
+            .nonce(1)
+            .into(),
     );
 
     let receipt1 = provider.send_transaction(tx1).await.unwrap().get_receipt().await.unwrap();

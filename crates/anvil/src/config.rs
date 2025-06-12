@@ -17,7 +17,7 @@ use crate::{
 };
 use alloy_consensus::BlockHeader;
 use alloy_genesis::Genesis;
-use alloy_network::{AnyNetwork, TransactionResponse};
+use alloy_network::TransactionResponse;
 use alloy_primitives::{hex, map::HashMap, utils::Unit, BlockNumber, TxHash, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::{Block, BlockNumberOrTag};
@@ -41,13 +41,13 @@ use foundry_evm::{
 };
 use foundry_evm_core::AsEnvMut;
 use itertools::Itertools;
-use op_revm::OpTransaction;
+// use op_revm::OpTransaction;
 use parking_lot::RwLock;
 use rand_08::thread_rng;
 use revm::{
-    context::{BlockEnv, CfgEnv, TxEnv},
+    context::{BlockEnv, TxEnv},
     context_interface::block::BlobExcessGasAndPrice,
-    primitives::hardfork::SpecId,
+    primitives::hardfork::SpecId as RevmSpecId,
 };
 use serde_json::{json, Value};
 use std::{
@@ -63,6 +63,8 @@ use tokio::sync::RwLock as TokioRwLock;
 use yansi::Paint;
 
 pub use foundry_common::version::SHORT_VERSION as VERSION_MESSAGE;
+
+use seismic_prelude::foundry::{AnyNetwork, CfgEnv, OpTransaction, SpecId};
 
 /// Default port the rpc will open
 pub const NODE_PORT: u16 = 8545;
@@ -289,7 +291,7 @@ Chain ID
             );
         }
 
-        if (SpecId::from(self.get_hardfork()) as u8) < (SpecId::LONDON as u8) {
+        if (RevmSpecId::from(self.get_hardfork()) as u8) < (RevmSpecId::LONDON as u8) {
             let _ = write!(
                 s,
                 r#"
@@ -541,8 +543,8 @@ impl NodeConfig {
         if self.enable_optimism {
             return OptimismHardfork::default().into();
         }
-        if self.enable_seismic || cfg!(feature = "seismic") {
-            return SeismicHardfork::default().into();
+        if self.enable_seismic {
+            return crate::hardfork::SeismicHardfork::default().into();
         }
         EthereumHardfork::default().into()
     }
@@ -1044,7 +1046,8 @@ impl NodeConfig {
         // configure the revm environment
 
         let mut cfg = CfgEnv::default();
-        cfg.spec = self.get_hardfork().into();
+        // cfg.spec = self.get_hardfork().into();
+        cfg.spec = SpecId::MERCURY;
 
         cfg.chain_id = self.get_chain_id();
         cfg.limit_contract_code_size = self.code_size_limit;
@@ -1206,7 +1209,10 @@ impl NodeConfig {
                     provider.get_chain_id().await.wrap_err("failed to fetch network chain ID")?;
                 if alloy_chains::NamedChain::Mainnet == chain_id {
                     let hardfork: EthereumHardfork = fork_block_number.into();
+                    /*
                     env.evm_env.cfg_env.spec = hardfork.into();
+                    */
+                    env.evm_env.cfg_env.spec = SpecId::MERCURY;
                     self.hardfork = Some(ChainHardfork::Ethereum(hardfork));
                 }
                 Some(U256::from(chain_id))
@@ -1422,8 +1428,9 @@ async fn derive_block_and_transactions(
                 .get_transaction_by_hash(transaction_hash.0.into())
                 .await?
                 .ok_or_else(|| eyre::eyre!("failed to get fork transaction by hash"))?;
-            let transaction_block_number = transaction.block_number.unwrap();
+            let transaction_block_number = transaction.0.block_number.unwrap();
 
+            // TODO: seismic provider
             // Get the block pertaining to the fork transaction
             let transaction_block = provider
                 .get_block_by_number(transaction_block_number.into())

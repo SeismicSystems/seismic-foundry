@@ -11,8 +11,12 @@ use foundry_evm::{
 use foundry_test_utils::{init_tracing, Filter};
 use futures::future::join_all;
 use itertools::Itertools;
+/*
 use revm::primitives::hardfork::SpecId;
+*/
 use std::collections::BTreeMap;
+
+use seismic_prelude::foundry::SpecId;
 
 /// How to execute a test run.
 pub struct TestConfig {

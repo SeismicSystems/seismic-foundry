@@ -16,11 +16,10 @@ use revm::{
     bytecode::Bytecode,
     context::BlockEnv,
     database::{CacheDB, DatabaseRef, DbAccount},
-    primitives::KECCAK_EMPTY,
+    primitives::{FlaggedStorage, KECCAK_EMPTY},
     state::AccountInfo,
     Database, DatabaseCommit,
 };
-use revm::primitives::FlaggedStorage;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt, path::Path};
 

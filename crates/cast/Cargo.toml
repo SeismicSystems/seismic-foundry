@@ -21,6 +21,8 @@ name = "scast"
 path = "bin/main.rs"
 
 [dependencies]
+seismic-prelude.workspace = true
+
 # lib
 foundry-block-explorers.workspace = true
 foundry-common.workspace = true

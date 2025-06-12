@@ -6,8 +6,7 @@ use crate::{
     provider::runtime_transport::RuntimeTransportBuilder, ALCHEMY_FREE_TIER_CUPS, REQUEST_TIMEOUT,
 };
 use alloy_provider::{
-    fillers::{ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller},
-    network::{AnyNetwork, EthereumWallet},
+    fillers::{ChainIdFiller, FillProvider, JoinFill, NonceFiller, WalletFiller},
     Identity, ProviderBuilder as AlloyProviderBuilder, RootProvider,
 };
 use alloy_rpc_client::ClientBuilder;
@@ -22,6 +21,8 @@ use std::{
     time::Duration,
 };
 use url::ParseError;
+
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, GasFiller};
 
 /// The assumed block time for unknown chains.
 /// We assume that these are chains have a faster block time.

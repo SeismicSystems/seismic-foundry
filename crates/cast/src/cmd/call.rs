@@ -264,16 +264,16 @@ impl CallArgs {
                 create2_deployer,
             )?;
 
-            let value = tx.value.unwrap_or_default();
-            let input = tx.inner.input.into_input().unwrap_or_default();
-            let tx_kind = tx.inner.to.expect("set by builder");
+            let value = tx.inner.inner.value.unwrap_or_default();
+            let input = tx.inner.inner.input.into_input().unwrap_or_default();
+            let tx_kind = tx.inner.inner.to.expect("set by builder");
             let env_tx = &mut executor.env_mut().tx;
 
-            if let Some(tx_type) = tx.inner.transaction_type {
+            if let Some(tx_type) = tx.inner.inner.transaction_type {
                 env_tx.tx_type = tx_type;
             }
 
-            if let Some(access_list) = tx.inner.access_list {
+            if let Some(access_list) = tx.inner.inner.access_list {
                 env_tx.access_list = access_list;
 
                 if env_tx.tx_type == TransactionType::Legacy as u8 {

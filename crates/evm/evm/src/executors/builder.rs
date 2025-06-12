@@ -1,6 +1,10 @@
 use crate::{executors::Executor, inspectors::InspectorStackBuilder};
 use foundry_evm_core::{backend::Backend, Env};
+/*
 use revm::primitives::hardfork::SpecId;
+*/
+
+use seismic_prelude::foundry::SpecId;
 
 /// The builder that allows to configure an evm [`Executor`] which a stack of optional
 /// [`revm::Inspector`]s, such as [`Cheatcodes`].

@@ -27,20 +27,20 @@ use foundry_evm_core::{
     },
     decode::{RevertDecoder, SkipReason},
     utils::StateChangeset,
-    EvmEnv, InspectorExt,
+    InspectorExt,
 };
 use foundry_evm_coverage::HitMaps;
 use foundry_evm_traces::{SparsedTraceArena, TraceMode};
 use revm::{
     bytecode::Bytecode,
-    context::{BlockEnv, TxEnv},
+    context::{BlockEnv, TxEnv as RevmTxEnv},
     context_interface::{
         result::{ExecutionResult, Output, ResultAndState},
         transaction::SignedAuthorization,
     },
     database::{DatabaseCommit, DatabaseRef},
     interpreter::{return_ok, InstructionResult},
-    primitives::hardfork::SpecId,
+    // primitives::hardfork::SpecId,
 };
 use std::{
     borrow::Cow,
@@ -58,6 +58,8 @@ pub use invariant::InvariantExecutor;
 
 mod trace;
 pub use trace::TracingExecutor;
+
+use seismic_prelude::foundry::{EvmEnv, SpecId};
 
 sol! {
     interface ITest {
@@ -661,7 +663,7 @@ impl Executor {
                     ..self.env().evm_env.block_env.clone()
                 },
             },
-            tx: TxEnv {
+            tx: RevmTxEnv {
                 caller,
                 kind,
                 data,
@@ -671,8 +673,9 @@ impl Executor {
                 gas_priority_fee: None,
                 gas_limit: self.gas_limit,
                 chain_id: Some(self.env().evm_env.cfg_env.chain_id),
-                ..self.env().tx.clone()
-            },
+                ..self.env().tx.base.clone()
+            }
+            .into(),
         }
     }
 
@@ -950,7 +953,7 @@ fn convert_executed_result(
         }
     };
     let gas = revm::interpreter::gas::calculate_initial_tx_gas(
-        env.evm_env.cfg_env.spec,
+        env.evm_env.cfg_env.spec.into(),
         &env.tx.data,
         env.tx.kind.is_create(),
         env.tx.access_list.len().try_into()?,

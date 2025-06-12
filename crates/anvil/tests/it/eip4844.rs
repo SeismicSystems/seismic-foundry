@@ -4,12 +4,14 @@ use alloy_eips::{
     eip4844::{BLOB_TX_MIN_BLOB_GASPRICE, DATA_GAS_PER_BLOB, MAX_DATA_GAS_PER_BLOCK_DENCUN},
     Typed2718,
 };
-use alloy_network::{EthereumWallet, ReceiptResponse, TransactionBuilder, TransactionBuilder4844};
+use alloy_network::{ReceiptResponse, TransactionBuilder, TransactionBuilder4844};
 use alloy_primitives::{b256, Address, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::{BlockId, TransactionRequest};
 use alloy_serde::WithOtherFields;
 use anvil::{spawn, EthereumHardfork, NodeConfig};
+
+use seismic_prelude::foundry::{tx_builder, EthereumWallet};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_send_eip4844_transaction() {
@@ -27,7 +29,7 @@ async fn can_send_eip4844_transaction() {
     let sidecar: SidecarBuilder<SimpleCoder> = SidecarBuilder::from_slice(b"Hello World");
 
     let sidecar = sidecar.build().unwrap();
-    let tx = TransactionRequest::default()
+    let tx = tx_builder()
         .with_from(from)
         .with_to(to)
         .with_nonce(0)
@@ -35,11 +37,11 @@ async fn can_send_eip4844_transaction() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar)
-        .value(U256::from(5));
+        .with_value(U256::from(5));
 
-    let mut tx = WithOtherFields::new(tx);
+    let mut tx = WithOtherFields::new(tx.into());
 
-    tx.populate_blob_hashes();
+    tx.inner.inner.populate_blob_hashes();
 
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -67,7 +69,7 @@ async fn can_send_multiple_blobs_in_one_tx() {
 
     let sidecar = sidecar.build().unwrap();
 
-    let tx = TransactionRequest::default()
+    let tx = tx_builder()
         .with_from(from)
         .with_to(to)
         .with_nonce(0)
@@ -75,9 +77,9 @@ async fn can_send_multiple_blobs_in_one_tx() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar);
-    let mut tx = WithOtherFields::new(tx);
+    let mut tx = WithOtherFields::new(tx.into());
 
-    tx.populate_blob_hashes();
+    tx.inner.inner.populate_blob_hashes();
 
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -105,7 +107,7 @@ async fn cannot_exceed_six_blobs() {
 
     let sidecar = sidecar.build().unwrap();
 
-    let tx = TransactionRequest::default()
+    let tx = tx_builder()
         .with_from(from)
         .with_to(to)
         .with_nonce(0)
@@ -113,9 +115,9 @@ async fn cannot_exceed_six_blobs() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar);
-    let mut tx = WithOtherFields::new(tx);
+    let mut tx = WithOtherFields::new(tx.into());
 
-    tx.populate_blob_hashes();
+    tx.inner.inner.populate_blob_hashes();
 
     let err = provider.send_transaction(tx).await.unwrap_err();
 
@@ -145,7 +147,7 @@ async fn can_mine_blobs_when_exceeds_max_blobs() {
 
     let sidecar = sidecar.build().unwrap();
 
-    let tx = TransactionRequest::default()
+    let tx = tx_builder()
         .with_from(from)
         .with_to(to)
         .with_nonce(0)
@@ -153,9 +155,9 @@ async fn can_mine_blobs_when_exceeds_max_blobs() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar);
-    let mut tx = WithOtherFields::new(tx);
+    let mut tx = WithOtherFields::new(tx.into());
 
-    tx.populate_blob_hashes();
+    tx.inner.inner.populate_blob_hashes();
 
     let first_tx = provider.send_transaction(tx.clone()).await.unwrap();
 
@@ -168,7 +170,7 @@ async fn can_mine_blobs_when_exceeds_max_blobs() {
     let sidecar = sidecar.build().unwrap();
     tx.set_blob_sidecar(sidecar);
     tx.set_nonce(1);
-    tx.populate_blob_hashes();
+    tx.inner.inner.populate_blob_hashes();
     let second_tx = provider.send_transaction(tx).await.unwrap();
 
     api.mine_one().await;
@@ -224,7 +226,7 @@ async fn can_correctly_estimate_blob_gas_with_recommended_fillers() {
     let sidecar = sidecar.build().unwrap();
 
     let tx = TransactionRequest::default().with_to(bob).with_blob_sidecar(sidecar);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     // Send the transaction and wait for the broadcast.
     let pending_tx = provider.send_transaction(tx).await.unwrap();
@@ -270,7 +272,7 @@ async fn can_correctly_estimate_blob_gas_with_recommended_fillers_with_signer() 
     let sidecar = sidecar.build().unwrap();
 
     let tx = TransactionRequest::default().with_to(bob).with_blob_sidecar(sidecar);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     // Send the transaction and wait for the broadcast.
     let pending_tx = provider.send_transaction(tx).await.unwrap();
@@ -332,7 +334,7 @@ async fn can_bypass_sidecar_requirement() {
     };
 
     let receipt = provider
-        .send_transaction(WithOtherFields::new(tx))
+        .send_transaction(WithOtherFields::new(tx.into()))
         .await
         .unwrap()
         .get_receipt()
@@ -343,5 +345,5 @@ async fn can_bypass_sidecar_requirement() {
 
     let tx = provider.get_transaction_by_hash(receipt.transaction_hash).await.unwrap().unwrap();
 
-    assert_eq!(tx.inner.ty(), 3);
+    assert_eq!(tx.inner().inner.ty(), 3);
 }

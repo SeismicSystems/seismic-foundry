@@ -3,8 +3,6 @@ use alloy_primitives::{Address, Bytes, TxHash, B256, B64, U256};
 use alloy_rpc_types::{
     anvil::{Forking, MineOptions},
     pubsub::{Params as SubscriptionParams, SubscriptionKind},
-    request::TransactionRequest,
-    simulate::SimulatePayload,
     state::StateOverride,
     trace::{
         filter::TraceFilter,
@@ -15,6 +13,10 @@ use alloy_rpc_types::{
 use alloy_serde::WithOtherFields;
 use foundry_common::serde_helpers::{
     deserialize_number, deserialize_number_opt, deserialize_number_seq,
+};
+
+use seismic_prelude::foundry::{
+    SeismicCallRequest, SeismicRawTxRequest, SimulatePayload, TransactionRequest,
 };
 
 pub mod block;
@@ -148,11 +150,11 @@ pub enum EthRequest {
     EthSendTransaction(Box<WithOtherFields<TransactionRequest>>),
 
     #[serde(rename = "eth_sendRawTransaction", with = "sequence")]
-    EthSendRawTransaction(seismic_alloy_rpc_types::SeismicRawTxRequest),
+    EthSendRawTransaction(SeismicRawTxRequest),
 
     #[serde(rename = "eth_call")]
     EthCall(
-        seismic_alloy_rpc_types::SeismicCallRequest,
+        SeismicCallRequest,
         #[serde(default)] Option<BlockId>,
         #[serde(default)] Option<StateOverride>,
         #[serde(default)] Option<Box<BlockOverrides>>,

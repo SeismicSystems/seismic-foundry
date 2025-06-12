@@ -2,7 +2,7 @@ use super::{
     Cheatcodes, CheatsConfig, ChiselState, CoverageCollector, CustomPrintTracer, Fuzzer,
     LogCollector, RevertDiagnostic, ScriptExecutionInspector, TracingInspector,
 };
-use alloy_evm::{eth::EthEvmContext, Evm};
+use alloy_evm::Evm;
 use alloy_primitives::{
     map::{AddressHashMap, HashMap},
     Address, Bytes, Log, TxKind, U256,
@@ -32,6 +32,8 @@ use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
 };
+
+use seismic_prelude::foundry::EthEvmContext;
 
 #[derive(Clone, Debug, Default)]
 #[must_use = "builders do nothing unless you call `build` on them"]

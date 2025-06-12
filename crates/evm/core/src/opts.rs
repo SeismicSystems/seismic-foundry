@@ -2,17 +2,18 @@ use super::fork::environment;
 use crate::{
     constants::DEFAULT_CREATE2_DEPLOYER,
     fork::{configure_env, CreateFork},
-    EvmEnv,
 };
 use alloy_primitives::{Address, B256, U256};
-use alloy_provider::{network::AnyRpcBlock, Provider};
+use alloy_provider::Provider;
 use eyre::WrapErr;
 use foundry_common::{provider::ProviderBuilder, ALCHEMY_FREE_TIER_CUPS};
 use foundry_config::{Chain, Config, GasLimit};
-use revm::context::{BlockEnv, TxEnv};
+use revm::context::{BlockEnv, TxEnv as RevmTxEnv};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
+
+use seismic_prelude::foundry::{AnyRpcBlock, EvmEnv, TxEnv};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvmOpts {
@@ -167,12 +168,12 @@ impl EvmOpts {
                     ..Default::default()
                 },
             },
-            tx: TxEnv {
+            tx: TxEnv::new(RevmTxEnv {
                 gas_price: self.env.gas_price.unwrap_or_default().into(),
                 gas_limit: self.gas_limit(),
                 caller: self.sender,
                 ..Default::default()
-            },
+            }),
         }
     }
 
