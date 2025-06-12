@@ -1,10 +1,11 @@
 //! Handler that can get current storage related data
 
 use crate::mem::Backend;
-use alloy_network::AnyRpcBlock;
 use alloy_primitives::B256;
 use anvil_core::eth::{block::Block, transaction::TypedReceipt};
 use std::{fmt, sync::Arc};
+
+use seismic_prelude::foundry::AnyRpcBlock;
 
 /// A type that can fetch data related to the ethereum storage.
 ///

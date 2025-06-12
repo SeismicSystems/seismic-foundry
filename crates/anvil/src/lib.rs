@@ -1,4 +1,5 @@
-#![doc = include_str!("../README.md")]
+//! Anvil is a fast local Ethereum development node.
+
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 use crate::{
@@ -22,7 +23,6 @@ use alloy_signer_local::PrivateKeySigner;
 use eth::backend::fork::ClientFork;
 use eyre::Result;
 use foundry_common::provider::{ProviderBuilder, RetryProvider};
-use foundry_evm::revm;
 use futures::{FutureExt, TryFutureExt};
 use parking_lot::Mutex;
 use server::try_spawn_ipc;
@@ -47,13 +47,14 @@ pub use config::{
 };
 
 mod hardfork;
-pub use hardfork::EthereumHardfork;
+pub use hardfork::{EthereumHardfork, OptimismHardfork};
 
 /// ethereum related implementations
 pub mod eth;
 /// Evm related abstractions
 mod evm;
 pub use evm::{inject_precompiles, PrecompileFactory};
+
 /// support for polling filters
 pub mod filter;
 /// commandline output
@@ -70,6 +71,12 @@ mod tasks;
 /// contains cli command
 #[cfg(feature = "cmd")]
 pub mod cmd;
+
+#[cfg(feature = "cmd")]
+pub mod args;
+
+#[cfg(feature = "cmd")]
+pub mod opts;
 
 #[macro_use]
 extern crate foundry_common;
@@ -427,7 +434,7 @@ impl Future for NodeHandle {
         }
 
         // poll the axum server handles
-        for server in pin.servers.iter_mut() {
+        for server in &mut pin.servers {
             if let Poll::Ready(res) = server.poll_unpin(cx) {
                 return Poll::Ready(res);
             }

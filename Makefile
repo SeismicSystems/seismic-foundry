@@ -5,13 +5,17 @@
 
 # Cargo profile for builds.
 PROFILE ?= dev
+# The docker image name
+DOCKER_IMAGE_NAME ?= ghcr.io/foundry-rs/foundry:latest
+BIN_DIR = dist/bin
+CARGO_TARGET_DIR ?= target
 
 # List of features to use when building. Can be overridden via the environment.
 # No jemalloc on Windows
 ifeq ($(OS),Windows_NT)
-    FEATURES ?= rustls aws-kms cli asm-keccak
+    FEATURES ?= aws-kms gcp-kms cli asm-keccak
 else
-    FEATURES ?= jemalloc rustls aws-kms cli asm-keccak
+    FEATURES ?= jemalloc aws-kms gcp-kms cli asm-keccak
 endif
 
 ##@ Help
@@ -26,46 +30,94 @@ help: ## Display this help.
 build: ## Build the project.
 	cargo build --features "$(FEATURES)" --profile "$(PROFILE)"
 
-##@ Other
+# The following commands use `cross` to build a cross-compile.
+#
+# These commands require that:
+#
+# - `cross` is installed (`cargo install cross`).
+# - Docker is running.
+# - The current user is in the `docker` group.
+#
+# The resulting binaries will be created in the `target/` directory.
+build-%:
+	cross build --target $* --features "$(FEATURES)" --profile "$(PROFILE)"
 
-.PHONY: clean
-clean: ## Clean the project.
-	cargo clean
+.PHONY: docker-build-push
+docker-build-push: docker-build-prepare ## Build and push a cross-arch Docker image tagged with DOCKER_IMAGE_NAME.
+	FEATURES="jemalloc aws-kms gcp-kms cli asm-keccak" $(MAKE) build-x86_64-unknown-linux-gnu
+	mkdir -p $(BIN_DIR)/amd64
+	for bin in anvil cast chisel forge; do \
+		cp $(CARGO_TARGET_DIR)/x86_64-unknown-linux-gnu/$(PROFILE)/$$bin $(BIN_DIR)/amd64/; \
+	done
 
-## Linting
+	FEATURES="aws-kms gcp-kms cli asm-keccak" $(MAKE) build-aarch64-unknown-linux-gnu
+	mkdir -p $(BIN_DIR)/arm64
+	for bin in anvil cast chisel forge; do \
+		cp $(CARGO_TARGET_DIR)/aarch64-unknown-linux-gnu/$(PROFILE)/$$bin $(BIN_DIR)/arm64/; \
+	done
+
+	docker buildx build --file ./Dockerfile.cross . \
+		--platform linux/amd64,linux/arm64 \
+		$(foreach tag,$(shell echo $(DOCKER_IMAGE_NAME) | tr ',' ' '),--tag $(tag)) \
+		--provenance=false \
+		--push
+
+.PHONY: docker-build-prepare
+docker-build-prepare: ## Prepare the Docker build environment.
+	docker run --privileged --rm tonistiigi/binfmt:qemu-v7.0.0-28 --install amd64,arm64
+	@if ! docker buildx inspect cross-builder &> /dev/null; then \
+		echo "Creating a new buildx builder instance"; \
+		docker buildx create --use --driver docker-container --name cross-builder; \
+	else \
+		echo "Using existing buildx builder instance"; \
+		docker buildx use cross-builder; \
+	fi
+
+##@ Test
+
+.PHONY: test-unit
+test-unit: ## Run unit tests.
+	cargo nextest run -E 'kind(test) & !test(/\b(issue|ext_integration)/)'
+
+.PHONY: test-doc
+test-doc: ## Run doc tests.
+	cargo test --doc --workspace
+
+.PHONY: test
+test: ## Run all tests.
+	make test-unit && \
+	make test-doc
+
+##@ Linting
 
 fmt: ## Run all formatters.
 	cargo +nightly fmt
 	./.github/scripts/format.sh --check
 
-lint-foundry:
-	RUSTFLAGS="-Dwarnings" cargo clippy --workspace --all-targets --all-features
+lint-clippy: ## Run clippy on the codebase.
+	cargo +nightly clippy \
+	--workspace \
+	--all-targets \
+	--all-features \
+	-- -D warnings
 
-lint-codespell: ensure-codespell
-	codespell --skip "*.json"
-
-ensure-codespell:
-	@if ! command -v codespell &> /dev/null; then \
-		echo "codespell not found. Please install it by running the command `pip install codespell` or refer to the following link for more information: https://github.com/codespell-project/codespell" \
+lint-codespell: ## Run codespell on the codebase.
+	@command -v codespell >/dev/null || { \
+		echo "codespell not found. Please install it by running the command `pipx install codespell` or refer to the following link for more information: https://github.com/codespell-project/codespell" \
 		exit 1; \
-    fi
+	}
+	codespell --skip "*.json"
 
 lint: ## Run all linters.
 	make fmt && \
-	make lint-foundry && \
+	make lint-clippy && \
 	make lint-codespell
 
-## Testing
+##@ Other
 
-test-foundry:
-	cargo nextest run -E 'kind(test) & !test(/issue|forge_std|ext_integration/)'
-
-test-doc:
-	cargo test --doc --workspace
-
-test: ## Run all tests.
-	make test-foundry && \
-	make test-doc
+.PHONY: clean
+clean: ## Clean the project.
+	cargo clean
 
 pr: ## Run all tests and linters in preparation for a PR.
 	make lint && \

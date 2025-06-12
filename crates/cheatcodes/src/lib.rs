@@ -17,13 +17,12 @@ extern crate tracing;
 
 use alloy_primitives::Address;
 use foundry_evm_core::backend::DatabaseExt;
-use revm::{ContextPrecompiles, InnerEvmContext};
 use spec::Status;
 
 pub use config::CheatsConfig;
 pub use error::{Error, ErrorKind, Result};
 pub use inspector::{
-    BroadcastableTransaction, BroadcastableTransactions, Cheatcodes, CheatcodesExecutor, Context,
+    BroadcastableTransaction, BroadcastableTransactions, Cheatcodes, CheatcodesExecutor,
 };
 pub use spec::{CheatcodeDef, Vm};
 pub use Vm::ForgeContext;
@@ -36,6 +35,8 @@ mod base64;
 mod config;
 
 mod crypto;
+
+mod version;
 
 mod env;
 pub use env::set_execution_context;
@@ -59,6 +60,8 @@ pub use test::expect::ExpectedCallTracker;
 mod toml;
 
 mod utils;
+
+use seismic_prelude::foundry::EthEvmContext;
 
 /// Cheatcode implementation.
 pub(crate) trait Cheatcode: CheatcodeDef + DynCheatcode {
@@ -136,9 +139,7 @@ pub struct CheatsCtxt<'cheats, 'evm, 'db, 'db2> {
     /// The cheatcodes inspector state.
     pub(crate) state: &'cheats mut Cheatcodes,
     /// The EVM data.
-    pub(crate) ecx: &'evm mut InnerEvmContext<&'db mut (dyn DatabaseExt + 'db2)>,
-    /// The precompiles context.
-    pub(crate) precompiles: &'evm mut ContextPrecompiles<&'db mut (dyn DatabaseExt + 'db2)>,
+    pub(crate) ecx: &'evm mut EthEvmContext<&'db mut (dyn DatabaseExt + 'db2)>,
     /// The original `msg.sender`.
     pub(crate) caller: Address,
     /// Gas limit of the current cheatcode call.
@@ -146,7 +147,7 @@ pub struct CheatsCtxt<'cheats, 'evm, 'db, 'db2> {
 }
 
 impl<'db, 'db2> std::ops::Deref for CheatsCtxt<'_, '_, 'db, 'db2> {
-    type Target = InnerEvmContext<&'db mut (dyn DatabaseExt + 'db2)>;
+    type Target = EthEvmContext<&'db mut (dyn DatabaseExt + 'db2)>;
 
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
@@ -164,6 +165,6 @@ impl std::ops::DerefMut for CheatsCtxt<'_, '_, '_, '_> {
 impl CheatsCtxt<'_, '_, '_, '_> {
     #[inline]
     pub(crate) fn is_precompile(&self, address: &Address) -> bool {
-        self.precompiles.contains(address)
+        self.ecx.journaled_state.inner.precompiles.contains(address)
     }
 }
