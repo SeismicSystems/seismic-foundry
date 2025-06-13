@@ -89,4 +89,4 @@ jobs:
       - name: Install dependencies
         run: bun install
       - name: Run viem tests vs. Anvil
-        run: bun test
+        run: bun viem:test

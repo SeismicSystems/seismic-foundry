@@ -4,10 +4,11 @@
   ],
   "private": true,
   "scripts": {
-    "test": "bun run --cwd packages/client-tests test"
+    "viem:test": "bun run --cwd packages/client-tests test",
+    "forge:test": "bun run --cwd packages/sforge-tests test"
   },
   "dependencies": {
-    "seismic-viem": "^1.0.34",
+    "seismic-viem": "^1.0.44",
     "seismic-viem-tests": "^0.0.9"
   }
 }
