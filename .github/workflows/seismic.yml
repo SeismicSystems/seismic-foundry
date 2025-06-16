@@ -97,6 +97,7 @@ jobs:
     timeout-minutes: 30
     env:
       CODE_PATH: /home/ubuntu
+      SFORGE_BINARY: /home/ubuntu/.seismic/bin/sforge
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -108,11 +109,7 @@ jobs:
           shared-key: "contract-tests-cache"
       - name: Install JS dependencies
         run: bun install
-      - name: Set PATH
-        run: echo "PATH=/home/ubuntu/.seismic/bin:$PATH" >> $GITHUB_ENV
       - name: Install sforge binary
         run: cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge --locked
-      - name: Check sforge liveness
-        run: sforge --version
       - name: Run contract tests with sforge
         run: bun forge:test

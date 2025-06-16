@@ -8,7 +8,7 @@ import { repos, type Repo } from "./repos";
 import path from "path";
 import fs from "fs/promises";
 
-let sforgeBinary: string = "sforge";
+let sforgeBinary: string = process.env.SFORGE_BINARY || "sforge";
 
 type CommandOutput = {
   stdout: Buffer;
