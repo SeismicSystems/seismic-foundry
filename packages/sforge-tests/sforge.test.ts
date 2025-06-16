@@ -7,15 +7,8 @@ import {
 import { repos, type Repo } from "./repos";
 import path from "path";
 import fs from "fs/promises";
-import type { ChildProcess } from "child_process";
-import { write } from "bun";
-import { fail } from "assert";
 
 let sforgeBinary: string = "sforge";
-
-beforeAll(async () => {
-  // build sforge from scratch
-});
 
 type CommandOutput = {
   stdout: Buffer;
@@ -31,10 +24,16 @@ type TestOutput = {
   test?: CommandOutput;
 };
 
-const getCodeLocation = (): string =>
-  new URL("../../..", import.meta.url).pathname;
+const getCodeLocation = (): string => {
+  if (process.env.CODE_PATH) {
+    return process.env.CODE_PATH;
+  }
+  return new URL("../../..", import.meta.url).pathname;
+}
+
 const getRepoLocation = (repo: Repo): string =>
   path.join(getCodeLocation(), repo.repo);
+
 const getRepoContractsPath = (repo: Repo): string =>
   path.join(getRepoLocation(repo), repo.contracts || "");
 
@@ -176,6 +175,9 @@ const showTestOutput = (output: TestOutput) => {
   }
 };
 
+beforeAll(() => {
+  Error.stackTraceLimit = 0;
+});
 describe("sforge tests", async () => {
   const allOutputs: TestOutput[] = [];
 
@@ -232,10 +234,6 @@ describe("sforge tests", async () => {
       { timeout: 20_000 }
     );
   }
-
-  beforeAll(() => {
-    Error.stackTraceLimit = 0;
-  });
 
   // After all tests, log all outputs in order
   afterAll(() => {

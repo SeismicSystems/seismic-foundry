@@ -90,3 +90,25 @@ jobs:
         run: bun install
       - name: Run viem tests vs. Anvil
         run: bun viem:test
+
+  contract-tests:
+    runs-on: sforge
+    timeout-minutes: 30
+    env:
+      PATH: /home/ubuntu/.seismic/bin:$PATH
+      CODE_PATH: /home/ubuntu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "contract-tests-cache"
+      - name: Install sforge binary
+        run: cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge --locked
+      - name: Install dependencies
+        run: bun install
+      - name: Run contract tests with sforge
+        run: bun forge:test
