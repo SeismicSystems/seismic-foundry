@@ -9,6 +9,6 @@
   },
   "dependencies": {
     "seismic-viem": "^1.0.44",
-    "seismic-viem-tests": "^0.0.9"
+    "seismic-viem-tests": "^0.0.15"
   }
 }
