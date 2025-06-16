@@ -65,7 +65,7 @@ jobs:
           shared-key: "test-cache"
       - name: seismic transaction
         run: cargo nextest run test_seismic_transaction
-      # TODO: make these run
+      # TODO: make these work & run
       # - name: sforge tests
       #   run: cargo test --bin sforge
       # - name: sanvil tests
@@ -106,11 +106,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "contract-tests-cache"
+      - name: Install JS dependencies
+        run: bun install
       - name: Set PATH
         run: echo "PATH=/home/ubuntu/.seismic/bin:$PATH" >> $GITHUB_ENV
       - name: Install sforge binary
         run: cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge --locked
-      - name: Install dependencies
-        run: bun install
+      - name: Check sforge liveness
+        run: sforge --version
       - name: Run contract tests with sforge
         run: bun forge:test
