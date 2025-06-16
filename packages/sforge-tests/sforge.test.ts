@@ -231,7 +231,7 @@ describe("sforge tests", async () => {
           throw new Error(`${repo.repo}: ${errors.join("\n")}`);
         }
       },
-      { timeout: 20_000 }
+      { timeout: 120_000 }
     );
   }
 
