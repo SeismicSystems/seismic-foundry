@@ -105,15 +105,8 @@ const spawnScript = (
   options: RunProcessOptions
 ): Promise<CommandOutput> => {
   const { args, ...rest } = options
-  if (process.platform === "darwin") {
-    return spawn("script", {
-      args: ["-q", "/dev/null", command, ...(args as string[])],
-      ...rest,
-    })
-  }
-  const cmd = `"${command} ${args?.join(" ")}"`
   return spawn("script", {
-    args: ["-q", "/dev/null", "-c", cmd],
+    args: ["-q", "/dev/null", command, ...(args as string[])],
     ...rest,
   })
 }
@@ -123,10 +116,11 @@ const testContracts = async (
 ): Promise<{ build: CommandOutput; test?: CommandOutput }> => {
   const contractsPath = getRepoContractsPath(repo)
   await ensurePathExists(contractsPath)
-  // const stdio = ["inherit", "pipe", "pipe"] as StdioOptions
-  const stdio = ["inherit", "inherit", "inherit"] as StdioOptions
+  const spawner = process.platform === "darwin" ? spawnScript : spawn
+  const stdio = ["inherit", "pipe", "pipe"] as StdioOptions
+  // const stdio = ["inherit", "inherit", "inherit"] as StdioOptions
   // Check if it builds
-  const build = await spawnScript(sforgeBinary, {
+  const build = await spawner(sforgeBinary, {
     args: ["build", "--color", "always"],
     cwd: contractsPath,
     stdio,
@@ -135,7 +129,7 @@ const testContracts = async (
     return { build }
   }
   // Check if the tests pass
-  const test = await spawnScript(sforgeBinary, {
+  const test = await spawner(sforgeBinary, {
     args: ["test", "--color", "always"],
     cwd: contractsPath,
     stdio,
