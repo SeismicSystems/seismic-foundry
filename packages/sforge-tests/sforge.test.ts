@@ -116,7 +116,7 @@ const testContracts = async (
   const contractsPath = getRepoContractsPath(repo)
   await ensurePathExists(contractsPath)
   // Check if it builds
-  const build = await spawnScript(sforgeBinary, {
+  const build = await spawn(sforgeBinary, {
     args: ["build", "--color", "always"],
     cwd: contractsPath,
     stdio: ["inherit", "pipe", "pipe"],
@@ -125,7 +125,7 @@ const testContracts = async (
     return { build }
   }
   // Check if the tests pass
-  const test = await spawnScript(sforgeBinary, {
+  const test = await spawn(sforgeBinary, {
     args: ["test", "--color", "always"],
     cwd: contractsPath,
     stdio: ["inherit", "pipe", "pipe"],
