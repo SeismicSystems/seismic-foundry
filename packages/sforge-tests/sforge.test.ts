@@ -105,8 +105,15 @@ const spawnScript = (
   options: RunProcessOptions
 ): Promise<CommandOutput> => {
   const { args, ...rest } = options
+  if (process.platform === "darwin") {
+    return spawn("script", {
+      args: ["-q", "/dev/null", command, ...(args as string[])],
+      ...rest,
+    })
+  }
+  const cmd = `"${command} ${args?.join(" ")}"`
   return spawn("script", {
-    args: ["-q", "/dev/null", command, ...(args as string[])],
+    args: ["-q", "/dev/null", "-c", cmd],
     ...rest,
   })
 }
@@ -116,7 +123,7 @@ const testContracts = async (
 ): Promise<{ build: CommandOutput; test?: CommandOutput }> => {
   const contractsPath = getRepoContractsPath(repo)
   await ensurePathExists(contractsPath)
-  // const stdio = ["inherit", "pipe", "pipe"]
+  // const stdio = ["inherit", "pipe", "pipe"] as StdioOptions
   const stdio = ["inherit", "inherit", "inherit"] as StdioOptions
   // Check if it builds
   const build = await spawnScript(sforgeBinary, {
