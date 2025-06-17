@@ -111,10 +111,10 @@ jobs:
         run: bun install
       # - name: Clean previous installations
       #   run: rm -rf $HOME/.seismic/bin/sforge || true
-      - name: Install sforge binary
-        run: |
-          cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge --locked
-          echo "$HOME/.seismic/bin" >> $GITHUB_PATH
+      # - name: Install sforge binary
+      #   run: |
+      #     cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge --locked
+      #     echo "$HOME/.seismic/bin" >> $GITHUB_PATH
       - name: Verify sforge installation
         run: |
           ls -la $HOME/.seismic/bin/sforge
