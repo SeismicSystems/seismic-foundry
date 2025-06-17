@@ -110,6 +110,12 @@ jobs:
       - name: Install JS dependencies
         run: bun install
       - name: Install sforge binary
-        run: cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge --locked
+        run: |
+          cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge --locked
+          echo "$HOME/.seismic/bin" >> $GITHUB_PATH
+      - name: Verify sforge installation
+        run: |
+          ls -la $HOME/.seismic/bin/sforge
+          $HOME/.seismic/bin/sforge --version || echo "sforge failed to run"
       - name: Run contract tests with sforge
         run: bun forge:test
