@@ -119,7 +119,7 @@ const testContracts = async (
   // const stdio = ["inherit", "pipe", "pipe"]
   const stdio = ["inherit", "inherit", "inherit"] as StdioOptions
   // Check if it builds
-  const build = await spawn(sforgeBinary, {
+  const build = await spawnScript(sforgeBinary, {
     args: ["build", "--color", "always"],
     cwd: contractsPath,
     stdio,
@@ -128,7 +128,7 @@ const testContracts = async (
     return { build }
   }
   // Check if the tests pass
-  const test = await spawn(sforgeBinary, {
+  const test = await spawnScript(sforgeBinary, {
     args: ["test", "--color", "always"],
     cwd: contractsPath,
     stdio,
