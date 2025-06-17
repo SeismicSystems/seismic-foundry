@@ -66,7 +66,8 @@ const spawn = async (
   }
 
   // Wait for process to complete
-  await waitForProcessExit(childProcess)
+  await Bun.sleep(10_000)
+  // await waitForProcessExit(childProcess)
   return {
     stdout: Buffer.concat(stdoutChunks),
     stderr: Buffer.concat(stderrChunks),
