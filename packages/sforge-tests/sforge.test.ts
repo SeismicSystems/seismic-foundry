@@ -7,6 +7,7 @@ import {
 import { repos, type Repo } from "./repos"
 import path from "path"
 import fs from "fs/promises"
+import type { StdioOptions } from "child_process"
 
 let sforgeBinary: string = process.env.SFORGE_BINARY || "sforge"
 
@@ -66,8 +67,8 @@ const spawn = async (
   }
 
   // Wait for process to complete
-  await Bun.sleep(10_000)
-  // await waitForProcessExit(childProcess)
+  // await Bun.sleep(10_000)
+  await waitForProcessExit(childProcess)
   return {
     stdout: Buffer.concat(stdoutChunks),
     stderr: Buffer.concat(stderrChunks),
@@ -115,11 +116,13 @@ const testContracts = async (
 ): Promise<{ build: CommandOutput; test?: CommandOutput }> => {
   const contractsPath = getRepoContractsPath(repo)
   await ensurePathExists(contractsPath)
+  // const stdio = ["inherit", "pipe", "pipe"]
+  const stdio = ["inherit", "inherit", "inherit"] as StdioOptions
   // Check if it builds
   const build = await spawn(sforgeBinary, {
     args: ["build", "--color", "always"],
     cwd: contractsPath,
-    stdio: ["inherit", "pipe", "pipe"],
+    stdio,
   })
   if (build.exitCode !== 0) {
     return { build }
@@ -128,7 +131,7 @@ const testContracts = async (
   const test = await spawn(sforgeBinary, {
     args: ["test", "--color", "always"],
     cwd: contractsPath,
-    stdio: ["inherit", "pipe", "pipe"],
+    stdio,
   })
   return { build, test }
 }
