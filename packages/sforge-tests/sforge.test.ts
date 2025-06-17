@@ -102,10 +102,10 @@ const spawnScript = (
   command: string,
   options: RunProcessOptions
 ): Promise<CommandOutput> => {
+  const { args, ...rest } = options;
   return spawn("script", {
-    args: ["-q", "/dev/null", command, ...(options.args as string[])],
-    cwd: options.cwd,
-    stdio: ["inherit", "pipe", "pipe"],
+    args: ["-q", "/dev/null", command, ...(args as string[])],
+    ...rest,
   });
 };
 
@@ -115,17 +115,19 @@ const testContracts = async (
   const contractsPath = getRepoContractsPath(repo);
   await ensurePathExists(contractsPath);
   // Check if it builds
-  const build = await spawnScript(sforgeBinary, {
+  const build = await spawn(sforgeBinary, {
     args: ["build", "--color", "always"],
     cwd: contractsPath,
+    stdio: ["inherit", "pipe", "pipe"],
   });
   if (build.exitCode !== 0) {
     return { build };
   }
   // Check if the tests pass
-  const test = await spawnScript(sforgeBinary, {
+  const test = await spawn(sforgeBinary, {
     args: ["test", "--color", "always"],
     cwd: contractsPath,
+    stdio: ["inherit", "pipe", "pipe"],
   });
   return { build, test };
 };
