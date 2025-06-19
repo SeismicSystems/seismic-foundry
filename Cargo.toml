@@ -376,7 +376,7 @@ alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy
 
 alloy-trie = { git = "https://github.com/SeismicSystems/seismic-trie.git", rev = "f3a74a3" }
 
-# Seismic alloy
+# seismic-alloy
 seismic-alloy-consensus = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "47a7612" }
 seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "47a7612" }
 seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "47a7612" }
