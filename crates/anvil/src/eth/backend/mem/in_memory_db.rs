@@ -153,10 +153,9 @@ impl MaybeForkedDatabase for MemDb {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{address, Bytes};
+    use alloy_primitives::{address, Bytes, FlaggedStorage};
     use revm::{bytecode::Bytecode, primitives::KECCAK_EMPTY};
     use std::collections::BTreeMap;
-    use alloy_primitives::FlaggedStorage;
 
     // verifies that all substantial aspects of a loaded account remain the same after an account
     // is dumped and reloaded
@@ -258,7 +257,13 @@ mod tests {
         assert_eq!(loaded_account.balance, U256::from(100100));
         assert_eq!(db.code_by_hash_ref(loaded_account.code_hash).unwrap(), contract_code);
         assert_eq!(loaded_account.nonce, 1234);
-        assert_eq!(db.storage_ref(test_addr, U256::from(1234567)).unwrap(), FlaggedStorage::from(U256::from(1)));
-        assert_eq!(db.storage_ref(test_addr, U256::from(1234568)).unwrap(), FlaggedStorage::from(U256::from(5)));
+        assert_eq!(
+            db.storage_ref(test_addr, U256::from(1234567)).unwrap(),
+            FlaggedStorage::from(U256::from(1))
+        );
+        assert_eq!(
+            db.storage_ref(test_addr, U256::from(1234568)).unwrap(),
+            FlaggedStorage::from(U256::from(5))
+        );
     }
 }
