@@ -7,7 +7,8 @@ use revm::{
     Context, Database, Journal, JournalEntry,
 };
 
-use seismic_prelude::foundry::{CfgEnv, EvmEnv, SpecId, TxEnv};
+use seismic_prelude::foundry::{CfgEnv, SpecId, TxEnv};
+use crate::{EvmEnv};
 
 /// Helper container type for [`EvmEnv`] and [`TxEnv`].
 #[derive(Clone, Debug, Default)]

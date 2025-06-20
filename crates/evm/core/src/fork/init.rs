@@ -7,7 +7,8 @@ use eyre::WrapErr;
 use foundry_common::NON_ARCHIVE_NODE_WARNING;
 
 use revm::context::{BlockEnv, TxEnv as RevmTxEnv};
-use seismic_prelude::foundry::{CfgEnv, EvmEnv, TxEnv};
+use seismic_prelude::foundry::{CfgEnv, TxEnv};
+use crate::{EvmEnv};
 
 /// Initializes a REVM block environment based on a forked
 /// ethereum provider.

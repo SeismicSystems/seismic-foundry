@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 seismic-prelude.workspace = true
+alloy-seismic-evm.workspace = true
 
 foundry-cheatcodes-spec.workspace = true
 foundry-common.workspace = true

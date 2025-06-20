@@ -14,6 +14,13 @@ use revm::{inspector::NoOpInspector, interpreter::CreateInputs, Inspector};
 use revm_inspectors::access_list::AccessListInspector;
 
 use seismic_prelude::foundry::EthEvmContext;
+use seismic_prelude::foundry::SeismicSpecId;
+
+pub use alloy_evm::EvmEnv as AlloyEvmEnv;
+pub use alloy_seismic_evm::SeismicEvm;
+
+/// Seismic EVM environment, which wraps alloy-evm's EvmEnv
+pub type EvmEnv = AlloyEvmEnv<SeismicSpecId>;
 
 #[macro_use]
 extern crate tracing;

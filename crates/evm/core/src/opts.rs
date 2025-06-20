@@ -13,7 +13,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
 
-use seismic_prelude::foundry::{AnyRpcBlock, EvmEnv, TxEnv};
+use seismic_prelude::foundry::{AnyRpcBlock, TxEnv};
+use crate::EvmEnv;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvmOpts {
