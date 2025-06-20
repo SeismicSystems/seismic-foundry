@@ -11,8 +11,8 @@ use revm::{
     DatabaseCommit, Inspector,
 };
 
+use crate::SeismicEvm;
 use seismic_prelude::foundry::{OpHaltReason, OpTransaction, SeismicContext, SpecId};
-use crate::{SeismicEvm};
 
 /// Alias for result type returned by [`Evm::transact`] methods.
 type EitherEvmResult<DBError, HaltReason, TxError> =

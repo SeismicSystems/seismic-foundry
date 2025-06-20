@@ -59,8 +59,8 @@ pub use invariant::InvariantExecutor;
 mod trace;
 pub use trace::TracingExecutor;
 
-use seismic_prelude::foundry::SpecId;
 use foundry_evm_core::EvmEnv;
+use seismic_prelude::foundry::SpecId;
 
 sol! {
     interface ITest {

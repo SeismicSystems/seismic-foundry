@@ -6,9 +6,9 @@ use alloy_rpc_types::BlockNumberOrTag;
 use eyre::WrapErr;
 use foundry_common::NON_ARCHIVE_NODE_WARNING;
 
+use crate::EvmEnv;
 use revm::context::{BlockEnv, TxEnv as RevmTxEnv};
 use seismic_prelude::foundry::{CfgEnv, TxEnv};
-use crate::{EvmEnv};
 
 /// Initializes a REVM block environment based on a forked
 /// ethereum provider.

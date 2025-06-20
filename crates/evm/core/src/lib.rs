@@ -13,8 +13,7 @@ use backend::DatabaseExt;
 use revm::{inspector::NoOpInspector, interpreter::CreateInputs, Inspector};
 use revm_inspectors::access_list::AccessListInspector;
 
-use seismic_prelude::foundry::EthEvmContext;
-use seismic_prelude::foundry::SeismicSpecId;
+use seismic_prelude::foundry::{EthEvmContext, SeismicSpecId};
 
 pub use alloy_evm::EvmEnv as AlloyEvmEnv;
 pub use alloy_seismic_evm::SeismicEvm;

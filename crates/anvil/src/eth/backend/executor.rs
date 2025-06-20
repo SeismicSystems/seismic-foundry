@@ -37,11 +37,11 @@ use revm::{
 };
 use std::sync::Arc;
 
-use seismic_prelude::foundry::{
-    CfgEnv, RevmEvm, SeismicChain, SeismicContext, SeismicInstructions,
-    SeismicPrecompiles, SeismicTransaction,
-};
 use foundry_evm_core::SeismicEvm;
+use seismic_prelude::foundry::{
+    CfgEnv, RevmEvm, SeismicChain, SeismicContext, SeismicInstructions, SeismicPrecompiles,
+    SeismicTransaction,
+};
 
 /// Represents an executed transaction (transacted on the DB)
 #[derive(Debug)]

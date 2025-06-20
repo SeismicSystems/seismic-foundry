@@ -69,11 +69,10 @@ mod tests {
 
     use crate::{inject_precompiles, PrecompileFactory};
 
-    use seismic_prelude::foundry::{
-        SeismicChain, SeismicContext, SeismicPrecompiles, SeismicSpecId,
-        SeismicTransaction,
-    };
     use foundry_evm_core::SeismicEvm;
+    use seismic_prelude::foundry::{
+        SeismicChain, SeismicContext, SeismicPrecompiles, SeismicSpecId, SeismicTransaction,
+    };
 
     // A precompile activated in the `Prague` spec.
     const ETH_PRAGUE_PRECOMPILE: Address = address!("0x0000000000000000000000000000000000000011");
