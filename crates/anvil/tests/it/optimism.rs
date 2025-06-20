@@ -2,14 +2,16 @@
 
 use crate::utils::{http_provider, http_provider_with_signer};
 use alloy_eips::eip2718::Encodable2718;
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::{TransactionBuilder};
 use alloy_primitives::{b256, Address, TxHash, TxKind, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
-use anvil::{spawn, EthereumHardfork, NodeConfig};
-use anvil_core::eth::transaction::optimism::DepositTransaction;
+use anvil::{spawn, NodeConfig};
+use op_alloy_consensus::TxDeposit;
 use op_alloy_rpc_types::OpTransactionFields;
+
+use seismic_prelude::foundry::EthereumWallet;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deposits_not_supported_if_optimism_disabled() {
@@ -28,7 +30,7 @@ async fn test_deposits_not_supported_if_optimism_disabled() {
 
     let op_fields = OpTransactionFields {
         source_hash: Some(b256!(
-            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
         )),
         mint: Some(0),
         is_system_tx: Some(true),
@@ -48,10 +50,7 @@ async fn test_deposits_not_supported_if_optimism_disabled() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_send_value_deposit_transaction() {
     // enable the Optimism flag
-    let (api, handle) = spawn(
-        NodeConfig::test().with_optimism(true).with_hardfork(Some(EthereumHardfork::Paris.into())),
-    )
-    .await;
+    let (api, handle) = spawn(NodeConfig::test().with_optimism(true)).await;
 
     let accounts: Vec<_> = handle.dev_wallets().collect();
     let signer: EthereumWallet = accounts[0].clone().into();
@@ -65,7 +64,7 @@ async fn test_send_value_deposit_transaction() {
 
     let op_fields = OpTransactionFields {
         source_hash: Some(b256!(
-            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
         )),
         mint: Some(0),
         is_system_tx: Some(true),
@@ -98,10 +97,7 @@ async fn test_send_value_deposit_transaction() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_send_value_raw_deposit_transaction() {
     // enable the Optimism flag
-    let (api, handle) = spawn(
-        NodeConfig::test().with_optimism(true).with_hardfork(Some(EthereumHardfork::Paris.into())),
-    )
-    .await;
+    let (api, handle) = spawn(NodeConfig::test().with_optimism(true)).await;
 
     let accounts: Vec<_> = handle.dev_wallets().collect();
     let signer: EthereumWallet = accounts[0].clone().into();
@@ -125,7 +121,7 @@ async fn test_send_value_raw_deposit_transaction() {
 
     let op_fields = OpTransactionFields {
         source_hash: Some(b256!(
-            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
         )),
         mint: Some(0),
         is_system_tx: Some(true),
@@ -157,10 +153,7 @@ async fn test_send_value_raw_deposit_transaction() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deposit_transaction_hash_matches_sepolia() {
     // enable the Optimism flag
-    let (_api, handle) = spawn(
-        NodeConfig::test().with_optimism(true).with_hardfork(Some(EthereumHardfork::Paris.into())),
-    )
-    .await;
+    let (_api, handle) = spawn(NodeConfig::test().with_optimism(true)).await;
 
     let accounts: Vec<_> = handle.dev_wallets().collect();
     let signer: EthereumWallet = accounts[0].clone().into();
@@ -191,10 +184,7 @@ async fn test_deposit_transaction_hash_matches_sepolia() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deposit_tx_checks_sufficient_funds_after_applying_deposited_value() {
     // enable the Optimism flag
-    let (_api, handle) = spawn(
-        NodeConfig::test().with_optimism(true).with_hardfork(Some(EthereumHardfork::Paris.into())),
-    )
-    .await;
+    let (_api, handle) = spawn(NodeConfig::test().with_optimism(true)).await;
 
     let provider = http_provider(&handle.http_endpoint());
 
@@ -208,15 +198,14 @@ async fn test_deposit_tx_checks_sufficient_funds_after_applying_deposited_value(
     let recipient_prev_balance = provider.get_balance(recipient).await.unwrap();
     assert_eq!(recipient_prev_balance, U256::from(0));
 
-    let deposit_tx = DepositTransaction {
-        source_hash: b256!("0000000000000000000000000000000000000000000000000000000000000000"),
+    let deposit_tx = TxDeposit {
+        source_hash: b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
         from: sender,
-        nonce: 0,
-        kind: TxKind::Call(recipient),
-        mint: U256::from(send_value),
+        to: TxKind::Call(recipient),
+        mint: Some(send_value),
         value: U256::from(send_value),
         gas_limit: 21_000,
-        is_system_tx: false,
+        is_system_transaction: false,
         input: Vec::new().into(),
     };
 

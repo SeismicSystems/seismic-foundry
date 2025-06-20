@@ -4,17 +4,15 @@ use crate::{
 };
 use alloy_chains::Chain;
 use alloy_consensus::TxEnvelope;
-use alloy_eips::eip2718::Encodable2718;
-use alloy_network::{AnyNetwork, EthereumWallet, TransactionBuilder};
+use alloy_eips::{eip2718::Encodable2718, BlockId};
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{
     map::{AddressHashMap, AddressHashSet},
     utils::format_units,
     Address, TxHash,
 };
 use alloy_provider::{utils::Eip1559Estimation, Provider};
-use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
-use alloy_transport::Transport;
 use eyre::{bail, Context, Result};
 use forge_verify::provider::VerificationProviderType;
 use foundry_cheatcodes::Wallets;
@@ -28,31 +26,35 @@ use futures::{future::join_all, StreamExt};
 use itertools::Itertools;
 use std::{cmp::Ordering, sync::Arc};
 
-pub async fn estimate_gas<P, T>(
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, TransactionRequest};
+
+pub async fn estimate_gas<P: Provider<AnyNetwork>>(
     tx: &mut WithOtherFields<TransactionRequest>,
     provider: &P,
     estimate_multiplier: u64,
-) -> Result<()>
-where
-    P: Provider<T, AnyNetwork>,
-    T: Transport + Clone,
-{
+) -> Result<()> {
     // if already set, some RPC endpoints might simply return the gas value that is already
     // set in the request and omit the estimate altogether, so we remove it here
-    tx.gas = None;
+    tx.inner.inner.gas = None;
 
     tx.set_gas_limit(
-        provider.estimate_gas(tx).await.wrap_err("Failed to estimate gas for tx")? *
+        provider.estimate_gas(tx.clone()).await.wrap_err("Failed to estimate gas for tx")? *
             estimate_multiplier /
             100,
     );
     Ok(())
 }
 
-pub async fn next_nonce(caller: Address, provider_url: &str) -> eyre::Result<u64> {
+pub async fn next_nonce(
+    caller: Address,
+    provider_url: &str,
+    block_number: Option<u64>,
+) -> eyre::Result<u64> {
     let provider = try_get_http_provider(provider_url)
         .wrap_err_with(|| format!("bad fork_url provider: {provider_url}"))?;
-    Ok(provider.get_transaction_count(caller).await?)
+
+    let block_id = block_number.map_or(BlockId::latest(), BlockId::number);
+    Ok(provider.get_transaction_count(caller).block_id(block_id).await?)
 }
 
 pub async fn send_transaction(
@@ -65,9 +67,9 @@ pub async fn send_transaction(
 ) -> Result<TxHash> {
     if let SendTransactionKind::Raw(tx, _) | SendTransactionKind::Unlocked(tx) = &mut kind {
         if sequential_broadcast {
-            let from = tx.from.expect("no sender");
+            let from = tx.inner.inner.from.expect("no sender");
 
-            let tx_nonce = tx.nonce.expect("no nonce");
+            let tx_nonce = tx.inner.inner.nonce.expect("no nonce");
             for attempt in 0..5 {
                 let nonce = provider.get_transaction_count(from).await?;
                 match nonce.cmp(&tx_nonce) {
@@ -283,7 +285,7 @@ impl BundledState {
                         }),
                     ),
                     (false, _, _) => {
-                        let mut fees = provider.estimate_eip1559_fees(None).await.wrap_err("Failed to estimate EIP1559 fees. This chain might not support EIP1559, try adding --legacy to your command.")?;
+                        let mut fees = provider.estimate_eip1559_fees().await.wrap_err("Failed to estimate EIP1559 fees. This chain might not support EIP1559, try adding --legacy to your command.")?;
 
                         if let Some(gas_price) = self.args.with_gas_price {
                             fees.max_fee_per_gas = gas_price.to();
@@ -311,13 +313,17 @@ impl BundledState {
                                 SendTransactionKind::Signed(tx)
                             }
                             TransactionMaybeSigned::Unsigned(mut tx) => {
-                                let from = tx.from.expect("No sender for onchain transaction!");
+                                let from = tx
+                                    .inner
+                                    .inner
+                                    .from
+                                    .expect("No sender for onchain transaction!");
 
                                 tx.set_chain_id(sequence.chain);
 
                                 // Set TxKind::Create explicitly to satisfy `check_reqd_fields` in
                                 // alloy
-                                if tx.to.is_none() {
+                                if tx.inner.inner.to.is_none() {
                                     tx.set_create();
                                 }
 
@@ -413,11 +419,11 @@ impl BundledState {
             let (total_gas, total_gas_price, total_paid) =
                 sequence.receipts.iter().fold((0, 0, 0), |acc, receipt| {
                     let gas_used = receipt.gas_used;
-                    let gas_price = receipt.effective_gas_price;
+                    let gas_price = receipt.effective_gas_price as u64;
                     (acc.0 + gas_used, acc.1 + gas_price, acc.2 + gas_used * gas_price)
                 });
             let paid = format_units(total_paid, 18).unwrap_or_else(|_| "N/A".to_string());
-            let avg_gas_price = format_units(total_gas_price / sequence.receipts.len() as u128, 9)
+            let avg_gas_price = format_units(total_gas_price / sequence.receipts.len() as u64, 9)
                 .unwrap_or_else(|_| "N/A".to_string());
 
             seq_progress.inner.write().set_status(&format!(

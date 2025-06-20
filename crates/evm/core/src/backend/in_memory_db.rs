@@ -4,8 +4,10 @@ use crate::state_snapshot::StateSnapshots;
 use alloy_primitives::{Address, B256, U256};
 use foundry_fork_db::DatabaseError;
 use revm::{
-    db::{CacheDB, DatabaseRef, EmptyDB},
-    primitives::{Account, AccountInfo, Bytecode, FlaggedStorage, HashMap as Map},
+    bytecode::Bytecode,
+    database::{CacheDB, DatabaseRef, EmptyDB},
+    primitives::HashMap as Map,
+    state::{Account, AccountInfo},
     Database, DatabaseCommit,
 };
 
@@ -40,7 +42,11 @@ impl DatabaseRef for MemDb {
         DatabaseRef::code_by_hash_ref(&self.inner, code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(&self.inner, address, index)
     }
 
@@ -61,7 +67,11 @@ impl Database for MemDb {
         Database::code_by_hash(&mut self.inner, code_hash)
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
+    fn storage(
+        &mut self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         Database::storage(&mut self.inner, address, index)
     }
 
@@ -107,7 +117,11 @@ impl DatabaseRef for EmptyDBWrapper {
     fn code_by_hash_ref(&self, code_hash: B256) -> Result<Bytecode, Self::Error> {
         Ok(self.0.code_by_hash_ref(code_hash)?)
     }
-    fn storage_ref(&self, address: Address, index: U256) -> Result<FlaggedStorage, Self::Error> {
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         Ok(self.0.storage_ref(address, index)?)
     }
 
@@ -168,7 +182,7 @@ mod tests {
     fn mem_db_insert_basic_default() {
         let mut db = MemDb::default();
         let address = Address::from_word(b256!(
-            "000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045"
+            "0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045"
         ));
 
         let info = Database::basic(&mut db, address).unwrap();
