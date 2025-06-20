@@ -4344,7 +4344,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers"
 version = "0.16.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=cde8c42#cde8c4233df3c41aee8c081b2d70ed228f26f64d"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=c08f5ac#c08f5ac2c40d9048b3bbf839cce9129af777cd72"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4357,7 +4357,7 @@ dependencies = [
  "fs_extra",
  "futures-util",
  "home",
- "itertools 0.14.0",
+ "itertools 0.13.0",
  "path-slash",
  "rand 0.8.5",
  "rayon",
@@ -4380,7 +4380,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts"
 version = "0.16.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=cde8c42#cde8c4233df3c41aee8c081b2d70ed228f26f64d"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=c08f5ac#c08f5ac2c40d9048b3bbf839cce9129af777cd72"
 dependencies = [
  "foundry-compilers-artifacts-solc",
  "foundry-compilers-artifacts-vyper",
@@ -4389,7 +4389,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts-solc"
 version = "0.16.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=cde8c42#cde8c4233df3c41aee8c081b2d70ed228f26f64d"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=c08f5ac#c08f5ac2c40d9048b3bbf839cce9129af777cd72"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4411,7 +4411,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts-vyper"
 version = "0.16.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=cde8c42#cde8c4233df3c41aee8c081b2d70ed228f26f64d"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=c08f5ac#c08f5ac2c40d9048b3bbf839cce9129af777cd72"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4425,7 +4425,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-core"
 version = "0.16.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=cde8c42#cde8c4233df3c41aee8c081b2d70ed228f26f64d"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=c08f5ac#c08f5ac2c40d9048b3bbf839cce9129af777cd72"
 dependencies = [
  "alloy-primitives",
  "cfg-if",
@@ -4650,7 +4650,7 @@ dependencies = [
 [[package]]
 name = "foundry-fork-db"
 version = "0.14.0"
-source = "git+https://github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=e973e44#e973e440b42493f3b022e8a09a188513a0c73dee"
+source = "git+https://github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=a6d3bc3#a6d3bc3e57e3253bcc375ebfd7d50f2ebf805dcd"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
