@@ -1,0 +1,18 @@
+{
+  "name": "sforge-tests",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  },
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "seismic-viem-tests": "^0.0.15"
+  }
+}

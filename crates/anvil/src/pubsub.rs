@@ -13,6 +13,9 @@ use std::{
     pin::Pin,
     task::{Context, Poll},
 };
+use tokio::sync::mpsc::UnboundedReceiver;
+
+use seismic_prelude::foundry::AnyRpcTransaction;
 
 /// Listens for new blocks and matching logs emitted in that block
 #[derive(Debug)]
@@ -86,6 +89,7 @@ pub enum EthSubscription {
     Logs(Box<LogsSubscription>),
     Header(NewBlockNotifications, StorageInfo, SubscriptionId),
     PendingTransactions(Receiver<TxHash>, SubscriptionId),
+    FullPendingTransactions(UnboundedReceiver<AnyRpcTransaction>, SubscriptionId),
 }
 
 impl EthSubscription {
@@ -118,6 +122,13 @@ impl EthSubscription {
                         let params = EthSubscriptionParams { subscription: id.clone(), result };
                         EthSubscriptionResponse::new(params)
                     });
+                Poll::Ready(res)
+            }
+            Self::FullPendingTransactions(tx, id) => {
+                let res = ready!(tx.poll_recv(cx)).map(to_rpc_result).map(|result| {
+                    let params = EthSubscriptionParams { subscription: id.clone(), result };
+                    EthSubscriptionResponse::new(params)
+                });
                 Poll::Ready(res)
             }
         }

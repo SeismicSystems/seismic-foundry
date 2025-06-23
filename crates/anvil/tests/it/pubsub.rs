@@ -1,7 +1,7 @@
 //! tests for subscriptions
 
 use crate::utils::{connect_pubsub, connect_pubsub_with_wallet};
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{Address, U256};
 use alloy_provider::Provider;
 use alloy_pubsub::Subscription;
@@ -10,6 +10,8 @@ use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{spawn, NodeConfig};
 use futures::StreamExt;
+
+use seismic_prelude::foundry::EthereumWallet;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_sub_new_heads() {
@@ -49,7 +51,7 @@ async fn test_sub_logs_legacy() {
     let contract = EmitLogs::new(contract_addr, provider.clone());
 
     let val = contract.getValue().call().await.unwrap();
-    assert_eq!(val._0, msg);
+    assert_eq!(val, msg);
 
     // subscribe to events from the contract
     let filter = Filter::new().address(contract.address().to_owned());
@@ -89,7 +91,7 @@ async fn test_sub_logs() {
     let contract = EmitLogs::new(contract_addr, provider.clone());
 
     let val = contract.getValue().call().await.unwrap();
-    assert_eq!(val._0, msg);
+    assert_eq!(val, msg);
 
     // subscribe to events from the contract
     let filter = Filter::new().address(contract.address().to_owned());
@@ -140,10 +142,12 @@ async fn test_sub_logs_impersonated() {
     let data = contract.setValue("Next Message".to_string());
     let data = data.calldata().clone();
 
-    let tx =
-        TransactionRequest::default().from(impersonate).to(*contract.address()).with_input(data);
+    let tx = TransactionRequest::default()
+        .with_from(impersonate)
+        .with_to(*contract.address())
+        .with_input(data);
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let provider = handle.http_provider();
 
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
@@ -247,7 +251,7 @@ async fn test_subscriptions() {
     assert_eq!(blocks, vec![1, 2, 3])
 }
 
-#[allow(clippy::disallowed_macros)]
+#[expect(clippy::disallowed_macros)]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_sub_new_heads_fast() {
     let (api, handle) = spawn(NodeConfig::test()).await;

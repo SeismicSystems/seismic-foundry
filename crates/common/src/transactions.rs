@@ -1,19 +1,19 @@
 //! Wrappers for transactions.
 
-use alloy_consensus::{Transaction, TxEnvelope};
+use alloy_consensus::{transaction::SignerRecoverable, Transaction, TxEnvelope};
 use alloy_eips::eip7702::SignedAuthorization;
-use alloy_network::AnyTransactionReceipt;
 use alloy_primitives::{Address, TxKind, U256};
 use alloy_provider::{
-    network::{AnyNetwork, ReceiptResponse, TransactionBuilder},
+    network::{ReceiptResponse, TransactionBuilder},
     Provider,
 };
-use alloy_rpc_types::{BlockId, TransactionRequest};
+use alloy_rpc_types::BlockId;
 use alloy_serde::WithOtherFields;
-use alloy_transport::Transport;
 use eyre::Result;
 use foundry_common_fmt::UIfmt;
 use serde::{Deserialize, Serialize};
+
+use seismic_prelude::foundry::{AnyNetwork, AnyTransactionReceipt, TransactionRequest};
 
 /// Helper type to carry a transaction along with an optional revert reason
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -30,12 +30,15 @@ pub struct TransactionReceiptWithRevertReason {
 impl TransactionReceiptWithRevertReason {
     /// Returns if the status of the transaction is 0 (failure)
     pub fn is_failure(&self) -> bool {
-        !self.receipt.inner.inner.inner.receipt.status.coerce_status()
+        match self.receipt.inner.inner.as_receipt() {
+            Some(receipt) => !receipt.status.coerce_status(),
+            None => true,
+        }
     }
 
     /// Updates the revert reason field using `eth_call` and returns an Err variant if the revert
     /// reason was not successfully updated
-    pub async fn update_revert_reason<T: Transport + Clone, P: Provider<T, AnyNetwork>>(
+    pub async fn update_revert_reason<P: Provider<AnyNetwork>>(
         &mut self,
         provider: &P,
     ) -> Result<()> {
@@ -43,7 +46,7 @@ impl TransactionReceiptWithRevertReason {
         Ok(())
     }
 
-    async fn fetch_revert_reason<T: Transport + Clone, P: Provider<T, AnyNetwork>>(
+    async fn fetch_revert_reason<P: Provider<AnyNetwork>>(
         &self,
         provider: &P,
     ) -> Result<Option<String>> {
@@ -58,11 +61,10 @@ impl TransactionReceiptWithRevertReason {
             .ok_or_else(|| eyre::eyre!("transaction not found"))?;
 
         if let Some(block_hash) = self.receipt.block_hash {
-            match provider
-                .call(&transaction.inner.inner.into())
-                .block(BlockId::Hash(block_hash.into()))
-                .await
-            {
+            let mut call_request: WithOtherFields<TransactionRequest> =
+                transaction.inner().inner.clone_inner().into();
+            call_request.set_from(transaction.inner().inner.signer());
+            match provider.call(call_request).block(BlockId::Hash(block_hash.into())).await {
                 Err(e) => return Ok(extract_revert_reason(e.to_string())),
                 Ok(_) => eyre::bail!("no revert reason as transaction succeeded"),
             }
@@ -88,12 +90,54 @@ impl UIfmt for TransactionReceiptWithRevertReason {
         if let Some(revert_reason) = &self.revert_reason {
             format!(
                 "{}
-revertReason            {}",
+revertReason         {}",
                 self.receipt.pretty(),
                 revert_reason
             )
         } else {
             self.receipt.pretty()
+        }
+    }
+}
+
+impl UIfmt for TransactionMaybeSigned {
+    fn pretty(&self) -> String {
+        match self {
+            Self::Signed { tx, .. } => tx.pretty(),
+            Self::Unsigned(tx) => {
+                let tx = &tx.inner.inner;
+                format!(
+                    "
+accessList           {}
+chainId              {}
+gasLimit             {}
+gasPrice             {}
+input                {}
+maxFeePerBlobGas     {}
+maxFeePerGas         {}
+maxPriorityFeePerGas {}
+nonce                {}
+to                   {}
+type                 {}
+value                {}",
+                    tx.access_list
+                        .as_ref()
+                        .map(|a| a.iter().collect::<Vec<_>>())
+                        .unwrap_or_default()
+                        .pretty(),
+                    tx.chain_id.pretty(),
+                    tx.gas.unwrap_or_default(),
+                    tx.gas_price.pretty(),
+                    tx.input.input.pretty(),
+                    tx.max_fee_per_blob_gas.pretty(),
+                    tx.max_fee_per_gas.pretty(),
+                    tx.max_priority_fee_per_gas.pretty(),
+                    tx.nonce.pretty(),
+                    tx.to.as_ref().map(|a| a.to()).unwrap_or_default().pretty(),
+                    tx.transaction_type.unwrap_or_default(),
+                    tx.value.pretty(),
+                )
+            }
         }
     }
 }
@@ -116,39 +160,25 @@ pub fn get_pretty_tx_receipt_attr(
         "blockNumber" | "block_number" => Some(receipt.receipt.block_number.pretty()),
         "contractAddress" | "contract_address" => Some(receipt.receipt.contract_address.pretty()),
         "cumulativeGasUsed" | "cumulative_gas_used" => {
-            Some(receipt.receipt.inner.inner.inner.receipt.cumulative_gas_used.pretty())
+            Some(receipt.receipt.inner.inner.cumulative_gas_used().pretty())
         }
         "effectiveGasPrice" | "effective_gas_price" => {
             Some(receipt.receipt.effective_gas_price.to_string())
         }
         "gasUsed" | "gas_used" => Some(receipt.receipt.gas_used.to_string()),
-        "logs" => Some(receipt.receipt.inner.inner.inner.receipt.logs.as_slice().pretty()),
-        "logsBloom" | "logs_bloom" => Some(receipt.receipt.inner.inner.inner.logs_bloom.pretty()),
+        "logs" => Some(receipt.receipt.inner.inner.logs().pretty()),
+        "logsBloom" | "logs_bloom" => Some(receipt.receipt.inner.inner.logs_bloom().pretty()),
         "root" | "stateRoot" | "state_root " => Some(receipt.receipt.state_root().pretty()),
         "status" | "statusCode" | "status_code" => {
-            Some(receipt.receipt.inner.inner.inner.receipt.status.pretty())
+            Some(receipt.receipt.inner.inner.status().pretty())
         }
         "transactionHash" | "transaction_hash" => Some(receipt.receipt.transaction_hash.pretty()),
         "transactionIndex" | "transaction_index" => {
             Some(receipt.receipt.transaction_index.pretty())
         }
-        "type" | "transaction_type" => Some(receipt.receipt.inner.inner.r#type.to_string()),
+        "type" | "transaction_type" => Some(receipt.receipt.inner.inner.tx_type().to_string()),
         "revertReason" | "revert_reason" => Some(receipt.revert_reason.pretty()),
         _ => None,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_extract_revert_reason() {
-        let error_string_1 = "server returned an error response: error code 3: execution reverted: Transaction too old";
-        let error_string_2 = "server returned an error response: error code 3: Invalid signature";
-
-        assert_eq!(extract_revert_reason(error_string_1), Some("Transaction too old".to_string()));
-        assert_eq!(extract_revert_reason(error_string_2), None);
     }
 }
 
@@ -175,7 +205,7 @@ impl TransactionMaybeSigned {
     /// Creates a new signed transaction for broadcast.
     pub fn new_signed(
         tx: TxEnvelope,
-    ) -> core::result::Result<Self, alloy_primitives::SignatureError> {
+    ) -> core::result::Result<Self, alloy_consensus::crypto::RecoveryError> {
         let from = tx.recover_signer()?;
         Ok(Self::Signed { tx, from })
     }
@@ -194,28 +224,28 @@ impl TransactionMaybeSigned {
     pub fn from(&self) -> Option<Address> {
         match self {
             Self::Signed { from, .. } => Some(*from),
-            Self::Unsigned(tx) => tx.from,
+            Self::Unsigned(tx) => tx.inner.inner.from,
         }
     }
 
     pub fn input(&self) -> Option<&[u8]> {
         match self {
             Self::Signed { tx, .. } => Some(tx.input()),
-            Self::Unsigned(tx) => tx.input.input().map(|i| i.as_ref()),
+            Self::Unsigned(tx) => tx.inner.inner.input.input().map(|i| i.as_ref()),
         }
     }
 
     pub fn to(&self) -> Option<TxKind> {
         match self {
             Self::Signed { tx, .. } => Some(tx.kind()),
-            Self::Unsigned(tx) => tx.to,
+            Self::Unsigned(tx) => tx.inner.inner.to,
         }
     }
 
     pub fn value(&self) -> Option<U256> {
         match self {
             Self::Signed { tx, .. } => Some(tx.value()),
-            Self::Unsigned(tx) => tx.value,
+            Self::Unsigned(tx) => tx.inner.inner.value,
         }
     }
 
@@ -229,14 +259,16 @@ impl TransactionMaybeSigned {
     pub fn nonce(&self) -> Option<u64> {
         match self {
             Self::Signed { tx, .. } => Some(tx.nonce()),
-            Self::Unsigned(tx) => tx.nonce,
+            Self::Unsigned(tx) => tx.inner.inner.nonce,
         }
     }
 
     pub fn authorization_list(&self) -> Option<Vec<SignedAuthorization>> {
         match self {
             Self::Signed { tx, .. } => tx.authorization_list().map(|auths| auths.to_vec()),
-            Self::Unsigned(tx) => tx.authorization_list.as_deref().map(|auths| auths.to_vec()),
+            Self::Unsigned(tx) => {
+                tx.inner.inner.authorization_list.as_deref().map(|auths| auths.to_vec())
+            }
         }
         .filter(|auths| !auths.is_empty())
     }
@@ -249,9 +281,23 @@ impl From<TransactionRequest> for TransactionMaybeSigned {
 }
 
 impl TryFrom<TxEnvelope> for TransactionMaybeSigned {
-    type Error = alloy_primitives::SignatureError;
+    type Error = alloy_consensus::crypto::RecoveryError;
 
     fn try_from(tx: TxEnvelope) -> core::result::Result<Self, Self::Error> {
         Self::new_signed(tx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_revert_reason() {
+        let error_string_1 = "server returned an error response: error code 3: execution reverted: Transaction too old";
+        let error_string_2 = "server returned an error response: error code 3: Invalid signature";
+
+        assert_eq!(extract_revert_reason(error_string_1), Some("Transaction too old".to_string()));
+        assert_eq!(extract_revert_reason(error_string_2), None);
     }
 }

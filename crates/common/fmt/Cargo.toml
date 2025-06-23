@@ -14,6 +14,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+seismic-prelude.workspace = true
+
 alloy-primitives.workspace = true
 alloy-dyn-abi = { workspace = true, features = ["eip712", "seismic"] }
 alloy-sol-types.workspace = true
@@ -26,8 +28,7 @@ alloy-serde.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
-revm-primitives.workspace = true
-comfy-table.workspace = true
+revm.workspace = true
 yansi.workspace = true
 
 [dev-dependencies]
