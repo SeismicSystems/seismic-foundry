@@ -4650,7 +4650,7 @@ dependencies = [
 [[package]]
 name = "foundry-fork-db"
 version = "0.14.0"
-source = "git+https://github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=a6d3bc3#a6d3bc3e57e3253bcc375ebfd7d50f2ebf805dcd"
+source = "git+https://github.com/SeismicSystems/seismic-foundry-fork-db.git?rev=332e59c#332e59c12cc1fb97cb65fb57c98ec584028cc1ca"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
