@@ -363,7 +363,7 @@ zip-extract = "=0.2.1"
 # If our dependencies depend on these things,
 # then this will override whatever versions they point to
 # and instead use our local version
-seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "30a53d5"}
+seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "a347832"}
 
 # seismic-alloy-core
 alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "bc4b5ed" }

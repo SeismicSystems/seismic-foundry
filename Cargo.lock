@@ -2116,15 +2116,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230c5f1ca6a325a32553f8640d31ac9b49f2411e901e427570154868b46da4f7"
 
 [[package]]
-name = "bincode"
-version = "1.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "bindgen"
 version = "0.69.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6043,12 +6034,14 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.7.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b6441ed73b0faa50707d4de41c6b45c76654b661b96aaf7b26a41331eedc0a5"
+checksum = "2be9fa1f64b3c8da5043cdc634007c6f7444b3ef1f3668f66b34180bdb398ec7"
 dependencies = [
+ "base64 0.22.1",
  "serde",
  "serde_json",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -8845,20 +8838,15 @@ dependencies = [
 [[package]]
 name = "seismic-enclave"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=30a53d5#30a53d53375de3dfa66938793dd739ec1c386a5b"
+source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=a347832#a347832fa80db6837399c74de15efb55df478127"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "bincode",
- "byteorder",
- "bytes",
- "clap",
+ "base64 0.22.1",
  "hkdf",
  "jsonrpsee",
  "kbs-types",
- "once_cell",
  "rand 0.9.1",
- "reqwest",
  "schnorrkel",
  "secp256k1",
  "seismic-enclave-derive",
@@ -8867,14 +8855,12 @@ dependencies = [
  "sha2 0.10.9",
  "strum 0.26.3",
  "tokio",
- "tracing",
- "tracing-subscriber 0.3.19",
 ]
 
 [[package]]
 name = "seismic-enclave-derive"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=30a53d5#30a53d53375de3dfa66938793dd739ec1c386a5b"
+source = "git+https://github.com/SeismicSystems/seismic-enclave.git?rev=a347832#a347832fa80db6837399c74de15efb55df478127"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -10384,16 +10370,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-serde"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "704b1aeb7be0d0a84fc9828cae51dab5970fee5088f83d1dd7ee6f6246fc6ff1"
-dependencies = [
- "serde",
- "tracing-core",
-]
-
-[[package]]
 name = "tracing-subscriber"
 version = "0.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10412,15 +10388,12 @@ dependencies = [
  "nu-ansi-term",
  "once_cell",
  "regex",
- "serde",
- "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
  "tracing-log",
- "tracing-serde",
 ]
 
 [[package]]

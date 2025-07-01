@@ -96,7 +96,7 @@ use revm::{
     interpreter::{return_ok, return_revert, InstructionResult},
     primitives::eip7702::PER_EMPTY_ACCOUNT_COST,
 };
-use seismic_enclave::rpc::SyncEnclaveApiClient;
+use seismic_enclave::{keys::GetPurposeKeysRequest, rpc::SyncEnclaveApiClient};
 use std::{future::Future, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use yansi::Paint;
@@ -180,8 +180,9 @@ impl EthApi {
         let response = match request.clone() {
             EthRequest::SeismicGetTeePublicKey(()) => {
                 let result = seismic_enclave::MockEnclaveClient::new()
-                    .get_public_key()
-                    .map_err(|e| BlockchainError::Internal(e.to_string()));
+                    .get_purpose_keys(GetPurposeKeysRequest { epoch: 0 })
+                    .map_err(|e| BlockchainError::Internal(e.to_string()))
+                    .map(|r| r.tx_io_pk);
                 result.to_rpc_result()
             }
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),
