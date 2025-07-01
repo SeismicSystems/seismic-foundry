@@ -6,12 +6,20 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 use crate::constants::DEFAULT_CREATE2_DEPLOYER;
-use alloy_evm::eth::EthEvmContext;
+// use alloy_evm::eth::EthEvmContext;
 use alloy_primitives::Address;
 use auto_impl::auto_impl;
 use backend::DatabaseExt;
 use revm::{inspector::NoOpInspector, interpreter::CreateInputs, Inspector};
 use revm_inspectors::access_list::AccessListInspector;
+
+use seismic_prelude::foundry::{EthEvmContext, SeismicSpecId};
+
+pub use alloy_evm::EvmEnv as AlloyEvmEnv;
+pub use alloy_seismic_evm::SeismicEvm;
+
+/// Seismic EVM environment, which wraps alloy-evm's EvmEnv
+pub type EvmEnv = AlloyEvmEnv<SeismicSpecId>;
 
 #[macro_use]
 extern crate tracing;

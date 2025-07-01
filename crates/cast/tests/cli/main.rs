@@ -2058,6 +2058,7 @@ forgetest_async!(decode_traces_with_project_artifacts, |prj, cmd| {
     prj.add_source(
         "LocalProjectContract",
         r#"
+pragma solidity ^0.8.27;
 contract LocalProjectContract {
     event LocalProjectContractCreated(address owner);
 
@@ -2071,6 +2072,7 @@ contract LocalProjectContract {
     prj.add_script(
         "LocalProjectScript",
         r#"
+pragma solidity ^0.8.27;
 import "forge-std/Script.sol";
 import {LocalProjectContract} from "../src/LocalProjectContract.sol";
 
@@ -2128,7 +2130,7 @@ Traces:
   [..] → new <unknown>@0x5FbDB2315678afecb367f032d93F642f64180aa3
     ├─  emit topic 0: 0xa7263295d3a687d750d1fd377b5df47de69d7db8decc745aaa4bbee44dc1688d
     │           data: 0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266
-    └─ ← [Return] 62 bytes of code
+    └─ ← [Return] 101 bytes of code
 
 
 Transaction successfully executed.
@@ -2147,7 +2149,7 @@ No files changed, compilation skipped
 Traces:
   [..] → new LocalProjectContract@0x5FbDB2315678afecb367f032d93F642f64180aa3
     ├─ emit LocalProjectContractCreated(owner: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
-    └─ ← [Return] 62 bytes of code
+    └─ ← [Return] 101 bytes of code
 
 
 Transaction successfully executed.
@@ -2209,8 +2211,8 @@ Executing previous transactions from the block.
 Traces:
   [..] 0x5FbDB2315678afecb367f032d93F642f64180aa3::setNumber(111)
     ├─  storage changes:
-    │   @ 0: 0 → 111
-    └─ ← [Stop]
+    │   @ 0: 0, false → 111, false
+    └─ ← [Stop] 
 
 
 Transaction successfully executed.
@@ -2227,6 +2229,7 @@ forgetest_async!(decode_external_libraries_with_cached_selectors, |prj, cmd| {
     prj.add_source(
         "ExternalLib",
         r#"
+pragma solidity ^0.8.27;
 import "./CounterInExternalLib.sol";
 library ExternalLib {
     function updateCounterInExternalLib(CounterInExternalLib.Info storage counterInfo, uint256 counter) public {
@@ -2239,6 +2242,7 @@ library ExternalLib {
     prj.add_source(
         "CounterInExternalLib",
         r#"
+pragma solidity ^0.8.27;
 import "./ExternalLib.sol";
 contract CounterInExternalLib {
     struct Info {
@@ -2255,6 +2259,7 @@ contract CounterInExternalLib {
     prj.add_script(
         "CounterInExternalLibScript",
         r#"
+pragma solidity ^0.8.27;
 import "forge-std/Script.sol";
 import {CounterInExternalLib} from "../src/CounterInExternalLib.sol";
 contract CounterInExternalLibScript is Script {

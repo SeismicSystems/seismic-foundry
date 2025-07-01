@@ -20,21 +20,21 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Show Forge version
+      - name: Show Sforge version
         run: |
-          forge --version
+          sforge --version
 
-      - name: Run Forge fmt
+      - name: Run Sforge fmt
         run: |
-          forge fmt --check
+          sforge fmt --check
         id: fmt
 
-      - name: Run Forge build
+      - name: Run Sforge build
         run: |
-          forge build --sizes
+          sforge build --sizes
         id: build
 
-      - name: Run Forge tests
+      - name: Run Sforge tests
         run: |
-          forge test -vvv
+          sforge test -vvv
         id: test

@@ -219,6 +219,8 @@ impl NodeArgs {
             Some(hf) => {
                 if self.evm.optimism {
                     Some(OptimismHardfork::from_str(hf)?.into())
+                } else if self.evm.seismic {
+                    Some(crate::hardfork::SeismicHardfork::from_str(hf)?.into())
                 } else {
                     Some(EthereumHardfork::from_str(hf)?.into())
                 }
@@ -227,6 +229,7 @@ impl NodeArgs {
         };
 
         Ok(NodeConfig::default()
+            .with_seismic(self.evm.seismic)
             .with_gas_limit(self.evm.gas_limit)
             .disable_block_gas_limit(self.evm.disable_block_gas_limit)
             .with_gas_price(self.evm.gas_price)
@@ -588,6 +591,10 @@ pub struct AnvilEvmArgs {
     #[arg(long, visible_alias = "optimism")]
     pub optimism: bool,
 
+    /// Run a Seismic chain
+    #[arg(long, visible_alias = "seismic")]
+    pub seismic: bool,
+
     /// Disable the default create2 deployer
     #[arg(long, visible_alias = "no-create2")]
     pub disable_default_create2_deployer: bool,
@@ -675,7 +682,7 @@ impl Future for PeriodicStateDumper {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
         if this.dump_state.is_none() {
-            return Poll::Pending
+            return Poll::Pending;
         }
 
         loop {
@@ -686,7 +693,7 @@ impl Future for PeriodicStateDumper {
                     }
                     Poll::Pending => {
                         this.in_progress_dump = Some(flush);
-                        return Poll::Pending
+                        return Poll::Pending;
                     }
                 }
             }
@@ -697,7 +704,7 @@ impl Future for PeriodicStateDumper {
                 this.in_progress_dump =
                     Some(Box::pin(Self::dump_state(api, path, this.preserve_historical_states)));
             } else {
-                break
+                break;
             }
         }
 
@@ -727,7 +734,7 @@ impl StateFile {
         }
         let mut state = Self { path, state: None };
         if !state.path.exists() {
-            return Ok(state)
+            return Ok(state);
         }
 
         state.state = Some(SerializableState::load(&state.path).map_err(|err| err.to_string())?);
@@ -762,14 +769,14 @@ impl FromStr for ForkUrl {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some((url, block)) = s.rsplit_once('@') {
             if block == "latest" {
-                return Ok(Self { url: url.to_string(), block: None })
+                return Ok(Self { url: url.to_string(), block: None });
             }
             // this will prevent false positives for auths `user:password@example.com`
             if !block.is_empty() && !block.contains(':') && !block.contains('.') {
                 let block: u64 = block
                     .parse()
                     .map_err(|_| format!("Failed to parse block number: `{block}`"))?;
-                return Ok(Self { url: url.to_string(), block: Some(block) })
+                return Ok(Self { url: url.to_string(), block: Some(block) });
             }
         }
         Ok(Self { url: s.to_string(), block: None })

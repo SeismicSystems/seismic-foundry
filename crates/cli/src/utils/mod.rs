@@ -1,6 +1,6 @@
 use alloy_json_abi::JsonAbi;
 use alloy_primitives::U256;
-use alloy_provider::{network::AnyNetwork, Provider};
+use alloy_provider::Provider;
 use eyre::{ContextCompat, Result};
 use foundry_common::{
     provider::{ProviderBuilder, RetryProvider},
@@ -16,6 +16,8 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tracing_subscriber::prelude::*;
+
+use seismic_prelude::foundry::AnyNetwork;
 
 mod cmd;
 pub use cmd::*;

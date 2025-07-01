@@ -3,8 +3,6 @@ use alloy_primitives::{Address, Bytes, TxHash, B256, B64, U256};
 use alloy_rpc_types::{
     anvil::{Forking, MineOptions},
     pubsub::{Params as SubscriptionParams, SubscriptionKind},
-    request::TransactionRequest,
-    simulate::SimulatePayload,
     state::StateOverride,
     trace::{
         filter::TraceFilter,
@@ -15,6 +13,10 @@ use alloy_rpc_types::{
 use alloy_serde::WithOtherFields;
 use foundry_common::serde_helpers::{
     deserialize_number, deserialize_number_opt, deserialize_number_seq,
+};
+
+use seismic_prelude::foundry::{
+    SeismicCallRequest, SeismicRawTxRequest, SimulatePayload, TransactionRequest,
 };
 
 pub mod block;
@@ -37,6 +39,9 @@ pub struct Params<T: Default> {
 #[serde(tag = "method", content = "params")]
 #[allow(clippy::large_enum_variant)]
 pub enum EthRequest {
+    #[serde(rename = "seismic_getTeePublicKey", with = "empty_params")]
+    SeismicGetTeePublicKey(()),
+
     #[serde(rename = "web3_clientVersion", with = "empty_params")]
     Web3ClientVersion(()),
 
@@ -145,11 +150,11 @@ pub enum EthRequest {
     EthSendTransaction(Box<WithOtherFields<TransactionRequest>>),
 
     #[serde(rename = "eth_sendRawTransaction", with = "sequence")]
-    EthSendRawTransaction(Bytes),
+    EthSendRawTransaction(SeismicRawTxRequest),
 
     #[serde(rename = "eth_call")]
     EthCall(
-        WithOtherFields<TransactionRequest>,
+        SeismicCallRequest,
         #[serde(default)] Option<BlockId>,
         #[serde(default)] Option<StateOverride>,
         #[serde(default)] Option<Box<BlockOverrides>>,

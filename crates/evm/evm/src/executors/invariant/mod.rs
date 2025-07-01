@@ -328,7 +328,7 @@ impl<'a> InvariantExecutor<'a> {
     ) -> Result<InvariantFuzzTestResult> {
         // Throw an error to abort test run if the invariant function accepts input params
         if !invariant_contract.invariant_function.inputs.is_empty() {
-            return Err(eyre!("Invariant test function should have no inputs"))
+            return Err(eyre!("Invariant test function should have no inputs"));
         }
 
         let (invariant_test, invariant_strategy) =
@@ -573,7 +573,7 @@ impl<'a> InvariantExecutor<'a> {
             &mut failures,
         )?;
         if let Some(error) = failures.error {
-            return Err(eyre!(error.revert_reason().unwrap_or_default()))
+            return Err(eyre!(error.revert_reason().unwrap_or_default()));
         }
 
         Ok((
@@ -679,7 +679,7 @@ impl<'a> InvariantExecutor<'a> {
                     .wrap_err(format!("{contract} does not have the selector {selector:?}"))?;
             }
 
-            return Ok(artifact.identifier())
+            return Ok(artifact.identifier());
         }
         eyre::bail!("{contract} not found in the project. Allowed format: `contract_name` or `contract_path:contract_name`.");
     }
@@ -828,7 +828,7 @@ impl<'a> InvariantExecutor<'a> {
     ) -> eyre::Result<()> {
         // Do not add address in target contracts if no function selected.
         if selectors.is_empty() {
-            return Ok(())
+            return Ok(());
         }
 
         let contract = match targeted_contracts.entry(address) {

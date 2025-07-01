@@ -3,9 +3,10 @@
 use alloy_network::TransactionBuilder;
 use alloy_primitives::U256;
 use alloy_provider::{ext::TxPoolApi, Provider};
-use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use anvil::{spawn, NodeConfig};
+
+use seismic_prelude::foundry::tx_builder;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn geth_txpool() {
@@ -18,12 +19,12 @@ async fn geth_txpool() {
     let value = U256::from(42);
     let gas_price = 221435145689u128;
 
-    let tx = TransactionRequest::default()
+    let tx = tx_builder()
         .with_to(account)
         .with_from(account)
         .with_value(value)
         .with_gas_price(gas_price);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     // send a few transactions
     let mut txs = Vec::new();

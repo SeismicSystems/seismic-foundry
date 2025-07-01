@@ -5,14 +5,13 @@ use crate::{
 use alloy_chains::Chain;
 use alloy_consensus::TxEnvelope;
 use alloy_eips::{eip2718::Encodable2718, BlockId};
-use alloy_network::{AnyNetwork, EthereumWallet, TransactionBuilder};
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{
     map::{AddressHashMap, AddressHashSet},
     utils::format_units,
     Address, TxHash,
 };
 use alloy_provider::{utils::Eip1559Estimation, Provider};
-use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use eyre::{bail, Context, Result};
 use forge_verify::provider::VerificationProviderType;
@@ -27,6 +26,8 @@ use futures::{future::join_all, StreamExt};
 use itertools::Itertools;
 use std::{cmp::Ordering, sync::Arc};
 
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, TransactionRequest};
+
 pub async fn estimate_gas<P: Provider<AnyNetwork>>(
     tx: &mut WithOtherFields<TransactionRequest>,
     provider: &P,
@@ -34,7 +35,7 @@ pub async fn estimate_gas<P: Provider<AnyNetwork>>(
 ) -> Result<()> {
     // if already set, some RPC endpoints might simply return the gas value that is already
     // set in the request and omit the estimate altogether, so we remove it here
-    tx.gas = None;
+    tx.inner.inner.gas = None;
 
     tx.set_gas_limit(
         provider.estimate_gas(tx.clone()).await.wrap_err("Failed to estimate gas for tx")? *
@@ -66,9 +67,9 @@ pub async fn send_transaction(
 ) -> Result<TxHash> {
     if let SendTransactionKind::Raw(tx, _) | SendTransactionKind::Unlocked(tx) = &mut kind {
         if sequential_broadcast {
-            let from = tx.from.expect("no sender");
+            let from = tx.inner.inner.from.expect("no sender");
 
-            let tx_nonce = tx.nonce.expect("no nonce");
+            let tx_nonce = tx.inner.inner.nonce.expect("no nonce");
             for attempt in 0..5 {
                 let nonce = provider.get_transaction_count(from).await?;
                 match nonce.cmp(&tx_nonce) {
@@ -312,13 +313,17 @@ impl BundledState {
                                 SendTransactionKind::Signed(tx)
                             }
                             TransactionMaybeSigned::Unsigned(mut tx) => {
-                                let from = tx.from.expect("No sender for onchain transaction!");
+                                let from = tx
+                                    .inner
+                                    .inner
+                                    .from
+                                    .expect("No sender for onchain transaction!");
 
                                 tx.set_chain_id(sequence.chain);
 
                                 // Set TxKind::Create explicitly to satisfy `check_reqd_fields` in
                                 // alloy
-                                if tx.to.is_none() {
+                                if tx.inner.inner.to.is_none() {
                                     tx.set_create();
                                 }
 

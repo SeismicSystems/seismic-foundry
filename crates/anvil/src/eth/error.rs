@@ -201,6 +201,9 @@ pub struct ErrDetail {
 /// An error due to invalid transaction
 #[derive(Debug, thiserror::Error)]
 pub enum InvalidTransactionError {
+    /// Thrown when a seismic transaction is invalid
+    #[error("Seismic decryption failed: {0}")]
+    SeismicDecryptionFailed(String),
     /// returned if the nonce of a transaction is lower than the one present in the local chain.
     #[error("nonce too low")]
     NonceTooLow,

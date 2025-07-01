@@ -22,7 +22,6 @@ use crate::{
     Vm::{self, AccountAccess},
 };
 use alloy_consensus::BlobTransactionSidecar;
-use alloy_evm::eth::EthEvmContext;
 use alloy_network::TransactionBuilder4844;
 use alloy_primitives::{
     hex,
@@ -30,7 +29,7 @@ use alloy_primitives::{
     Address, Bytes, Log, TxKind, B256, U256,
 };
 use alloy_rpc_types::{
-    request::{TransactionInput, TransactionRequest},
+    request::{TransactionInput, TransactionRequest as AlloyTransactionRequest},
     AccessList,
 };
 use alloy_sol_types::{SolCall, SolInterface, SolValue};
@@ -71,6 +70,8 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
+
+use seismic_prelude::foundry::{EthEvmContext, SeismicChain, TransactionRequest};
 
 mod utils;
 
@@ -142,7 +143,7 @@ where
             database: &mut *ccx.ecx.journaled_state.database as &mut dyn DatabaseExt,
         },
         local: LocalContext::default(),
-        chain: (),
+        chain: SeismicChain::default(),
         error,
     };
 
@@ -150,11 +151,11 @@ where
 
     let res = f(&mut evm)?;
 
-    ccx.ecx.journaled_state.inner = evm.inner.ctx.journaled_state.inner;
-    ccx.ecx.block = evm.inner.ctx.block;
-    ccx.ecx.tx = evm.inner.ctx.tx;
-    ccx.ecx.cfg = evm.inner.ctx.cfg;
-    ccx.ecx.error = evm.inner.ctx.error;
+    ccx.ecx.journaled_state.inner = evm.inner.0.ctx.journaled_state.inner;
+    ccx.ecx.block = evm.inner.0.ctx.block;
+    ccx.ecx.tx = evm.inner.0.ctx.tx;
+    ccx.ecx.cfg = evm.inner.0.ctx.cfg;
+    ccx.ecx.error = evm.inner.0.ctx.error;
 
     Ok(res)
 }
@@ -312,7 +313,7 @@ impl ArbitraryStorage {
     pub fn save(&mut self, ecx: Ecx, address: Address, slot: U256, data: U256) {
         self.values.get_mut(&address).expect("missing arbitrary address entry").insert(slot, data);
         if let Ok(mut account) = ecx.journaled_state.load_account(address) {
-            account.storage.insert(slot, EvmStorageSlot::new(data));
+            account.storage.insert(slot, EvmStorageSlot::new(data.into()));
         }
     }
 
@@ -330,14 +331,14 @@ impl ArbitraryStorage {
                 storage_cache.insert(slot, new_value);
                 // Update source storage with new value.
                 if let Ok(mut source_account) = ecx.journaled_state.load_account(*source) {
-                    source_account.storage.insert(slot, EvmStorageSlot::new(new_value));
+                    source_account.storage.insert(slot, EvmStorageSlot::new(new_value.into()));
                 }
                 new_value
             }
         };
         // Update target storage with new value.
         if let Ok(mut target_account) = ecx.journaled_state.load_account(target) {
-            target_account.storage.insert(slot, EvmStorageSlot::new(value));
+            target_account.storage.insert(slot, EvmStorageSlot::new(value.into()));
         }
         value
     }
@@ -741,13 +742,20 @@ impl Cheatcodes {
                     self.broadcastable_transactions.push_back(BroadcastableTransaction {
                         rpc: ecx.journaled_state.database.active_fork_url(),
                         transaction: TransactionRequest {
-                            from: Some(broadcast.new_origin),
-                            to: None,
-                            value: Some(input.value()),
-                            input: TransactionInput::new(input.init_code()),
-                            nonce: Some(account.info.nonce),
-                            gas: if is_fixed_gas_limit { Some(input.gas_limit()) } else { None },
-                            ..Default::default()
+                            inner: AlloyTransactionRequest {
+                                from: Some(broadcast.new_origin),
+                                to: None,
+                                value: Some(input.value()),
+                                input: TransactionInput::new(input.init_code()),
+                                nonce: Some(account.info.nonce),
+                                gas: if is_fixed_gas_limit {
+                                    Some(input.gas_limit())
+                                } else {
+                                    None
+                                },
+                                ..Default::default()
+                            },
+                            seismic_elements: None,
                         }
                         .into(),
                     });
@@ -1126,14 +1134,17 @@ impl Cheatcodes {
                         ecx.journaled_state.inner.state().get_mut(&broadcast.new_origin).unwrap();
 
                     let mut tx_req = TransactionRequest {
-                        from: Some(broadcast.new_origin),
-                        to: Some(TxKind::from(Some(call.target_address))),
-                        value: call.transfer_value(),
-                        input,
-                        nonce: Some(account.info.nonce),
-                        chain_id: Some(ecx.cfg.chain_id),
-                        gas: if is_fixed_gas_limit { Some(call.gas_limit) } else { None },
-                        ..Default::default()
+                        inner: AlloyTransactionRequest {
+                            from: Some(broadcast.new_origin),
+                            to: Some(TxKind::from(Some(call.target_address))),
+                            value: call.transfer_value(),
+                            input,
+                            nonce: Some(account.info.nonce),
+                            chain_id: Some(ecx.cfg.chain_id),
+                            gas: if is_fixed_gas_limit { Some(call.gas_limit) } else { None },
+                            ..Default::default()
+                        },
+                        seismic_elements: None,
                     };
 
                     match (self.active_delegation.take(), self.active_blob_sidecar.take()) {
@@ -1149,19 +1160,19 @@ impl Cheatcodes {
                             });
                         }
                         (Some(auth_list), None) => {
-                            tx_req.authorization_list = Some(vec![auth_list]);
-                            tx_req.sidecar = None;
+                            tx_req.inner.authorization_list = Some(vec![auth_list]);
+                            tx_req.inner.sidecar = None;
 
                             // Increment nonce to reflect the signed authorization.
                             account.info.nonce += 1;
                         }
                         (None, Some(blob_sidecar)) => {
                             tx_req.set_blob_sidecar(blob_sidecar);
-                            tx_req.authorization_list = None;
+                            tx_req.inner.authorization_list = None;
                         }
                         (None, None) => {
-                            tx_req.sidecar = None;
-                            tx_req.authorization_list = None;
+                            tx_req.inner.sidecar = None;
+                            tx_req.inner.authorization_list = None;
                         }
                     }
 
@@ -1845,9 +1856,10 @@ impl Cheatcodes {
         if let Some(paused_gas) = self.gas_metering.paused_frames.last() {
             // Keep gas constant if paused.
             // Make sure we record the memory changes so that memory expansion is not paused.
-            let memory = interpreter.control.gas.memory;
+            let memory = *interpreter.control.gas.memory();
             interpreter.control.gas = *paused_gas;
-            interpreter.control.gas.memory = memory;
+            interpreter.control.gas.memory_mut().words_num = memory.words_num;
+            interpreter.control.gas.memory_mut().expansion_cost = memory.expansion_cost;
         } else {
             // Record frame paused gas.
             self.gas_metering.paused_frames.push(interpreter.control.gas);
@@ -1919,7 +1931,7 @@ impl Cheatcodes {
         let (key, target_address) = if interpreter.bytecode.opcode() == op::SLOAD {
             (try_or_return!(interpreter.stack.peek(0)), interpreter.input.target_address)
         } else {
-            return
+            return;
         };
 
         let Some(value) = ecx.sload(target_address, key) else {

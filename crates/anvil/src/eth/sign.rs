@@ -106,6 +106,7 @@ impl Signer for DevSigner {
             TypedTransactionRequest::Deposit(_) => {
                 unreachable!("op deposit txs should not be signed")
             }
+            TypedTransactionRequest::Seismic(mut tx) => Ok(signer.sign_transaction_sync(&mut tx)?),
         }
     }
 }
@@ -120,6 +121,9 @@ pub fn build_typed_transaction(
     signature: Signature,
 ) -> Result<TypedTransaction, BlockchainError> {
     let tx = match request {
+        TypedTransactionRequest::Seismic(tx) => {
+            TypedTransaction::Seismic(tx.into_signed(signature))
+        }
         TypedTransactionRequest::Legacy(tx) => TypedTransaction::Legacy(tx.into_signed(signature)),
         TypedTransactionRequest::EIP2930(tx) => {
             TypedTransaction::EIP2930(tx.into_signed(signature))

@@ -26,7 +26,7 @@ use foundry_evm::{
 };
 use foundry_linking::{LinkOutput, Linker};
 use rayon::prelude::*;
-use revm::primitives::hardfork::SpecId;
+// use revm::primitives::hardfork::SpecId;
 use std::{
     borrow::Borrow,
     collections::BTreeMap,
@@ -41,6 +41,8 @@ pub struct TestContract {
     pub abi: JsonAbi,
     pub bytecode: Bytes,
 }
+
+use seismic_prelude::foundry::SpecId;
 
 pub type DeployableContracts = BTreeMap<ArtifactId, TestContract>;
 
@@ -303,7 +305,6 @@ impl TestRunnerConfig {
     /// This is for example used to override the configuration with inline config.
     pub fn reconfigure_with(&mut self, config: Arc<Config>) {
         debug_assert!(!Arc::ptr_eq(&self.config, &config));
-
         self.spec_id = config.evm_spec_id();
         self.sender = config.sender;
         self.odyssey = config.odyssey;

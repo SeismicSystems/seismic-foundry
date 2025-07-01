@@ -14,7 +14,7 @@ repository.workspace = true
 workspace = true
 
 [[bin]]
-name = "forge"
+name = "sforge"
 path = "bin/main.rs"
 
 [[test]]
@@ -23,6 +23,8 @@ path = "tests/ui.rs"
 harness = false
 
 [dependencies]
+seismic-prelude.workspace = true
+
 # lib
 foundry-block-explorers = { workspace = true, features = ["foundry-compilers"] }
 foundry-common.workspace = true

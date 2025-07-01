@@ -13,6 +13,9 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+seismic-enclave.workspace = true
+seismic-prelude.workspace = true
+
 foundry-common.workspace = true
 foundry-evm.workspace = true
 revm = { workspace = true, default-features = false, features = [
@@ -23,15 +26,15 @@ revm = { workspace = true, default-features = false, features = [
 ] }
 op-revm.workspace = true
 
-alloy-primitives = { workspace = true, features = ["serde", "rlp"] }
+alloy-primitives = { workspace = true, features = ["serde", "seismic", "rlp"] }
 alloy-rpc-types = { workspace = true, features = ["anvil", "trace"] }
 alloy-serde.workspace = true
 alloy-rlp.workspace = true
 alloy-eips.workspace = true
 alloy-consensus = { workspace = true, features = ["k256", "kzg"] }
-alloy-dyn-abi = { workspace = true, features = ["std", "eip712"] }
+alloy-dyn-abi = { workspace = true, features = ["std", "eip712", "seismic"] }
 op-alloy-consensus = { workspace = true, features = ["serde"] }
-alloy-network.workspace = true
+# alloy-network.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 bytes.workspace = true

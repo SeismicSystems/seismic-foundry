@@ -97,7 +97,7 @@ impl ForkedDatabase {
         let db = self.db.db();
         let state_snapshot = StateSnapshot {
             accounts: db.accounts.read().clone(),
-            storage: db.storage.read().clone(),
+            storage: db.storage.read().clone().into(),
             block_hashes: db.block_hashes.read().clone(),
         };
         ForkDbStateSnapshot { local: self.cache_db.clone(), state_snapshot }
@@ -164,7 +164,11 @@ impl Database for ForkedDatabase {
         Database::code_by_hash(&mut self.cache_db, code_hash)
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage(
+        &mut self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         Database::storage(&mut self.cache_db, address, index)
     }
 
@@ -184,7 +188,11 @@ impl DatabaseRef for ForkedDatabase {
         self.cache_db.code_by_hash_ref(code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(&self.cache_db, address, index)
     }
 
@@ -209,13 +217,18 @@ pub struct ForkDbStateSnapshot {
 }
 
 impl ForkDbStateSnapshot {
-    fn get_storage(&self, address: Address, index: U256) -> Option<U256> {
+    fn get_storage(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Option<revm::primitives::FlaggedStorage> {
         self.local
             .cache
             .accounts
             .get(&address)
             .and_then(|account| account.storage.get(&index))
             .copied()
+            .into()
     }
 }
 
@@ -243,7 +256,11 @@ impl DatabaseRef for ForkDbStateSnapshot {
         self.local.code_by_hash_ref(code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         match self.local.cache.accounts.get(&address) {
             Some(account) => match account.storage.get(&index) {
                 Some(entry) => Ok(*entry),

@@ -1,0 +1,125 @@
+name: Seismic CI
+
+on:
+  push:
+    branches: [seismic]
+  pull_request:
+    branches: [seismic, alloy-1]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  build:
+    runs-on: large-github-runner
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-cache"
+      - name: sforge build
+        run: cargo build --bin sforge
+      - name: sanvil build
+        run: cargo build --bin sanvil
+
+  warnings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "warnings-cache"
+      - name: sforge warnings
+        run: RUSTFLAGS="-D warnings" cargo check --bin sforge
+      - name: sanvil warnings
+        run: RUSTFLAGS="-D warnings" cargo check --bin sanvil
+
+  test:
+    runs-on: large-github-runner
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "test-cache"
+      - name: seismic unit tests
+        run: cargo nextest run test_seismic_tx_encoding
+      - name: seismic integration tests
+        run: cargo nextest run test_seismic_
+      # TODO: make these work & run
+      # - name: sforge tests
+      #   run: cargo test --bin sforge
+      # - name: sanvil tests
+      #   run: cargo test --bin sanvil
+
+  viem:
+    runs-on: large-github-runner
+    timeout-minutes: 30
+    env:
+      SFOUNDRY_ROOT: /home/runner/work/seismic-foundry/seismic-foundry
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "viem-cache"
+      - name: sanvil build
+        run: cargo build --bin sanvil
+      - name: Install dependencies
+        run: bun install
+      - name: Run viem tests vs. Anvil
+        run: bun viem:test
+
+  contract-tests:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    env:
+      CODE_PATH: /home/ubuntu
+      SFORGE_BINARY: /home/ubuntu/.seismic/bin/sforge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "contract-tests-cache"
+      - name: Install JS dependencies
+        run: bun install
+      - name: Clean previous installations
+        run: rm -rf $HOME/.seismic/bin/sforge || true
+      - name: Install sforge binary
+        run: |
+          cargo install --root=$HOME/.seismic --profile dev --path ./crates/forge --locked
+          echo "$HOME/.seismic/bin" >> $GITHUB_PATH
+      - name: Verify sforge installation
+        run: |
+          ls -la $HOME/.seismic/bin/sforge
+          $HOME/.seismic/bin/sforge --version || echo "sforge failed to run"
+      - name: Run contract tests with sforge
+        run: bun forge:test

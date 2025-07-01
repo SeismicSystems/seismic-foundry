@@ -16,14 +16,11 @@ use revm::{
     bytecode::Bytecode,
     context::BlockEnv,
     database::{CacheDB, DatabaseRef, DbAccount},
-    primitives::KECCAK_EMPTY,
+    primitives::{FlaggedStorage, KECCAK_EMPTY},
     state::AccountInfo,
     Database, DatabaseCommit,
 };
-use serde::{
-    de::{MapAccess, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt, path::Path};
 
 /// Helper trait get access to the full state data of the database
@@ -130,7 +127,12 @@ pub trait Db:
     }
 
     /// Sets the balance of the given address
-    fn set_storage_at(&mut self, address: Address, slot: B256, val: B256) -> DatabaseResult<()>;
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: U256,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()>;
 
     /// inserts a blockhash for the given number
     fn insert_block_hash(&mut self, number: U256, hash: B256);
@@ -171,7 +173,7 @@ pub trait Db:
             );
 
             for (k, v) in account.storage.into_iter() {
-                self.set_storage_at(addr, k, v)?;
+                self.set_storage_at(addr, k, v.into())?;
             }
         }
         Ok(true)
@@ -210,8 +212,13 @@ impl<T: DatabaseRef<Error = DatabaseError> + Send + Sync + Clone + fmt::Debug> D
         self.insert_account_info(address, account)
     }
 
-    fn set_storage_at(&mut self, address: Address, slot: B256, val: B256) -> DatabaseResult<()> {
-        self.insert_account_storage(address, slot.into(), val.into())
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: U256,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()> {
+        self.insert_account_storage(address, slot, val)
     }
 
     fn insert_block_hash(&mut self, number: U256, hash: B256) {
@@ -345,7 +352,7 @@ impl DatabaseRef for StateDb {
         self.0.code_by_hash_ref(code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> DatabaseResult<U256> {
+    fn storage_ref(&self, address: Address, index: U256) -> DatabaseResult<FlaggedStorage> {
         self.0.storage_ref(address, index)
     }
 
@@ -423,38 +430,7 @@ pub struct SerializableAccountRecord {
     pub nonce: u64,
     pub balance: U256,
     pub code: Bytes,
-
-    #[serde(deserialize_with = "deserialize_btree")]
-    pub storage: BTreeMap<B256, B256>,
-}
-
-fn deserialize_btree<'de, D>(deserializer: D) -> Result<BTreeMap<B256, B256>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct BTreeVisitor;
-
-    impl<'de> Visitor<'de> for BTreeVisitor {
-        type Value = BTreeMap<B256, B256>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("a mapping of hex encoded storage slots to hex encoded state data")
-        }
-
-        fn visit_map<M>(self, mut mapping: M) -> Result<BTreeMap<B256, B256>, M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            let mut btree = BTreeMap::new();
-            while let Some((key, value)) = mapping.next_entry::<U256, U256>()? {
-                btree.insert(B256::from(key), B256::from(value));
-            }
-
-            Ok(btree)
-        }
-    }
-
-    deserializer.deserialize_map(BTreeVisitor)
+    pub storage: BTreeMap<U256, FlaggedStorage>,
 }
 
 /// Defines a backwards-compatible enum for transactions.

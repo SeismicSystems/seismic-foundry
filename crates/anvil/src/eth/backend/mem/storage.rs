@@ -568,9 +568,24 @@ impl MinedTransaction {
                     }
                     GethDebugBuiltInTracerType::CallTracer => {
                         return match tracer_config.into_call_config() {
-                            Ok(call_config) => Ok(GethTraceBuilder::new(self.info.traces.clone())
-                                .geth_call_traces(call_config, self.receipt.cumulative_gas_used())
-                                .into()),
+                            Ok(call_config) => {
+                                let frame = GethTraceBuilder::new(self.info.traces.clone())
+                                    .geth_call_traces(
+                                        call_config,
+                                        self.receipt.cumulative_gas_used(),
+                                    );
+
+                                // TODO: for shielding the trace
+                                /*
+                                frame.tx_type = self.info.tx_type.unwrap_or_default();
+                                if frame.tx_type ==
+                                    TxSeismic::TX_TYPE as isize
+                                {
+                                    frame = frame.shield_inputs();
+                                }
+                                */
+                                Ok(frame.into())
+                            }
                             Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
                         };
                     }

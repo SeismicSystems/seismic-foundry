@@ -14,12 +14,15 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+seismic-prelude.workspace = true
+alloy-seismic-evm.workspace = true
+
 foundry-cheatcodes-spec.workspace = true
 foundry-common.workspace = true
 foundry-config.workspace = true
 foundry-evm-abi.workspace = true
 
-alloy-dyn-abi = { workspace = true, features = ["arbitrary", "eip712"] }
+alloy-dyn-abi = { workspace = true, features = ["arbitrary", "eip712", "seismic"] }
 alloy-evm.workspace = true
 alloy-genesis.workspace = true
 alloy-json-abi.workspace = true
@@ -50,7 +53,7 @@ revm = { workspace = true, features = [
 ] }
 revm-inspectors.workspace = true
 op-revm.workspace = true
-alloy-op-evm.workspace = true
+# alloy-op-evm.workspace = true
 
 auto_impl.workspace = true
 eyre.workspace = true

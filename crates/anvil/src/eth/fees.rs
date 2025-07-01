@@ -16,12 +16,14 @@ use alloy_primitives::B256;
 use anvil_core::eth::transaction::TypedTransaction;
 use futures::StreamExt;
 use parking_lot::{Mutex, RwLock};
-use revm::{context_interface::block::BlobExcessGasAndPrice, primitives::hardfork::SpecId};
+use revm::context_interface::block::BlobExcessGasAndPrice;
 
 use crate::eth::{
     backend::{info::StorageInfo, notifications::NewBlockNotifications},
     error::BlockchainError,
 };
+
+use seismic_prelude::foundry::SpecId;
 
 /// Maximum number of entries in the fee history cache
 pub const MAX_FEE_HISTORY_CACHE_SIZE: u64 = 2048u64;
@@ -45,6 +47,7 @@ pub fn default_elasticity() -> f64 {
 /// Stores the fee related information
 #[derive(Clone, Debug)]
 pub struct FeeManager {
+    #[allow(dead_code)]
     /// Hardfork identifier
     spec_id: SpecId,
     /// Tracks the base fee for the next block post London
@@ -88,11 +91,17 @@ impl FeeManager {
 
     /// Returns true for post London
     pub fn is_eip1559(&self) -> bool {
+        /*
         (self.spec_id as u8) >= (SpecId::LONDON as u8)
+        */
+        true
     }
 
     pub fn is_eip4844(&self) -> bool {
+        /*
         (self.spec_id as u8) >= (SpecId::CANCUN as u8)
+        */
+        true
     }
 
     /// Calculates the current blob gas price
@@ -168,7 +177,7 @@ impl FeeManager {
         // It means it was set by the user deliberately and therefore we treat it as a constant.
         // Therefore, we skip the base fee calculation altogether and we return 0.
         if self.base_fee() == 0 {
-            return 0
+            return 0;
         }
         calculate_next_block_base_fee(gas_used, gas_limit, last_fee_per_gas)
     }
@@ -297,6 +306,7 @@ impl FeeHistoryService {
                             .max_priority_fee_per_gas
                             .min(t.tx().max_fee_per_gas.saturating_sub(base_fee)),
                         Some(TypedTransaction::Deposit(_)) => 0,
+                        Some(TypedTransaction::Seismic(_)) => 0,
                         None => 0,
                     };
 
@@ -316,7 +326,7 @@ impl FeeHistoryService {
                     for (gas_used, effective_reward) in transactions.iter().cloned() {
                         sum_gas += gas_used;
                         if target_gas <= sum_gas {
-                            return Some(effective_reward)
+                            return Some(effective_reward);
                         }
                     }
                     None
@@ -438,7 +448,7 @@ impl FeeDetails {
                 if let Some(max_priority) = max_priority {
                     let max_fee = max_fee.unwrap_or_default();
                     if max_priority > max_fee {
-                        return Err(BlockchainError::InvalidFeeInput)
+                        return Err(BlockchainError::InvalidFeeInput);
                     }
                 }
                 Ok(Self {
@@ -454,7 +464,7 @@ impl FeeDetails {
                 if let Some(max_priority) = max_priority {
                     let max_fee = max_fee.unwrap_or_default();
                     if max_priority > max_fee {
-                        return Err(BlockchainError::InvalidFeeInput)
+                        return Err(BlockchainError::InvalidFeeInput);
                     }
                 }
                 Ok(Self {

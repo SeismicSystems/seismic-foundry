@@ -9,6 +9,7 @@ use revm::primitives::hardfork::SpecId;
 pub enum ChainHardfork {
     Ethereum(EthereumHardfork),
     Optimism(OptimismHardfork),
+    Seismic(SeismicHardfork),
 }
 
 impl From<EthereumHardfork> for ChainHardfork {
@@ -23,9 +24,16 @@ impl From<OptimismHardfork> for ChainHardfork {
     }
 }
 
+impl From<SeismicHardfork> for ChainHardfork {
+    fn from(value: SeismicHardfork) -> Self {
+        Self::Seismic(value)
+    }
+}
+
 impl From<ChainHardfork> for SpecId {
     fn from(fork: ChainHardfork) -> Self {
         match fork {
+            ChainHardfork::Seismic(hardfork) => hardfork.into(),
             ChainHardfork::Ethereum(hardfork) => hardfork.into(),
             ChainHardfork::Optimism(hardfork) => hardfork.into_eth_spec(),
         }
@@ -216,6 +224,36 @@ impl From<OptimismHardfork> for OpSpecId {
             OptimismHardfork::Granite => Self::GRANITE,
             OptimismHardfork::Holocene => Self::HOLOCENE,
             OptimismHardfork::Isthmus => Self::ISTHMUS,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SeismicHardfork {
+    Mercury,
+    #[default]
+    Latest,
+}
+
+impl FromStr for SeismicHardfork {
+    type Err = eyre::Report;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.to_lowercase();
+        let hardfork = match s.as_str() {
+            "mercury" => Self::Mercury,
+            "latest" => Self::Latest,
+            _ => bail!("Unknown hardfork {s}"),
+        };
+        Ok(hardfork)
+    }
+}
+
+impl From<SeismicHardfork> for SpecId {
+    fn from(fork: SeismicHardfork) -> Self {
+        match fork {
+            SeismicHardfork::Mercury => Self::MERCURY,
+            SeismicHardfork::Latest => Self::MERCURY,
         }
     }
 }

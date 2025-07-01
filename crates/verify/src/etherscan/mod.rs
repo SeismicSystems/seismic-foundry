@@ -72,7 +72,7 @@ impl VerificationProvider for EtherscanVerificationProvider {
                 verify_args.address.to_checksum(None)
             )?;
 
-            return Ok(())
+            return Ok(());
         }
 
         trace!(?verify_args, "submitting verification request");
@@ -103,7 +103,7 @@ impl VerificationProvider for EtherscanVerificationProvider {
                         // specific for blockscout response
                         || resp.result == "Smart-contract already verified."
                     {
-                        return Ok(None)
+                        return Ok(None);
                     }
 
                     if resp.result.starts_with("Unable to locate ContractCode at") ||
@@ -142,7 +142,7 @@ impl VerificationProvider for EtherscanVerificationProvider {
                     retry: RETRY_CHECK_ON_VERIFY,
                     verifier: args.verifier,
                 };
-                return self.check(check_args).await
+                return self.check(check_args).await;
             }
         } else {
             sh_println!("Contract source code already verified")?;
@@ -173,20 +173,20 @@ impl VerificationProvider for EtherscanVerificationProvider {
                 );
 
                 if resp.result == "Pending in queue" {
-                    return Err(RetryError::Retry(eyre!("Verification is still pending...")))
+                    return Err(RetryError::Retry(eyre!("Verification is still pending...")));
                 }
 
                 if resp.result == "Unable to verify" {
-                    return Err(RetryError::Retry(eyre!("Unable to verify.")))
+                    return Err(RetryError::Retry(eyre!("Unable to verify.")));
                 }
 
                 if resp.result == "Already Verified" {
                     let _ = sh_println!("Contract source code already verified");
-                    return Ok(())
+                    return Ok(());
                 }
 
                 if resp.status == "0" {
-                    return Err(RetryError::Break(eyre!("Contract failed to verify.")))
+                    return Err(RetryError::Break(eyre!("Contract failed to verify.")));
                 }
 
                 if resp.result == "Pass - Verified" {
@@ -380,10 +380,10 @@ impl EtherscanVerificationProvider {
                 read_constructor_args_file(constructor_args_path.to_path_buf())?,
             )?;
             let encoded_args = hex::encode(encoded_args);
-            return Ok(Some(encoded_args[8..].into()))
+            return Ok(Some(encoded_args[8..].into()));
         }
         if args.guess_constructor_args {
-            return Ok(Some(self.guess_constructor_args(args, context).await?))
+            return Ok(Some(self.guess_constructor_args(args, context).await?));
         }
 
         Ok(args.constructor_args.clone())
@@ -412,9 +412,9 @@ impl EtherscanVerificationProvider {
             .ok_or_eyre("Couldn't fetch transaction receipt from RPC")?;
 
         let maybe_creation_code = if receipt.contract_address == Some(args.address) {
-            transaction.inner.inner.input()
+            transaction.0.inner.input()
         } else if transaction.to() == Some(DEFAULT_CREATE2_DEPLOYER) {
-            &transaction.inner.inner.input()[32..]
+            &transaction.0.inner.input()[32..]
         } else {
             eyre::bail!("Fetching of constructor arguments is not supported for contracts created by contracts")
         };

@@ -1,9 +1,10 @@
 use crate::{ScriptSequence, TransactionWithMetadata};
-use alloy_network::AnyTransactionReceipt;
 use eyre::{bail, Result};
 use foundry_common::fs;
 use revm_inspectors::tracing::types::CallKind;
 use std::path::{Component, Path, PathBuf};
+
+use seismic_prelude::foundry::AnyTransactionReceipt;
 
 /// This type reads broadcast files in the
 /// `project_root/broadcast/{contract_name}.s.sol/{chain_id}/` directory.

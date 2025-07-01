@@ -5,7 +5,7 @@ use alloy_network::{
         EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID, EIP7702_TX_TYPE_ID,
         LEGACY_TX_TYPE_ID,
     },
-    AnyTxEnvelope, TransactionResponse,
+    TransactionResponse,
 };
 use alloy_primitives::{Address, Selector, TxKind, B256, U256};
 use alloy_provider::{network::BlockResponse, Network};
@@ -16,6 +16,8 @@ use revm::primitives::hardfork::SpecId;
 pub use revm::state::EvmState as StateChangeset;
 
 use crate::EnvMut;
+
+use seismic_prelude::foundry::{AnyTxEnvelope, SeismicTransactionRequest};
 
 /// Depending on the configured chain id and block number this should apply any specific changes
 ///
@@ -105,26 +107,30 @@ pub fn configure_tx_env(env: &mut EnvMut<'_>, tx: &Transaction<AnyTxEnvelope>) {
 /// impersonated transaction by resetting the `env.tx.caller` field to `impersonated_from`.
 pub fn configure_tx_req_env(
     env: &mut EnvMut<'_>,
-    tx: &TransactionRequest,
+    tx: &SeismicTransactionRequest,
     impersonated_from: Option<Address>,
 ) -> eyre::Result<()> {
-    let TransactionRequest {
-        nonce,
-        from,
-        to,
-        value,
-        gas_price,
-        gas,
-        max_fee_per_gas,
-        max_priority_fee_per_gas,
-        max_fee_per_blob_gas,
-        ref input,
-        chain_id,
-        ref blob_versioned_hashes,
-        ref access_list,
-        transaction_type,
-        ref authorization_list,
-        sidecar: _,
+    let SeismicTransactionRequest {
+        inner:
+            TransactionRequest {
+                nonce,
+                from,
+                to,
+                value,
+                gas_price,
+                gas,
+                max_fee_per_gas,
+                max_priority_fee_per_gas,
+                max_fee_per_blob_gas,
+                ref input,
+                chain_id,
+                ref blob_versioned_hashes,
+                ref access_list,
+                transaction_type,
+                ref authorization_list,
+                sidecar: _,
+            },
+        seismic_elements: _,
     } = *tx;
 
     // If no transaction type is provided, we need to infer it from the other fields.
@@ -141,34 +147,34 @@ pub fn configure_tx_req_env(
             LEGACY_TX_TYPE_ID
         }
     });
-    env.tx.tx_type = tx_type;
+    env.tx.base.tx_type = tx_type;
 
     // If no `to` field then set create kind: https://eips.ethereum.org/EIPS/eip-2470#deployment-transaction
-    env.tx.kind = to.unwrap_or(TxKind::Create);
+    env.tx.base.kind = to.unwrap_or(TxKind::Create);
     // If the transaction is impersonated, we need to set the caller to the from
     // address Ref: https://github.com/foundry-rs/foundry/issues/9541
-    env.tx.caller =
+    env.tx.base.caller =
         impersonated_from.unwrap_or(from.ok_or_else(|| eyre::eyre!("missing `from` field"))?);
-    env.tx.gas_limit = gas.ok_or_else(|| eyre::eyre!("missing `gas` field"))?;
-    env.tx.nonce = nonce.unwrap_or_default();
-    env.tx.value = value.unwrap_or_default();
-    env.tx.data = input.input().cloned().unwrap_or_default();
-    env.tx.chain_id = chain_id;
+    env.tx.base.gas_limit = gas.ok_or_else(|| eyre::eyre!("missing `gas` field"))?;
+    env.tx.base.nonce = nonce.unwrap_or_default();
+    env.tx.base.value = value.unwrap_or_default();
+    env.tx.base.data = input.input().cloned().unwrap_or_default();
+    env.tx.base.chain_id = chain_id;
 
     // Type 1, EIP-2930
-    env.tx.access_list = access_list.clone().unwrap_or_default();
+    env.tx.base.access_list = access_list.clone().unwrap_or_default();
 
     // Type 2, EIP-1559
-    env.tx.gas_price = gas_price.or(max_fee_per_gas).unwrap_or_default();
-    env.tx.gas_priority_fee = max_priority_fee_per_gas;
+    env.tx.base.gas_price = gas_price.or(max_fee_per_gas).unwrap_or_default();
+    env.tx.base.gas_priority_fee = max_priority_fee_per_gas;
 
     // Type 3, EIP-4844
-    env.tx.blob_hashes = blob_versioned_hashes.clone().unwrap_or_default();
-    env.tx.max_fee_per_blob_gas = max_fee_per_blob_gas.unwrap_or_default();
+    env.tx.base.blob_hashes = blob_versioned_hashes.clone().unwrap_or_default();
+    env.tx.base.max_fee_per_blob_gas = max_fee_per_blob_gas.unwrap_or_default();
 
     // Type 4, EIP-7702
     if let Some(authorization_list) = authorization_list {
-        env.tx.set_signed_authorization(authorization_list.clone());
+        env.tx.base.set_signed_authorization(authorization_list.clone());
     }
 
     Ok(())

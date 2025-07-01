@@ -1,7 +1,7 @@
 use crate::{bytecode::VerifyBytecodeArgs, types::VerificationType};
 use alloy_dyn_abi::DynSolValue;
 use alloy_primitives::{Address, Bytes, TxKind};
-use alloy_provider::{network::AnyRpcBlock, Provider};
+use alloy_provider::Provider;
 use alloy_rpc_types::BlockId;
 use clap::ValueEnum;
 use eyre::{OptionExt, Result};
@@ -20,10 +20,12 @@ use foundry_evm::{
     traces::TraceMode, Env, EnvMut,
 };
 use reqwest::Url;
-use revm::{bytecode::Bytecode, database::Database, primitives::hardfork::SpecId};
+use revm::{bytecode::Bytecode, database::Database};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
+
+use seismic_prelude::foundry::{AnyRpcBlock, SpecId};
 
 /// Enum to represent the type of bytecode being verified
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, ValueEnum)]
@@ -130,7 +132,7 @@ pub fn build_using_cache(
                     }
                 }
 
-                return Ok(artifact.artifact)
+                return Ok(artifact.artifact);
             }
         }
     }
@@ -185,7 +187,7 @@ fn is_partial_match(
     // 1. Check length of constructor args
     if constructor_args.is_empty() || is_runtime {
         // Assume metadata is at the end of the bytecode
-        return try_extract_and_compare_bytecode(local_bytecode, bytecode)
+        return try_extract_and_compare_bytecode(local_bytecode, bytecode);
     }
 
     // If not runtime, extract constructor args from the end of the bytecode

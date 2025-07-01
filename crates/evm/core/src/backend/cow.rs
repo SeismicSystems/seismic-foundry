@@ -12,18 +12,19 @@ use crate::{
 use alloy_evm::Evm;
 use alloy_genesis::GenesisAccount;
 use alloy_primitives::{Address, B256, U256};
-use alloy_rpc_types::TransactionRequest;
 use eyre::WrapErr;
 use foundry_fork_db::DatabaseError;
 use revm::{
     bytecode::Bytecode,
     context_interface::result::ResultAndState,
     database::DatabaseRef,
-    primitives::{hardfork::SpecId, HashMap as Map},
+    primitives::HashMap as Map,
     state::{Account, AccountInfo},
     Database, DatabaseCommit,
 };
 use std::{borrow::Cow, collections::BTreeMap};
+
+use seismic_prelude::foundry::{SpecId, TransactionRequest};
 
 /// A wrapper around `Backend` that ensures only `revm::DatabaseRef` functions are called.
 ///
@@ -100,7 +101,7 @@ impl<'a> CowBackend<'a> {
             env.evm_env.cfg_env.spec = self.spec_id;
             backend.initialize(&env);
             self.is_initialized = true;
-            return backend
+            return backend;
         }
         self.backend.to_mut()
     }
@@ -108,7 +109,7 @@ impl<'a> CowBackend<'a> {
     /// Returns a mutable instance of the Backend if it is initialized.
     fn initialized_backend_mut(&mut self) -> Option<&mut Backend> {
         if self.is_initialized {
-            return Some(self.backend.to_mut())
+            return Some(self.backend.to_mut());
         }
         None
     }
@@ -132,7 +133,7 @@ impl DatabaseExt for CowBackend<'_> {
     fn delete_state_snapshot(&mut self, id: U256) -> bool {
         // delete state snapshot requires a previous snapshot to be initialized
         if let Some(backend) = self.initialized_backend_mut() {
-            return backend.delete_state_snapshot(id)
+            return backend.delete_state_snapshot(id);
         }
         false
     }
@@ -301,7 +302,11 @@ impl DatabaseRef for CowBackend<'_> {
         DatabaseRef::code_by_hash_ref(self.backend.as_ref(), code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(self.backend.as_ref(), address, index)
     }
 
@@ -321,7 +326,11 @@ impl Database for CowBackend<'_> {
         DatabaseRef::code_by_hash_ref(self, code_hash)
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage(
+        &mut self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         DatabaseRef::storage_ref(self, address, index)
     }
 

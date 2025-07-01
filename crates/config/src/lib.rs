@@ -39,7 +39,7 @@ use foundry_compilers::{
     RestrictionsWithVersion, VyperLanguage,
 };
 use regex::Regex;
-use revm::primitives::hardfork::SpecId;
+// use revm::primitives::hardfork::SpecId;
 use semver::Version;
 use serde::{Deserialize, Serialize, Serializer};
 use std::{
@@ -125,6 +125,8 @@ use bind_json::BindJsonConfig;
 
 mod compilation;
 pub use compilation::{CompilationRestrictions, SettingsOverrides};
+
+use seismic_prelude::foundry::SpecId;
 
 /// Foundry configuration
 ///
@@ -512,6 +514,11 @@ pub struct Config {
     /// Timeout for transactions in seconds.
     pub transaction_timeout: u64,
 
+    /// Seismic field (default: true)
+    ///
+    /// Used for purposes of specifying Seismic-Solidity (solc)
+    pub seismic: bool,
+
     /// Warnings gathered when loading the Config. See [`WarningsProvider`] for more information.
     #[serde(rename = "__warnings", default, skip_serializing)]
     pub warnings: Vec<Warning>,
@@ -882,7 +889,16 @@ impl Config {
         config.libs.sort_unstable();
         config.libs.dedup();
 
+        config.sanitize_seismic_settings();
+
         config
+    }
+
+    // Turn on seismic flag if evm version is seismic. For now this logic works.
+    pub fn sanitize_seismic_settings(&mut self) {
+        if self.evm_version == EvmVersion::Mercury {
+            self.seismic = true;
+        }
     }
 
     /// Cleans up any duplicate `Remapping` and sorts them
@@ -1071,6 +1087,37 @@ impl Config {
     ///
     /// If `solc` is [`SolcReq::Local`] then this will ensure that the path exists.
     fn ensure_solc(&self) -> Result<Option<Solc>, SolcError> {
+        if self.seismic {
+            if let Some(ref solc_req) = self.solc {
+                match solc_req {
+                    SolcReq::Version(version) => {
+                        if version.to_string() == "0.8.28" {
+                            let default_solc_path = self.get_default_ssolc_path()?;
+                            return Ok(Some(Solc::new(default_solc_path)?));
+                        } else {
+                            if let Some(solc) = Solc::find_svm_installed_version(version)? {
+                                return Ok(Some(solc));
+                            } else if self.offline {
+                                return Err(SolcError::msg(format!(
+                                    "can't install missing solc {version} in offline mode"
+                                )));
+                            }
+                            return Ok(Some(Solc::blocking_install(version)?));
+                        }
+                    }
+                    SolcReq::Local(local_solc_path) => {
+                        if !local_solc_path.is_file() {
+                            return Err(SolcError::msg(format!(
+                                "`solc` {} does not exist",
+                                local_solc_path.display()
+                            )));
+                        }
+                        return Ok(Some(Solc::new(local_solc_path)?));
+                    }
+                }
+            }
+        }
+
         if let Some(solc) = &self.solc {
             let solc = match solc {
                 SolcReq::Version(version) => {
@@ -1102,6 +1149,23 @@ impl Config {
     }
 
     /// Returns the [SpecId] derived from the configured [EvmVersion]
+    #[inline]
+    pub fn get_default_ssolc_path(&self) -> Result<PathBuf, SolcError> {
+        let default_solc_path = if cfg!(windows) {
+            PathBuf::from("C:\\Program Files\\Seismic\\bin\\ssolc.exe")
+        } else {
+            PathBuf::from("/usr/local/bin/ssolc")
+        };
+        if !default_solc_path.is_file() {
+            return Err(SolcError::msg(format!(
+                "`solc` {} does not exist",
+                default_solc_path.display()
+            )));
+        }
+        Ok(default_solc_path)
+    }
+
+    /// Get default ssolc path
     #[inline]
     pub fn evm_spec_id(&self) -> SpecId {
         evm_spec_id(self.evm_version, self.odyssey)
@@ -2315,11 +2379,11 @@ impl Default for Config {
             allow_paths: vec![],
             include_paths: vec![],
             force: false,
-            evm_version: EvmVersion::Cancun,
+            evm_version: EvmVersion::Mercury,
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,
-            solc: None,
+            solc: Some(SolcReq::Version(Version::parse("0.8.28").unwrap())),
             vyper: Default::default(),
             auto_detect_solc: true,
             offline: false,
@@ -2415,6 +2479,7 @@ impl Default for Config {
             transaction_timeout: 120,
             additional_compiler_profiles: Default::default(),
             compilation_restrictions: Default::default(),
+            seismic: true,
             script_execution_protection: true,
             _non_exhaustive: (),
         }

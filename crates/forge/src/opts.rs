@@ -15,7 +15,7 @@ use std::path::PathBuf;
 /// Build, test, fuzz, debug and deploy Solidity contracts.
 #[derive(Parser)]
 #[command(
-    name = "forge",
+    name = "sforge",
     version = SHORT_VERSION,
     long_version = LONG_VERSION,
     after_help = "Find more information in the book: http://book.getfoundry.sh/reference/forge/forge.html",

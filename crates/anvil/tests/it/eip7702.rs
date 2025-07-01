@@ -33,7 +33,7 @@ async fn can_send_eip7702_tx() {
         .with_input(logger_bytecode);
 
     let receipt = provider
-        .send_transaction(WithOtherFields::new(tx))
+        .send_transaction(WithOtherFields::new(tx.into()))
         .await
         .unwrap()
         .get_receipt()
@@ -102,7 +102,7 @@ async fn can_send_eip7702_request() {
         .with_input(logger_bytecode);
 
     let receipt = provider
-        .send_transaction(WithOtherFields::new(tx))
+        .send_transaction(WithOtherFields::new(tx.into()))
         .await
         .unwrap()
         .get_receipt()
@@ -136,7 +136,7 @@ async fn can_send_eip7702_request() {
     let request = TransactionRequest::from_transaction(tx).with_from(sender);
 
     api.anvil_impersonate_account(sender).await.unwrap();
-    let txhash = api.send_transaction(WithOtherFields::new(request)).await.unwrap();
+    let txhash = api.send_transaction(WithOtherFields::new(request.into())).await.unwrap();
 
     let txhash = provider
         .watch_pending_transaction(PendingTransactionConfig::new(txhash))

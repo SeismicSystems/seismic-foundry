@@ -291,8 +291,9 @@ impl ExecutedState {
         // issues with eth_estimateGas and eth_sendTransaction requests.
         for tx in &mut txs {
             if let Some(req) = tx.transaction.as_unsigned_mut() {
-                req.input =
-                    TransactionInput::maybe_both(std::mem::take(&mut req.input).into_input());
+                req.inner.inner.input = TransactionInput::maybe_both(
+                    std::mem::take(&mut req.inner.inner.input).into_input(),
+                );
             }
         }
         let rpc_data = RpcData::from_transactions(&txs);

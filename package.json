@@ -1,0 +1,14 @@
+{
+  "workspaces": [
+    "packages/**"
+  ],
+  "private": true,
+  "scripts": {
+    "viem:test": "bun run --cwd packages/client-tests test",
+    "forge:test": "bun run --cwd packages/sforge-tests test"
+  },
+  "dependencies": {
+    "seismic-viem": "^1.0.44",
+    "seismic-viem-tests": "^0.0.15"
+  }
+}

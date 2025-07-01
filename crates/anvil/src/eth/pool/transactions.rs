@@ -1,5 +1,4 @@
 use crate::eth::{error::PoolError, util::hex_fmt_many};
-use alloy_network::AnyRpcTransaction;
 use alloy_primitives::{
     map::{HashMap, HashSet},
     Address, TxHash,
@@ -7,6 +6,8 @@ use alloy_primitives::{
 use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
 use parking_lot::RwLock;
 use std::{cmp::Ordering, collections::BTreeSet, fmt, str::FromStr, sync::Arc, time::Instant};
+
+use seismic_prelude::foundry::AnyRpcTransaction;
 
 /// A unique identifying marker for a transaction
 pub type TxMarker = Vec<u8>;
@@ -185,7 +186,7 @@ impl PendingTransactions {
                 warn!(target: "txpool", "pending replacement transaction underpriced [{:?}]", tx.transaction.hash());
                 return Err(PoolError::ReplacementUnderpriced(Box::new(
                     tx.transaction.as_ref().clone(),
-                )))
+                )));
             }
         }
 
@@ -371,7 +372,7 @@ impl Iterator for TransactionsIterator {
                 }
             }
 
-            return Some(best.transaction)
+            return Some(best.transaction);
         }
     }
 }
@@ -498,7 +499,7 @@ impl ReadyTransactions {
 
         // early exit if we are not replacing anything.
         if remove_hashes.is_empty() {
-            return Ok((Vec::new(), Vec::new()))
+            return Ok((Vec::new(), Vec::new()));
         }
 
         // check if we're replacing the same transaction and if it can be replaced
@@ -515,7 +516,7 @@ impl ReadyTransactions {
                     // check if underpriced
                     if tx.pending_transaction.transaction.gas_price() <= to_remove.gas_price() {
                         warn!(target: "txpool", "ready replacement transaction underpriced [{:?}]", tx.hash());
-                        return Err(PoolError::ReplacementUnderpriced(Box::new(tx.clone())))
+                        return Err(PoolError::ReplacementUnderpriced(Box::new(tx.clone())));
                     } else {
                         trace!(target: "txpool", "replacing ready transaction [{:?}] with higher gas price [{:?}]", to_remove.transaction.transaction.hash(), tx.hash());
                     }

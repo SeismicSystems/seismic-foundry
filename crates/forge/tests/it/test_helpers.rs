@@ -188,7 +188,7 @@ impl ForgeTestData {
         let config = self.config.clone();
         let mut runner = MultiContractRunnerBuilder::new(config).sender(self.config.sender);
         if self.profile.is_paris() {
-            runner = runner.evm_spec(SpecId::MERGE);
+            runner = runner.evm_spec(SpecId::MERGE.into());
         }
         runner
     }
