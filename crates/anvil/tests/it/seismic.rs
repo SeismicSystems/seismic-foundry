@@ -150,9 +150,8 @@ async fn test_seismic_transaction_rpc() {
         EthereumWallet::new(signer.clone()),
         reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
     );
-    let unsigned_provider = SeismicUnsignedProvider::<AnyNetwork>::new_http(
-        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
-    );
+    let url = handle.http_endpoint().as_str().parse().unwrap();
+    let unsigned_provider = SeismicUnsignedProvider::<AnyNetwork>::new_http(url);
     let deployer = handle.dev_accounts().next().unwrap();
     let network_pubkey = provider.get_tee_pubkey().await.unwrap();
 
