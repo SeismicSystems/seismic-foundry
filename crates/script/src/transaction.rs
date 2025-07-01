@@ -67,7 +67,7 @@ impl ScriptTransactionBuilder {
                 if let Some(function) = function {
                     self.transaction.function = Some(function.signature());
 
-                    let values = function.abi_decode_input(data, false).inspect_err(|_| {
+                    let values = function.abi_decode_input(data).inspect_err(|_| {
                         error!(
                             contract=?self.transaction.contract_name,
                             signature=?function,
@@ -126,7 +126,7 @@ impl ScriptTransactionBuilder {
         let constructor_args = &creation_code[bytecode.len()..];
 
         let Some(constructor) = info.abi.constructor() else { return Ok(()) };
-        let values = constructor.abi_decode_input(constructor_args, false).inspect_err(|_| {
+        let values = constructor.abi_decode_input(constructor_args).inspect_err(|_| {
                 error!(
                     contract=?self.transaction.contract_name,
                     signature=%format!("constructor({})", constructor.inputs.iter().map(|p| &p.ty).format(",")),
@@ -160,7 +160,7 @@ impl ScriptTransactionBuilder {
         if !self.transaction.is_fixed_gas_limit {
             if let Some(unsigned) = self.transaction.transaction.as_unsigned_mut() {
                 // We inflate the gas used by the user specified percentage
-                unsigned.gas = Some(result.gas_used * gas_estimate_multiplier / 100);
+                unsigned.inner.inner.gas = Some(result.gas_used * gas_estimate_multiplier / 100);
             }
         }
 

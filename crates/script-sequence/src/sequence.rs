@@ -1,5 +1,4 @@
 use crate::transaction::TransactionWithMetadata;
-use alloy_network::AnyTransactionReceipt;
 use alloy_primitives::{hex, map::HashMap, TxHash};
 use eyre::{ContextCompat, Result, WrapErr};
 use foundry_common::{fs, shell, TransactionMaybeSigned, SELECTOR_LEN};
@@ -12,6 +11,8 @@ use std::{
     path::PathBuf,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
+
+use seismic_prelude::foundry::AnyTransactionReceipt;
 
 pub const DRY_RUN_DIR: &str = "dry-run";
 

@@ -4,7 +4,7 @@ use crate::{
     utils::http_provider_with_signer,
 };
 use alloy_eips::BlockId;
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{
     hex::{self, FromHex},
     Address, Bytes, U256,
@@ -29,6 +29,8 @@ use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{spawn, EthereumHardfork, NodeConfig};
 
+use seismic_prelude::foundry::EthereumWallet;
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_transfer_parity_traces() {
     let (_api, handle) = spawn(NodeConfig::test()).await;
@@ -40,7 +42,7 @@ async fn test_get_transfer_parity_traces() {
     let amount = handle.genesis_balance().checked_div(U256::from(2u64)).unwrap();
     // specify the `from` field so that the client knows which account to use
     let tx = TransactionRequest::default().to(to).value(amount).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     // broadcast it via the eth_sendTransaction API
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
@@ -138,7 +140,11 @@ async fn test_transfer_debug_trace_call() {
 
     let traces = handle
         .http_provider()
-        .debug_trace_call(tx, BlockId::latest(), GethDebugTracingCallOptions::default())
+        .debug_trace_call(
+            WithOtherFields::new(tx.into()),
+            BlockId::latest(),
+            GethDebugTracingCallOptions::default(),
+        )
         .await
         .unwrap();
 
@@ -183,7 +189,7 @@ async fn test_call_tracer_debug_trace_call() {
     let internal_call_tx_traces = handle
         .http_provider()
         .debug_trace_call(
-            internal_call_tx.clone(),
+            WithOtherFields::new(internal_call_tx.clone().into()),
             BlockId::latest(),
             GethDebugTracingCallOptions::default().with_tracing_options(
                 GethDebugTracingOptions::default()
@@ -211,7 +217,7 @@ async fn test_call_tracer_debug_trace_call() {
     let internal_call_only_top_call_tx_traces = handle
         .http_provider()
         .debug_trace_call(
-            internal_call_tx.clone(),
+            WithOtherFields::new(internal_call_tx.clone().into()),
             BlockId::latest(),
             GethDebugTracingCallOptions::default().with_tracing_options(
                 GethDebugTracingOptions::default()
@@ -240,7 +246,7 @@ async fn test_call_tracer_debug_trace_call() {
     let direct_call_tx_traces = handle
         .http_provider()
         .debug_trace_call(
-            direct_call_tx,
+            WithOtherFields::new(direct_call_tx.into()),
             BlockId::latest(),
             GethDebugTracingCallOptions::default().with_tracing_options(
                 GethDebugTracingOptions::default()
@@ -284,7 +290,7 @@ async fn test_debug_trace_call_state_override() {
     let tx_traces = handle
         .http_provider()
         .debug_trace_call(
-            tx.clone(),
+            WithOtherFields::new(tx.clone().into()),
             BlockId::latest(),
             GethDebugTracingCallOptions::default()
                 .with_tracing_options(GethDebugTracingOptions::default())
@@ -323,7 +329,7 @@ async fn test_trace_address_fork() {
         .with_input::<Bytes>(input.into())
         .with_gas_limit(300_000);
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     api.anvil_impersonate_account(from).await.unwrap();
 
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
@@ -521,11 +527,11 @@ async fn test_trace_address_fork2() {
         .with_input::<Bytes>(input.into())
         .with_gas_limit(350_000);
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     api.anvil_impersonate_account(from).await.unwrap();
 
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.as_receipt().unwrap().status.coerce_status();
     assert!(status);
 
     let traces = provider.trace_transaction(tx.transaction_hash).await.unwrap();
@@ -793,7 +799,7 @@ async fn test_trace_filter() {
 
     for i in 0..=5 {
         let tx = TransactionRequest::default().to(to).value(U256::from(i)).from(from);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         api.send_transaction(tx).await.unwrap();
     }
 
@@ -813,11 +819,11 @@ async fn test_trace_filter() {
 
     for i in 0..=5 {
         let tx = TransactionRequest::default().to(to).value(U256::from(i)).from(from);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
         let tx = TransactionRequest::default().to(to_two).value(U256::from(i)).from(from_two);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
     }
 
@@ -851,7 +857,7 @@ async fn test_trace_filter() {
     // Mine transactions to filter against
     for i in 0..=5 {
         let tx = TransactionRequest::default().to(to_two).value(U256::from(i)).from(from_two);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
     }
 
@@ -872,6 +878,21 @@ async fn test_trace_filter() {
 
     let traces = api.trace_filter(tracer).await;
     assert!(traces.is_err());
+
+    // Test same from and to block is valid
+    let latest = provider.get_block_number().await.unwrap();
+    let tracer = TraceFilter {
+        from_block: Some(latest),
+        to_block: Some(latest),
+        from_address: vec![],
+        to_address: vec![],
+        mode: TraceFilterMode::Union,
+        after: None,
+        count: None,
+    };
+
+    let traces = api.trace_filter(tracer).await;
+    assert!(traces.is_ok());
 
     // Test invalid block range
     let latest = provider.get_block_number().await.unwrap();
@@ -901,7 +922,7 @@ async fn test_trace_filter() {
 
     for i in 0..=10 {
         let tx = TransactionRequest::default().to(to).value(U256::from(i)).from(from);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
     }
 
