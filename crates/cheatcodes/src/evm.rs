@@ -478,10 +478,20 @@ impl Cheatcode for txGasPriceCall {
 }
 
 impl Cheatcode for warpCall {
+    /// NOTE: allow the input timestamp to be either seconds or milliseconds, but when we set block timestamp must be in milliseconds
     fn apply_stateful(&self, ccx: &mut CheatsCtxt) -> Result {
         let Self { newTimestamp } = self;
         ensure!(*newTimestamp <= U256::from(u64::MAX), "timestamp must be less than 2^64 - 1");
-        ccx.ecx.block.timestamp = newTimestamp.saturating_to();
+
+        let mut timestamp_ms: u64 = newTimestamp.saturating_to();
+        if timestamp_ms < 1_000_000_000_000 {
+            // add a warning before converting to milliseconds
+            warn!("warp timestamp is in seconds, converting to milliseconds");
+            timestamp_ms = timestamp_ms * 1_000;
+        }
+
+        ccx.ecx.block.timestamp = timestamp_ms;
+
         Ok(Default::default())
     }
 }

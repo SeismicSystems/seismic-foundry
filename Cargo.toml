@@ -378,11 +378,11 @@ alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy
 alloy-trie = { git = "https://github.com/SeismicSystems/seismic-trie.git", rev = "417644c" }
 
 # seismic-revm
-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e7fa9fab" }
-revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e7fa9fab" }
-revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e7fa9fab" }
-op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e7fa9fab" }
-seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e7fa9fab" }
+revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "timestamp-ms" }
+revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "timestamp-ms" }
+revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "timestamp-ms" }
+op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "timestamp-ms" }
+seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "timestamp-ms" }
 
 revm-inspectors = { git = "https://github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "2b50433" }
 
