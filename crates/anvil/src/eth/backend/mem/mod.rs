@@ -1371,7 +1371,15 @@ impl Backend {
             // update env with new values
             *self.env.write() = env;
 
-            let timestamp = utc_from_secs(header.timestamp);
+            // let timestamp: chrono::DateTime<chrono::Utc> = utc_from_secs(header.timestamp);
+            // MODIFIED: Check if timestamp is in milliseconds (13 digits) or seconds (10 digits)
+            let timestamp: chrono::DateTime<chrono::Utc> = if header.timestamp >= 1_000_000_000_000 {
+                // Timestamp is in milliseconds, convert to seconds - this should always be the case
+                utc_from_secs(header.timestamp / 1000)
+            } else {
+                // Timestamp is in seconds
+                utc_from_secs(header.timestamp)
+            };
 
             node_info!("    Block Number: {}", block_number);
             node_info!("    Block Hash: {:?}", block_hash);
@@ -1827,7 +1835,8 @@ impl Backend {
 
                 // update block env
                 block_env.number += 1;
-                block_env.timestamp += 12;
+                // MODIFIED: add 12000 ms (12 seconds) to the block timestamp
+                block_env.timestamp += 12000;
                 block_env.basefee = simulated_block
                     .inner
                     .header

@@ -961,6 +961,7 @@ contract CounterTest {
 });
 
 #[cfg(not(feature = "isolate-by-default"))]
+// modified block_timestamp to be in milliseconds (1 second)
 forgetest_init!(test_default_config, |prj, cmd| {
     prj.write_config(Config::default());
     cmd.forge_fuse().args(["config"]).assert_success().stdout_eq(str![[r#"
@@ -1014,7 +1015,7 @@ block_number = 1
 gas_limit = 1073741824
 block_base_fee_per_gas = 0
 block_coinbase = "0x0000000000000000000000000000000000000000"
-block_timestamp = 1
+block_timestamp = 1000
 block_difficulty = 0
 block_prevrandao = "0x0000000000000000000000000000000000000000000000000000000000000000"
 memory_limit = 134217728

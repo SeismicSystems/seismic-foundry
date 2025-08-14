@@ -113,7 +113,8 @@ impl TimeManager {
             };
         // Ensures that the timestamp is always increasing
         if next_timestamp < last_timestamp {
-            next_timestamp = last_timestamp + 1;
+            // MODIFIED: add 1 second to the last timestamp
+            next_timestamp = last_timestamp + 1000;
         }
         let next_offset = update_offset.then_some((next_timestamp as i128) - current);
         (next_timestamp, next_offset)

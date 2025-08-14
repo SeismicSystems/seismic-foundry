@@ -2422,7 +2422,7 @@ impl Default for Config {
             gas_price: None,
             block_base_fee_per_gas: 0,
             block_coinbase: Address::ZERO,
-            block_timestamp: 1,
+            block_timestamp: 1000,
             block_difficulty: 0,
             block_prevrandao: Default::default(),
             block_gas_limit: None,
@@ -3763,6 +3763,7 @@ mod tests {
     }
 
     #[test]
+    // modified timestamp to be in milliseconds (1 second)
     fn test_load_full_toml() {
         figment::Jail::expect_with(|jail| {
             jail.create_file(
@@ -3775,7 +3776,7 @@ mod tests {
                 block_difficulty = 0
                 block_prevrandao = '0x0000000000000000000000000000000000000000000000000000000000000000'
                 block_number = 1
-                block_timestamp = 1
+                block_timestamp = 1000
                 use_literal_content = false
                 bytecode_hash = 'ipfs'
                 cbor_metadata = true

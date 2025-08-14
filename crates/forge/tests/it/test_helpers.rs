@@ -101,7 +101,8 @@ impl ForgeTestProfile {
         config.chain = None;
         config.tx_origin = CALLER;
         config.block_number = 1;
-        config.block_timestamp = 1;
+        // modified to be in milliseconds (1 second)
+        config.block_timestamp = 1000;
 
         config.sender = CALLER;
         config.initial_balance = U256::MAX;
