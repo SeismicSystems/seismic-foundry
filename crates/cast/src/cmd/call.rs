@@ -4,7 +4,10 @@ use crate::{
     Cast,
 };
 use alloy_ens::NameOrAddress;
-use alloy_primitives::{Address, Bytes, TxKind, U256};
+use alloy_network::{TransactionBuilder};
+use alloy_provider::{Provider, SendableTx};
+use alloy_signer::Signer;
+use alloy_primitives::{hex, Address, Bytes, TxKind, U256};
 use alloy_rpc_types::{
     state::{StateOverride, StateOverridesBuilder},
     BlockId, BlockNumberOrTag,
@@ -34,10 +37,47 @@ use regex::Regex;
 use revm::context::TransactionType;
 use std::{str::FromStr, sync::LazyLock};
 
+// Seismic imports for encryption/decryption
+use secp256k1::{PublicKey, SecretKey, Secp256k1};
+use rand::RngCore;
+use seismic_prelude::foundry::{TxSeismicElements, SeismicProviderExt, EthereumWallet};
+use alloy_primitives::aliases::U96;
+
+
 // matches override pattern <address>:<slot>:<value>
 // e.g. 0x123:0x1:0x1234
 static OVERRIDE_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([^:]+):([^:]+):([^:]+)$").unwrap());
+
+/// Helper function to get or generate encryption private key
+fn get_or_generate_encryption_key(provided_key: Option<String>) -> Result<SecretKey> {
+    match provided_key {
+        Some(key_str) => {
+            SecretKey::from_str(&key_str).map_err(|e| eyre::eyre!("Invalid private key: {}", e))
+        }
+        None => {
+            // Generate a truly random private key on the fly
+            let mut rng = rand::rng();
+            let mut key_bytes = [0u8; 32];
+            rng.fill_bytes(&mut key_bytes);
+            SecretKey::from_slice(&key_bytes)
+                .map_err(|e| eyre::eyre!("Failed to generate random private key: {}", e))
+        }
+    }
+}
+
+/// Helper function to create seismic elements from private key
+fn create_seismic_elements(encryption_sk: &SecretKey) -> TxSeismicElements {
+    let secp = Secp256k1::new();
+    let encryption_pk = PublicKey::from_secret_key(&secp, encryption_sk);
+    // randomly generate a nonce
+    let encryption_nonce = U96::random();
+    TxSeismicElements {
+        encryption_pubkey: encryption_pk,
+        encryption_nonce,
+        message_version: 0,
+    }
+}
 
 /// CLI arguments for `cast call`.
 ///
@@ -148,6 +188,10 @@ pub struct CallArgs {
     /// Format: address:slot:value
     #[arg(long = "override-state-diff", value_name = "ADDRESS:SLOT:VALUE")]
     pub state_diff_overrides: Option<Vec<String>>,
+
+    /// Optional private key for encrypting seismic transaction
+    #[arg(long, help = "Private key for encrypting seismic transaction")]
+    pub encryption_private_key: Option<String>,
 }
 
 #[derive(Debug, Parser)]
@@ -196,6 +240,7 @@ impl CallArgs {
             labels,
             data,
             with_local_artifacts,
+            encryption_private_key,
             ..
         } = self;
 
@@ -204,9 +249,20 @@ impl CallArgs {
         }
 
         let provider = utils::get_provider(&config)?;
-        let sender = SenderKind::from_wallet_opts(eth.wallet).await?;
+        let sender = SenderKind::from_wallet_opts(eth.wallet.clone()).await?;
         let from = sender.address();
 
+        // Get wallet signer directly for seismic transactions
+        let signer = eth.wallet.signer().await?;
+
+        println!("Sender address: {:?}", sender.address());
+        println!("Signer address: {:?}", signer.address());
+
+        // set gas price if not provided
+        if tx.gas_price.is_none() {
+            tx.gas_price = Some(U256::from(provider.get_gas_price().await?));
+        }
+        
         let code = if let Some(CallSubcommands::Create {
             code,
             sig: create_sig,
@@ -230,7 +286,8 @@ impl CallArgs {
             .await?
             .with_code_sig_and_args(code, sig, args)
             .await?
-            .build_raw(sender)
+            .build(sender)
+            // .build_raw(sender)
             .await?;
 
         if trace {
@@ -306,10 +363,78 @@ impl CallArgs {
             return Ok(());
         }
 
-        sh_println!(
-            "{}",
-            Cast::new(provider).call(&tx, func.as_ref(), block, state_overrides).await?
-        )?;
+        // sh_println!("{}", Cast::new(provider).call(&tx, func.as_ref(), block, state_overrides).await?);
+
+        // Always do encryption/decryption logic
+        // Get or generate encryption key (generates temporary key if not provided)
+        let encryption_sk = get_or_generate_encryption_key(encryption_private_key)?;
+        let seismic_elements = create_seismic_elements(&encryption_sk);
+        
+        // Get the network's TEE public key
+        let network_pubkey = provider.get_tee_pubkey().await?;
+        
+        // Get the original transaction input data
+        let original_input = tx.inner.input.input().unwrap_or_default().clone();
+        
+        // Encrypt the input data
+        let encrypted_input = seismic_elements
+            .client_encrypt(&original_input, &network_pubkey, &encryption_sk)
+            .map_err(|e| eyre::eyre!("Failed to encrypt input data: {}", e))?;
+        
+        // Create encrypted transaction
+        let mut encrypted_tx = tx.clone();
+        encrypted_tx.inner.input = alloy_rpc_types::TransactionInput {
+            input: Some(Bytes::from(encrypted_input)),
+            data: None,
+        };
+        encrypted_tx.inner.transaction_type = Some(seismic_prelude::foundry::TxSeismic::TX_TYPE);
+        encrypted_tx.seismic_elements = Some(seismic_elements.clone());
+        
+        // Convert EIP-1559 fields back to legacy gas_price for seismic transactions
+        if let Some(max_fee) = encrypted_tx.inner.max_fee_per_gas {
+            encrypted_tx.inner.gas_price = Some(max_fee);
+            encrypted_tx.inner.max_fee_per_gas = None;
+            encrypted_tx.inner.max_priority_fee_per_gas = None;
+        }
+        
+        // Sign the transaction to create a raw signed seismic tx
+        let ethereum_wallet = EthereumWallet::from(signer);
+        let signed_envelope = encrypted_tx.build(&ethereum_wallet).await?;
+
+        println!("Signed envelope: {:?}", signed_envelope);
+
+        // DEBUG: Manually recover the signer from the signed envelope to verify signature
+        println!("DEBUG: Attempting signature recovery from signed envelope...");
+        match &signed_envelope {
+            seismic_prelude::foundry::AnyTxEnvelope::Seismic(seismic_signed) => {
+                println!("DEBUG: Found seismic transaction, attempting signature recovery...");
+                match seismic_signed.recover_signer() {
+                    Ok(recovered_signer) => {
+                        println!("Successfully recovered signer from signed envelope: {}", recovered_signer);
+                    }
+                    Err(e) => {
+                        println!("Failed to recover signer from seismic transaction: {:?}", e);
+                    }
+                }
+            }
+            _ => {
+                println!("Non-seismic envelope type, cannot recover signer");
+            }
+        }
+        
+        // Make the seismic call using signed raw transaction
+        let encrypted_response = provider
+            .seismic_call(SendableTx::Envelope(signed_envelope))
+            .await
+            .map_err(|e| eyre::eyre!("Seismic call failed: {}", e))?;
+
+        // Decrypt the response (seismic_call should return Bytes directly, no need to decode hex)
+        let decrypted_response = seismic_elements
+            .client_decrypt(&encrypted_response, &network_pubkey, &encryption_sk)
+            .map_err(|e| eyre::eyre!("Failed to decrypt response: {}", e))?;
+        
+        let result = hex::encode_prefixed(&decrypted_response);
+        sh_println!("{}", result)?;
 
         Ok(())
     }
