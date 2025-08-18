@@ -259,8 +259,8 @@ impl SendTxArgs {
             cast_send(provider, tx, cast_async, confirmations, timeout).await
         // Case 2:
         // An option to use a local signer was provided.
-        // If we cannot successfully instantiate a local signer, then we will assume we don't
-        // have enough information to sign and we must bail.
+        // If we cannot successfully instantiate a local signer, then we will assume we don't have
+        // enough information to sign and we must bail.
         } else {
             // Retrieve the signer, and bail if it can't be constructed.
             let signer = eth.wallet.signer().await?;
