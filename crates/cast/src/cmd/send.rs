@@ -186,7 +186,7 @@ impl SendTxArgs {
 
             tx::validate_from_address(eth.wallet.from, from)?;
 
-            let (mut tx, _) = builder.build(&signer).await?;
+            let (tx, _) = builder.build(&signer).await?;
 
             // Handle seismic transaction
             let encryption_sk = get_or_generate_encryption_key(seismic.unwrap())?;
@@ -228,55 +228,54 @@ impl SendTxArgs {
                 .wallet(wallet)
                 .connect_provider(&provider);
 
-            cast_send(provider, encrypted_tx, cast_async, confirmations, timeout).await
-        } else {
-            // Case 1:
-            // Default to sending via eth_sendTransaction if the --unlocked flag is passed.
-            // This should be the only way this RPC method is used as it requires a local node
-            // or remote RPC with unlocked accounts.
-            if unlocked {
-                // only check current chain id if it was specified in the config
-                if let Some(config_chain) = config.chain {
-                    let current_chain_id = provider.get_chain_id().await?;
-                    let config_chain_id = config_chain.id();
-                    // switch chain if current chain id is not the same as the one specified in the
-                    // config
-                    if config_chain_id != current_chain_id {
-                        sh_warn!("Switching to chain {}", config_chain)?;
-                        provider
-                            .raw_request(
-                                "wallet_switchEthereumChain".into(),
-                                [serde_json::json!({
-                                    "chainId": format!("0x{:x}", config_chain_id),
-                                })],
-                            )
-                            .await?;
-                    }
+            return cast_send(provider, encrypted_tx, cast_async, confirmations, timeout).await;
+        }
+        // Case 1:
+        // Default to sending via eth_sendTransaction if the --unlocked flag is passed.
+        // This should be the only way this RPC method is used as it requires a local node
+        // or remote RPC with unlocked accounts.
+        if unlocked {
+            // only check current chain id if it was specified in the config
+            if let Some(config_chain) = config.chain {
+                let current_chain_id = provider.get_chain_id().await?;
+                let config_chain_id = config_chain.id();
+                // switch chain if current chain id is not the same as the one specified in the
+                // config
+                if config_chain_id != current_chain_id {
+                    sh_warn!("Switching to chain {}", config_chain)?;
+                    provider
+                        .raw_request(
+                            "wallet_switchEthereumChain".into(),
+                            [serde_json::json!({
+                                "chainId": format!("0x{:x}", config_chain_id),
+                            })],
+                        )
+                        .await?;
                 }
-
-                let (tx, _) = builder.build(config.sender).await?;
-
-                cast_send(provider, tx, cast_async, confirmations, timeout).await
-            // Case 2:
-            // An option to use a local signer was provided.
-            // If we cannot successfully instantiate a local signer, then we will assume we don't
-            // have enough information to sign and we must bail.
-            } else {
-                // Retrieve the signer, and bail if it can't be constructed.
-                let signer = eth.wallet.signer().await?;
-                let from = signer.address();
-
-                tx::validate_from_address(eth.wallet.from, from)?;
-
-                let (tx, _) = builder.build(&signer).await?;
-
-                let wallet = EthereumWallet::from(signer);
-                let provider = ProviderBuilder::<_, _, AnyNetwork>::default()
-                    .wallet(wallet)
-                    .connect_provider(&provider);
-
-                cast_send(provider, tx, cast_async, confirmations, timeout).await
             }
+
+            let (tx, _) = builder.build(config.sender).await?;
+
+            cast_send(provider, tx, cast_async, confirmations, timeout).await
+        // Case 2:
+        // An option to use a local signer was provided.
+        // If we cannot successfully instantiate a local signer, then we will assume we don't
+        // have enough information to sign and we must bail.
+        } else {
+            // Retrieve the signer, and bail if it can't be constructed.
+            let signer = eth.wallet.signer().await?;
+            let from = signer.address();
+
+            tx::validate_from_address(eth.wallet.from, from)?;
+
+            let (tx, _) = builder.build(&signer).await?;
+
+            let wallet = EthereumWallet::from(signer);
+            let provider = ProviderBuilder::<_, _, AnyNetwork>::default()
+                .wallet(wallet)
+                .connect_provider(&provider);
+
+            cast_send(provider, tx, cast_async, confirmations, timeout).await
         }
     }
 }
