@@ -642,6 +642,7 @@ fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
             let suint = serde_json::from_str(&u.to_string())?;
             Ok(Value::Number(suint))
         }
+        DynSolValue::Sbytes(b, size) => Ok(Value::String(hex::encode_prefixed(&b[..size]))),
     }
 }
 
