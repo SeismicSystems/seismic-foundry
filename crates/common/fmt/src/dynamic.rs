@@ -78,9 +78,7 @@ impl DynValueFormatter {
             &DynSolValue::Saddress(SAddress(inner)) => write!(f, "{inner}"),
             &DynSolValue::Sint(SInt(inner), _) => write!(f, "{inner}"),
             &DynSolValue::Suint(SUInt(inner), _) => write!(f, "{inner}"),
-            &DynSolValue::Sbytes(word, size) => {
-                f.write_str(&hex::encode_prefixed(&word[..size]))
-            }
+            &DynSolValue::Sbytes(word, size) => f.write_str(&hex::encode_prefixed(&word[..size])),
         }
     }
 
