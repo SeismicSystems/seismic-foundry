@@ -4,7 +4,7 @@ use alloy_primitives::{
     aliases::{SInt, SUInt},
     hex, SAddress,
 };
-use alloy_sol_types::sol_data::{Sbool, Sbytes};
+use alloy_sol_types::sol_data::Sbool;
 use std::fmt;
 
 /// [`DynSolValue`] formatter.
