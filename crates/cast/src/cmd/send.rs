@@ -15,7 +15,39 @@ use foundry_cli::{
 };
 use std::{path::PathBuf, str::FromStr};
 
-use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, TransactionRequest};
+// Seismic imports for encryption/decryption
+use alloy_primitives::{aliases::U96, Bytes};
+use rand::RngCore;
+use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use seismic_prelude::foundry::{
+    AnyNetwork, EthereumWallet, SeismicProviderExt, TransactionRequest, TxSeismicElements,
+};
+
+/// Helper function to create seismic elements from private key
+fn create_seismic_elements(encryption_sk: &SecretKey) -> TxSeismicElements {
+    let secp = Secp256k1::new();
+    let encryption_pk = PublicKey::from_secret_key(&secp, encryption_sk);
+    // randomly generate a nonce
+    let encryption_nonce = U96::random();
+    TxSeismicElements { encryption_pubkey: encryption_pk, encryption_nonce, message_version: 0 }
+}
+
+/// Helper function to get or generate encryption private key
+fn get_or_generate_encryption_key(provided_key: Option<String>) -> Result<SecretKey> {
+    match provided_key {
+        Some(key_str) => {
+            SecretKey::from_str(&key_str).map_err(|e| eyre::eyre!("Invalid private key: {}", e))
+        }
+        None => {
+            // Generate a truly random private key on the fly
+            let mut rng = rand::rng();
+            let mut key_bytes = [0u8; 32];
+            rng.fill_bytes(&mut key_bytes);
+            SecretKey::from_slice(&key_bytes)
+                .map_err(|e| eyre::eyre!("Failed to generate random private key: {}", e))
+        }
+    }
+}
 
 /// CLI arguments for `cast send`.
 #[derive(Debug, Parser)]
@@ -66,6 +98,10 @@ pub struct SendTxArgs {
         help_heading = "Transaction options"
     )]
     path: Option<PathBuf>,
+
+    /// Use seismic transaction with optional encryption private key
+    #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
+    pub seismic: Option<Option<String>>,
 }
 
 #[derive(Debug, Parser)]
@@ -99,6 +135,7 @@ impl SendTxArgs {
             unlocked,
             path,
             timeout,
+            seismic,
         } = self;
 
         let blob_data = if let Some(path) = path { Some(std::fs::read(path)?) } else { None };
@@ -140,6 +177,59 @@ impl SendTxArgs {
 
         let timeout = timeout.unwrap_or(config.transaction_timeout);
 
+        let is_seismic = seismic.is_some();
+
+        if is_seismic {
+            // Get wallet signer directly for seismic transactions
+            let signer = eth.wallet.signer().await?;
+            let from = signer.address();
+
+            tx::validate_from_address(eth.wallet.from, from)?;
+
+            let (tx, _) = builder.build(&signer).await?;
+
+            // Handle seismic transaction
+            let encryption_sk = get_or_generate_encryption_key(seismic.unwrap())?;
+
+            // Create seismic elements
+            let seismic_elements = create_seismic_elements(&encryption_sk);
+
+            // Get the network's TEE public key
+            let network_pubkey = provider.get_tee_pubkey().await?;
+
+            // Get the original transaction input data
+            let original_input = tx.inner.input.input().unwrap_or_default().clone();
+
+            // Encrypt the input data
+            let encrypted_input = seismic_elements
+                .client_encrypt(&original_input, &network_pubkey, &encryption_sk)
+                .map_err(|e| eyre::eyre!("Failed to encrypt input data: {}", e))?;
+
+            // Create encrypted transaction
+            let mut encrypted_tx = tx.clone();
+            encrypted_tx.inner.input = alloy_rpc_types::TransactionInput {
+                input: Some(Bytes::from(encrypted_input)),
+                data: None,
+            };
+            encrypted_tx.inner.transaction_type =
+                Some(seismic_prelude::foundry::TxSeismic::TX_TYPE);
+            encrypted_tx.seismic_elements = Some(seismic_elements.clone());
+
+            // Convert EIP-1559 fields back to legacy gas_price for seismic transactions
+            if let Some(max_fee) = encrypted_tx.inner.max_fee_per_gas {
+                encrypted_tx.inner.gas_price = Some(max_fee);
+                encrypted_tx.inner.max_fee_per_gas = None;
+                encrypted_tx.inner.max_priority_fee_per_gas = None;
+            }
+
+            // Sign the transaction to create a raw signed seismic tx
+            let wallet = EthereumWallet::from(signer);
+            let provider = ProviderBuilder::<_, _, AnyNetwork>::default()
+                .wallet(wallet)
+                .connect_provider(&provider);
+
+            return cast_send(provider, encrypted_tx, cast_async, confirmations, timeout).await;
+        }
         // Case 1:
         // Default to sending via eth_sendTransaction if the --unlocked flag is passed.
         // This should be the only way this RPC method is used as it requires a local node
