@@ -255,9 +255,6 @@ impl CallArgs {
         // Get wallet signer directly for seismic transactions
         let signer = eth.wallet.signer().await?;
 
-        println!("Sender address: {:?}", sender.address());
-        println!("Signer address: {:?}", signer.address());
-
         // set gas price if not provided
         if tx.gas_price.is_none() {
             tx.gas_price = Some(U256::from(provider.get_gas_price().await?));
@@ -363,8 +360,6 @@ impl CallArgs {
             return Ok(());
         }
 
-        // sh_println!("{}", Cast::new(provider).call(&tx, func.as_ref(), block, state_overrides).await?);
-
         // Always do encryption/decryption logic
         // Get or generate encryption key (generates temporary key if not provided)
         let encryption_sk = get_or_generate_encryption_key(encryption_private_key)?;
@@ -401,26 +396,6 @@ impl CallArgs {
         let ethereum_wallet = EthereumWallet::from(signer);
         let signed_envelope = encrypted_tx.build(&ethereum_wallet).await?;
 
-        println!("Signed envelope: {:?}", signed_envelope);
-
-        // DEBUG: Manually recover the signer from the signed envelope to verify signature
-        println!("DEBUG: Attempting signature recovery from signed envelope...");
-        match &signed_envelope {
-            seismic_prelude::foundry::AnyTxEnvelope::Seismic(seismic_signed) => {
-                println!("DEBUG: Found seismic transaction, attempting signature recovery...");
-                match seismic_signed.recover_signer() {
-                    Ok(recovered_signer) => {
-                        println!("Successfully recovered signer from signed envelope: {}", recovered_signer);
-                    }
-                    Err(e) => {
-                        println!("Failed to recover signer from seismic transaction: {:?}", e);
-                    }
-                }
-            }
-            _ => {
-                println!("Non-seismic envelope type, cannot recover signer");
-            }
-        }
         
         // Make the seismic call using signed raw transaction
         let encrypted_response = provider
