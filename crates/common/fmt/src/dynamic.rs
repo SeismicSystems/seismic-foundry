@@ -4,7 +4,7 @@ use alloy_primitives::{
     aliases::{SInt, SUInt},
     hex, SAddress,
 };
-use alloy_sol_types::sol_data::Sbool;
+use alloy_sol_types::sol_data::{Sbool, Sbytes};
 use std::fmt;
 
 /// [`DynSolValue`] formatter.
@@ -78,6 +78,9 @@ impl DynValueFormatter {
             &DynSolValue::Saddress(SAddress(inner)) => write!(f, "{inner}"),
             &DynSolValue::Sint(SInt(inner), _) => write!(f, "{inner}"),
             &DynSolValue::Suint(SUInt(inner), _) => write!(f, "{inner}"),
+            &DynSolValue::Sbytes(word, size) => {
+                f.write_str(&hex::encode_prefixed(&word[..size]))
+            }
         }
     }
 
