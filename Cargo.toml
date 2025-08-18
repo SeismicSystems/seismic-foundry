@@ -366,14 +366,14 @@ zip-extract = "=0.2.1"
 seismic-enclave = { git = "https://github.com/SeismicSystems/seismic-enclave.git", rev = "a347832"}
 
 # seismic-alloy-core
-alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", branch = "sbytes" }
-alloy-json-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", branch = "sbytes" }
-alloy-primitives = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", branch = "sbytes" }
-alloy-sol-macro = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", branch = "sbytes" }
-alloy-sol-macro-expander = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", branch = "sbytes" }
-alloy-sol-macro-input = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", branch = "sbytes" }
-alloy-sol-types = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", branch = "sbytes" }
-alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", branch = "sbytes" }
+alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "13caaf2" }
+alloy-json-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "13caaf2" }
+alloy-primitives = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "13caaf2" }
+alloy-sol-macro = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "13caaf2" }
+alloy-sol-macro-expander = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "13caaf2" }
+alloy-sol-macro-input = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "13caaf2" }
+alloy-sol-types = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "13caaf2" }
+alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "13caaf2" }
 
 alloy-trie = { git = "https://github.com/SeismicSystems/seismic-trie.git", rev = "417644c" }
 
