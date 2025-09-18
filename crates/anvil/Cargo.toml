@@ -20,10 +20,10 @@ required-features = ["cli"]
 
 [dependencies]
 # Seismic's added dependencies
-# secp256k1 = { version = "0.30", default-features = false, features = [
-#     "global-context",
-#     "recovery",
-# ] }
+secp256k1 = { version = "0.30", default-features = false, features = [
+    "global-context",
+    "recovery",
+] }
 bytes.workspace = true
 seismic-enclave.workspace = true
 seismic-prelude.workspace = true

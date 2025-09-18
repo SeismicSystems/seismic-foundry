@@ -12,7 +12,7 @@ use alloy_rpc_types::{BlockId, TransactionRequest};
 use alloy_serde::WithOtherFields;
 use anvil::{NodeConfig, spawn};
 
-use seismic_prelude::foundry::{tx_builder, EthereumWallet};
+use seismic_prelude::foundry::{tx_builder, AnyTransactionRequest, EthereumWallet};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_send_eip4844_transaction() {
@@ -365,7 +365,7 @@ async fn can_get_blobs_by_versioned_hash() {
     let sidecar: SidecarBuilder<SimpleCoder> = SidecarBuilder::from_slice(b"Hello World");
 
     let sidecar = sidecar.build().unwrap();
-    let tx = TransactionRequest::default()
+    let tx = tx_builder()
         .with_from(from)
         .with_to(to)
         .with_nonce(0)
@@ -373,7 +373,8 @@ async fn can_get_blobs_by_versioned_hash() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar.clone())
-        .value(U256::from(5));
+        .with_value(U256::from(5))
+        .into();
 
     let mut tx = WithOtherFields::new(tx);
 
@@ -403,7 +404,7 @@ async fn can_get_blobs_by_tx_hash() {
     let sidecar: SidecarBuilder<SimpleCoder> = SidecarBuilder::from_slice(b"Hello World");
 
     let sidecar = sidecar.build().unwrap();
-    let tx = TransactionRequest::default()
+    let mut tx = tx_builder()
         .with_from(from)
         .with_to(to)
         .with_nonce(0)
@@ -411,13 +412,12 @@ async fn can_get_blobs_by_tx_hash() {
         .with_max_fee_per_gas(eip1559_est.max_fee_per_gas)
         .with_max_priority_fee_per_gas(eip1559_est.max_priority_fee_per_gas)
         .with_blob_sidecar(sidecar.clone())
-        .value(U256::from(5));
-
-    let mut tx = WithOtherFields::new(tx);
+        .with_value(U256::from(5))
+        .into();
 
     tx.populate_blob_hashes();
 
-    let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
+    let receipt = provider.send_transaction(tx.into()).await.unwrap().get_receipt().await.unwrap();
     let hash = receipt.transaction_hash;
     api.anvil_set_auto_mine(true).await.unwrap();
     let blobs = api.anvil_get_blob_by_tx_hash(hash).unwrap().unwrap();

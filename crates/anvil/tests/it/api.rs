@@ -10,7 +10,7 @@ use alloy_primitives::{
     Address, B256, ChainId, U256, b256, bytes,
     map::{AddressHashMap, B256HashMap, HashMap},
 };
-use alloy_provider::Provider;
+use alloy_provider::{Provider, SendableTx};
 use alloy_rpc_types::{
     BlockId, BlockNumberOrTag, BlockTransactions, request::TransactionRequest,
     state::AccountOverride,
@@ -456,11 +456,12 @@ async fn can_send_tx_sync() {
     let logger_bytecode = bytes!("66365f5f37365fa05f5260076019f3");
 
     let from = wallets[0].address();
-    let tx = TransactionRequest::default()
+    let tx = tx_builder()
         .with_from(from)
         .into_create()
         .with_nonce(0)
-        .with_input(logger_bytecode);
+        .with_input(logger_bytecode)
+        .into();
 
     let receipt = api.send_transaction_sync(WithOtherFields::new(tx)).await.unwrap();
     assert_eq!(receipt.from, wallets[0].address());

@@ -7,6 +7,7 @@ use alloy_consensus::{Header, TxEnvelope};
 use alloy_dyn_abi::{DynSolType, DynSolValue, FunctionExt};
 use alloy_ens::NameOrAddress;
 use alloy_json_abi::Function;
+use alloy_network::AnyTxEnvelope;
 use alloy_primitives::{
     Address, B256, I256, Keccak256, Selector, TxHash, TxKind, U64, U256, hex,
     utils::{ParseUnits, Unit, keccak256},
@@ -36,7 +37,6 @@ use foundry_compilers::flatten::Flattener;
 use foundry_config::Chain;
 use foundry_evm_core::ic::decode_instructions;
 use futures::{FutureExt, StreamExt, future::Either};
-use op_alloy_consensus::OpTxEnvelope;
 use rayon::prelude::*;
 use std::{
     borrow::Cow,
@@ -804,20 +804,24 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
 
         Ok(if raw {
             // TODO(usm)
+            /*
             // also consider opstack deposit transactions
-            let either_tx = tx.try_into_either::<OpTxEnvelope>()?;
+            let either_tx = tx.try_into_either::<AnyTxEnvelope>()?;
             let encoded = either_tx.encoded_2718();
             format!("0x{}", hex::encode(encoded))
+            */
+            format!("0x{}", hex::encode(tx.inner().inner.encoded_2718()))
         } else if let Some(field) = field {
             get_pretty_tx_attr(&tx.inner(), field.as_str())
                 .ok_or_else(|| eyre::eyre!("invalid tx field: {}", field.to_string()))?
         } else if shell::is_json() {
             // to_value first to sort json object keys
             serde_json::to_value(&tx)?.to_string()
-        } else if to_request {
-            serde_json::to_string_pretty(&TransactionRequest::from_recovered_transaction(
-                tx.into(),
-            ))?
+        // TODO(usm): make this work
+        // } else if to_request {
+        //     serde_json::to_string_pretty(&TransactionRequest::from_recovered_transaction(
+        //         tx.into(),
+        //     ))?
         } else {
             tx.pretty()
         })

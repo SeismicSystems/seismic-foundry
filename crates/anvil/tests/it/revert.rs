@@ -1,13 +1,14 @@
 use crate::abi::VendingMachine;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{U256, bytes};
-use alloy_provider::Provider;
+use alloy_provider::{Provider, SendableTx};
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{NodeConfig, spawn};
 
 use seismic_prelude::foundry::{sfoundry_signed_provider, tx_builder, SeismicProviderExt};
+use reqwest::Url;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deploy_reverting() {

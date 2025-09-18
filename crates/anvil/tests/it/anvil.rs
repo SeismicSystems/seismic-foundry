@@ -9,6 +9,7 @@ use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_sol_types::SolCall;
 use anvil::{NodeConfig, spawn};
+use seismic_prelude::foundry::tx_builder;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_can_change_mining_mode() {
@@ -156,7 +157,7 @@ async fn test_anvil_recover_signature() {
         "0x60808060405234601557610125908161001a8239f35b5f80fdfe60808060405260043610156011575f80fd5b5f3560e01c63bff0b743146023575f80fd5b3460eb5760a036600319011260eb5760243560ff811680910360eb576084356001600160a01b038116929083900360eb5760805f916020936004358252848201526044356040820152606435606082015282805260015afa1560e0575f516001600160a01b031603609057005b60405162461bcd60e51b815260206004820152602260248201527f65637265636f766572206661696c65643a2061646472657373206d69736d61746044820152610c6d60f31b6064820152608490fd5b6040513d5f823e3d90fd5b5f80fdfea264697066735822122006368b42bca31c97f2c409a1cc5186dc899d4255ecc28db7bbb0ad285dc82ae464736f6c634300081c0033",
     ).unwrap();
 
-    let tx = TransactionRequest::default().with_deploy_code(bytecode);
+    let tx = tx_builder().with_deploy_code(bytecode).into();
     let receipt = provider.send_transaction(tx.into()).await.unwrap().get_receipt().await.unwrap();
     let contract_address = receipt.contract_address().unwrap();
     let contract = TestRecover::new(contract_address, &provider);
@@ -189,7 +190,7 @@ async fn test_fake_signature_transaction() {
         "0x60808060405234601557610125908161001a8239f35b5f80fdfe60808060405260043610156011575f80fd5b5f3560e01c63bff0b743146023575f80fd5b3460eb5760a036600319011260eb5760243560ff811680910360eb576084356001600160a01b038116929083900360eb5760805f916020936004358252848201526044356040820152606435606082015282805260015afa1560e0575f516001600160a01b031603609057005b60405162461bcd60e51b815260206004820152602260248201527f65637265636f766572206661696c65643a2061646472657373206d69736d61746044820152610c6d60f31b6064820152608490fd5b6040513d5f823e3d90fd5b5f80fdfea264697066735822122006368b42bca31c97f2c409a1cc5186dc899d4255ecc28db7bbb0ad285dc82ae464736f6c634300081c0033",
     ).unwrap();
 
-    let tx = TransactionRequest::default().with_deploy_code(bytecode);
+    let tx = tx_builder().with_deploy_code(bytecode).into();
     let _receipt = provider.send_transaction(tx.into()).await.unwrap().get_receipt().await.unwrap();
 
     let sig = alloy_primitives::hex::decode("11".repeat(65)).unwrap();
@@ -200,7 +201,7 @@ async fn test_fake_signature_transaction() {
     let expected = alloy_primitives::address!("0x1234567890123456789012345678901234567890");
     api.anvil_impersonate_signature(sig.clone().into(), expected).await.unwrap();
     let calldata = TestRecover::testRecoverCall { hash: fake_hash, v, r, s, expected }.abi_encode();
-    let tx = TransactionRequest::default().with_input(calldata);
+    let tx = tx_builder().with_input(calldata).into();
     let pending = provider.send_transaction(tx.into()).await.unwrap();
     let result = pending.get_receipt().await;
 
