@@ -1,4 +1,4 @@
-use forge_fmt::{format_to, parse, solang_ext::AstEq, FormatterConfig};
+use forge_fmt::{FormatterConfig, format_to, parse, solang_ext::AstEq};
 use itertools::Itertools;
 use std::{fs, path::PathBuf};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
@@ -217,7 +217,6 @@ test_directories! {
     TryStatement,
     ConditionalOperatorExpression,
     NamedFunctionCallExpression,
-    NonKeywords,
     ArrayExpressions,
     UnitExpression,
     ThisExpression,
@@ -242,3 +241,4 @@ test_directories! {
 }
 
 test_dir!(SortedImports, TestConfig::skip_compare_ast_eq());
+test_dir!(NonKeywords, TestConfig::skip_compare_ast_eq());

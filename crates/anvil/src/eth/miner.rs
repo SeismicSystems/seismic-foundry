@@ -1,17 +1,17 @@
 //! Mines transactions
 
-use crate::eth::pool::{transactions::PoolTransaction, Pool};
+use crate::eth::pool::{Pool, transactions::PoolTransaction};
 use alloy_primitives::TxHash;
 use futures::{
     channel::mpsc::Receiver,
     stream::{Fuse, StreamExt},
     task::AtomicWaker,
 };
-use parking_lot::{lock_api::RwLockWriteGuard, RawRwLock, RwLock};
+use parking_lot::{RawRwLock, RwLock, lock_api::RwLockWriteGuard};
 use std::{
     fmt,
     sync::Arc,
-    task::{ready, Context, Poll},
+    task::{Context, Poll, ready},
     time::Duration,
 };
 use tokio::time::{Interval, MissedTickBehavior};
@@ -135,7 +135,7 @@ pub enum MiningMode {
     /// A miner that constructs a new block every `interval` tick
     FixedBlockTime(FixedBlockTimeMiner),
 
-    /// A minner that uses both Auto and FixedBlockTime
+    /// A miner that uses both Auto and FixedBlockTime
     Mixed(ReadyTransactionMiner, FixedBlockTimeMiner),
 }
 

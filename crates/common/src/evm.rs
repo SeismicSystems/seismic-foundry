@@ -1,16 +1,15 @@
 //! CLI arguments for configuring the EVM settings.
 
-use alloy_primitives::{map::HashMap, Address, B256, U256};
+use alloy_primitives::{Address, B256, U256, map::HashMap};
 use clap::Parser;
 use eyre::ContextCompat;
 use foundry_config::{
+    Chain, Config,
     figment::{
-        self,
+        self, Metadata, Profile, Provider,
         error::Kind::InvalidType,
         value::{Dict, Map, Value},
-        Metadata, Profile, Provider,
     },
-    Chain, Config,
 };
 use serde::Serialize;
 
@@ -253,7 +252,7 @@ pub struct EnvArgs {
     pub block_prevrandao: Option<B256>,
 
     /// The block gas limit.
-    #[arg(long, visible_alias = "gas-limit", value_name = "GAS_LIMIT")]
+    #[arg(long, visible_aliases = &["block-gas-limit", "gas-limit"], value_name = "BLOCK_GAS_LIMIT")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub block_gas_limit: Option<u64>,
 
@@ -266,9 +265,14 @@ pub struct EnvArgs {
     pub memory_limit: Option<u64>,
 
     /// Whether to disable the block gas limit checks.
-    #[arg(long, visible_alias = "no-gas-limit")]
+    #[arg(long, visible_aliases = &["no-block-gas-limit", "no-gas-limit"])]
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub disable_block_gas_limit: bool,
+
+    /// Whether to enable tx gas limit checks as imposed by Osaka (EIP-7825).
+    #[arg(long, visible_alias = "tx-gas-limit")]
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub enable_tx_gas_limit: bool,
 }
 
 impl EvmArgs {

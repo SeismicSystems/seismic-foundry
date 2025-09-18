@@ -1,15 +1,23 @@
-use alloy_evm::{precompiles::DynPrecompile, Database, Evm};
+use alloy_evm::{
+    Database, Evm,
+    eth::EthEvmContext,
+    precompiles::{DynPrecompile, PrecompileInput, PrecompilesMap},
+};
+
 use foundry_evm_core::either_evm::EitherEvm;
-use revm::{precompile::PrecompileWithAddress, Inspector};
+use op_revm::OpContext;
+use revm::{Inspector, precompile::Precompile};
 use std::fmt::Debug;
 
 use seismic_prelude::foundry::{SeismicContext, SeismicPrecompiles};
+
+pub mod celo_precompile;
 
 /// Object-safe trait that enables injecting extra precompiles when using
 /// `anvil` as a library.
 pub trait PrecompileFactory: Send + Sync + Unpin + Debug {
     /// Returns a set of precompiles to extend the EVM with.
-    fn precompiles(&self) -> Vec<PrecompileWithAddress>;
+    fn precompiles(&self) -> Vec<(Precompile, u64)>;
 }
 
 #[allow(unused_variables)]
@@ -26,7 +34,7 @@ fn apply_precompile<DB: Database, F>(
 /// Inject precompiles into the EVM dynamically.
 pub fn inject_precompiles<DB, I>(
     evm: &mut EitherEvm<DB, I, SeismicPrecompiles<SeismicContext<DB>>>,
-    precompiles: Vec<PrecompileWithAddress>,
+    precompiles: Vec<(Precompile, u64)>,
 ) where
     DB: Database,
     /*
@@ -34,9 +42,11 @@ pub fn inject_precompiles<DB, I>(
     */
     I: Inspector<SeismicContext<DB>>,
 {
-    for p in precompiles {
-        apply_precompile(evm.precompiles_mut(), p.address(), |_| {
-            Some(DynPrecompile::from(*p.precompile()))
+    for (precompile, gas) in precompiles {
+        let addr = *precompile.address();
+        let func = *precompile.precompile();
+        evm.precompiles_mut().apply_precompile(&addr, move |_| {
+            Some(DynPrecompile::from(move |input: PrecompileInput<'_>| func(input.data, gas)))
         });
     }
 }
@@ -45,29 +55,29 @@ pub fn inject_precompiles<DB, I>(
 #[allow(unused_imports)]
 #[allow(dead_code)]
 mod tests {
-    use std::convert::Infallible;
+    use std::{borrow::Cow, convert::Infallible};
 
-    use alloy_evm::{eth::EthEvmContext, precompiles::PrecompilesMap, EthEvm, Evm, EvmEnv};
+    use alloy_evm::{EthEvm, Evm, EvmEnv, eth::EthEvmContext, precompiles::PrecompilesMap};
     use alloy_op_evm::OpEvm;
-    use alloy_primitives::{address, Address, Bytes, TxKind, U256};
+    use alloy_primitives::{Address, Bytes, TxKind, U256, address};
     use foundry_evm_core::either_evm::EitherEvm;
     use itertools::Itertools;
-    use op_revm::{precompiles::OpPrecompiles, L1BlockInfo, OpContext, OpSpecId, OpTransaction};
+    use op_revm::{L1BlockInfo, OpContext, OpSpecId, OpTransaction, precompiles::OpPrecompiles};
     use revm::{
+        Journal,
         context::{CfgEnv, Evm as RevmEvm, JournalTr, LocalContext, TxEnv},
         database::{EmptyDB, EmptyDBTyped},
-        handler::{instructions::EthInstructions, EthPrecompiles},
+        handler::{EthPrecompiles, instructions::EthInstructions},
         inspector::NoOpInspector,
         interpreter::interpreter::EthInterpreter,
         precompile::{
-            PrecompileOutput, PrecompileResult, PrecompileSpecId, PrecompileWithAddress,
+            Precompile, PrecompileId, PrecompileOutput, PrecompileResult, PrecompileSpecId,
             Precompiles,
         },
         primitives::hardfork::SpecId,
-        Journal,
     };
 
-    use crate::{inject_precompiles, PrecompileFactory};
+    use crate::{PrecompileFactory, inject_precompiles};
 
     use foundry_evm_core::SeismicEvm;
     use seismic_prelude::foundry::{
@@ -88,18 +98,22 @@ mod tests {
     struct CustomPrecompileFactory;
 
     impl PrecompileFactory for CustomPrecompileFactory {
-        fn precompiles(&self) -> Vec<PrecompileWithAddress> {
-            vec![PrecompileWithAddress::from((
-                PRECOMPILE_ADDR,
-                custom_echo_precompile as fn(&[u8], u64) -> PrecompileResult,
-            ))]
+        fn precompiles(&self) -> Vec<(Precompile, u64)> {
+            vec![(
+                Precompile::from((
+                    PrecompileId::Custom(Cow::Borrowed("custom_echo")),
+                    PRECOMPILE_ADDR,
+                    custom_echo_precompile as fn(&[u8], u64) -> PrecompileResult,
+                )),
+                1000,
+            )]
         }
     }
 
     /// Custom precompile that echoes the input data.
     /// In this example it uses `0xdeadbeef` as the input data, returning it as output.
     fn custom_echo_precompile(input: &[u8], _gas_limit: u64) -> PrecompileResult {
-        Ok(PrecompileOutput { bytes: Bytes::copy_from_slice(input), gas_used: 0 })
+        Ok(PrecompileOutput { bytes: Bytes::copy_from_slice(input), gas_used: 0, reverted: false })
     }
 
     /*
@@ -160,8 +174,9 @@ mod tests {
                 data: PAYLOAD.into(),
                 ..Default::default()
             }.into(),
-            is_optimism: true,
             is_seismic: false,
+            is_optimism: true,
+            is_celo: false,
         };
 
         let mut chain = L1BlockInfo::default();

@@ -7,16 +7,16 @@ use foundry_compilers::{
     solc::Solc,
 };
 use foundry_config::{
+    CompilationRestrictions, Config, FsPermissions, FuzzConfig, FuzzCorpusConfig, InvariantConfig,
+    SettingsOverrides, SolcReq,
     cache::{CachedChains, CachedEndpoints, StorageCachingConfig},
     filter::GlobMatcher,
     fs_permissions::{FsAccessPermission, PathPermission},
-    CompilationRestrictions, Config, FsPermissions, FuzzConfig, InvariantConfig, SettingsOverrides,
-    SolcReq,
 };
 use foundry_evm::opts::EvmOpts;
 use foundry_test_utils::{
-    foundry_compilers::artifacts::{remappings::Remapping, EvmVersion},
-    util::{pretty_err, OutputExt, TestCommand, OTHER_SOLC_VERSION},
+    foundry_compilers::artifacts::{EvmVersion, remappings::Remapping},
+    util::{OTHER_SOLC_VERSION, OutputExt, TestCommand, pretty_err},
 };
 use path_slash::PathBufExt;
 use semver::VersionReq;
@@ -26,6 +26,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     str::FromStr,
+    thread,
 };
 
 // tests all config values that are in use
@@ -36,6 +37,7 @@ forgetest!(can_extract_config_values, |prj, cmd| {
         // `profiles` is not serialized.
         profiles: vec![],
         root: ".".into(),
+        extends: None,
         src: "test-src".into(),
         test: "test-test".into(),
         script: "test-script".into(),
@@ -84,13 +86,16 @@ forgetest!(can_extract_config_values, |prj, cmd| {
             max_test_rejects: 100203,
             seed: Some(U256::from(1000)),
             failure_persist_dir: Some("test-cache/fuzz".into()),
-            failure_persist_file: Some("failures".to_string()),
             show_logs: false,
             ..Default::default()
         },
         invariant: InvariantConfig {
             runs: 256,
             failure_persist_dir: Some("test-cache/fuzz".into()),
+            corpus: FuzzCorpusConfig {
+                corpus_dir: Some("cache/invariant/corpus".into()),
+                ..Default::default()
+            },
             ..Default::default()
         },
         ffi: true,
@@ -100,7 +105,7 @@ forgetest!(can_extract_config_values, |prj, cmd| {
         sender: "00a329c0648769A73afAc7F9381D08FB43dBEA72".parse().unwrap(),
         tx_origin: "00a329c0648769A73afAc7F9F81E08FB43dBEA72".parse().unwrap(),
         initial_balance: U256::from(0xffffffffffffffffffffffffu128),
-        block_number: 10,
+        block_number: U256::from(10),
         fork_block_number: Some(200),
         chain: Some(9999.into()),
         gas_limit: 99_000_000u64.into(),
@@ -108,23 +113,24 @@ forgetest!(can_extract_config_values, |prj, cmd| {
         gas_price: Some(999),
         block_base_fee_per_gas: 10,
         block_coinbase: Address::random(),
-        block_timestamp: 10,
+        block_timestamp: U256::from(10),
         block_difficulty: 10,
         block_prevrandao: B256::random(),
         block_gas_limit: Some(100u64.into()),
         disable_block_gas_limit: false,
+        enable_tx_gas_limit: false,
         memory_limit: 1 << 27,
         eth_rpc_url: Some("localhost".to_string()),
+        eth_rpc_accept_invalid_certs: false,
         eth_rpc_jwt: None,
         eth_rpc_timeout: None,
         eth_rpc_headers: None,
         etherscan_api_key: None,
-        etherscan_api_version: None,
         etherscan: Default::default(),
         verbosity: 4,
         remappings: vec![Remapping::from_str("forge-std/=lib/forge-std/").unwrap().into()],
         libraries: vec![
-            "src/DssSpell.sol:DssExecLib:0x8De6DDbCd5053d32292AAA0D2105A32d108484a6".to_string()
+            "src/DssSpell.sol:DssExecLib:0x8De6DDbCd5053d32292AAA0D2105A32d108484a6".to_string(),
         ],
         ignored_error_codes: vec![],
         ignored_file_paths: vec![],
@@ -344,11 +350,15 @@ forgetest_init!(can_get_evm_opts, |prj, _cmd| {
     assert_eq!(config.eth_rpc_url, Some(url.to_string()));
     assert!(config.ffi);
 
-    std::env::set_var("FOUNDRY_ETH_RPC_URL", url);
+    unsafe {
+        std::env::set_var("FOUNDRY_ETH_RPC_URL", url);
+    }
     let figment = Config::figment_with_root(prj.root()).merge(("debug", false));
     let evm_opts: EvmOpts = figment.extract().unwrap();
     assert_eq!(evm_opts.fork_url, Some(url.to_string()));
-    std::env::remove_var("FOUNDRY_ETH_RPC_URL");
+    unsafe {
+        std::env::remove_var("FOUNDRY_ETH_RPC_URL");
+    }
 });
 
 // checks that we can set various config values
@@ -367,8 +377,7 @@ forgetest!(can_set_solc_explicitly, |prj, cmd| {
 pragma solidity *;
 contract Greeter {}
    ",
-    )
-    .unwrap();
+    );
 
     prj.update_config(|config| {
         config.solc = Some(OTHER_SOLC_VERSION.into());
@@ -390,8 +399,7 @@ forgetest!(can_use_solc, |prj, cmd| {
 pragma solidity *;
 contract Foo {}
    ",
-    )
-    .unwrap();
+    );
 
     cmd.args(["build", "--use", OTHER_SOLC_VERSION]).assert_success().stdout_eq(str![[r#"
 [COMPILING_FILES] with [SOLC_VERSION]
@@ -447,8 +455,7 @@ contract Foo {
     }
 }
    ",
-    )
-    .unwrap();
+    );
 
     cmd.arg("build").assert_failure().stderr_eq(str![[r#"
 Error: Compiler run failed:
@@ -658,6 +665,8 @@ forgetest_init!(can_prioritise_closer_lib_remappings, |prj, cmd| {
 // remapping.
 // See <https://github.com/foundry-rs/foundry/issues/9146>
 // Test that
+// - single file remapping is properly added, see
+// <https://github.com/foundry-rs/foundry/issues/6706> and <https://github.com/foundry-rs/foundry/issues/8499>
 // - project defined `@openzeppelin/contracts` remapping is added
 // - library defined `@openzeppelin/contracts-upgradeable` remapping is added
 // - library defined `@openzeppelin/contracts/upgradeable` remapping is not added as it conflicts
@@ -667,6 +676,7 @@ forgetest_init!(can_prioritise_project_remappings, |prj, cmd| {
     let mut config = cmd.config();
     // Add `@utils/` remapping in project config.
     config.remappings = vec![
+        Remapping::from_str("@utils/libraries/Contract.sol=src/Contract.sol").unwrap().into(),
         Remapping::from_str("@utils/=src/").unwrap().into(),
         Remapping::from_str("@openzeppelin/contracts=lib/openzeppelin-contracts/").unwrap().into(),
     ];
@@ -694,6 +704,7 @@ forgetest_init!(can_prioritise_project_remappings, |prj, cmd| {
 
     cmd.args(["remappings", "--pretty"]).assert_success().stdout_eq(str![[r#"
 Global:
+- @utils/libraries/Contract.sol=src/Contract.sol
 - @utils/=src/
 - @openzeppelin/contracts/=lib/openzeppelin-contracts/
 - @openzeppelin/contracts-upgradeable/=lib/dep1/lib/openzeppelin-upgradeable/
@@ -905,8 +916,7 @@ import "forge-std/Script.sol";
 contract BaseScript is Script {
 }
    "#,
-    )
-    .unwrap();
+    );
     prj.add_script(
         "MyScript.sol",
         r#"
@@ -915,8 +925,7 @@ import "script/BaseScript.sol";
 contract MyScript is BaseScript {
 }
    "#,
-    )
-    .unwrap();
+    );
 
     let nested = prj.paths().libraries[0].join("another-dep");
     pretty_err(&nested, fs::create_dir_all(&nested));
@@ -955,8 +964,7 @@ import "contracts/Counter.sol";
 contract CounterTest {
 }
    "#,
-    )
-    .unwrap();
+    );
     cmd.forge_fuse().args(["build"]).assert_success();
 });
 
@@ -984,7 +992,7 @@ allow_paths = []
 include_paths = []
 skip = []
 force = false
-evm_version = "cancun"
+evm_version = "prague"
 gas_reports = ["*"]
 gas_reports_ignore = []
 gas_reports_include_tests = false
@@ -993,6 +1001,7 @@ offline = false
 optimizer = false
 optimizer_runs = 200
 verbosity = 0
+eth_rpc_accept_invalid_certs = false
 ignored_error_codes = [
     "license",
     "code-size",
@@ -1033,6 +1042,7 @@ sparse_mode = false
 build_info = false
 isolate = false
 disable_block_gas_limit = false
+enable_tx_gas_limit = false
 unchecked_cheatcode_artifacts = false
 create2_library_salt = "0x0000000000000000000000000000000000000000000000000000000000000000"
 create2_deployer = "0x4e59b44847b379578588920ca78fbf26c0b4956c"
@@ -1055,6 +1065,7 @@ path = "out"
 [fmt]
 line_length = 120
 tab_width = 4
+style = "space"
 bracket_spacing = false
 int_types = "long"
 multiline_func_header = "attributes_first"
@@ -1072,6 +1083,11 @@ sort_imports = false
 severity = []
 exclude_lints = []
 ignore = []
+lint_on_build = true
+mixed_case_exceptions = [
+    "ERC",
+    "URI",
+]
 
 [doc]
 out = "docs"
@@ -1082,6 +1098,7 @@ ignore = []
 
 [fuzz]
 runs = 256
+fail_on_revert = true
 max_test_rejects = 65536
 dictionary_weight = 40
 include_storage = true
@@ -1089,8 +1106,11 @@ include_push_bytes = true
 max_fuzz_dictionary_addresses = 15728640
 max_fuzz_dictionary_values = 6553600
 gas_report_samples = 256
+corpus_gzip = true
+corpus_min_mutations = 5
+corpus_min_size = 0
+show_edge_coverage = false
 failure_persist_dir = "cache/fuzz"
-failure_persist_file = "failures"
 show_logs = false
 
 [invariant]
@@ -1106,8 +1126,12 @@ max_fuzz_dictionary_values = 6553600
 shrink_run_limit = 5000
 max_assume_rejects = 65536
 gas_report_samples = 256
+corpus_gzip = true
+corpus_min_mutations = 5
+corpus_min_size = 0
+show_edge_coverage = false
 failure_persist_dir = "cache/invariant"
-show_metrics = false
+show_metrics = true
 show_solidity = false
 
 [labels]
@@ -1147,7 +1171,7 @@ exclude = []
   "include_paths": [],
   "skip": [],
   "force": false,
-  "evm_version": "cancun",
+  "evm_version": "prague",
   "gas_reports": [
     "*"
   ],
@@ -1162,11 +1186,11 @@ exclude = []
   "model_checker": null,
   "verbosity": 0,
   "eth_rpc_url": null,
+  "eth_rpc_accept_invalid_certs": false,
   "eth_rpc_jwt": null,
   "eth_rpc_timeout": null,
   "eth_rpc_headers": null,
   "etherscan_api_key": null,
-  "etherscan_api_version": null,
   "ignored_error_codes": [
     "license",
     "code-size",
@@ -1187,6 +1211,7 @@ exclude = []
   "show_progress": false,
   "fuzz": {
     "runs": 256,
+    "fail_on_revert": true,
     "max_test_rejects": 65536,
     "seed": null,
     "dictionary_weight": 40,
@@ -1195,8 +1220,12 @@ exclude = []
     "max_fuzz_dictionary_addresses": 15728640,
     "max_fuzz_dictionary_values": 6553600,
     "gas_report_samples": 256,
+    "corpus_dir": null,
+    "corpus_gzip": true,
+    "corpus_min_mutations": 5,
+    "corpus_min_size": 0,
+    "show_edge_coverage": false,
     "failure_persist_dir": "cache/fuzz",
-    "failure_persist_file": "failures",
     "show_logs": false,
     "timeout": null
   },
@@ -1213,8 +1242,13 @@ exclude = []
     "shrink_run_limit": 5000,
     "max_assume_rejects": 65536,
     "gas_report_samples": 256,
+    "corpus_dir": null,
+    "corpus_gzip": true,
+    "corpus_min_mutations": 5,
+    "corpus_min_size": 0,
+    "show_edge_coverage": false,
     "failure_persist_dir": "cache/invariant",
-    "show_metrics": false,
+    "show_metrics": true,
     "timeout": null,
     "show_solidity": false
   },
@@ -1260,6 +1294,7 @@ exclude = []
   "fmt": {
     "line_length": 120,
     "tab_width": 4,
+    "style": "space",
     "bracket_spacing": false,
     "int_types": "long",
     "multiline_func_header": "attributes_first",
@@ -1276,7 +1311,12 @@ exclude = []
   "lint": {
     "severity": [],
     "exclude_lints": [],
-    "ignore": []
+    "ignore": [],
+    "lint_on_build": true,
+    "mixed_case_exceptions": [
+      "ERC",
+      "URI"
+    ]
   },
   "doc": {
     "out": "docs",
@@ -1298,6 +1338,7 @@ exclude = []
   ],
   "isolate": false,
   "disable_block_gas_limit": false,
+  "enable_tx_gas_limit": false,
   "labels": {},
   "unchecked_cheatcode_artifacts": false,
   "create2_library_salt": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -1414,8 +1455,7 @@ contract Flare {
     }
 }
     "#,
-    )
-    .unwrap();
+    );
 
     let test_contract = |n: u32| {
         format!(
@@ -1448,7 +1488,7 @@ contract GasSnapshotCheckTest is DSTest {{
     };
 
     // Assert that gas_snapshot_check is disabled by default.
-    prj.add_source("GasSnapshotCheckTest.sol", &test_contract(1)).unwrap();
+    prj.add_source("GasSnapshotCheckTest.sol", &test_contract(1));
     cmd.forge_fuse().args(["test"]).assert_success().stdout_eq(str![[r#"
 ...
 Ran 1 test for src/GasSnapshotCheckTest.sol:GasSnapshotCheckTest
@@ -1467,7 +1507,7 @@ gas_snapshot_check = true
 "#]]);
 
     // Replace the test contract with a new one that will fail the gas snapshot check.
-    prj.add_source("GasSnapshotCheckTest.sol", &test_contract(2)).unwrap();
+    prj.add_source("GasSnapshotCheckTest.sol", &test_contract(2));
     cmd.forge_fuse().args(["test"]).assert_failure().stderr_eq(str![[r#"
 ...
 [GasSnapshotCheckTest] Failed to match snapshots:
@@ -1499,7 +1539,7 @@ Suite result: ok. 1 passed; 0 failed; 0 skipped; [ELAPSED]
 "#]]);
 
     // Replace the test contract with a new one that will fail the gas_snapshot_check.
-    prj.add_source("GasSnapshotCheckTest.sol", &test_contract(3)).unwrap();
+    prj.add_source("GasSnapshotCheckTest.sol", &test_contract(3));
     cmd.forge_fuse().args(["test"]).assert_failure().stderr_eq(str![[r#"
 ...
 [GasSnapshotCheckTest] Failed to match snapshots:
@@ -1524,7 +1564,7 @@ Suite result: ok. 1 passed; 0 failed; 0 skipped; [ELAPSED]
     // Enable using `FORGE_SNAPSHOT_CHECK` environment variable.
     // Assert that this will override the config file value.
     prj.update_config(|config| config.gas_snapshot_check = false);
-    prj.add_source("GasSnapshotCheckTest.sol", &test_contract(4)).unwrap();
+    prj.add_source("GasSnapshotCheckTest.sol", &test_contract(4));
     cmd.forge_fuse();
     cmd.env("FORGE_SNAPSHOT_CHECK", "true");
     cmd.args(["test"]).assert_failure().stderr_eq(str![[r#"
@@ -1592,8 +1632,7 @@ contract GasSnapshotEmitTest is DSTest {
     }
 }
     "#,
-    )
-    .unwrap();
+    );
 
     // Assert that gas_snapshot_emit is enabled by default.
     cmd.forge_fuse().args(["test"]).assert_success();
@@ -1672,8 +1711,7 @@ forgetest_init!(test_additional_compiler_profiles, |prj, cmd| {
 contract Counter {
 }
     "#,
-    )
-    .unwrap();
+    );
 
     prj.add_source(
         "v2/Counter.sol",
@@ -1681,8 +1719,7 @@ contract Counter {
 contract Counter {
 }
     "#,
-    )
-    .unwrap();
+    );
 
     prj.add_source(
         "v3/Counter.sol",
@@ -1690,8 +1727,7 @@ contract Counter {
 contract Counter {
 }
     "#,
-    )
-    .unwrap();
+    );
 
     // Additional profiles are defined with optimizer runs but without explicitly enabling
     // optimizer
@@ -1713,7 +1749,7 @@ contract Counter {
     let v1_profile = SettingsOverrides {
         name: "v1".to_string(),
         via_ir: Some(true),
-        evm_version: Some(EvmVersion::Cancun),
+        evm_version: Some(EvmVersion::Prague),
         optimizer: None,
         optimizer_runs: Some(44444444),
         bytecode_hash: None,
@@ -1799,19 +1835,19 @@ contract Counter {
 
     let (via_ir, evm_version, enabled, runs) = artifact_settings("Counter.sol/Counter.json");
     assert_eq!(None, via_ir);
-    assert_eq!("\"cancun\"", evm_version.unwrap().to_string());
+    assert_eq!("\"prague\"", evm_version.unwrap().to_string());
     assert_eq!("false", enabled.unwrap().to_string());
     assert_eq!("200", runs.unwrap().to_string());
 
     let (via_ir, evm_version, enabled, runs) = artifact_settings("v1/Counter.sol/Counter.json");
     assert_eq!("true", via_ir.unwrap().to_string());
-    assert_eq!("\"cancun\"", evm_version.unwrap().to_string());
+    assert_eq!("\"prague\"", evm_version.unwrap().to_string());
     assert_eq!("true", enabled.unwrap().to_string());
     assert_eq!("44444444", runs.unwrap().to_string());
 
     let (via_ir, evm_version, enabled, runs) = artifact_settings("v2/Counter.sol/Counter.json");
     assert_eq!("true", via_ir.unwrap().to_string());
-    assert_eq!("\"cancun\"", evm_version.unwrap().to_string());
+    assert_eq!("\"prague\"", evm_version.unwrap().to_string());
     assert_eq!("true", enabled.unwrap().to_string());
     assert_eq!("111", runs.unwrap().to_string());
 
@@ -1820,4 +1856,55 @@ contract Counter {
     assert_eq!("\"istanbul\"", evm_version.unwrap().to_string());
     assert_eq!("true", enabled.unwrap().to_string());
     assert_eq!("800", runs.unwrap().to_string());
+});
+
+// <https://github.com/foundry-rs/foundry/issues/11227>
+forgetest_init!(test_exclude_lints_config, |prj, cmd| {
+    prj.update_config(|config| {
+        config.lint.exclude_lints = vec![
+            "asm-keccak256".to_string(),
+            "incorrect-shift".to_string(),
+            "divide-before-multiply".to_string(),
+            "mixed-case-variable".to_string(),
+            "mixed-case-function".to_string(),
+            "screaming-snake-case-const".to_string(),
+            "screaming-snake-case-immutable".to_string(),
+            "unwrapped-modifier-logic".to_string(),
+        ]
+    });
+    cmd.args(["lint"]).assert_success().stdout_eq(str![[r#"
+No files changed, compilation skipped
+
+"#]]);
+});
+
+// <https://github.com/foundry-rs/foundry/issues/6529>
+forgetest_init!(test_fail_fast_config, |prj, cmd| {
+    // Skip if we don't have at least 2 CPUs to run both tests in parallel.
+    if thread::available_parallelism().map_or(1, |n| n.get()) < 2 {
+        return;
+    }
+
+    prj.wipe_contracts();
+    prj.update_config(|config| {
+        // Set large timeout for fuzzed tests so test campaign won't stop if fail fast not passed.
+        config.fuzz.timeout = Some(3600);
+    });
+    prj.add_test(
+        "AnotherCounterTest.sol",
+        r#"
+import {Test} from "forge-std/Test.sol";
+
+contract AnotherCounterTest is Test {
+    // This failure should stop all other tests.
+    function test_Failure() public pure {
+        require(false);
+    }
+
+    function testFuzz_SetNumber(uint256 x) public {
+    }
+}
+"#,
+    );
+    cmd.args(["test", "--fail-fast"]).assert_failure();
 });
