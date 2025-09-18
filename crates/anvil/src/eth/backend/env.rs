@@ -25,7 +25,6 @@ impl Env {
         is_optimism: bool,
         is_celo: bool,
     ) -> Self {
-        #[rustfmt::skip]
         Self { evm_env: EvmEnv { cfg_env: cfg, block_env: block }, tx, is_seismic: true, is_optimism, is_celo }
     }
 }

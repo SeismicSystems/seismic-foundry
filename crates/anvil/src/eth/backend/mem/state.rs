@@ -5,6 +5,8 @@ use alloy_rlp::Encodable;
 use alloy_trie::{HashBuilder, Nibbles};
 use revm::{database::DbAccount, state::AccountInfo};
 
+use alloy_primitives::FlaggedStorage;
+
 pub fn build_root(values: impl IntoIterator<Item = (Nibbles, Vec<u8>, bool)>) -> B256 {
     let mut builder = HashBuilder::default();
     for (key, value, is_private) in values {

@@ -1622,13 +1622,16 @@ impl Inspector<EthEvmContext<&mut dyn DatabaseExt>> for Cheatcodes {
                 self.broadcastable_transactions.push_back(BroadcastableTransaction {
                     rpc: ecx.journaled_state.database.active_fork_url(),
                     transaction: TransactionRequest {
-                        from: Some(broadcast.new_origin),
-                        to: None,
-                        value: Some(input.value()),
-                        input: TransactionInput::new(input.init_code()),
-                        nonce: Some(account.info.nonce),
-                        gas: if is_fixed_gas_limit { Some(input.gas_limit()) } else { None },
-                        ..Default::default()
+                        inner: AlloyTransactionRequest {
+                            from: Some(broadcast.new_origin),
+                            to: None,
+                            value: Some(input.value()),
+                            input: TransactionInput::new(input.init_code()),
+                            nonce: Some(account.info.nonce),
+                            gas: if is_fixed_gas_limit { Some(input.gas_limit()) } else { None },
+                            ..Default::default()
+                        },
+                        seismic_elements: None,
                     }
                     .into(),
                 });

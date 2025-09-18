@@ -390,8 +390,9 @@ alloy-trie = { git = "https://github.com/SeismicSystems/seismic-trie.git", branc
 
 # seismic-revm
 revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
-revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
+revm-context-interface = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
 revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
+revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
 op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
 seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
 

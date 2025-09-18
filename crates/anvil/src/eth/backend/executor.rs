@@ -20,11 +20,9 @@ use alloy_consensus::{
 };
 use alloy_eips::{eip7685::EMPTY_REQUESTS_HASH, eip7840::BlobParams};
 use alloy_evm::{
-    EthEvm, Evm,
+    Evm,
     eth::EthEvmContext,
-    precompiles::{DynPrecompile, Precompile, PrecompilesMap},
 };
-use alloy_op_evm::OpEvm;
 use alloy_primitives::{B256, Bloom, BloomInput, Log};
 use anvil_core::eth::{
     block::{Block, BlockInfo, PartialHeader},
@@ -37,19 +35,11 @@ use foundry_evm::{
     traces::{CallTraceDecoder, CallTraceNode},
 };
 use foundry_evm_core::{either_evm::EitherEvm, precompiles::EC_RECOVER};
-use op_revm::{L1BlockInfo, OpContext, precompiles::OpPrecompiles};
+use op_revm::{OpContext};
 use revm::{
-    Database, DatabaseRef, Inspector, Journal,
-    context::{Block as RevmBlock, BlockEnv, Cfg, CfgEnv, Evm as RevmEvm, JournalTr, LocalContext},
-    context_interface::result::{EVMError, ExecutionResult, Output},
-    database::WrapDatabaseRef,
-    handler::{EthPrecompiles, instructions::EthInstructions},
-    interpreter::InstructionResult,
-    precompile::{
-        PrecompileSpecId, Precompiles,
-        secp256r1::{P256VERIFY, P256VERIFY_BASE_GAS_FEE},
-    },
-    primitives::hardfork::SpecId,
+    context::{Block as RevmBlock, BlockEnv, Cfg, JournalTr, LocalContext}, context_interface::result::{EVMError, ExecutionResult, Output}, database::WrapDatabaseRef, handler::{instructions::EthInstructions, EthPrecompiles}, interpreter::InstructionResult, precompile::{
+        secp256r1::{P256VERIFY, P256VERIFY_BASE_GAS_FEE}, PrecompileSpecId, Precompiles
+    }, primitives::hardfork::SpecId, Database, DatabaseRef, Inspector, Journal
 };
 use std::{fmt::Debug, sync::Arc};
 
@@ -377,10 +367,11 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
             }
 
             if self.celo {
+                let _f = celo_precompile::precompile;
+                /*
                 evm.precompiles_mut()
-                    .apply_precompile(&celo_precompile::CELO_TRANSFER_ADDRESS, move |_| {
-                        Some(celo_precompile::precompile())
-                    });
+                    .apply_precompile(&celo_precompile::CELO_TRANSFER_ADDRESS, );
+                */
             }
 
             if let Some(factory) = &self.precompile_factory {
@@ -389,13 +380,15 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
 
             let cheats = Arc::new(self.cheats.clone());
             if cheats.has_recover_overrides() {
-                let cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
-                evm.precompiles_mut().apply_precompile(&EC_RECOVER, move |_| {
-                    Some(DynPrecompile::new_stateful(
-                        cheat_ecrecover.precompile_id().clone(),
-                        move |input| cheat_ecrecover.call(input),
-                    ))
-                });
+                // TODO(usm)
+                let _cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
+                let _addr = EC_RECOVER;
+                // evm.precompiles_mut().apply_precompile(&EC_RECOVER, move |_| {
+                //     Some(DynPrecompile::new_stateful(
+                //         cheat_ecrecover.precompile_id().clone(),
+                //         move |input| cheat_ecrecover.call(input),
+                //     ))
+                // });
             }
 
             trace!(target: "backend", "[{:?}] executing", transaction.hash());

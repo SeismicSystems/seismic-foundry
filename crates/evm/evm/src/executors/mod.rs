@@ -15,8 +15,7 @@ use crate::{
 use alloy_dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
 use alloy_json_abi::Function;
 use alloy_primitives::{
-    Address, Bytes, Log, TxKind, U256, keccak256,
-    map::{AddressHashMap, HashMap},
+    keccak256, map::{AddressHashMap, HashMap}, Address, Bytes, Log, TxKind, U256
 };
 use alloy_sol_types::{SolCall, sol};
 use foundry_evm_core::{
@@ -50,7 +49,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use foundry_evm_core::EvmEnv;
+use alloy_primitives::FlaggedStorage;
 use seismic_prelude::foundry::SpecId;
 
 mod builder;
@@ -281,7 +280,7 @@ impl Executor {
     pub fn set_storage(
         &mut self,
         address: Address,
-        storage: HashMap<U256, U256>,
+        storage: HashMap<U256, FlaggedStorage>,
     ) -> BackendResult<()> {
         self.backend_mut().replace_account_storage(address, storage)?;
         Ok(())
@@ -292,7 +291,7 @@ impl Executor {
         &mut self,
         address: Address,
         slot: U256,
-        value: U256,
+        value: FlaggedStorage,
     ) -> BackendResult<()> {
         self.backend_mut().insert_account_storage(address, slot, value)?;
         Ok(())

@@ -7,7 +7,7 @@ use std::{
 };
 
 use alloy_consensus::Header;
-use alloy_primitives::{Address, B256, Bytes, U256, keccak256, map::HashMap};
+use alloy_primitives::{keccak256, map::HashMap, Address, Bytes, FixedBytes, B256, U256};
 use alloy_rpc_types::BlockId;
 use anvil_core::eth::{
     block::Block,
@@ -28,7 +28,7 @@ use revm::{
 };
 use serde::{
     Deserialize, Deserializer, Serialize,
-    de::{Error as DeError, MapAccess, Visitor},
+    de::{Error as DeError},
 };
 use serde_json::Value;
 
@@ -172,7 +172,7 @@ pub trait Db:
             );
 
             for (k, v) in account.storage.into_iter() {
-                self.set_storage_at(addr, k, v.into())?;
+                self.set_storage_at(addr, k.into(), v.into())?;
             }
         }
         Ok(true)
@@ -207,10 +207,10 @@ impl<T: DatabaseRef<Error = DatabaseError> + Send + Sync + Clone + fmt::Debug> D
     fn set_storage_at(
         &mut self,
         address: Address,
-        slot: U256,
+        slot: FixedBytes<32>,
         val: FlaggedStorage,
     ) -> DatabaseResult<()> {
-        self.insert_account_storage(address, slot, val)
+        self.insert_account_storage(address, slot.into(), val)
     }
 
     fn insert_block_hash(&mut self, number: U256, hash: B256) {

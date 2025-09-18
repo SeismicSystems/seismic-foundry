@@ -11,10 +11,10 @@ use alloy_primitives::{Address, Bytes, TxKind, U256, hex};
 use alloy_provider::{
     Provider,
     ext::TraceApi,
-    network::{AnyTxEnvelope, TransactionBuilder},
+    network::{TransactionBuilder},
 };
 use alloy_rpc_types::{
-    BlockId, BlockNumberOrTag, TransactionInput, TransactionRequest,
+    BlockId, BlockNumberOrTag, TransactionInput,
     trace::parity::{Action, CreateAction, CreateOutput, TraceOutput},
 };
 use clap::{Parser, ValueHint};
@@ -31,6 +31,7 @@ use foundry_evm_core::AsEnvMut;
 use revm::state::AccountInfo;
 use std::path::PathBuf;
 
+use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
 use seismic_prelude::foundry::{AnyTxEnvelope, TransactionRequest};
 
 impl_figment_convert!(VerifyBytecodeArgs);
@@ -339,8 +340,8 @@ impl VerifyBytecodeArgs {
         };
 
         let mut transaction: TransactionRequest = match transaction.0.inner.inner.inner() {
-            AnyTxEnvelope::Ethereum(tx) => tx.clone().into(),
             AnyTxEnvelope::Seismic(tx) => tx.clone().into(),
+            AnyTxEnvelope::Ethereum(tx) => tx.clone().into(),
             AnyTxEnvelope::Unknown(_) => unreachable!("Unknown transaction type"),
         };
 

@@ -40,7 +40,7 @@ use alloy_eips::{
 };
 use alloy_evm::overrides::{OverrideBlockHashes, apply_state_overrides};
 use alloy_network::{
-    AnyRpcBlock, AnyRpcTransaction, BlockResponse, Ethereum, NetworkWallet, TransactionBuilder,
+    BlockResponse, NetworkWallet, TransactionBuilder,
     TransactionResponse, eip2718::Decodable2718,
 };
 use alloy_primitives::{
@@ -102,15 +102,12 @@ use tokio::{
     sync::mpsc::{UnboundedReceiver, unbounded_channel},
     try_join,
 };
-use std::{future::Future, sync::Arc, time::Duration};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use yansi::Paint;
 
 
 use seismic_enclave::{keys::GetPurposeKeysRequest, rpc::SyncEnclaveApiClient};
 use seismic_prelude::foundry::{
-    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
-    SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest,
+    tx_builder, AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest, SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest
 };
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -276,12 +273,14 @@ impl EthApi {
             EthRequest::EthSignTypedDataV4(addr, data) => {
                 self.sign_typed_data_v4(addr, &data).await.to_rpc_result()
             }
-            EthRequest::EthSendRawTransaction(tx) => {
-                SeismicRawTxRequest::Bytes(tx) => {
-                    self.send_raw_transaction(tx).await.to_rpc_result()
-                }
-                SeismicRawTxRequest::TypedData(td) => {
-                    self.send_signed_typed_data_tx(td).await.to_rpc_result()
+            EthRequest::EthSendRawTransaction(tx_req) => {
+                match tx_req {
+                    SeismicRawTxRequest::Bytes(tx) => {
+                        self.send_raw_transaction(tx).await.to_rpc_result()
+                    }
+                    SeismicRawTxRequest::TypedData(td) => {
+                        self.send_signed_typed_data_tx(td).await.to_rpc_result()
+                    }
                 }
             }
             EthRequest::EthSendRawTransactionSync(tx) => {
@@ -1260,7 +1259,7 @@ impl EthApi {
                     "not available on past forked blocks".to_string(),
                 ));
             }
-            return Ok(fork.call(&request, Some(number.into())).await?);
+            return Ok(fork.call(&seismic_request, Some(number.into())).await?);
         }
 
         let request = seismic_request.clone().inner.inner;
@@ -2180,7 +2179,7 @@ impl EthApi {
         calldata: Bytes,
         expected_value: U256,
     ) -> Result<B256> {
-        let tx = TransactionRequest::default().with_to(token_address).with_input(calldata.clone());
+        let tx = tx_builder().with_to(token_address).with_input(calldata.clone()).into();
 
         // first collect all the slots that are used by the function call
         let access_list_result =
@@ -2760,12 +2759,12 @@ impl EthApi {
                             .coerce_status()
                             && let Some(reason) = RevertDecoder::new().maybe_decode(&output, None)
                         {
-                            tx.other.insert(
+                            tx.0.other.insert(
                                 "revertReason".to_string(),
                                 serde_json::to_value(reason).expect("Infallible"),
                             );
                         }
-                        tx.other.insert(
+                        tx.0.other.insert(
                             "output".to_string(),
                             serde_json::to_value(output).expect("Infallible"),
                         );

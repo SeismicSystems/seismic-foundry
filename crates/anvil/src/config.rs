@@ -12,7 +12,7 @@ use crate::{
         fees::{INITIAL_BASE_FEE, INITIAL_GAS_PRICE},
         pool::transactions::{PoolTransaction, TransactionOrder},
     },
-    hardfork::{ChainHardfork, ethereum_hardfork_from_block_tag, spec_id_from_ethereum_hardfork},
+    hardfork::{ChainHardfork, ethereum_hardfork_from_block_tag},
     mem::{self, in_memory_db::MemDb},
 };
 use alloy_chains::Chain;
@@ -1268,18 +1268,9 @@ impl NodeConfig {
                 let chain_id =
                     provider.get_chain_id().await.wrap_err("failed to fetch network chain ID")?;
                 if alloy_chains::NamedChain::Mainnet == chain_id {
-<<<<<<< HEAD
-                    let hardfork: EthereumHardfork = fork_block_number.into();
-                    /*
-                    env.evm_env.cfg_env.spec = hardfork.into();
-                    */
-                    env.evm_env.cfg_env.spec = SpecId::MERCURY;
-=======
-                    let hardfork: EthereumHardfork =
-                        ethereum_hardfork_from_block_tag(fork_block_number);
+                    let hardfork: EthereumHardfork = ethereum_hardfork_from_block_tag(fork_block_number);
 
-                    env.evm_env.cfg_env.spec = spec_id_from_ethereum_hardfork(hardfork);
->>>>>>> a8dc5ae2424832ba9fc39120eec0d206f8584743
+                    env.evm_env.cfg_env.spec = SpecId::MERCURY;
                     self.hardfork = Some(ChainHardfork::Ethereum(hardfork));
                 }
                 Some(U256::from(chain_id))
@@ -1507,13 +1498,9 @@ async fn derive_block_and_transactions(
                 .get_transaction_by_hash(transaction_hash.0.into())
                 .await?
                 .ok_or_else(|| eyre::eyre!("failed to get fork transaction by hash"))?;
-<<<<<<< HEAD
-            let transaction_block_number = transaction.0.block_number.unwrap();
-=======
-            let transaction_block_number = transaction.block_number.ok_or_else(|| {
+            let transaction_block_number = transaction.block_number().ok_or_else(|| {
                 eyre::eyre!("fork transaction is not mined yet (no block number)")
             })?;
->>>>>>> a8dc5ae2424832ba9fc39120eec0d206f8584743
 
             // TODO: seismic provider
             // Get the block pertaining to the fork transaction

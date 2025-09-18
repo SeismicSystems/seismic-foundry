@@ -1,5 +1,4 @@
-use alloy_evm::{Database, EthEvm, Evm, EvmEnv, eth::EthEvmContext};
-use alloy_op_evm::OpEvm;
+use alloy_evm::{Database, Evm, EvmEnv};
 use alloy_primitives::{Address, Bytes};
 use op_revm::{OpSpecId, OpTransactionError};
 use revm::{
@@ -124,8 +123,11 @@ where
 
     fn block(&self) -> &BlockEnv {
         match self {
+            Self::Seismic(evm) => evm.block(),
+            /*
             Self::Eth(evm) => evm.block(),
             Self::Op(evm) => evm.block(),
+            */
         }
     }
 
@@ -142,26 +144,30 @@ where
     fn components(&self) -> (&Self::DB, &Self::Inspector, &Self::Precompiles) {
         match self {
             Self::Seismic(evm) => evm.components(),
+            /*
             Self::Eth(evm) => evm.components(),
             Self::Op(evm) => evm.components(),
+            */
         }
     }
 
     fn components_mut(&mut self) -> (&mut Self::DB, &mut Self::Inspector, &mut Self::Precompiles) {
         match self {
             Self::Seismic(evm) => evm.components_mut(),
+            /*
             Self::Eth(evm) => evm.components_mut(),
             Self::Op(evm) => evm.components_mut(),
+            */
         }
     }
 
     fn db_mut(&mut self) -> &mut Self::DB {
         match self {
+            Self::Seismic(evm) => evm.db_mut(),
             /*
             Self::Eth(evm) => evm.db_mut(),
             Self::Op(evm) => evm.db_mut(),
             */
-            Self::Seismic(evm) => evm.db_mut(),
         }
     }
 

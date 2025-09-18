@@ -348,7 +348,7 @@ impl From<InvalidTransaction> for InvalidTransactionError {
             InvalidTransaction::NonceTooHigh { .. } => Self::NonceTooHigh,
             InvalidTransaction::NonceTooLow { .. } => Self::NonceTooLow,
             InvalidTransaction::AccessListNotSupported => Self::AccessListNotSupported,
-            InvalidTransaction::BlobGasPriceGreaterThanMax => Self::BlobFeeCapTooLow,
+            InvalidTransaction::BlobGasPriceGreaterThanMax { .. } => Self::BlobFeeCapTooLow,
             InvalidTransaction::BlobVersionedHashesNotSupported => {
                 Self::BlobVersionedHashesNotSupported
             }

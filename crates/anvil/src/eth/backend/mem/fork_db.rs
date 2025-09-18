@@ -2,7 +2,7 @@ use crate::eth::backend::db::{
     Db, MaybeForkedDatabase, MaybeFullDatabase, SerializableAccountRecord, SerializableBlock,
     SerializableHistoricalStates, SerializableState, SerializableTransaction, StateDb,
 };
-use alloy_primitives::{Address, B256, U256, map::HashMap};
+use alloy_primitives::{map::HashMap, Address, FixedBytes, B256, U256};
 use alloy_rpc_types::BlockId;
 use foundry_evm::{
     backend::{BlockchainDb, DatabaseResult, RevertStateSnapshotAction, StateSnapshot},
@@ -24,7 +24,7 @@ impl Db for ForkedDatabase {
     fn set_storage_at(
         &mut self,
         address: Address,
-        slot: U256,
+        slot: FixedBytes<32>,
         val: revm::primitives::FlaggedStorage,
     ) -> DatabaseResult<()> {
         // this ensures the account is loaded first

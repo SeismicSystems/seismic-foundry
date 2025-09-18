@@ -5,7 +5,7 @@ use crate::eth::{
 };
 use alloy_consensus::Transaction as TransactionTrait;
 use alloy_network::{
-    AnyHeader, AnyRpcBlock, AnyRpcHeader, AnyRpcTransaction, AnyTxEnvelope, BlockResponse,
+    AnyHeader, AnyRpcHeader, BlockResponse,
     TransactionResponse,
 };
 use alloy_primitives::{Address, B256, Bytes, U256};

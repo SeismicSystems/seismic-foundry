@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use alloy_hardforks::EthereumHardfork;
 use alloy_op_hardforks::OpHardfork::{self};
 use alloy_rpc_types::BlockNumberOrTag;
@@ -67,6 +69,7 @@ pub fn spec_id_from_ethereum_hardfork(hardfork: EthereumHardfork) -> SpecId {
         | EthereumHardfork::Bpo3
         | EthereumHardfork::Bpo4
         | EthereumHardfork::Bpo5 => unimplemented!(),
+        _ => unimplemented!()
     }
 }
 
@@ -83,6 +86,7 @@ pub fn spec_id_from_optimism_hardfork(hardfork: OpHardfork) -> OpSpecId {
         OpHardfork::Isthmus => OpSpecId::ISTHMUS,
         OpHardfork::Interop => OpSpecId::INTEROP,
         OpHardfork::Jovian => OpSpecId::ISTHMUS,
+        _ => unimplemented!()
     }
 }
 
@@ -112,7 +116,7 @@ impl FromStr for SeismicHardfork {
         let hardfork = match s.as_str() {
             "mercury" => Self::Mercury,
             "latest" => Self::Latest,
-            _ => bail!("Unknown hardfork {s}"),
+            _ => eyre::bail!("Unknown hardfork {s}"),
         };
         Ok(hardfork)
     }

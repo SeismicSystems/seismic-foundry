@@ -9,21 +9,19 @@ use crate::{
 use alloy_consensus::constants::KECCAK_EMPTY;
 use alloy_evm::{
     Evm, EvmEnv,
-    eth::EthEvmContext,
-    precompiles::{DynPrecompile, PrecompileInput, PrecompilesMap},
+    precompiles::{DynPrecompile, PrecompileInput},
 };
 use alloy_primitives::{Address, Bytes, U256};
 use foundry_fork_db::DatabaseError;
 use revm::{
     Context, Journal,
     context::{
-        BlockEnv, CfgEnv, ContextTr, CreateScheme, Evm as RevmEvm, JournalTr, LocalContext,
-        LocalContextTr, TxEnv,
+        BlockEnv, ContextTr, CreateScheme, JournalTr, LocalContext,
+        LocalContextTr,
         result::{EVMError, ExecResultAndState, ExecutionResult, HaltReason, ResultAndState},
     },
     handler::{
         EthFrame, EthPrecompiles, EvmTr, FrameResult, FrameTr, Handler, ItemOrResult,
-        instructions::EthInstructions,
     },
     inspector::{InspectorEvmTr, InspectorHandler},
     interpreter::{
@@ -44,7 +42,7 @@ use seismic_prelude::foundry::{
 pub type PrecompileCtx<'db> = EthEvmContext<&'db mut dyn DatabaseExt>;
 pub type SeismicFoundryPrecompiles<'db> = SeismicPrecompiles<PrecompileCtx<'db>>;
 
-pub fn new_evm_with_inspector<'i, 'db, I: InspectorExt + ?Sized>(
+pub fn new_evm_with_inspector<'i, 'db, I: InspectorExt + Sized>(
     db: &'db mut dyn DatabaseExt,
     env: Env,
     inspector: I,
@@ -110,7 +108,7 @@ where
 /// Conditionally inject additional precompiles into the EVM context.
 fn inject_precompiles(evm: &mut FoundryEvm<'_, impl InspectorExt>) {
     if evm.inspector().is_odyssey() {
-        evm.precompiles_mut().apply_precompile(P256VERIFY.address(), |_| {
+        apply_precompile(evm.precompiles_mut(), P256VERIFY.address(), |_| {
             // Create a wrapper function that adapts the new API
             let precompile_fn = |input: PrecompileInput<'_>| -> Result<_, _> {
                 P256VERIFY.precompile()(input.data, P256VERIFY_BASE_GAS_FEE)
@@ -208,9 +206,9 @@ impl<'db, I: InspectorExt> Evm for FoundryEvm<'db, I> {
 
     fn components_mut(&mut self) -> (&mut Self::DB, &mut Self::Inspector, &mut Self::Precompiles) {
         (
-            &mut self.inner.ctx.journaled_state.database,
-            &mut self.inner.inspector,
-            &mut self.inner.precompiles,
+            &mut self.inner.0.ctx.journaled_state.database,
+            &mut self.inner.0.inspector,
+            &mut self.inner.0.precompiles,
         )
     }
 

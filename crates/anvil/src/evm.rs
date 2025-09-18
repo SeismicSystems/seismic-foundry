@@ -1,11 +1,9 @@
 use alloy_evm::{
     Database, Evm,
-    eth::EthEvmContext,
-    precompiles::{DynPrecompile, PrecompileInput, PrecompilesMap},
+    precompiles::DynPrecompile,
 };
 
 use foundry_evm_core::either_evm::EitherEvm;
-use op_revm::OpContext;
 use revm::{Inspector, precompile::Precompile};
 use std::fmt::Debug;
 
@@ -21,7 +19,7 @@ pub trait PrecompileFactory: Send + Sync + Unpin + Debug {
 }
 
 #[allow(unused_variables)]
-fn apply_precompile<DB: Database, F>(
+pub fn apply_precompile<DB: Database, F>(
     p: &mut SeismicPrecompiles<SeismicContext<DB>>,
     address: &alloy_primitives::Address,
     f: F,
@@ -42,11 +40,9 @@ pub fn inject_precompiles<DB, I>(
     */
     I: Inspector<SeismicContext<DB>>,
 {
-    for (precompile, gas) in precompiles {
-        let addr = *precompile.address();
-        let func = *precompile.precompile();
-        evm.precompiles_mut().apply_precompile(&addr, move |_| {
-            Some(DynPrecompile::from(move |input: PrecompileInput<'_>| func(input.data, gas)))
+    for (p, _) in precompiles {
+        apply_precompile(evm.precompiles_mut(), p.address(), |_| {
+            Some(DynPrecompile::from(*p.precompile()))
         });
     }
 }

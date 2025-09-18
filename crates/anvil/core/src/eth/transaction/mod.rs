@@ -17,18 +17,16 @@ use alloy_serde::{OtherFields, WithOtherFields};
 use bytes::BufMut;
 use foundry_evm::traces::CallTraceNode;
 use op_alloy_consensus::{DEPOSIT_TX_TYPE_ID, TxDeposit};
-use op_revm::{OpTransaction, transaction::deposit::DepositTransactionParts};
+use op_revm::transaction::deposit::DepositTransactionParts;
 use revm::{context::TxEnv, interpreter::InstructionResult};
 use serde::{Deserialize, Serialize};
 use std::{
-    fmt::Debug,
-    hash::Hash,
-    ops::{Deref, Mul},
+    fmt::Debug, hash::Hash, ops::{Deref, Mul}
 };
 
-use alloy_eips::{Decodable2718, Encodable2718};
+use alloy_eips::{eip2718::Eip2718Error, Decodable2718, Encodable2718};
 use seismic_prelude::foundry::{
-    AnyReceiptEnvelope, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, Decodable712,
+    AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, Decodable712,
     Eip712Result, OpTransaction, RpcTransaction, TransactionReceipt, TransactionRequest,
     TxEnvelope, TxSeismic, TxSeismicElements, TypedDataRequest, SEISMIC_TX_TYPE_ID,
 };
@@ -1227,7 +1225,6 @@ impl From<TxEnvelope> for TypedTransaction {
             TxEnvelope::Eip1559(tx) => Self::EIP1559(tx),
             TxEnvelope::Eip4844(tx) => Self::EIP4844(tx),
             TxEnvelope::Eip7702(tx) => Self::EIP7702(tx),
-            _ => unreachable!(),
         }
     }
 }
@@ -1647,8 +1644,11 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
                 blob_gas_used,
                 inner,
             },
-        other: _,
+        other,
     } = receipt;
+
+    let r#type = inner.type_id();
+    let receipt_with_bloom = inner.as_receipt_with_bloom().clone();
 
     Some(TransactionReceipt {
         transaction_hash,
@@ -1672,15 +1672,15 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
             0x7E => TypedReceipt::Deposit(DepositReceipt {
                 inner: receipt_with_bloom,
                 deposit_nonce: other
-                    .get_deserialized::<U64>("depositNonce")
+                    .get_deserialized::<u64>("depositNonce")
                     .transpose()
                     .ok()?
-                    .map(|v| v.to()),
+                    .map(|v| v.into()),
                 deposit_receipt_version: other
-                    .get_deserialized::<U64>("depositReceiptVersion")
+                    .get_deserialized::<u64>("depositReceiptVersion")
                     .transpose()
                     .ok()?
-                    .map(|v| v.to()),
+                    .map(|v| v.into()),
             }),
             _ => return None,
         },
@@ -1692,6 +1692,7 @@ mod tests {
     use super::*;
     use alloy_primitives::{LogData, b256, hex};
     use std::str::FromStr;
+    use alloy_consensus::SignableTransaction;
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
     #[test]
