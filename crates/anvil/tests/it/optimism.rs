@@ -2,12 +2,12 @@
 
 use crate::utils::{http_provider, http_provider_with_signer};
 use alloy_eips::eip2718::Encodable2718;
-use alloy_network::{TransactionBuilder};
-use alloy_primitives::{b256, Address, TxHash, TxKind, U256};
+use alloy_network::TransactionBuilder;
+use alloy_primitives::{Address, TxHash, TxKind, U256, b256};
 use alloy_provider::Provider;
 use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
-use anvil::{spawn, NodeConfig};
+use anvil::{NodeConfig, spawn};
 use op_alloy_consensus::TxDeposit;
 use op_alloy_rpc_types::OpTransactionFields;
 
@@ -202,7 +202,7 @@ async fn test_deposit_tx_checks_sufficient_funds_after_applying_deposited_value(
         source_hash: b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
         from: sender,
         to: TxKind::Call(recipient),
-        mint: Some(send_value),
+        mint: send_value,
         value: U256::from(send_value),
         gas_limit: 21_000,
         is_system_transaction: false,

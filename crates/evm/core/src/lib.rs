@@ -10,7 +10,7 @@ use crate::constants::DEFAULT_CREATE2_DEPLOYER;
 use alloy_primitives::Address;
 use auto_impl::auto_impl;
 use backend::DatabaseExt;
-use revm::{inspector::NoOpInspector, interpreter::CreateInputs, Inspector};
+use revm::{Inspector, inspector::NoOpInspector, interpreter::CreateInputs};
 use revm_inspectors::access_list::AccessListInspector;
 
 use seismic_prelude::foundry::{EthEvmContext, SeismicSpecId};
@@ -39,7 +39,6 @@ pub mod either_evm;
 pub mod evm;
 pub mod fork;
 pub mod ic;
-pub mod opcodes;
 pub mod opts;
 pub mod precompiles;
 pub mod state_snapshot;

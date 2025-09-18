@@ -1,30 +1,27 @@
 use super::IncorrectShift;
 use crate::{
-    declare_forge_lint,
     linter::{EarlyLintPass, LintContext},
     sol::{Severity, SolLint},
 };
-use solar_ast::{BinOp, BinOpKind, Expr, ExprKind};
+use solar::ast::{BinOp, BinOpKind, Expr, ExprKind};
 
 declare_forge_lint!(
     INCORRECT_SHIFT,
     Severity::High,
     "incorrect-shift",
-    "the order of args in a shift operation is incorrect",
-    ""
+    "the order of args in a shift operation is incorrect"
 );
 
 impl<'ast> EarlyLintPass<'ast> for IncorrectShift {
-    fn check_expr(&mut self, ctx: &LintContext<'_>, expr: &'ast Expr<'ast>) {
+    fn check_expr(&mut self, ctx: &LintContext, expr: &'ast Expr<'ast>) {
         if let ExprKind::Binary(
             left_expr,
             BinOp { kind: BinOpKind::Shl | BinOpKind::Shr, .. },
             right_expr,
         ) = &expr.kind
+            && contains_incorrect_shift(left_expr, right_expr)
         {
-            if contains_incorrect_shift(left_expr, right_expr) {
-                ctx.emit(&INCORRECT_SHIFT, expr.span);
-            }
+            ctx.emit(&INCORRECT_SHIFT, expr.span);
         }
     }
 }

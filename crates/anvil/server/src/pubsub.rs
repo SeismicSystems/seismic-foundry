@@ -1,4 +1,4 @@
-use crate::{error::RequestError, handler::handle_request, RpcHandler};
+use crate::{RpcHandler, error::RequestError, handler::handle_request};
 use anvil_rpc::{
     error::RpcError,
     request::Request,
@@ -11,7 +11,6 @@ use serde::de::DeserializeOwned;
 use std::{
     collections::VecDeque,
     fmt,
-    future::Future,
     hash::Hash,
     pin::Pin,
     sync::Arc,

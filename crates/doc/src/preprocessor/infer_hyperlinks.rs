@@ -120,7 +120,10 @@ impl InferInlineHyperlinks {
                 ParseSource::Event(ev) => {
                     let ev_name = &ev.name.safe_unwrap().name;
                     if ev_name == link.ref_name() {
-                        return Some(InlineLinkTarget::borrowed(ev_name, target_path.to_path_buf()));
+                        return Some(InlineLinkTarget::borrowed(
+                            ev_name,
+                            target_path.to_path_buf(),
+                        ));
                     }
                 }
                 ParseSource::Error(err) => {
@@ -233,7 +236,7 @@ impl<'a> InlineLink<'a> {
     }
 
     fn captures(s: &'a str) -> impl Iterator<Item = Self> + 'a {
-        RE_INLINE_LINK.captures(s).map(Self::from_capture).into_iter().flatten()
+        RE_INLINE_LINK.captures_iter(s).filter_map(Self::from_capture)
     }
 
     /// Parses the first inline link.

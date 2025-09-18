@@ -1,14 +1,14 @@
 //! Support for polling based filters
 use crate::{
+    StorageInfo,
     eth::{backend::notifications::NewBlockNotifications, error::ToRpcResponseResult},
     pubsub::filter_logs,
-    StorageInfo,
 };
-use alloy_primitives::{map::HashMap, TxHash};
+use alloy_primitives::{TxHash, map::HashMap};
 use alloy_rpc_types::{Filter, FilteredParams, Log};
 use anvil_core::eth::subscription::SubscriptionId;
 use anvil_rpc::response::ResponseResult;
-use futures::{channel::mpsc::Receiver, Stream, StreamExt};
+use futures::{Stream, StreamExt, channel::mpsc::Receiver};
 use std::{
     pin::Pin,
     sync::Arc,
@@ -61,7 +61,7 @@ impl Filters {
     /// Returns the original `Filter` of an `eth_newFilter`
     pub async fn get_log_filter(&self, id: &str) -> Option<Filter> {
         let filters = self.active_filters.lock().await;
-        if let Some((EthFilter::Logs(ref log), _)) = filters.get(id) {
+        if let Some((EthFilter::Logs(log), _)) = filters.get(id) {
             return log.filter.filter.clone();
         }
         None
@@ -156,7 +156,7 @@ pub struct LogsFilter {
     pub filter: FilteredParams,
     /// existing logs that matched the filter when the listener was installed
     ///
-    /// They'll be returned on the first pill
+    /// They'll be returned on the first poll
     pub historic: Option<Vec<Log>>,
 }
 

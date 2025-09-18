@@ -1,10 +1,7 @@
 pub use alloy_evm::EvmEnv as AlloyEvmEnv;
 use revm::{
-    context::{BlockEnv, JournalInner, JournalTr},
-    /*
-    primitives::hardfork::SpecId,
-    */
     Context, Database, Journal, JournalEntry,
+    context::{BlockEnv, JournalInner, JournalTr},
 };
 
 use crate::EvmEnv;

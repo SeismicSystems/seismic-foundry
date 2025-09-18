@@ -1,21 +1,19 @@
 use super::PascalCaseStruct;
 use crate::{
-    declare_forge_lint,
     linter::{EarlyLintPass, LintContext},
     sol::{Severity, SolLint},
 };
-use solar_ast::ItemStruct;
+use solar::ast::ItemStruct;
 
 declare_forge_lint!(
     PASCAL_CASE_STRUCT,
     Severity::Info,
     "pascal-case-struct",
-    "structs should use PascalCase",
-    "https://docs.soliditylang.org/en/latest/style-guide.html#struct-names"
+    "structs should use PascalCase"
 );
 
 impl<'ast> EarlyLintPass<'ast> for PascalCaseStruct {
-    fn check_item_struct(&mut self, ctx: &LintContext<'_>, strukt: &'ast ItemStruct<'ast>) {
+    fn check_item_struct(&mut self, ctx: &LintContext, strukt: &'ast ItemStruct<'ast>) {
         let name = strukt.name.as_str();
         if name.len() > 1 && !is_pascal_case(name) {
             ctx.emit(&PASCAL_CASE_STRUCT, strukt.name.span);

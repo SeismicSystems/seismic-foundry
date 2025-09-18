@@ -1,7 +1,7 @@
 use crate::transaction::TransactionWithMetadata;
-use alloy_primitives::{hex, map::HashMap, TxHash};
+use alloy_primitives::{TxHash, hex, map::HashMap};
 use eyre::{ContextCompat, Result, WrapErr};
-use foundry_common::{fs, shell, TransactionMaybeSigned, SELECTOR_LEN};
+use foundry_common::{SELECTOR_LEN, TransactionMaybeSigned, fs, shell};
 use foundry_compilers::ArtifactId;
 use foundry_config::Config;
 use serde::{Deserialize, Serialize};
@@ -35,7 +35,7 @@ pub struct ScriptSequence {
     /// None if sequence should not be saved to disk (e.g. part of a multi-chain sequence)
     pub paths: Option<(PathBuf, PathBuf)>,
     pub returns: HashMap<String, NestedValue>,
-    pub timestamp: u64,
+    pub timestamp: u128,
     pub chain: u64,
     pub commit: Option<String>,
 }
@@ -102,7 +102,7 @@ impl ScriptSequence {
 
         let Some((path, sensitive_path)) = self.paths.clone() else { return Ok(()) };
 
-        self.timestamp = now().as_secs();
+        self.timestamp = now().as_millis();
         let ts_name = format!("run-{}.json", self.timestamp);
 
         let sensitive_script_sequence: SensitiveScriptSequence = self.clone().into();
@@ -229,9 +229,13 @@ pub fn sig_to_file_name(sig: &str) -> String {
         return name.to_string();
     }
     // assume calldata if `sig` is hex
-    if let Ok(calldata) = hex::decode(sig) {
-        // in which case we return the function signature
-        return hex::encode(&calldata[..SELECTOR_LEN]);
+    if let Ok(calldata) = hex::decode(sig.strip_prefix("0x").unwrap_or(sig)) {
+        // in which case we return the function selector if available
+        if let Some(selector) = calldata.get(..SELECTOR_LEN) {
+            return hex::encode(selector);
+        }
+        // fallback to original string if calldata is too short to contain selector
+        return sig.to_string();
     }
 
     // return sig as is
@@ -256,5 +260,20 @@ mod tests {
             .as_str(),
             "522bb704"
         );
+        // valid calldata with 0x prefix
+        assert_eq!(
+            sig_to_file_name(
+                "0x522bb704000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfFFb92266"
+            )
+            .as_str(),
+            "522bb704"
+        );
+        // short calldata: should not panic and should return input as-is
+        assert_eq!(sig_to_file_name("0x1234").as_str(), "0x1234");
+        assert_eq!(sig_to_file_name("123").as_str(), "123");
+        // invalid hex: should return input as-is
+        assert_eq!(sig_to_file_name("0xnotahex").as_str(), "0xnotahex");
+        // non-hex non-signature: should return input as-is
+        assert_eq!(sig_to_file_name("not_a_sig_or_hex").as_str(), "not_a_sig_or_hex");
     }
 }

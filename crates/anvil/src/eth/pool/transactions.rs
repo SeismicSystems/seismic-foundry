@@ -1,7 +1,7 @@
 use crate::eth::{error::PoolError, util::hex_fmt_many};
 use alloy_primitives::{
-    map::{HashMap, HashSet},
     Address, TxHash,
+    map::{HashMap, HashSet},
 };
 use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
 use parking_lot::RwLock;
@@ -522,7 +522,7 @@ impl ReadyTransactions {
                     }
                 }
 
-                unlocked_tx.extend(to_remove.unlocks.iter().cloned())
+                unlocked_tx.extend(to_remove.unlocks.iter().copied())
             }
         }
 
@@ -640,12 +640,11 @@ impl ReadyTransactions {
 
                 // remove from unlocks
                 for mark in &tx.transaction.transaction.requires {
-                    if let Some(hash) = self.provided_markers.get(mark) {
-                        if let Some(tx) = ready.get_mut(hash) {
-                            if let Some(idx) = tx.unlocks.iter().position(|i| i == hash) {
-                                tx.unlocks.swap_remove(idx);
-                            }
-                        }
+                    if let Some(hash) = self.provided_markers.get(mark)
+                        && let Some(tx) = ready.get_mut(hash)
+                        && let Some(idx) = tx.unlocks.iter().position(|i| i == hash)
+                    {
+                        tx.unlocks.swap_remove(idx);
                     }
                 }
 

@@ -1,17 +1,15 @@
 use super::ScreamingSnakeCase;
 use crate::{
-    declare_forge_lint,
     linter::{EarlyLintPass, LintContext},
     sol::{Severity, SolLint},
 };
-use solar_ast::{VarMut, VariableDefinition};
+use solar::ast::{VarMut, VariableDefinition};
 
 declare_forge_lint!(
     SCREAMING_SNAKE_CASE_CONSTANT,
     Severity::Info,
     "screaming-snake-case-const",
-    "constants should use SCREAMING_SNAKE_CASE",
-    "https://docs.soliditylang.org/en/latest/style-guide.html#constants"
+    "constants should use SCREAMING_SNAKE_CASE"
 );
 
 declare_forge_lint!(
@@ -24,7 +22,7 @@ declare_forge_lint!(
 impl<'ast> EarlyLintPass<'ast> for ScreamingSnakeCase {
     fn check_variable_definition(
         &mut self,
-        ctx: &LintContext<'_>,
+        ctx: &LintContext,
         var: &'ast VariableDefinition<'ast>,
     ) {
         if let (Some(name), Some(mutability)) = (var.name, var.mutability) {

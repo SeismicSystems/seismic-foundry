@@ -3,7 +3,7 @@ use alloy_chains::Chain;
 use alloy_dyn_abi::{DynSolValue, JsonAbiExt, Specifier};
 use alloy_json_abi::{Constructor, JsonAbi};
 use alloy_network::TransactionBuilder;
-use alloy_primitives::{hex, Address, Bytes};
+use alloy_primitives::{Address, Bytes, hex};
 use alloy_provider::{PendingTransactionError, Provider, ProviderBuilder};
 use alloy_serde::WithOtherFields;
 use alloy_signer::Signer;
@@ -13,7 +13,7 @@ use eyre::{Context, Result};
 use forge_verify::{RetryArgs, VerifierArgs, VerifyArgs};
 use foundry_cli::{
     opts::{BuildOpts, EthereumOpts, EtherscanOpts, TransactionOpts},
-    utils::{self, read_constructor_args_file, remove_contract, LoadConfig},
+    utils::{self, LoadConfig, read_constructor_args_file, remove_contract},
 };
 use foundry_common::{
     compile::{self},
@@ -21,15 +21,15 @@ use foundry_common::{
     shell,
 };
 use foundry_compilers::{
-    artifacts::BytecodeObject, info::ContractInfo, utils::canonicalize, ArtifactId,
+    ArtifactId, artifacts::BytecodeObject, info::ContractInfo, utils::canonicalize,
 };
 use foundry_config::{
+    Config,
     figment::{
-        self,
+        self, Metadata, Profile,
         value::{Dict, Map},
-        Metadata, Profile,
     },
-    merge_impl_figment_convert, Config,
+    merge_impl_figment_convert,
 };
 use serde_json::json;
 use std::{borrow::Borrow, marker::PhantomData, path::PathBuf, sync::Arc, time::Duration};
@@ -138,7 +138,10 @@ impl CreateArgs {
                     })
                     .collect::<Vec<String>>()
                     .join("\n");
-                eyre::bail!("Dynamic linking not supported in `create` command - deploy the following library contracts first, then provide the address to link at compile time\n{}", link_refs)
+                eyre::bail!(
+                    "Dynamic linking not supported in `create` command - deploy the following library contracts first, then provide the address to link at compile time\n{}",
+                    link_refs
+                )
             }
         };
 
@@ -231,7 +234,6 @@ impl CreateArgs {
             num_of_optimizations: None,
             etherscan: EtherscanOpts {
                 key: self.eth.etherscan.key.clone(),
-                api_version: self.eth.etherscan.api_version,
                 chain: Some(chain.into()),
             },
             rpc: Default::default(),
@@ -248,6 +250,8 @@ impl CreateArgs {
             show_standard_json_input: self.show_standard_json_input,
             guess_constructor_args: false,
             compilation_profile: Some(id.profile.to_string()),
+            language: None,
+            creation_transaction_hash: None,
         };
 
         // Check config for Etherscan API Keys to avoid preflight check failing if no
@@ -367,7 +371,9 @@ impl CreateArgs {
                 )?;
                 sh_println!("ABI: {}\n", serde_json::to_string_pretty(&abi)?)?;
 
-                sh_warn!("To broadcast this transaction, add --broadcast to the previous command. See forge create --help for more.")?;
+                sh_warn!(
+                    "To broadcast this transaction, add --broadcast to the previous command. See forge create --help for more."
+                )?;
             } else {
                 let output = json!({
                     "contract": self.contract.name,
@@ -404,11 +410,7 @@ impl CreateArgs {
         sh_println!("Starting contract verification...")?;
 
         let num_of_optimizations = if let Some(optimizer) = self.build.compiler.optimize {
-            if optimizer {
-                Some(self.build.compiler.optimizer_runs.unwrap_or(200))
-            } else {
-                None
-            }
+            if optimizer { Some(self.build.compiler.optimizer_runs.unwrap_or(200)) } else { None }
         } else {
             self.build.compiler.optimizer_runs
         };
@@ -420,11 +422,7 @@ impl CreateArgs {
             constructor_args,
             constructor_args_path: None,
             num_of_optimizations,
-            etherscan: EtherscanOpts {
-                key: self.eth.etherscan.key(),
-                api_version: self.eth.etherscan.api_version,
-                chain: Some(chain.into()),
-            },
+            etherscan: EtherscanOpts { key: self.eth.etherscan.key(), chain: Some(chain.into()) },
             rpc: Default::default(),
             flatten: false,
             force: false,
@@ -439,6 +437,8 @@ impl CreateArgs {
             show_standard_json_input: self.show_standard_json_input,
             guess_constructor_args: false,
             compilation_profile: Some(id.profile.to_string()),
+            language: None,
+            creation_transaction_hash: Some(receipt.transaction_hash),
         };
         sh_println!("Waiting for {} to detect contract deployment...", verify.verifier.verifier)?;
         verify.run().await
