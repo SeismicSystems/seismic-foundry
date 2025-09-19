@@ -390,12 +390,12 @@ alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy
 alloy-trie = { git = "https://github.com/SeismicSystems/seismic-trie.git", branch = "usm" }
 
 # seismic-revm
-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "apply-precompile" }
-revm-context-interface = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "apply-precompile" }
-revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "apply-precompile" }
-revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "apply-precompile" }
-op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "apply-precompile" }
-seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "apply-precompile" }
+revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
+revm-context-interface = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
+revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
+revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
+op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
+seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", branch = "usm" }
 
 revm-inspectors = { git = "https://github.com/SeismicSystems/seismic-revm-inspectors.git", branch = "usm" }
 
