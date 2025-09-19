@@ -136,7 +136,6 @@ pub enum ForgeSubcommand {
     // /// Lint Solidity source files
     // #[command(visible_alias = "l")]
     // Lint(LintArgs),
-
     /// Get specialized information about a smart contract.
     #[command(visible_alias = "in")]
     Inspect(inspect::InspectArgs),
