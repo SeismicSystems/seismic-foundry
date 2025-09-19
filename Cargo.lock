@@ -373,7 +373,8 @@ dependencies = [
 [[package]]
 name = "alloy-op-evm"
 version = "0.20.1"
-source = "git+https://github.com/SeismicSystems/seismic-evm.git?branch=usm#52fbe3f953baa9efb23e66ee9f30e5678a3c3ac0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed9b726869a13d5d958f2f78fbef7ce522689c4d40d613c16239f5e286fbeb1a"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",

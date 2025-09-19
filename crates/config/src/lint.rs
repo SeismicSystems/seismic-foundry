@@ -36,7 +36,8 @@ pub struct LinterConfig {
 impl Default for LinterConfig {
     fn default() -> Self {
         Self {
-            lint_on_build: true,
+            // TODO: need to tweak solar for this
+            lint_on_build: false,
             severity: Vec::new(),
             exclude_lints: Vec::new(),
             ignore: Vec::new(),
