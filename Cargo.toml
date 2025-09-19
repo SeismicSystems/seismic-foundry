@@ -408,7 +408,7 @@ seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git",
 
 # alloy-evm
 alloy-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", branch = "usm" }
-# alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", branch = "usm" }
+alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", branch = "usm" }
 alloy-seismic-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", branch = "usm" }
 
 # foundry
