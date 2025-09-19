@@ -20,7 +20,6 @@ required-features = ["cli"]
 
 [dependencies]
 # Seismic's added dependencies
-# bytes.workspace = true
 seismic-enclave.workspace = true
 seismic-prelude.workspace = true
 
