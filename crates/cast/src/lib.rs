@@ -49,7 +49,7 @@ use tokio::signal::ctrl_c;
 use foundry_common::abi::encode_function_args_packed;
 pub use foundry_evm::*;
 
-use seismic_prelude::foundry::{AnyNetwork, AnyRpcTransaction, TransactionRequest};
+use seismic_prelude::foundry::{AnyNetwork, AnyRpcTransaction, AnyTxEnvelope, TransactionRequest};
 
 pub mod args;
 pub mod cmd;
@@ -800,14 +800,10 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
         };
 
         Ok(if raw {
-            // TODO(usm)
-            /*
             // also consider opstack deposit transactions
             let either_tx = tx.try_into_either::<AnyTxEnvelope>()?;
             let encoded = either_tx.encoded_2718();
             format!("0x{}", hex::encode(encoded))
-            */
-            format!("0x{}", hex::encode(tx.inner().inner.encoded_2718()))
         } else if let Some(field) = field {
             get_pretty_tx_attr(&tx.inner(), field.as_str())
                 .ok_or_else(|| eyre::eyre!("invalid tx field: {}", field.to_string()))?
@@ -815,11 +811,7 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
             // to_value first to sort json object keys
             serde_json::to_value(&tx)?.to_string()
         } else if to_request {
-            // TODO(usm): make this work
-            // serde_json::to_string_pretty(&TransactionRequest::from_recovered_transaction(
-            //     tx.into(),
-            // ))?
-            tx.pretty()
+            serde_json::to_string_pretty(&tx.to_tx_request())?
         } else {
             tx.pretty()
         })

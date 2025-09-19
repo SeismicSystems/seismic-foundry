@@ -26,14 +26,10 @@ use crate::{
         macros::node_info,
         pool::transactions::PoolTransaction,
         sign::build_typed_transaction,
-<<<<<<< HEAD
-    }, evm::celo_precompile::{self, CELO_TRANSFER_ADDRESS}, inject_precompiles, mem::{
-=======
     },
     evm::celo_precompile::{self, CELO_TRANSFER_ADDRESS},
     inject_precompiles,
     mem::{
->>>>>>> a0d8e2f1ba5f8e0629c2bfa7cdd026da80b4aac6
         inspector::AnvilInspector,
         storage::{BlockchainStorage, InMemoryBlockStates, MinedBlockOutcome},
     },
