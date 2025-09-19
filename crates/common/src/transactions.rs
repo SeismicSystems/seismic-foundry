@@ -231,8 +231,6 @@ impl TransactionMaybeSigned {
     pub fn input(&self) -> Option<&Bytes> {
         match self {
             Self::Signed { tx, .. } => Some(tx.input()),
-            // TODO(usm):
-            // Self::Unsigned(tx) => tx.inner.inner.input.input().map(|i| i.as_ref()),
             Self::Unsigned(tx) => tx.input.input(),
         }
     }

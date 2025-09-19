@@ -2,16 +2,12 @@ use crate::{
     PrecompileFactory,
     eth::{
         backend::{
-            cheats::{CheatEcrecover, CheatsManager},
-            db::Db,
-            env::Env,
-            mem::op_haltreason_to_instruction_result,
+            cheats::CheatsManager, db::Db, env::Env, mem::op_haltreason_to_instruction_result,
             validate::TransactionValidator,
         },
         error::InvalidTransactionError,
         pool::transactions::PoolTransaction,
     },
-    evm::celo_precompile,
     inject_precompiles,
     mem::inspector::AnvilInspector,
 };
@@ -31,7 +27,7 @@ use foundry_evm::{
     backend::DatabaseError,
     traces::{CallTraceDecoder, CallTraceNode},
 };
-use foundry_evm_core::{either_evm::EitherEvm, precompiles::EC_RECOVER};
+use foundry_evm_core::either_evm::EitherEvm;
 use op_revm::OpContext;
 use revm::{
     Database, DatabaseRef, Inspector, Journal,
@@ -371,10 +367,11 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
             }
 
             if self.celo {
-                let _f = celo_precompile::precompile;
                 /*
                 evm.precompiles_mut()
-                    .apply_precompile(&celo_precompile::CELO_TRANSFER_ADDRESS, );
+                    .apply_precompile(&celo_precompile::CELO_TRANSFER_ADDRESS, move |_| {
+                        Some(celo_precompile::precompile())
+                    });
                 */
             }
 
@@ -384,15 +381,16 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
 
             let cheats = Arc::new(self.cheats.clone());
             if cheats.has_recover_overrides() {
-                // TODO(usm)
-                let _cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
-                let _addr = EC_RECOVER;
-                // evm.precompiles_mut().apply_precompile(&EC_RECOVER, move |_| {
-                //     Some(DynPrecompile::new_stateful(
-                //         cheat_ecrecover.precompile_id().clone(),
-                //         move |input| cheat_ecrecover.call(input),
-                //     ))
-                // });
+                // NOTE: seismic-anvil does not support this; typing too annoying
+                /*
+                let cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
+                evm.precompiles_mut().apply_precompile(&EC_RECOVER, move |_| {
+                    Some(DynPrecompile::new_stateful(
+                        cheat_ecrecover.precompile_id().clone(),
+                        move |input| cheat_ecrecover.call(input),
+                    ))
+                });
+                */
             }
 
             trace!(target: "backend", "[{:?}] executing", transaction.hash());

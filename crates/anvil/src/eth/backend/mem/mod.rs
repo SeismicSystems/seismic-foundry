@@ -857,13 +857,6 @@ impl Backend {
         self.env.read().is_celo
     }
 
-    // TODO(usm)
-    /*
-    pub fn precompiles(&self) -> Vec<Address> {
-        get_precompiles_for(self.env.read().evm_env.cfg_env.spec.into_eth_spec())
-    }
-    */
-
     /// Returns the precompiles for the current spec.
     pub fn precompiles(&self) -> BTreeMap<String, Address> {
         let spec_id = self.env.read().evm_env.cfg_env.spec;

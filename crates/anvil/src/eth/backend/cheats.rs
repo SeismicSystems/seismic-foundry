@@ -105,29 +105,6 @@ impl CheatEcrecover {
     pub fn new(cheats: Arc<CheatsManager>) -> Self {
         Self { cheats }
     }
-
-    pub fn precompile(&self, data: &[u8], gas_limit: u64) -> PrecompileResult {
-        if !self.cheats.has_recover_overrides() {
-            return ec_recover_run(data, gas_limit);
-        }
-
-        const ECRECOVER_BASE: u64 = 3_000;
-        if gas_limit < ECRECOVER_BASE {
-            return Err(PrecompileError::OutOfGas);
-        }
-        let padded = right_pad::<128>(data);
-        let v = padded[63];
-        let mut sig_bytes = [0u8; 65];
-        sig_bytes[..64].copy_from_slice(&padded[64..128]);
-        sig_bytes[64] = v;
-        let sig_bytes_wrapped = Bytes::copy_from_slice(&sig_bytes);
-        if let Some(addr) = self.cheats.get_recover_override(&sig_bytes_wrapped) {
-            let mut out = [0u8; 32];
-            out[12..].copy_from_slice(addr.as_slice());
-            return Ok(PrecompileOutput::new(ECRECOVER_BASE, Bytes::copy_from_slice(&out)));
-        }
-        ec_recover_run(data, gas_limit)
-    }
 }
 
 impl Precompile for CheatEcrecover {
