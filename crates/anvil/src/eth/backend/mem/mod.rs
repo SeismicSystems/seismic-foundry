@@ -38,9 +38,7 @@ use alloy_eips::{
     eip7910::SystemContract,
 };
 use alloy_evm::{
-    Database, Evm,
-    eth::EthEvmContext,
-    overrides::{OverrideBlockHashes, apply_state_overrides},
+    eth::EthEvmContext, overrides::{apply_state_overrides, OverrideBlockHashes}, precompiles::{DynPrecompile, Precompile}, Database, Evm
 };
 use alloy_network::{
     AnyHeader, AnyRpcHeader, AnyTxType, UnknownTxEnvelope, UnknownTypedTransaction,
@@ -1256,32 +1254,29 @@ impl Backend {
         let mut evm = new_evm_with_inspector_ref(db, env, inspector);
 
         if self.odyssey {
-            let _addr = P256VERIFY;
-            let _gas = P256VERIFY_BASE_GAS_FEE;
-            // inject_precompiles(&mut evm, vec![(P256VERIFY, P256VERIFY_BASE_GAS_FEE)]);
+            inject_precompiles(&mut evm, vec![(P256VERIFY, P256VERIFY_BASE_GAS_FEE)]);
         }
 
         if self.is_celo() {
-            let _cp = celo_precompile::precompile();
-            // apply_precompile(evm.precompiles_mut(), &celo_precompile::CELO_TRANSFER_ADDRESS, celo_precompile::precompile);
+            evm.precompiles_mut()
+                .apply_precompile(&celo_precompile::CELO_TRANSFER_ADDRESS, move |_| {
+                    Some(celo_precompile::precompile())
+                });
         }
 
         if let Some(factory) = &self.precompile_factory {
-            // inject_precompiles(&mut evm, factory.precompiles());
+            inject_precompiles(&mut evm, factory.precompiles());
         }
 
-        // TODO(usm): make these work
         let cheats = Arc::new(self.cheats.clone());
         if cheats.has_recover_overrides() {
-            let _addr = EC_RECOVER;
-            let _cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
-            // let precompile = RevmPrecompile::new(PrecompileId::EcRec, EC_RECOVER, move |_, _| {
-            //     Some(DynPrecompile::new_stateful(
-            //         cheat_ecrecover.precompile_id().clone(),
-            //         move |input| cheat_ecrecover.call(input),
-            //     ))
-            // });
-            // inject_precompiles(&mut evm, vec![(precompile, 0)]);
+            let cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
+            evm.precompiles_mut().apply_precompile(&EC_RECOVER, move |_| {
+                Some(DynPrecompile::new_stateful(
+                    cheat_ecrecover.precompile_id().clone(),
+                    move |input| cheat_ecrecover.call(input),
+                ))
+            });
         }
 
         evm

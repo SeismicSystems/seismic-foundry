@@ -484,7 +484,7 @@ pub fn new_evm_with_inspector<DB, I>(
 ) -> EitherEvm<DB, I, SeismicPrecompiles<SeismicContext<DB>>>
 where
     DB: Database<Error = DatabaseError> + Debug,
-    I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>>,
+    I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>> + Inspector<SeismicContext<DB>>,
 {
     let spec = env.evm_env.cfg_env.spec;
     let eth_context = SeismicContext {
@@ -586,7 +586,8 @@ pub fn new_evm_with_inspector_ref<'db, DB, I>(
 where
     DB: DatabaseRef<Error = DatabaseError> + Debug + 'db + ?Sized,
     I: Inspector<EthEvmContext<WrapDatabaseRef<&'db DB>>>
-        + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>,
+        + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>
+        + Inspector<SeismicContext<WrapDatabaseRef<&'db DB>>>,
     WrapDatabaseRef<&'db DB>: Database<Error = DatabaseError>,
 {
     new_evm_with_inspector(WrapDatabaseRef(db), env, inspector)
