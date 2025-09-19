@@ -11,10 +11,7 @@ use alloy_primitives::{
     map::{AddressHashMap, B256HashMap, HashMap},
 };
 use alloy_provider::{Provider, SendableTx};
-use alloy_rpc_types::{
-    BlockId, BlockNumberOrTag, BlockTransactions, request::TransactionRequest,
-    state::AccountOverride,
-};
+use alloy_rpc_types::{BlockId, BlockNumberOrTag, BlockTransactions, state::AccountOverride};
 use alloy_serde::WithOtherFields;
 use anvil::{CHAIN_ID, EthereumHardfork, NodeConfig, eth::api::CLIENT_VERSION, spawn};
 use foundry_test_utils::rpc;
@@ -23,7 +20,7 @@ use std::time::Duration;
 use url::Url;
 
 use seismic_prelude::foundry::{
-    sfoundry_signed_provider, tx_builder, EthereumWallet, SeismicProviderExt,
+    EthereumWallet, SeismicProviderExt, sfoundry_signed_provider, tx_builder,
 };
 
 #[tokio::test(flavor = "multi_thread")]
@@ -456,12 +453,8 @@ async fn can_send_tx_sync() {
     let logger_bytecode = bytes!("66365f5f37365fa05f5260076019f3");
 
     let from = wallets[0].address();
-    let tx = tx_builder()
-        .with_from(from)
-        .into_create()
-        .with_nonce(0)
-        .with_input(logger_bytecode)
-        .into();
+    let tx =
+        tx_builder().with_from(from).into_create().with_nonce(0).with_input(logger_bytecode).into();
 
     let receipt = api.send_transaction_sync(WithOtherFields::new(tx)).await.unwrap();
     assert_eq!(receipt.from, wallets[0].address());

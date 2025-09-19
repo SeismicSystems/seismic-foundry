@@ -40,6 +40,8 @@ use tokio::{
     task::{JoinError, JoinHandle},
 };
 
+use alloy_op_evm as _;
+
 /// contains the background service that drives the node
 mod service;
 

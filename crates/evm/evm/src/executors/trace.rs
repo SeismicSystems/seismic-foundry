@@ -2,7 +2,7 @@ use crate::{
     Env,
     executors::{Executor, ExecutorBuilder},
 };
-use alloy_primitives::{map::HashMap, Address, U256};
+use alloy_primitives::{Address, U256, map::HashMap};
 use alloy_rpc_types::state::StateOverride;
 use eyre::Context;
 use foundry_compilers::artifacts::EvmVersion;

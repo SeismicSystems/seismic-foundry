@@ -6,9 +6,9 @@ use alloy_hardforks::EthereumHardfork;
 use alloy_network::{ReceiptResponse, TransactionBuilder};
 use alloy_primitives::{Address, B256, hex};
 use alloy_provider::Provider;
-use alloy_rpc_types::TransactionRequest;
 use alloy_sol_types::SolCall;
 use anvil::{NodeConfig, spawn};
+
 use seismic_prelude::foundry::tx_builder;
 
 #[tokio::test(flavor = "multi_thread")]

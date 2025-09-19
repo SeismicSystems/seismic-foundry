@@ -7,7 +7,6 @@ use alloy_consensus::{Header, TxEnvelope};
 use alloy_dyn_abi::{DynSolType, DynSolValue, FunctionExt};
 use alloy_ens::NameOrAddress;
 use alloy_json_abi::Function;
-use alloy_network::AnyTxEnvelope;
 use alloy_primitives::{
     Address, B256, I256, Keccak256, Selector, TxHash, TxKind, U64, U256, hex,
     utils::{ParseUnits, Unit, keccak256},
@@ -17,9 +16,7 @@ use alloy_provider::{
     network::eip2718::{Decodable2718, Encodable2718},
 };
 use alloy_rlp::Decodable;
-use alloy_rpc_types::{
-    BlockId, BlockNumberOrTag, BlockOverrides, Filter, state::StateOverride,
-};
+use alloy_rpc_types::{BlockId, BlockNumberOrTag, BlockOverrides, Filter, state::StateOverride};
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use base::{Base, NumberWithBase, ToBase};
@@ -817,11 +814,12 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
         } else if shell::is_json() {
             // to_value first to sort json object keys
             serde_json::to_value(&tx)?.to_string()
-        // TODO(usm): make this work
-        // } else if to_request {
-        //     serde_json::to_string_pretty(&TransactionRequest::from_recovered_transaction(
-        //         tx.into(),
-        //     ))?
+        } else if to_request {
+            // TODO(usm): make this work
+            // serde_json::to_string_pretty(&TransactionRequest::from_recovered_transaction(
+            //     tx.into(),
+            // ))?
+            tx.pretty()
         } else {
             tx.pretty()
         })
@@ -1924,11 +1922,11 @@ impl SimpleCast {
             | DynSolType::CustomStruct { .. } => {
                 eyre::bail!("Type `{k_ty}` is not supported as a mapping key")
             }
-            DynSolType::Sbool |
-            DynSolType::Saddress |
-            DynSolType::Sint(_) |
-            DynSolType::Suint(_) |
-            DynSolType::Sbytes(..) => hasher.update(k.as_word().unwrap()),
+            DynSolType::Sbool
+            | DynSolType::Saddress
+            | DynSolType::Sint(_)
+            | DynSolType::Suint(_)
+            | DynSolType::Sbytes(..) => hasher.update(k.as_word().unwrap()),
         }
 
         let p = DynSolType::Uint(256)

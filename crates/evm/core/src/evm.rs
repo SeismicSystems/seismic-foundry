@@ -16,13 +16,10 @@ use foundry_fork_db::DatabaseError;
 use revm::{
     Context, Journal,
     context::{
-        BlockEnv, ContextTr, CreateScheme, JournalTr, LocalContext,
-        LocalContextTr,
+        BlockEnv, ContextTr, CreateScheme, JournalTr, LocalContext, LocalContextTr,
         result::{EVMError, ExecResultAndState, ExecutionResult, HaltReason, ResultAndState},
     },
-    handler::{
-        EthFrame, EthPrecompiles, EvmTr, FrameResult, FrameTr, Handler, ItemOrResult,
-    },
+    handler::{EthFrame, EthPrecompiles, EvmTr, FrameResult, FrameTr, Handler, ItemOrResult},
     inspector::{InspectorEvmTr, InspectorHandler},
     interpreter::{
         CallInput, CallInputs, CallOutcome, CallScheme, CallValue, CreateInputs, CreateOutcome,
