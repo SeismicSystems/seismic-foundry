@@ -112,15 +112,11 @@ impl BuildArgs {
             sh_println!("{}", serde_json::to_string_pretty(&output.output())?)?;
         }
 
-        // TODO: make a seismic fork of solar
-        // Linting via foundry won't work until we do this
-        /*
         // Only run the `SolidityLinter` if lint on build and no compilation errors.
         if config.lint.lint_on_build && !output.output().errors.iter().any(|e| e.is_error()) {
             self.lint(&project, &config, self.paths.as_deref(), &mut output)
                 .map_err(|err| eyre!("Lint failed: {err}"))?;
         }
-        */
 
         Ok(output)
     }
