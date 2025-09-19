@@ -36,9 +36,7 @@ pub struct LinterConfig {
 impl Default for LinterConfig {
     fn default() -> Self {
         Self {
-            // TODO: make a seismic fork of solar
-            // Linting via foundry won't work until we do this
-            lint_on_build: false,
+            lint_on_build: true,
             severity: Vec::new(),
             exclude_lints: Vec::new(),
             ignore: Vec::new(),
