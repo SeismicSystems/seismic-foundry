@@ -132,9 +132,10 @@ pub enum ForgeSubcommand {
     /// Format Solidity source files.
     Fmt(FmtArgs),
 
-    /// Lint Solidity source files
-    #[command(visible_alias = "l")]
-    Lint(LintArgs),
+    // TODO: Make seismic-solar parse seismic solidity
+    // /// Lint Solidity source files
+    // #[command(visible_alias = "l")]
+    // Lint(LintArgs),
 
     /// Get specialized information about a smart contract.
     #[command(visible_alias = "in")]
