@@ -24,7 +24,7 @@ use crate::{
         macros::node_info,
         pool::transactions::PoolTransaction,
         sign::build_typed_transaction,
-    }, evm::{celo_precompile::{self, CELO_TRANSFER_ADDRESS}}, mem::{
+    }, evm::celo_precompile::{self, CELO_TRANSFER_ADDRESS}, inject_precompiles, mem::{
         inspector::AnvilInspector,
         storage::{BlockchainStorage, InMemoryBlockStates, MinedBlockOutcome},
     }, ForkChoice, NodeConfig, PrecompileFactory
@@ -1266,7 +1266,7 @@ impl Backend {
             // apply_precompile(evm.precompiles_mut(), &celo_precompile::CELO_TRANSFER_ADDRESS, celo_precompile::precompile);
         }
 
-        if let Some(_factory) = &self.precompile_factory {
+        if let Some(factory) = &self.precompile_factory {
             // inject_precompiles(&mut evm, factory.precompiles());
         }
 
