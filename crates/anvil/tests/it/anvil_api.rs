@@ -38,7 +38,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use seismic_prelude::foundry::{tx_builder, EthereumWallet};
+use seismic_prelude::foundry::{EthereumWallet, tx_builder};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_set_gas_price() {
@@ -1080,8 +1080,8 @@ async fn test_anvil_reset_non_fork() {
     // Send a transaction
     let to = Address::random();
     let val = U256::from(1337);
-    let tx = TransactionRequest::default().with_from(init_accounts[0]).with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(init_accounts[0]).with_to(to).with_value(val);
+    let tx = WithOtherFields::new(tx.into());
 
     let _ = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 

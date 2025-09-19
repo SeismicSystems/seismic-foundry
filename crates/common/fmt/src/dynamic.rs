@@ -5,7 +5,7 @@ use eyre::Result;
 use serde_json::Value;
 use std::fmt;
 
-use alloy_primitives::aliases::{SInt, SUInt, SAddress};
+use alloy_primitives::aliases::{SAddress, SInt, SUInt};
 use alloy_sol_types::sol_data::Sbool;
 
 /// [`DynSolValue`] formatter.

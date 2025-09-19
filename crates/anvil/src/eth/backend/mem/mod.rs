@@ -7,7 +7,7 @@ use crate::{
     config::PruneStateHistoryConfig,
     eth::{
         backend::{
-            cheats::{CheatEcrecover, CheatsManager},
+            cheats::CheatsManager,
             db::{Db, MaybeFullDatabase, SerializableState},
             env::Env,
             executor::{ExecutedTransactions, TransactionExecutor},
@@ -36,8 +36,8 @@ use crate::{
 };
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    Account, Blob, BlockHeader, EnvKzgSettings, Header, Receipt, ReceiptWithBloom, Signed,
-    Transaction as TransactionTrait, TxEnvelope,
+    Account, Blob, BlockHeader, EnvKzgSettings, EthereumTxEnvelope, Header, Receipt,
+    ReceiptWithBloom, Signed, Transaction as TransactionTrait,
     proofs::{calculate_receipt_root, calculate_transaction_root},
     transaction::Recovered,
 };
@@ -49,7 +49,6 @@ use alloy_evm::{
     Database, Evm,
     eth::EthEvmContext,
     overrides::{OverrideBlockHashes, apply_state_overrides},
-    precompiles::{DynPrecompile, Precompile, PrecompilesMap},
 };
 use alloy_network::{
     AnyHeader, AnyRpcHeader, AnyTxType, UnknownTxEnvelope, UnknownTypedTransaction,
@@ -61,7 +60,7 @@ use alloy_primitives::{
 use alloy_rpc_types::{
     AccessList, Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions,
     EIP1186AccountProofResponse as AccountProof, EIP1186StorageProof as StorageProof, Filter,
-    Header as AlloyHeader, Index, Log, Transaction, TransactionReceipt,
+    Header as AlloyHeader, Index, Log, Transaction,
     anvil::Forking,
     serde_helpers::JsonStorageKey,
     simulate::{SimCallResult, SimulatedBlock},
@@ -83,8 +82,7 @@ use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
         DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
-        TransactionInfo, TypedReceipt, TypedTransaction, has_optimism_fields,
-        transaction_request_to_typed,
+        TransactionInfo, TypedReceipt, TypedTransaction, transaction_request_to_typed,
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
 };
@@ -100,12 +98,10 @@ use foundry_evm::{
     traces::{CallTraceDecoder, TracingInspectorConfig},
     utils::{get_blob_base_fee_update_fraction, get_blob_base_fee_update_fraction_by_spec_id},
 };
-use foundry_evm_core::{either_evm::EitherEvm, precompiles::EC_RECOVER};
+use foundry_evm_core::either_evm::EitherEvm;
 use futures::channel::mpsc::{UnboundedSender, unbounded};
 use op_alloy_consensus::DEPOSIT_TX_TYPE_ID;
-use op_revm::{
-    OpContext, OpHaltReason, OpTransaction, transaction::deposit::DepositTransactionParts,
-};
+use op_revm::OpContext;
 use parking_lot::{Mutex, RwLock};
 use revm::{
     DatabaseCommit, Inspector,
@@ -121,7 +117,7 @@ use revm::{
         secp256r1::{P256VERIFY, P256VERIFY_ADDRESS, P256VERIFY_BASE_GAS_FEE},
         u64_to_address,
     },
-    primitives::{KECCAK_EMPTY, hardfork::SpecId},
+    primitives::{KECCAK_EMPTY, hardfork::SpecId as RevmSpecId},
     state::AccountInfo,
 };
 use std::{
@@ -136,8 +132,7 @@ use std::{
 use storage::{Blockchain, DEFAULT_HISTORY_LIMIT, MinedTransaction};
 use tokio::sync::RwLock as AsyncRwLock;
 
-use super::executor::new_evm_with_inspector_ref;
-
+use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
 use seismic_prelude::foundry::{
     AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, OpHaltReason, OpTransaction,
     SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload, SpecId, TransactionReceipt,
@@ -674,8 +669,13 @@ impl Backend {
 
         // Clear all storage and reinitialize with genesis
         let base_fee = if self.fees.is_eip1559() { Some(self.fees.base_fee()) } else { None };
-        *self.blockchain.storage.write() =
-            BlockchainStorage::new(&env, spec_id, base_fee, genesis_timestamp, genesis_number);
+        *self.blockchain.storage.write() = BlockchainStorage::new(
+            &env,
+            spec_id.into_eth_spec(),
+            base_fee,
+            genesis_timestamp,
+            genesis_number,
+        );
         self.states.write().clear();
 
         // Clear the database
@@ -857,17 +857,10 @@ impl Backend {
         self.env.read().is_celo
     }
 
-    // TODO(usm)
-    /*
-    pub fn precompiles(&self) -> Vec<Address> {
-        get_precompiles_for(self.env.read().evm_env.cfg_env.spec.into_eth_spec())
-    }
-    */
-
     /// Returns the precompiles for the current spec.
     pub fn precompiles(&self) -> BTreeMap<String, Address> {
         let spec_id = self.env.read().evm_env.cfg_env.spec;
-        let precompiles = Precompiles::new(PrecompileSpecId::from_spec_id(spec_id));
+        let precompiles = Precompiles::new(PrecompileSpecId::from_spec_id(spec_id.into_eth_spec()));
 
         let mut precompiles_map = BTreeMap::<String, Address>::default();
         for (address, precompile) in precompiles.inner() {
@@ -903,11 +896,11 @@ impl Backend {
 
         let spec_id = self.env.read().evm_env.cfg_env.spec;
 
-        if spec_id >= SpecId::CANCUN {
+        if spec_id.into_eth_spec() >= RevmSpecId::CANCUN {
             system_contracts.extend(SystemContract::cancun());
         }
 
-        if spec_id >= SpecId::PRAGUE {
+        if spec_id.into_eth_spec() >= RevmSpecId::PRAGUE {
             system_contracts.extend(SystemContract::prague(None));
         }
 
@@ -918,11 +911,11 @@ impl Backend {
     pub fn blob_params(&self) -> BlobParams {
         let spec_id = self.env.read().evm_env.cfg_env.spec.into_eth_spec();
 
-        if spec_id >= SpecId::OSAKA {
+        if spec_id >= RevmSpecId::OSAKA {
             return BlobParams::osaka();
         }
 
-        if spec_id >= SpecId::PRAGUE {
+        if spec_id >= RevmSpecId::PRAGUE {
             return BlobParams::prague();
         }
 
@@ -1258,11 +1251,16 @@ impl Backend {
         db: &'db DB,
         env: &Env,
         inspector: &'db mut I,
-    ) -> EitherEvm<WrapDatabaseRef<&'db DB>, &'db mut I, PrecompilesMap>
+    ) -> EitherEvm<
+        WrapDatabaseRef<&'db DB>,
+        &'db mut I,
+        SeismicPrecompiles<SeismicContext<WrapDatabaseRef<&'db DB>>>,
+    >
     where
-        DB: DatabaseRef + ?Sized,
+        DB: DatabaseRef<Error = DatabaseError> + Debug + 'db + ?Sized,
         I: Inspector<EthEvmContext<WrapDatabaseRef<&'db DB>>>
-            + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>,
+            + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>
+            + Inspector<SeismicContext<WrapDatabaseRef<&'db DB>>>,
         WrapDatabaseRef<&'db DB>: Database<Error = DatabaseError>,
     {
         let mut evm = new_evm_with_inspector_ref(db, env, inspector);
@@ -1272,10 +1270,12 @@ impl Backend {
         }
 
         if self.is_celo() {
+            /*
             evm.precompiles_mut()
                 .apply_precompile(&celo_precompile::CELO_TRANSFER_ADDRESS, move |_| {
                     Some(celo_precompile::precompile())
                 });
+            */
         }
 
         if let Some(factory) = &self.precompile_factory {
@@ -1284,13 +1284,15 @@ impl Backend {
 
         let cheats = Arc::new(self.cheats.clone());
         if cheats.has_recover_overrides() {
-            let cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
+            // NOTE: seismic-anvil does not support this; typing too annoying
+            /*
             evm.precompiles_mut().apply_precompile(&EC_RECOVER, move |_| {
                 Some(DynPrecompile::new_stateful(
                     cheat_ecrecover.precompile_id().clone(),
                     move |input| cheat_ecrecover.call(input),
                 ))
             });
+            */
         }
 
         evm
@@ -1579,7 +1581,9 @@ impl Backend {
 
         self.fees.set_blob_excess_gas_and_price(BlobExcessGasAndPrice::new(
             next_block_excess_blob_gas,
-            get_blob_base_fee_update_fraction_by_spec_id(*self.env.read().evm_env.spec_id()),
+            get_blob_base_fee_update_fraction_by_spec_id(
+                self.env.read().evm_env.spec_id().into_eth_spec(),
+            ),
         ));
 
         // notify all listeners
@@ -1634,12 +1638,12 @@ impl Backend {
             let (exit, out, gas, state) = {
                 let mut cache_db = CacheDB::new(state);
                 if let Some(state_overrides) = overrides.state {
-                    state::apply_state_overrides(state_overrides.into_iter().collect(), &mut cache_db)?;
+                    apply_state_overrides(state_overrides.into_iter().collect(), &mut cache_db)?;
                 }
                 if let Some(block_overrides) = overrides.block {
-                    state::apply_block_overrides(*block_overrides, &mut cache_db, &mut block);
+                    alloy_evm::overrides::apply_block_overrides(*block_overrides, &mut cache_db, &mut block);
                 }
-                self.seismic_call_with_state(cache_db.as_dyn(), request, fee_details, block)
+                self.seismic_call_with_state(&cache_db, request, fee_details, block)
             }?;
             trace!(target: "backend", "seismic call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
             Ok((exit, out, gas, state))
@@ -1677,7 +1681,6 @@ impl Backend {
                         nonce,
                         sidecar: _,
                         chain_id,
-                        transaction_type,
                         .. // Rest of the gas fees related fields are taken from `fee_details`
                     },
                     seismic_elements: _,
@@ -3381,9 +3384,8 @@ impl Backend {
                     .zip(storage_proofs)
                     .map(|(key, proof)| {
                         let storage_key: U256 = key.into();
-                        let value = value.into();
                         let value = account.storage.get(&storage_key).copied().unwrap_or_default();
-                        StorageProof { key: JsonStorageKey::Hash(key), value, proof }
+                        StorageProof { key: JsonStorageKey::Hash(key), value: value.into(), proof }
                     })
                     .collect(),
             };
@@ -3554,7 +3556,9 @@ impl TransactionValidator for Backend {
         }
 
         // EIP-4844 structural validation
-        if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::CANCUN && tx.transaction.is_eip4844() {
+        if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::CANCUN
+            && tx.transaction.is_eip4844()
+        {
             // Heavy (blob validation) checks
             let blob_tx = match &tx.transaction {
                 TypedTransaction::EIP4844(tx) => tx.tx(),
@@ -3611,7 +3615,7 @@ impl TransactionValidator for Backend {
             }
 
             // EIP-1559 fee validation (London hard fork and later).
-            if env.evm_env.cfg_env.spec >= SpecId::LONDON {
+            if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::LONDON {
                 if tx.gas_price() < env.evm_env.block_env.basefee.into() && !is_deposit_tx {
                     warn!(target: "backend", "max fee per gas={}, too low, block basefee={}",tx.gas_price(),  env.evm_env.block_env.basefee);
                     return Err(InvalidTransactionError::FeeCapTooLow);
@@ -3627,7 +3631,7 @@ impl TransactionValidator for Backend {
             }
 
             // EIP-4844 blob fee validation
-            if env.evm_env.cfg_env.spec >= SpecId::CANCUN
+            if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::CANCUN
                 && tx.transaction.is_eip4844()
                 && let Some(max_fee_per_blob_gas) = tx.essentials().max_fee_per_blob_gas
                 && let Some(blob_gas_and_price) = &env.evm_env.block_env.blob_excess_gas_and_price

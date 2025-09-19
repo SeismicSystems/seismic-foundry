@@ -3,7 +3,7 @@ use crate::{
     utils::{connect_pubsub, http_provider_with_signer},
 };
 use alloy_hardforks::EthereumHardfork;
-use alloy_network::{EthereumWallet, TransactionBuilder, TransactionResponse};
+use alloy_network::{TransactionBuilder, TransactionResponse};
 use alloy_primitives::{Address, Bytes, FixedBytes, U256, address, hex, map::B256HashSet};
 use alloy_provider::{Provider, WsConnect};
 use alloy_rpc_types::{
@@ -20,7 +20,7 @@ use revm::primitives::eip7825::TX_GAS_LIMIT_CAP;
 use std::{str::FromStr, time::Duration};
 use tokio::time::timeout;
 
-use seismic_prelude::foundry::{tx_builder, EthereumWallet};
+use seismic_prelude::foundry::{EthereumWallet, tx_builder};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_transfer_eth() {
@@ -1331,7 +1331,8 @@ async fn can_send_tx_osaka_valid_with_limit_enabled() {
     let sender = wallet.address();
     let recipient = Address::random();
 
-    let base_tx = TransactionRequest::default().from(sender).to(recipient).value(U256::from(1e18));
+    let base_tx =
+        tx_builder().with_from(sender).with_to(recipient).with_value(U256::from(1e18)).into();
 
     // gas limit below the cap is accepted
     let tx = base_tx.clone().gas_limit(TX_GAS_LIMIT_CAP - 1);
@@ -1366,7 +1367,8 @@ async fn can_send_tx_osaka_valid_with_limit_disabled() {
     let sender = wallet.address();
     let recipient = Address::random();
 
-    let base_tx = TransactionRequest::default().from(sender).to(recipient).value(U256::from(1e18));
+    let base_tx =
+        tx_builder().with_from(sender).with_to(recipient).with_value(U256::from(1e18)).into();
 
     // gas limit below the cap is accepted
     let tx = base_tx.clone().gas_limit(TX_GAS_LIMIT_CAP - 1);

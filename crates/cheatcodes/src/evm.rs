@@ -581,7 +581,7 @@ impl Cheatcode for blobBaseFeeCall {
 
         ccx.ecx.block.set_blob_excess_gas_and_price(
             (*newBlobBaseFee).to(),
-            get_blob_base_fee_update_fraction_by_spec_id(ccx.ecx.cfg.spec),
+            get_blob_base_fee_update_fraction_by_spec_id(ccx.ecx.cfg.spec.into_eth_spec()),
         );
         Ok(Default::default())
     }

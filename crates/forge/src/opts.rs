@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use crate::cmd::{
     bind::BindArgs, bind_json, build::BuildArgs, cache::CacheArgs, clone::CloneArgs,
     compiler::CompilerArgs, config, coverage, create::CreateArgs, doc::DocArgs, eip712, flatten,
@@ -132,10 +133,10 @@ pub enum ForgeSubcommand {
     /// Format Solidity source files.
     Fmt(FmtArgs),
 
-    /// Lint Solidity source files
-    #[command(visible_alias = "l")]
-    Lint(LintArgs),
-
+    // TODO: Make seismic-solar parse seismic solidity
+    // /// Lint Solidity source files
+    // #[command(visible_alias = "l")]
+    // Lint(LintArgs),
     /// Get specialized information about a smart contract.
     #[command(visible_alias = "in")]
     Inspect(inspect::InspectArgs),

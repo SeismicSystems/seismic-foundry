@@ -4,7 +4,7 @@ on:
   push:
     branches: [seismic]
   pull_request:
-    branches: [seismic, alloy-1]
+    branches: [seismic, usm]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}

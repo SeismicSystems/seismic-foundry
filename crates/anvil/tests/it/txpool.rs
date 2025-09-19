@@ -85,7 +85,8 @@ async fn accepts_spend_after_funding_when_pool_checks_disabled() {
         .with_from(funder)
         .with_to(spender)
         .with_value(fund_value)
-        .with_gas_price(gas_price_fund);
+        .with_gas_price(gas_price_fund)
+        .into();
     let tx1 = WithOtherFields::new(tx1);
 
     // tx2: spender attempts to send value greater than their pre-funding balance (0),
@@ -95,7 +96,8 @@ async fn accepts_spend_after_funding_when_pool_checks_disabled() {
         .with_from(spender)
         .with_to(funder)
         .with_value(spend_value)
-        .with_gas_price(gas_price_spend);
+        .with_gas_price(gas_price_spend)
+        .into();
     let tx2 = WithOtherFields::new(tx2);
 
     // Publish both transactions (funding first, then spend-before-funding-is-mined)

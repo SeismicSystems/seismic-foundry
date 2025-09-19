@@ -174,7 +174,7 @@ impl FuzzDictionary {
                 // Sort storage values before inserting to ensure deterministic dictionary.
                 let values = account.storage.iter().collect::<BTreeMap<_, _>>();
                 for (slot, value) in values {
-                    self.insert_storage_value(slot, value.into(), None, None);
+                    self.insert_storage_value(slot, &value.into(), None, None);
                 }
             }
         }

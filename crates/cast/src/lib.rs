@@ -16,9 +16,7 @@ use alloy_provider::{
     network::eip2718::{Decodable2718, Encodable2718},
 };
 use alloy_rlp::Decodable;
-use alloy_rpc_types::{
-    BlockId, BlockNumberOrTag, BlockOverrides, Filter, state::StateOverride,
-};
+use alloy_rpc_types::{BlockId, BlockNumberOrTag, BlockOverrides, Filter, state::StateOverride};
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use base::{Base, NumberWithBase, ToBase};
@@ -36,7 +34,6 @@ use foundry_compilers::flatten::Flattener;
 use foundry_config::Chain;
 use foundry_evm_core::ic::decode_instructions;
 use futures::{FutureExt, StreamExt, future::Either};
-use op_alloy_consensus::OpTxEnvelope;
 use rayon::prelude::*;
 use std::{
     borrow::Cow,
@@ -52,7 +49,7 @@ use tokio::signal::ctrl_c;
 use foundry_common::abi::encode_function_args_packed;
 pub use foundry_evm::*;
 
-use seismic_prelude::foundry::{AnyNetwork, AnyRpcTransaction, TransactionRequest};
+use seismic_prelude::foundry::{AnyNetwork, AnyRpcTransaction, AnyTxEnvelope, TransactionRequest};
 
 pub mod args;
 pub mod cmd;
@@ -803,9 +800,8 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
         };
 
         Ok(if raw {
-            // TODO(usm)
             // also consider opstack deposit transactions
-            let either_tx = tx.try_into_either::<OpTxEnvelope>()?;
+            let either_tx = tx.try_into_either::<AnyTxEnvelope>()?;
             let encoded = either_tx.encoded_2718();
             format!("0x{}", hex::encode(encoded))
         } else if let Some(field) = field {
@@ -815,9 +811,7 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
             // to_value first to sort json object keys
             serde_json::to_value(&tx)?.to_string()
         } else if to_request {
-            serde_json::to_string_pretty(&TransactionRequest::from_recovered_transaction(
-                tx.into(),
-            ))?
+            serde_json::to_string_pretty(&tx.to_tx_request())?
         } else {
             tx.pretty()
         })
@@ -1920,11 +1914,11 @@ impl SimpleCast {
             | DynSolType::CustomStruct { .. } => {
                 eyre::bail!("Type `{k_ty}` is not supported as a mapping key")
             }
-            DynSolType::Sbool |
-            DynSolType::Saddress |
-            DynSolType::Sint(_) |
-            DynSolType::Suint(_) |
-            DynSolType::Sbytes(..) => hasher.update(k.as_word().unwrap()),
+            DynSolType::Sbool
+            | DynSolType::Saddress
+            | DynSolType::Sint(_)
+            | DynSolType::Suint(_)
+            | DynSolType::Sbytes(..) => hasher.update(k.as_word().unwrap()),
         }
 
         let p = DynSolType::Uint(256)

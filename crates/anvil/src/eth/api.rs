@@ -40,8 +40,7 @@ use alloy_eips::{
 };
 use alloy_evm::overrides::{OverrideBlockHashes, apply_state_overrides};
 use alloy_network::{
-    AnyRpcBlock, AnyRpcTransaction, BlockResponse, Ethereum, NetworkWallet, TransactionBuilder,
-    TransactionResponse, eip2718::Decodable2718,
+    BlockResponse, NetworkWallet, TransactionBuilder, TransactionResponse, eip2718::Decodable2718,
 };
 use alloy_primitives::{
     Address, B64, B256, Bytes, Signature, TxHash, TxKind, U64, U256,
@@ -102,15 +101,12 @@ use tokio::{
     sync::mpsc::{UnboundedReceiver, unbounded_channel},
     try_join,
 };
-use std::{future::Future, sync::Arc, time::Duration};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use yansi::Paint;
-
 
 use seismic_enclave::{keys::GetPurposeKeysRequest, rpc::SyncEnclaveApiClient};
 use seismic_prelude::foundry::{
     AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
-    SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest,
+    SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest, tx_builder,
 };
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -276,14 +272,14 @@ impl EthApi {
             EthRequest::EthSignTypedDataV4(addr, data) => {
                 self.sign_typed_data_v4(addr, &data).await.to_rpc_result()
             }
-            EthRequest::EthSendRawTransaction(tx) => {
+            EthRequest::EthSendRawTransaction(tx_req) => match tx_req {
                 SeismicRawTxRequest::Bytes(tx) => {
                     self.send_raw_transaction(tx).await.to_rpc_result()
                 }
                 SeismicRawTxRequest::TypedData(td) => {
                     self.send_signed_typed_data_tx(td).await.to_rpc_result()
                 }
-            }
+            },
             EthRequest::EthSendRawTransactionSync(tx) => {
                 // TODO: make this typed-data friendly
                 self.send_raw_transaction_sync(tx).await.to_rpc_result()
@@ -1260,7 +1256,7 @@ impl EthApi {
                     "not available on past forked blocks".to_string(),
                 ));
             }
-            return Ok(fork.call(&request, Some(number.into())).await?);
+            return Ok(fork.call(&seismic_request, Some(number.into())).await?);
         }
 
         let request = seismic_request.clone().inner.inner;
@@ -1314,9 +1310,10 @@ impl EthApi {
                         if tried_to_spoof_from {
                             // We'll embed the original error's text (which may include
                             // revert data) plus a multiline explanation:
-                            Err(BlockchainError::Message(format!("Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
-                            orig = original_err
-                        )))
+                            Err(BlockchainError::Message(format!(
+                                "Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
+                                orig = original_err
+                            )))
                         } else {
                             // Otherwise bubble up the original error
                             Err(original_err)
@@ -2180,7 +2177,7 @@ impl EthApi {
         calldata: Bytes,
         expected_value: U256,
     ) -> Result<B256> {
-        let tx = TransactionRequest::default().with_to(token_address).with_input(calldata.clone());
+        let tx = tx_builder().with_to(token_address).with_input(calldata.clone()).into();
 
         // first collect all the slots that are used by the function call
         let access_list_result =
@@ -2760,12 +2757,12 @@ impl EthApi {
                             .coerce_status()
                             && let Some(reason) = RevertDecoder::new().maybe_decode(&output, None)
                         {
-                            tx.other.insert(
+                            tx.0.other.insert(
                                 "revertReason".to_string(),
                                 serde_json::to_value(reason).expect("Infallible"),
                             );
                         }
-                        tx.other.insert(
+                        tx.0.other.insert(
                             "output".to_string(),
                             serde_json::to_value(output).expect("Infallible"),
                         );

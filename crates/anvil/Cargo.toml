@@ -20,12 +20,6 @@ required-features = ["cli"]
 
 [dependencies]
 # Seismic's added dependencies
-secp256k1 = { version = "0.30", default-features = false, features = [
-    "global-context",
-    "recovery",
-] }
-bytes.workspace = true
-k256.workspace = true
 seismic-enclave.workspace = true
 seismic-prelude.workspace = true
 
@@ -116,6 +110,11 @@ fdlimit = { version = "0.3", optional = true }
 clap_complete_fig = "4"
 
 [dev-dependencies]
+secp256k1 = { version = "0.30", default-features = false, features = [
+    "global-context",
+    "recovery",
+] }
+
 alloy-json-abi.workspace = true
 alloy-rpc-client = { workspace = true, features = ["pubsub"] }
 alloy-transport-ipc = { workspace = true, features = ["mock"] }

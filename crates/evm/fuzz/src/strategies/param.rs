@@ -10,7 +10,6 @@ use std::mem::replace;
 
 use alloy_primitives::aliases::{SInt, SUInt};
 
-
 /// The max length of arrays we fuzz for is 256.
 const MAX_ARRAY_LEN: usize = 256;
 

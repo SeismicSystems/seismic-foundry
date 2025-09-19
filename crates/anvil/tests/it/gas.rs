@@ -8,7 +8,7 @@ use alloy_rpc_types::BlockId;
 use alloy_serde::WithOtherFields;
 use anvil::{NodeConfig, eth::fees::INITIAL_BASE_FEE, spawn};
 
-use seismic_prelude::foundry::{tx_builder, EthereumWallet};
+use seismic_prelude::foundry::{EthereumWallet, tx_builder};
 
 const GAS_TRANSFER: u64 = 21_000;
 
@@ -226,30 +226,31 @@ async fn test_estimate_gas_empty_data() {
     let from = accounts[0];
     let to = accounts[1];
 
-    let tx_without_data =
-        TransactionRequest::default().with_from(from).with_to(to).with_value(U256::from(1));
+    let tx_without_data = tx_builder().with_from(from).with_to(to).with_value(U256::from(1)).into();
 
     let gas_without_data = api
         .estimate_gas(WithOtherFields::new(tx_without_data), None, Default::default())
         .await
         .unwrap();
 
-    let tx_with_empty_data = TransactionRequest::default()
+    let tx_with_empty_data = tx_builder()
         .with_from(from)
         .with_to(to)
         .with_value(U256::from(1))
-        .with_input(vec![]);
+        .with_input(vec![])
+        .into();
 
     let gas_with_empty_data = api
         .estimate_gas(WithOtherFields::new(tx_with_empty_data), None, Default::default())
         .await
         .unwrap();
 
-    let tx_with_data = TransactionRequest::default()
+    let tx_with_data = tx_builder()
         .with_from(from)
         .with_to(to)
         .with_value(U256::from(1))
-        .with_input(vec![0x12, 0x34]);
+        .with_input(vec![0x12, 0x34])
+        .into();
 
     let gas_with_data = api
         .estimate_gas(WithOtherFields::new(tx_with_data), None, Default::default())

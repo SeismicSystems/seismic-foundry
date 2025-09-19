@@ -12,6 +12,7 @@ use foundry_evm_traces::TraceMode;
 use revm::state::Bytecode;
 use std::ops::{Deref, DerefMut};
 
+use alloy_primitives::FlaggedStorage;
 use seismic_prelude::foundry::SpecId;
 
 /// A default executor with tracing enabled
@@ -54,7 +55,7 @@ impl TracingExecutor {
                     executor.set_code(address, bytecode)?;
                 }
                 if let Some(state) = overrides.state {
-                    let state: HashMap<U256, U256> = state
+                    let state: HashMap<U256, FlaggedStorage> = state
                         .into_iter()
                         .map(|(slot, value)| (slot.into(), value.into()))
                         .collect();

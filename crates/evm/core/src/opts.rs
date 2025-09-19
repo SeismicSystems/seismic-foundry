@@ -1,6 +1,5 @@
 use super::fork::environment;
 use crate::{
-    EvmEnv,
     constants::DEFAULT_CREATE2_DEPLOYER,
     fork::{CreateFork, configure_env},
 };

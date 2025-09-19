@@ -1,17 +1,16 @@
 use super::run::fetch_contracts_bytecode_from_trace;
 use crate::{
-    Cast,
     traces::TraceKind,
     tx::{CastTxBuilder, SenderKind},
 };
 use alloy_ens::NameOrAddress;
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{Address, B256, Bytes, TxKind, U256, map::HashMap};
-use alloy_provider::Provider;
+use alloy_provider::{Provider, SendableTx};
 use alloy_rpc_types::{
     BlockId, BlockNumberOrTag, BlockOverrides,
     state::{StateOverride, StateOverridesBuilder},
 };
-use alloy_signer::Signer;
 use clap::Parser;
 use eyre::Result;
 use foundry_cli::{
@@ -243,7 +242,7 @@ impl CallArgs {
             mut tx,
             eth,
             command,
-            block,
+            block: _,
             trace,
             evm_version,
             debug,
@@ -289,7 +288,7 @@ impl CallArgs {
             None
         };
 
-        let (tx, func) = CastTxBuilder::new(&provider, tx, &config)
+        let (tx, _func) = CastTxBuilder::new(&provider, tx, &config)
             .await?
             .with_to(to)
             .await?
@@ -359,7 +358,7 @@ impl CallArgs {
                 }
             }
 
-            if let Some(auth) = tx.inner.authorization_list {
+            if let Some(auth) = tx.inner.inner.authorization_list {
                 env_tx.authorization_list = auth.into_iter().map(Either::Left).collect();
 
                 env_tx.tx_type = TransactionType::Eip7702 as u8;
@@ -440,7 +439,7 @@ impl CallArgs {
             .client_decrypt(&encrypted_response, &network_pubkey, &encryption_sk)
             .map_err(|e| eyre::eyre!("Failed to decrypt response: {}", e))?;
 
-        let response = hex::encode_prefixed(&decrypted_response);
+        let response = alloy_primitives::hex::encode_prefixed(&decrypted_response);
         if response == "0x"
             && let Some(contract_address) = tx.to.and_then(|tx_kind| tx_kind.into_to())
         {

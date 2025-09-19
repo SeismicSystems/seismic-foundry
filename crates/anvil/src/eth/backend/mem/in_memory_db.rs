@@ -28,10 +28,10 @@ impl Db for MemDb {
     fn set_storage_at(
         &mut self,
         address: Address,
-        slot: U256,
+        slot: B256,
         val: revm::primitives::FlaggedStorage,
     ) -> DatabaseResult<()> {
-        self.inner.insert_account_storage(address, slot, val)
+        self.inner.insert_account_storage(address, slot.into(), val)
     }
 
     fn insert_block_hash(&mut self, number: U256, hash: B256) {
@@ -173,7 +173,9 @@ mod tests {
                 nonce: 1234,
             },
         );
-        dump_db.set_storage_at(test_addr, U256::from(1234567), U256::from(1).into()).unwrap();
+        dump_db
+            .set_storage_at(test_addr, U256::from(1234567).into(), U256::from(1).into())
+            .unwrap();
 
         // blocks dumping/loading tested in storage.rs
         let state = dump_db
@@ -217,8 +219,8 @@ mod tests {
             },
         );
 
-        db.set_storage_at(test_addr, U256::from(1234567), U256::from(1).into()).unwrap();
-        db.set_storage_at(test_addr, U256::from(1234568), U256::from(2).into()).unwrap();
+        db.set_storage_at(test_addr, U256::from(1234567).into(), U256::from(1).into()).unwrap();
+        db.set_storage_at(test_addr, U256::from(1234568).into(), U256::from(2).into()).unwrap();
 
         let mut new_state = SerializableState::default();
 

@@ -1,6 +1,6 @@
 use alloy_provider::{
     Identity, RootProvider,
-    fillers::{ChainIdFiller, FillProvider, JoinFill, NonceFiller, WalletFiller},
+    fillers::{BlobGasFiller, ChainIdFiller, FillProvider, JoinFill, NonceFiller, WalletFiller},
 };
 use foundry_common::provider::{
     ProviderBuilder, RetryProvider, RetryProviderWithSigner, get_http_provider,

@@ -32,3 +32,5 @@ pub use foundry_evm::*;
 
 mod lockfile;
 pub use lockfile::{DepIdentifier, DepMap, FOUNDRY_LOCK, Lockfile};
+
+use alloy_rpc_types as _;

@@ -3,10 +3,7 @@ use alloy_consensus::{SidecarBuilder, SignableTransaction, SimpleCoder};
 use alloy_dyn_abi::ErrorExt;
 use alloy_ens::NameOrAddress;
 use alloy_json_abi::Function;
-use alloy_network::{
-    TransactionBuilder, TransactionBuilder4844,
-    TransactionBuilder7702,
-};
+use alloy_network::{TransactionBuilder, TransactionBuilder4844, TransactionBuilder7702};
 use alloy_primitives::{Address, Bytes, TxKind, U256, hex};
 use alloy_provider::Provider;
 use alloy_rpc_types::{AccessList, Authorization, TransactionInput};
