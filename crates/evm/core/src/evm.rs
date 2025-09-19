@@ -270,7 +270,7 @@ impl<'db, I: InspectorExt> Deref for FoundryEvm<'db, I> {
         TxEnv,
         CfgEnv,
         &'db mut dyn DatabaseExt,
-        Journal<&'db mut (dyn DatabaseExt)>,
+        Journal<&'db mut dyn DatabaseExt>,
         SeismicChain,
     >;
 
