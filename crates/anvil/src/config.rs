@@ -18,7 +18,7 @@ use crate::{
 use alloy_chains::Chain;
 use alloy_consensus::BlockHeader;
 use alloy_genesis::Genesis;
-use alloy_network::{TransactionResponse};
+use alloy_network::TransactionResponse;
 use alloy_op_hardforks::OpHardfork;
 use alloy_primitives::{BlockNumber, TxHash, U256, hex, map::HashMap, utils::Unit};
 use alloy_provider::Provider;
@@ -1268,7 +1268,8 @@ impl NodeConfig {
                 let chain_id =
                     provider.get_chain_id().await.wrap_err("failed to fetch network chain ID")?;
                 if alloy_chains::NamedChain::Mainnet == chain_id {
-                    let hardfork: EthereumHardfork = ethereum_hardfork_from_block_tag(fork_block_number);
+                    let hardfork: EthereumHardfork =
+                        ethereum_hardfork_from_block_tag(fork_block_number);
 
                     env.evm_env.cfg_env.spec = SpecId::MERCURY;
                     self.hardfork = Some(ChainHardfork::Ethereum(hardfork));

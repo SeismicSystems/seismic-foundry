@@ -40,8 +40,7 @@ use alloy_eips::{
 };
 use alloy_evm::overrides::{OverrideBlockHashes, apply_state_overrides};
 use alloy_network::{
-    BlockResponse, NetworkWallet, TransactionBuilder,
-    TransactionResponse, eip2718::Decodable2718,
+    BlockResponse, NetworkWallet, TransactionBuilder, TransactionResponse, eip2718::Decodable2718,
 };
 use alloy_primitives::{
     Address, B64, B256, Bytes, Signature, TxHash, TxKind, U64, U256,
@@ -104,10 +103,10 @@ use tokio::{
 };
 use yansi::Paint;
 
-
 use seismic_enclave::{keys::GetPurposeKeysRequest, rpc::SyncEnclaveApiClient};
 use seismic_prelude::foundry::{
-    tx_builder, AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest, SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest
+    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
+    SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest, tx_builder,
 };
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -273,16 +272,14 @@ impl EthApi {
             EthRequest::EthSignTypedDataV4(addr, data) => {
                 self.sign_typed_data_v4(addr, &data).await.to_rpc_result()
             }
-            EthRequest::EthSendRawTransaction(tx_req) => {
-                match tx_req {
-                    SeismicRawTxRequest::Bytes(tx) => {
-                        self.send_raw_transaction(tx).await.to_rpc_result()
-                    }
-                    SeismicRawTxRequest::TypedData(td) => {
-                        self.send_signed_typed_data_tx(td).await.to_rpc_result()
-                    }
+            EthRequest::EthSendRawTransaction(tx_req) => match tx_req {
+                SeismicRawTxRequest::Bytes(tx) => {
+                    self.send_raw_transaction(tx).await.to_rpc_result()
                 }
-            }
+                SeismicRawTxRequest::TypedData(td) => {
+                    self.send_signed_typed_data_tx(td).await.to_rpc_result()
+                }
+            },
             EthRequest::EthSendRawTransactionSync(tx) => {
                 // TODO: make this typed-data friendly
                 self.send_raw_transaction_sync(tx).await.to_rpc_result()
@@ -1313,9 +1310,10 @@ impl EthApi {
                         if tried_to_spoof_from {
                             // We'll embed the original error's text (which may include
                             // revert data) plus a multiline explanation:
-                            Err(BlockchainError::Message(format!("Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
-                            orig = original_err
-                        )))
+                            Err(BlockchainError::Message(format!(
+                                "Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
+                                orig = original_err
+                            )))
                         } else {
                             // Otherwise bubble up the original error
                             Err(original_err)

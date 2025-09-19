@@ -7,7 +7,7 @@ use std::{
 };
 
 use alloy_consensus::Header;
-use alloy_primitives::{keccak256, map::HashMap, Address, Bytes, FixedBytes, B256, U256};
+use alloy_primitives::{Address, B256, Bytes, FixedBytes, U256, keccak256, map::HashMap};
 use alloy_rpc_types::BlockId;
 use anvil_core::eth::{
     block::Block,
@@ -26,10 +26,7 @@ use revm::{
     primitives::{FlaggedStorage, KECCAK_EMPTY, eip4844::BLOB_BASE_FEE_UPDATE_FRACTION_PRAGUE},
     state::AccountInfo,
 };
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{Error as DeError},
-};
+use serde::{Deserialize, Deserializer, Serialize, de::Error as DeError};
 use serde_json::Value;
 
 use crate::mem::storage::MinedTransaction;

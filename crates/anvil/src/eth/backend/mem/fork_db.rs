@@ -2,7 +2,7 @@ use crate::eth::backend::db::{
     Db, MaybeForkedDatabase, MaybeFullDatabase, SerializableAccountRecord, SerializableBlock,
     SerializableHistoricalStates, SerializableState, SerializableTransaction, StateDb,
 };
-use alloy_primitives::{map::HashMap, Address, FixedBytes, B256, U256};
+use alloy_primitives::{Address, B256, FixedBytes, U256, map::HashMap};
 use alloy_rpc_types::BlockId;
 use foundry_evm::{
     backend::{BlockchainDb, DatabaseResult, RevertStateSnapshotAction, StateSnapshot},

@@ -1,9 +1,7 @@
-use alloy_evm::{
-    Database, Evm,
-    precompiles::DynPrecompile,
-};
+use alloy_evm::{Database, Evm, eth::EthEvmContext};
 
 use foundry_evm_core::either_evm::EitherEvm;
+use op_revm::OpContext;
 use revm::{Inspector, precompile::Precompile};
 use std::fmt::Debug;
 
@@ -18,32 +16,23 @@ pub trait PrecompileFactory: Send + Sync + Unpin + Debug {
     fn precompiles(&self) -> Vec<(Precompile, u64)>;
 }
 
-#[allow(unused_variables)]
-pub fn apply_precompile<DB: Database, F>(
-    p: &mut SeismicPrecompiles<SeismicContext<DB>>,
-    address: &alloy_primitives::Address,
-    f: F,
-) where
-    F: FnOnce(Option<DynPrecompile>) -> Option<DynPrecompile>,
-{
-    todo!("Find a way to add this precompile to SeismicPrecompiles")
-}
-
 /// Inject precompiles into the EVM dynamically.
 pub fn inject_precompiles<DB, I>(
     evm: &mut EitherEvm<DB, I, SeismicPrecompiles<SeismicContext<DB>>>,
     precompiles: Vec<(Precompile, u64)>,
 ) where
     DB: Database,
-    /*
-    I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>>
-    */
-    I: Inspector<SeismicContext<DB>>,
+    I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>> + Inspector<SeismicContext<DB>>,
 {
-    for (p, _) in precompiles {
-        apply_precompile(evm.precompiles_mut(), p.address(), |_| {
-            Some(DynPrecompile::from(*p.precompile()))
+    for (precompile, _gas) in precompiles {
+        /*
+        let addr = *precompile.address();
+        let func = *precompile.precompile();
+        evm.precompiles_mut().apply_precompile(&addr, move |_| {
+            Some(DynPrecompile::from(move |input: PrecompileInput<'_>| func(input.data, gas)))
         });
+        */
+        evm.precompiles_mut().apply_precompile(precompile);
     }
 }
 
