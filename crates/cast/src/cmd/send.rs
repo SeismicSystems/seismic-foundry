@@ -16,7 +16,7 @@ use foundry_cli::{
 use std::{path::PathBuf, str::FromStr};
 
 // Seismic imports for encryption/decryption
-use alloy_primitives::{aliases::U96, Bytes};
+use alloy_primitives::{Bytes, aliases::U96};
 use rand::RngCore;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use seismic_prelude::foundry::{

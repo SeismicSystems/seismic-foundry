@@ -1,11 +1,7 @@
 //! Helper trait and functions to format Ethereum types.
 
-use alloy_consensus::{
-    Eip658Value, Transaction as TxTrait, TxEnvelope, TxType, Typed2718,
-};
-use alloy_network::{
-    AnyHeader, ReceiptResponse,
-};
+use alloy_consensus::{Eip658Value, Transaction as TxTrait, TxEnvelope, TxType, Typed2718};
+use alloy_network::{AnyHeader, ReceiptResponse};
 use alloy_primitives::{Address, Bloom, Bytes, FixedBytes, I256, U8, U64, U256, Uint, hex};
 use alloy_rpc_types::{
     AccessListItem, Block, BlockTransactions, Header, Log, Transaction, TransactionReceipt,

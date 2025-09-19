@@ -3,9 +3,11 @@
 use self::state::trie_storage;
 use super::executor::new_evm_with_inspector_ref;
 use crate::{
-    config::PruneStateHistoryConfig, eth::{
+    ForkChoice, NodeConfig, PrecompileFactory,
+    config::PruneStateHistoryConfig,
+    eth::{
         backend::{
-            cheats::{CheatEcrecover, CheatsManager},
+            cheats::CheatsManager,
             db::{Db, MaybeFullDatabase, SerializableState},
             env::Env,
             executor::{ExecutedTransactions, TransactionExecutor},
@@ -16,7 +18,7 @@ use crate::{
                 storage::MinedTransactionReceipt,
             },
             notifications::{NewBlockNotification, NewBlockNotifications},
-            time::{utc_from_secs, TimeManager},
+            time::{TimeManager, utc_from_secs},
             validate::TransactionValidator,
         },
         error::{BlockchainError, ErrDetail, InvalidTransactionError},
@@ -24,21 +26,29 @@ use crate::{
         macros::node_info,
         pool::transactions::PoolTransaction,
         sign::build_typed_transaction,
-    }, evm::celo_precompile::{self, CELO_TRANSFER_ADDRESS}, inject_precompiles, mem::{
+    },
+    evm::celo_precompile::{self, CELO_TRANSFER_ADDRESS},
+    inject_precompiles,
+    mem::{
         inspector::AnvilInspector,
         storage::{BlockchainStorage, InMemoryBlockStates, MinedBlockOutcome},
-    }, ForkChoice, NodeConfig, PrecompileFactory
+    },
 };
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    proofs::{calculate_receipt_root, calculate_transaction_root}, transaction::Recovered, Account, Blob, BlockHeader, EnvKzgSettings, EthereumTxEnvelope, Header, Receipt, ReceiptWithBloom, Signed, Transaction as TransactionTrait
+    Account, Blob, BlockHeader, EnvKzgSettings, EthereumTxEnvelope, Header, Receipt,
+    ReceiptWithBloom, Signed, Transaction as TransactionTrait,
+    proofs::{calculate_receipt_root, calculate_transaction_root},
+    transaction::Recovered,
 };
 use alloy_eips::{
     eip1559::BaseFeeParams, eip4844::kzg_to_versioned_hash, eip7840::BlobParams,
     eip7910::SystemContract,
 };
 use alloy_evm::{
-    eth::EthEvmContext, overrides::{apply_state_overrides, OverrideBlockHashes}, precompiles::{DynPrecompile, Precompile}, Database, Evm
+    Database, Evm,
+    eth::EthEvmContext,
+    overrides::{OverrideBlockHashes, apply_state_overrides},
 };
 use alloy_network::{
     AnyHeader, AnyRpcHeader, AnyTxType, UnknownTxEnvelope, UnknownTypedTransaction,
@@ -72,8 +82,7 @@ use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
         DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
-        TransactionInfo, TypedReceipt, TypedTransaction,
-        transaction_request_to_typed,
+        TransactionInfo, TypedReceipt, TypedTransaction, transaction_request_to_typed,
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
 };
@@ -89,20 +98,27 @@ use foundry_evm::{
     traces::{CallTraceDecoder, TracingInspectorConfig},
     utils::{get_blob_base_fee_update_fraction, get_blob_base_fee_update_fraction_by_spec_id},
 };
-use foundry_evm_core::{either_evm::EitherEvm, precompiles::EC_RECOVER};
+use foundry_evm_core::either_evm::EitherEvm;
 use futures::channel::mpsc::{UnboundedSender, unbounded};
 use op_alloy_consensus::DEPOSIT_TX_TYPE_ID;
-use op_revm::{
-    OpContext, 
-};
+use op_revm::OpContext;
 use parking_lot::{Mutex, RwLock};
 use revm::{
-    context::{Block as RevmBlock, BlockEnv, Cfg, TxEnv}, context_interface::{
+    DatabaseCommit, Inspector,
+    context::{Block as RevmBlock, BlockEnv, Cfg, TxEnv},
+    context_interface::{
         block::BlobExcessGasAndPrice,
         result::{ExecutionResult, Output, ResultAndState},
-    }, database::{CacheDB, WrapDatabaseRef}, interpreter::InstructionResult, precompile::{
-        secp256r1::{P256VERIFY, P256VERIFY_ADDRESS, P256VERIFY_BASE_GAS_FEE}, u64_to_address, PrecompileId, PrecompileSpecId, Precompiles
-    }, primitives::{hardfork::SpecId as RevmSpecId, KECCAK_EMPTY}, state::AccountInfo, DatabaseCommit, Inspector
+    },
+    database::{CacheDB, WrapDatabaseRef},
+    interpreter::InstructionResult,
+    precompile::{
+        PrecompileId, PrecompileSpecId, Precompiles,
+        secp256r1::{P256VERIFY, P256VERIFY_ADDRESS, P256VERIFY_BASE_GAS_FEE},
+        u64_to_address,
+    },
+    primitives::{KECCAK_EMPTY, hardfork::SpecId as RevmSpecId},
+    state::AccountInfo,
 };
 use std::{
     collections::BTreeMap,
@@ -116,13 +132,10 @@ use std::{
 use storage::{Blockchain, DEFAULT_HISTORY_LIMIT, MinedTransaction};
 use tokio::sync::RwLock as AsyncRwLock;
 
-// use super::executor::new_evm_with_inspector_ref;
-
 use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
-// use revm::precompile::Precompile as RevmPrecompile;
 use seismic_prelude::foundry::{
     AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, OpHaltReason, OpTransaction,
-    SeismicContext, SeismicPrecompiles, SimBlock, SpecId, SimulatePayload, TransactionReceipt,
+    SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload, SpecId, TransactionReceipt,
     TransactionRequest, TxEnvelope,
 };
 
@@ -656,8 +669,13 @@ impl Backend {
 
         // Clear all storage and reinitialize with genesis
         let base_fee = if self.fees.is_eip1559() { Some(self.fees.base_fee()) } else { None };
-        *self.blockchain.storage.write() =
-            BlockchainStorage::new(&env, spec_id.into_eth_spec(), base_fee, genesis_timestamp, genesis_number);
+        *self.blockchain.storage.write() = BlockchainStorage::new(
+            &env,
+            spec_id.into_eth_spec(),
+            base_fee,
+            genesis_timestamp,
+            genesis_number,
+        );
         self.states.write().clear();
 
         // Clear the database
@@ -1248,7 +1266,8 @@ impl Backend {
     where
         DB: DatabaseRef<Error = DatabaseError> + Debug + 'db + ?Sized,
         I: Inspector<EthEvmContext<WrapDatabaseRef<&'db DB>>>
-            + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>,
+            + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>
+            + Inspector<SeismicContext<WrapDatabaseRef<&'db DB>>>,
         WrapDatabaseRef<&'db DB>: Database<Error = DatabaseError>,
     {
         let mut evm = new_evm_with_inspector_ref(db, env, inspector);
@@ -1258,10 +1277,12 @@ impl Backend {
         }
 
         if self.is_celo() {
+            /*
             evm.precompiles_mut()
                 .apply_precompile(&celo_precompile::CELO_TRANSFER_ADDRESS, move |_| {
                     Some(celo_precompile::precompile())
                 });
+            */
         }
 
         if let Some(factory) = &self.precompile_factory {
@@ -1270,13 +1291,15 @@ impl Backend {
 
         let cheats = Arc::new(self.cheats.clone());
         if cheats.has_recover_overrides() {
-            let cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
+            // NOTE: seismic-anvil does not support this; typing too annoying
+            /*
             evm.precompiles_mut().apply_precompile(&EC_RECOVER, move |_| {
                 Some(DynPrecompile::new_stateful(
                     cheat_ecrecover.precompile_id().clone(),
                     move |input| cheat_ecrecover.call(input),
                 ))
             });
+            */
         }
 
         evm
@@ -1565,7 +1588,9 @@ impl Backend {
 
         self.fees.set_blob_excess_gas_and_price(BlobExcessGasAndPrice::new(
             next_block_excess_blob_gas,
-            get_blob_base_fee_update_fraction_by_spec_id(self.env.read().evm_env.spec_id().into_eth_spec()),
+            get_blob_base_fee_update_fraction_by_spec_id(
+                self.env.read().evm_env.spec_id().into_eth_spec(),
+            ),
         ));
 
         // notify all listeners
@@ -3538,7 +3563,9 @@ impl TransactionValidator for Backend {
         }
 
         // EIP-4844 structural validation
-        if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::CANCUN && tx.transaction.is_eip4844() {
+        if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::CANCUN
+            && tx.transaction.is_eip4844()
+        {
             // Heavy (blob validation) checks
             let blob_tx = match &tx.transaction {
                 TypedTransaction::EIP4844(tx) => tx.tx(),

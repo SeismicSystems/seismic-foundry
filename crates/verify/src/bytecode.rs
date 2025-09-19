@@ -8,11 +8,7 @@ use crate::{
     verify::VerifierArgs,
 };
 use alloy_primitives::{Address, Bytes, TxKind, U256, hex};
-use alloy_provider::{
-    Provider,
-    ext::TraceApi,
-    network::{TransactionBuilder},
-};
+use alloy_provider::{Provider, ext::TraceApi, network::TransactionBuilder};
 use alloy_rpc_types::{
     BlockId, BlockNumberOrTag, TransactionInput,
     trace::parity::{Action, CreateAction, CreateOutput, TraceOutput},

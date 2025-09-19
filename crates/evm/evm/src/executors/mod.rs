@@ -15,7 +15,8 @@ use crate::{
 use alloy_dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
 use alloy_json_abi::Function;
 use alloy_primitives::{
-    keccak256, map::{AddressHashMap, HashMap}, Address, Bytes, Log, TxKind, U256
+    Address, Bytes, Log, TxKind, U256, keccak256,
+    map::{AddressHashMap, HashMap},
 };
 use alloy_sol_types::{SolCall, sol};
 use foundry_evm_core::{

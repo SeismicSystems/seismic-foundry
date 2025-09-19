@@ -1,6 +1,6 @@
 use crate::utils::apply_chain_and_block_specific_env_changes;
 use alloy_consensus::Transaction;
-use alloy_network::{TransactionResponse};
+use alloy_network::TransactionResponse;
 use alloy_primitives::{
     Address, Bytes, U256,
     map::{HashMap, HashSet},

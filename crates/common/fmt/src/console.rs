@@ -1,5 +1,5 @@
 use super::UIfmt;
-use alloy_primitives::{Address, Bytes, FixedBytes, SAddress, I256, SI256, SU256, U256};
+use alloy_primitives::{Address, Bytes, FixedBytes, I256, SAddress, SI256, SU256, U256};
 use std::fmt::{self, Write};
 
 /// A piece is a portion of the format string which represents the next part to emit.

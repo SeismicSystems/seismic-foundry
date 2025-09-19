@@ -12,7 +12,7 @@ use alloy_rpc_types::{BlockId, TransactionRequest};
 use alloy_serde::WithOtherFields;
 use anvil::{NodeConfig, spawn};
 
-use seismic_prelude::foundry::{tx_builder, AnyTransactionRequest, EthereumWallet};
+use seismic_prelude::foundry::{EthereumWallet, tx_builder};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_send_eip4844_transaction() {

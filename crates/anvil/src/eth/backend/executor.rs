@@ -19,10 +19,7 @@ use alloy_consensus::{
     Receipt, ReceiptWithBloom, constants::EMPTY_WITHDRAWALS, proofs::calculate_receipt_root,
 };
 use alloy_eips::{eip7685::EMPTY_REQUESTS_HASH, eip7840::BlobParams};
-use alloy_evm::{
-    Evm,
-    eth::EthEvmContext,
-};
+use alloy_evm::{Evm, eth::EthEvmContext};
 use alloy_primitives::{B256, Bloom, BloomInput, Log};
 use anvil_core::eth::{
     block::{Block, BlockInfo, PartialHeader},
@@ -35,11 +32,18 @@ use foundry_evm::{
     traces::{CallTraceDecoder, CallTraceNode},
 };
 use foundry_evm_core::{either_evm::EitherEvm, precompiles::EC_RECOVER};
-use op_revm::{OpContext};
+use op_revm::OpContext;
 use revm::{
-    context::{Block as RevmBlock, BlockEnv, Cfg, JournalTr, LocalContext}, context_interface::result::{EVMError, ExecutionResult, Output}, database::WrapDatabaseRef, handler::{instructions::EthInstructions, EthPrecompiles}, interpreter::InstructionResult, precompile::{
-        secp256r1::{P256VERIFY, P256VERIFY_BASE_GAS_FEE}, PrecompileSpecId, Precompiles
-    }, primitives::hardfork::SpecId, Database, DatabaseRef, Inspector, Journal
+    Database, DatabaseRef, Inspector, Journal,
+    context::{Block as RevmBlock, BlockEnv, Cfg, JournalTr, LocalContext},
+    context_interface::result::{EVMError, ExecutionResult, Output},
+    database::WrapDatabaseRef,
+    interpreter::InstructionResult,
+    precompile::{
+        PrecompileSpecId, Precompiles,
+        secp256r1::{P256VERIFY, P256VERIFY_BASE_GAS_FEE},
+    },
+    primitives::hardfork::SpecId,
 };
 use std::{fmt::Debug, sync::Arc};
 

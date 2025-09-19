@@ -1,17 +1,17 @@
 //! Transaction related types
 use alloy_consensus::{
-    transaction::{
-        eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
-        Recovered, TxEip7702,
-    },
     EthereumTxEnvelope, Receipt, ReceiptEnvelope, ReceiptWithBloom, Signed, Transaction, TxEip1559,
     TxEip2930, TxLegacy, TxReceipt, Typed2718,
+    transaction::{
+        Recovered, TxEip7702,
+        eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
+    },
 };
-use alloy_primitives::{Address, Bloom, Bytes, Log, Signature, TxHash, TxKind, B256, U256};
-use alloy_rlp::{length_of_length, Decodable, Encodable, Header};
+use alloy_primitives::{Address, B256, Bloom, Bytes, Log, Signature, TxHash, TxKind, U256};
+use alloy_rlp::{Decodable, Encodable, Header, length_of_length};
 use alloy_rpc_types::{
-    trace::otterscan::OtsReceipt, AccessList, ConversionError,
-    TransactionRequest as AlloyTransactionRequest,
+    AccessList, ConversionError, TransactionRequest as AlloyTransactionRequest,
+    trace::otterscan::OtsReceipt,
 };
 use alloy_serde::{OtherFields, WithOtherFields};
 use bytes::BufMut;
@@ -21,14 +21,16 @@ use op_revm::transaction::deposit::DepositTransactionParts;
 use revm::{context::TxEnv, interpreter::InstructionResult};
 use serde::{Deserialize, Serialize};
 use std::{
-    fmt::Debug, hash::Hash, ops::{Deref, Mul}
+    fmt::Debug,
+    hash::Hash,
+    ops::{Deref, Mul},
 };
 
-use alloy_eips::{eip2718::Eip2718Error, Decodable2718, Encodable2718};
+use alloy_eips::{Decodable2718, Encodable2718, eip2718::Eip2718Error};
 use seismic_prelude::foundry::{
-    AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, Decodable712,
-    Eip712Result, OpTransaction, RpcTransaction, TransactionReceipt, TransactionRequest,
-    TxEnvelope, TxSeismic, TxSeismicElements, TypedDataRequest, SEISMIC_TX_TYPE_ID,
+    AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, Decodable712, Eip712Result,
+    OpTransaction, RpcTransaction, SEISMIC_TX_TYPE_ID, TransactionReceipt, TransactionRequest,
+    TxEnvelope, TxSeismic, TxSeismicElements, TypedDataRequest,
 };
 
 pub trait SeismicCompatible:
@@ -1690,9 +1692,9 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_consensus::SignableTransaction;
     use alloy_primitives::{LogData, b256, hex};
     use std::str::FromStr;
-    use alloy_consensus::SignableTransaction;
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
     #[test]

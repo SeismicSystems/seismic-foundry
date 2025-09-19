@@ -34,7 +34,7 @@ use std::{
     time::Duration,
 };
 
-use seismic_prelude::foundry::{tx_builder, EthereumWallet};
+use seismic_prelude::foundry::{EthereumWallet, tx_builder};
 
 const BLOCK_NUMBER: u64 = 14_608_400u64;
 const DEAD_BALANCE_AT_BLOCK_NUMBER: u128 = 12_556_069_338_441_120_059_867u128;

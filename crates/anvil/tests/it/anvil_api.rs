@@ -38,7 +38,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use seismic_prelude::foundry::{tx_builder, EthereumWallet};
+use seismic_prelude::foundry::{EthereumWallet, tx_builder};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_set_gas_price() {

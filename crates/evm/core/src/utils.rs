@@ -141,24 +141,25 @@ pub fn configure_tx_req_env(
     env.tx.tx_type = tx_type;
 
     let SeismicTransactionRequest {
-        inner: TransactionRequest {
-            nonce,
-            from,
-            to,
-            value,
-            gas_price,
-            gas,
-            max_fee_per_gas,
-            max_priority_fee_per_gas,
-            max_fee_per_blob_gas,
-            ref input,
-            chain_id,
-            ref blob_versioned_hashes,
-            ref access_list,
-            ref authorization_list,
-            transaction_type: _,
-            sidecar: _,
-        },
+        inner:
+            TransactionRequest {
+                nonce,
+                from,
+                to,
+                value,
+                gas_price,
+                gas,
+                max_fee_per_gas,
+                max_priority_fee_per_gas,
+                max_fee_per_blob_gas,
+                ref input,
+                chain_id,
+                ref blob_versioned_hashes,
+                ref access_list,
+                ref authorization_list,
+                transaction_type: _,
+                sidecar: _,
+            },
         seismic_elements: _,
     } = *tx;
 
