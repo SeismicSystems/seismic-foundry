@@ -7,7 +7,7 @@ use crate::{
     },
     mem::state::state_root,
 };
-use alloy_primitives::{map::HashMap, Address, B256, U256};
+use alloy_primitives::{Address, B256, U256, map::HashMap};
 use alloy_rpc_types::BlockId;
 use foundry_evm::backend::{BlockchainDb, DatabaseResult, StateSnapshot};
 use revm::{
@@ -28,10 +28,10 @@ impl Db for MemDb {
     fn set_storage_at(
         &mut self,
         address: Address,
-        slot: U256,
+        slot: B256,
         val: revm::primitives::FlaggedStorage,
     ) -> DatabaseResult<()> {
-        self.inner.insert_account_storage(address, slot, val)
+        self.inner.insert_account_storage(address, slot.into(), val)
     }
 
     fn insert_block_hash(&mut self, number: U256, hash: B256) {
@@ -111,10 +111,6 @@ impl Db for MemDb {
 }
 
 impl MaybeFullDatabase for MemDb {
-    fn as_dyn(&self) -> &dyn DatabaseRef<Error = foundry_evm::backend::DatabaseError> {
-        self
-    }
-
     fn maybe_as_full_db(&self) -> Option<&HashMap<Address, DbAccount>> {
         Some(&self.inner.cache.accounts)
     }
@@ -153,9 +149,11 @@ impl MaybeForkedDatabase for MemDb {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{address, Bytes, FlaggedStorage};
+    use alloy_primitives::{Bytes, address};
     use revm::{bytecode::Bytecode, primitives::KECCAK_EMPTY};
     use std::collections::BTreeMap;
+
+    use alloy_primitives::FlaggedStorage;
 
     // verifies that all substantial aspects of a loaded account remain the same after an account
     // is dumped and reloaded
@@ -175,7 +173,9 @@ mod tests {
                 nonce: 1234,
             },
         );
-        dump_db.set_storage_at(test_addr, U256::from(1234567), U256::from(1).into()).unwrap();
+        dump_db
+            .set_storage_at(test_addr, U256::from(1234567).into(), U256::from(1).into())
+            .unwrap();
 
         // blocks dumping/loading tested in storage.rs
         let state = dump_db
@@ -219,8 +219,8 @@ mod tests {
             },
         );
 
-        db.set_storage_at(test_addr, U256::from(1234567), U256::from(1).into()).unwrap();
-        db.set_storage_at(test_addr, U256::from(1234568), U256::from(2).into()).unwrap();
+        db.set_storage_at(test_addr, U256::from(1234567).into(), U256::from(1).into()).unwrap();
+        db.set_storage_at(test_addr, U256::from(1234568).into(), U256::from(2).into()).unwrap();
 
         let mut new_state = SerializableState::default();
 

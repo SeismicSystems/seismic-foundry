@@ -1,11 +1,11 @@
 //! Wrappers for transactions.
 
-use alloy_consensus::{transaction::SignerRecoverable, Transaction, TxEnvelope};
+use alloy_consensus::{Transaction, TxEnvelope, transaction::SignerRecoverable};
 use alloy_eips::eip7702::SignedAuthorization;
-use alloy_primitives::{Address, TxKind, U256};
+use alloy_primitives::{Address, Bytes, TxKind, U256};
 use alloy_provider::{
-    network::{ReceiptResponse, TransactionBuilder},
     Provider,
+    network::{ReceiptResponse, TransactionBuilder},
 };
 use alloy_rpc_types::BlockId;
 use alloy_serde::WithOtherFields;
@@ -228,10 +228,10 @@ impl TransactionMaybeSigned {
         }
     }
 
-    pub fn input(&self) -> Option<&[u8]> {
+    pub fn input(&self) -> Option<&Bytes> {
         match self {
             Self::Signed { tx, .. } => Some(tx.input()),
-            Self::Unsigned(tx) => tx.inner.inner.input.input().map(|i| i.as_ref()),
+            Self::Unsigned(tx) => tx.input.input(),
         }
     }
 

@@ -11,18 +11,26 @@ type EvmEnv = AlloyEvmEnv<SpecId>;
 pub struct Env {
     pub evm_env: EvmEnv,
     pub tx: OpTransaction<TxEnv>,
-    pub is_optimism: bool,
     pub is_seismic: bool,
+    pub is_optimism: bool,
+    pub is_celo: bool,
 }
 
 /// Helper container type for [`EvmEnv`] and [`OpTransaction<TxEnv>`].
 impl Env {
-    pub fn new(cfg: CfgEnv, block: BlockEnv, tx: OpTransaction<TxEnv>, is_optimism: bool) -> Self {
+    pub fn new(
+        cfg: CfgEnv,
+        block: BlockEnv,
+        tx: OpTransaction<TxEnv>,
+        is_optimism: bool,
+        is_celo: bool,
+    ) -> Self {
         Self {
             evm_env: EvmEnv { cfg_env: cfg, block_env: block },
             tx,
-            is_optimism,
             is_seismic: true,
+            is_optimism,
+            is_celo,
         }
     }
 }

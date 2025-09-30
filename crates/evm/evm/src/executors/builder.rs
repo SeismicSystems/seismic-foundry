@@ -1,8 +1,5 @@
 use crate::{executors::Executor, inspectors::InspectorStackBuilder};
-use foundry_evm_core::{backend::Backend, Env};
-/*
-use revm::primitives::hardfork::SpecId;
-*/
+use foundry_evm_core::{Env, backend::Backend};
 
 use seismic_prelude::foundry::SpecId;
 

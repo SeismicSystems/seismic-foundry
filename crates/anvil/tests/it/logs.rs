@@ -4,10 +4,10 @@ use crate::{
     abi::SimpleStorage::{self},
     utils::{http_provider_with_signer, ws_provider_with_signer},
 };
-use alloy_primitives::{map::B256HashSet, B256};
+use alloy_primitives::{B256, map::B256HashSet};
 use alloy_provider::Provider;
 use alloy_rpc_types::{BlockNumberOrTag, Filter};
-use anvil::{spawn, NodeConfig};
+use anvil::{NodeConfig, spawn};
 use futures::StreamExt;
 
 use seismic_prelude::foundry::EthereumWallet;

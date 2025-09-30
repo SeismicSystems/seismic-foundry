@@ -1,12 +1,12 @@
 //! general eth api tests
 
-use alloy_primitives::{address, TxKind, U256};
+use alloy_primitives::{TxKind, U256, address};
 use alloy_rpc_types::{
+    BlockOverrides,
     request::TransactionRequest,
     state::{AccountOverride, StateOverridesBuilder},
-    BlockOverrides,
 };
-use anvil::{spawn, NodeConfig};
+use anvil::{NodeConfig, spawn};
 use foundry_test_utils::rpc;
 
 use seismic_prelude::foundry::{SimBlock, SimulatePayload};
