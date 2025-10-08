@@ -166,10 +166,11 @@ impl CoverageReporter for LcovReporter {
                         }
                     }
                     CoverageItemKind::Branch { branch_id, path_id, .. } => {
+                        let hits_str = if hits == 0 { "-".to_string() } else { hits.to_string() };
                         writeln!(
                             out,
                             "BRDA:{line},{branch_id},{path_id},{}",
-                            if hits == 0 { "-" } else { &hits.to_string() }
+                            hits_str
                         )?;
                     }
                 }
