@@ -133,6 +133,7 @@ use storage::{Blockchain, DEFAULT_HISTORY_LIMIT, MinedTransaction};
 use tokio::sync::RwLock as AsyncRwLock;
 
 use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
+use seismic_enclave::rpc::SyncEnclaveApiClient;
 use seismic_prelude::foundry::{
     AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, OpHaltReason, OpTransaction,
     SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload, SpecId, TransactionReceipt,
@@ -1717,11 +1718,16 @@ impl Backend {
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
         let data = input.into_input().unwrap_or_default();
+        let mock_enclave_client = seismic_enclave::MockEnclaveClient {};
+        let keys = mock_enclave_client
+            .get_purpose_keys(seismic_enclave::keys::GetPurposeKeysRequest { epoch: 0 })
+            .unwrap();
         let data = match request.inner.seismic_elements {
             Some(seismic_elements) => seismic_elements
-                .server_decrypt(&seismic_enclave::MockEnclaveClient::new(), &data)
-                .expect("failed to decrypt seismic elements"),
-            None => data,
+                .decrypt(&keys.tx_io_sk, &data)
+                .expect("failed to decrypt seismic elements")
+                .into(),
+            None => data.into(),
         };
         let mut base = TxEnv {
             caller,
@@ -2059,15 +2065,16 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let seismic_elements = request.inner.seismic_elements;
+        let mock_enclave_client = seismic_enclave::MockEnclaveClient {};
+        let keys = mock_enclave_client
+            .get_purpose_keys(seismic_enclave::keys::GetPurposeKeysRequest { epoch: 0 })
+            .unwrap();
         let (exit_reason, out, gas_used, state) =
             self.call_with_state(state, request, fee_details, block_env)?;
         let output_data = out
             .map(|plaintext_output| match seismic_elements {
                 Some(seismic_elements) => seismic_elements
-                    .server_encrypt(
-                        &seismic_enclave::MockEnclaveClient::new(),
-                        &plaintext_output.data(),
-                    )
+                    .encrypt(&keys.tx_io_sk, &plaintext_output.data())
                     .map_err(|e| {
                         BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                     })
@@ -2089,8 +2096,9 @@ impl Backend {
         block_request: Option<BlockRequest>,
         opts: GethDebugTracingCallOptions,
     ) -> Result<GethTrace, BlockchainError> {
-        let GethDebugTracingCallOptions { tracing_options, block_overrides, state_overrides } =
-            opts;
+        let GethDebugTracingCallOptions {
+            tracing_options, block_overrides, state_overrides, ..
+        } = opts;
         let GethDebugTracingOptions { config, tracer, tracer_config, .. } = tracing_options;
 
         self.with_database_at(block_request, |state, mut block| {
@@ -3673,10 +3681,12 @@ impl TransactionValidator for Backend {
         if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
             // check that decryption works before we create tx env for it
             let inner = seismic_tx.tx();
-            let _decrypted_data = inner
-                .seismic_elements
-                .server_decrypt(&seismic_enclave::MockEnclaveClient::new(), &inner.input)
-                .map_err(|_e| {
+            let mock_enclave_client = seismic_enclave::MockEnclaveClient {};
+            let keys = mock_enclave_client
+                .get_purpose_keys(seismic_enclave::keys::GetPurposeKeysRequest { epoch: 0 })
+                .unwrap();
+            let _decrypted_data =
+                inner.seismic_elements.decrypt(&keys.tx_io_sk, &inner.input).map_err(|_e| {
                     InvalidTransactionError::SeismicDecryptionFailed(format!(
                         "Failed to decrypt seismic calldata"
                     ))

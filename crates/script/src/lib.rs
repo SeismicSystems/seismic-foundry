@@ -782,10 +782,10 @@ mod tests {
 
         let config = r#"
                 [profile.default]
-                etherscan_api_key = "mumbai"
+                etherscan_api_key = "amoy"
 
                 [etherscan]
-                mumbai = { key = "https://etherscan-mumbai.com/" }
+                amoy = { key = "https://etherscan-amoy.com/" }
             "#;
 
         let toml_file = root.join(Config::FILE_NAME);
@@ -794,14 +794,14 @@ mod tests {
             "foundry-cli",
             "Contract.sol",
             "--etherscan-api-key",
-            "mumbai",
+            "amoy",
             "--root",
             root.as_os_str().to_str().unwrap(),
         ]);
 
         let config = args.load_config().unwrap();
-        let mumbai = config.get_etherscan_api_key(Some(NamedChain::PolygonMumbai.into()));
-        assert_eq!(mumbai, Some("https://etherscan-mumbai.com/".to_string()));
+        let amoy = config.get_etherscan_api_key(Some(NamedChain::PolygonAmoy.into()));
+        assert_eq!(amoy, Some("https://etherscan-amoy.com/".to_string()));
     }
 
     #[test]

@@ -27,6 +27,7 @@ use std::{
 };
 
 use alloy_eips::{Decodable2718, Encodable2718, eip2718::Eip2718Error};
+use seismic_enclave::rpc::SyncEnclaveApiClient;
 use seismic_prelude::foundry::{
     AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, Decodable712, Eip712Result,
     OpTransaction, RpcTransaction, SEISMIC_TX_TYPE_ID, TransactionReceipt, TransactionRequest,
@@ -671,14 +672,21 @@ impl PendingTransaction {
                     seismic_elements,
                 } = &tx.tx();
 
+                let mock_enclave_client = seismic_enclave::MockEnclaveClient {};
+
+                let keys = mock_enclave_client
+                    .get_purpose_keys(seismic_enclave::keys::GetPurposeKeysRequest { epoch: 0 })
+                    .unwrap();
+
                 OpTransaction::new(TxEnv {
                     caller,
                     kind: transact_to(to),
                     // these two have already been validated in TransactionValidator,
                     // so we simply unwrap here
                     data: seismic_elements
-                        .server_decrypt(&seismic_enclave::MockEnclaveClient::new(), input)
-                        .expect("failed to decrypt seismic elements"),
+                        .decrypt(&keys.tx_io_sk, &input)
+                        .expect("failed to decrypt seismic elements")
+                        .into(),
                     chain_id: Some(*chain_id),
                     nonce: *nonce,
                     value: *value,
