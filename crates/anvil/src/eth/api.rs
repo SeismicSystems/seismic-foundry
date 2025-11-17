@@ -851,7 +851,9 @@ impl EthApi {
             ));
         }
 
-        self.backend.storage_with_privacy(address, index, Some(block_request)).await
+        self.backend
+            .storage_with_privacy(address, index, Some(block_request))
+            .await
             .map_err(|e| e.into())
     }
 

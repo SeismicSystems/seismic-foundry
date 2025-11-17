@@ -117,7 +117,7 @@ use revm::{
         secp256r1::{P256VERIFY, P256VERIFY_ADDRESS, P256VERIFY_BASE_GAS_FEE},
         u64_to_address,
     },
-    primitives::{KECCAK_EMPTY, FlaggedStorage, hardfork::SpecId as RevmSpecId},
+    primitives::{FlaggedStorage, KECCAK_EMPTY, hardfork::SpecId as RevmSpecId},
     state::AccountInfo,
 };
 use std::{
