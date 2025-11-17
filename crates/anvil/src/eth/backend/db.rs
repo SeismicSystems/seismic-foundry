@@ -169,7 +169,7 @@ pub trait Db:
             );
 
             for (k, v) in account.storage.into_iter() {
-                self.set_storage_at(addr, k.into(), v.into())?;
+                self.set_storage_at(addr, k.into(), v)?;
             }
         }
         Ok(true)
