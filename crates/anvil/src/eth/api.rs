@@ -221,6 +221,9 @@ impl EthApi {
             EthRequest::EthGetStorageAt(addr, slot, block) => {
                 self.storage_at(addr, slot, block).await.to_rpc_result()
             }
+            EthRequest::EthGetStorageWithPrivacy(addr, slot, block) => {
+                self.storage_with_privacy(addr, slot, block).await.to_rpc_result()
+            }
             EthRequest::EthGetBlockByHash(hash, full) => {
                 if full {
                     self.block_by_hash_full(hash).await.to_rpc_result()
