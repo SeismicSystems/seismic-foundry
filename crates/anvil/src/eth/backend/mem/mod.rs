@@ -117,7 +117,7 @@ use revm::{
         secp256r1::{P256VERIFY, P256VERIFY_ADDRESS, P256VERIFY_BASE_GAS_FEE},
         u64_to_address,
     },
-    primitives::{KECCAK_EMPTY, hardfork::SpecId as RevmSpecId},
+    primitives::{FlaggedStorage, KECCAK_EMPTY, hardfork::SpecId as RevmSpecId},
     state::AccountInfo,
 };
 use std::{
@@ -2668,6 +2668,22 @@ impl Backend {
             trace!(target: "backend", "get storage for {:?} at {:?}", address, index);
             let val = db.storage_ref(address, index)?;
             Ok(val.into())
+        })
+        .await?
+    }
+
+    /// Returns storage at given address and index with privacy flag
+    ///
+    /// Handler for custom RPC call: `eth_getStorageWithPrivacy`
+    pub async fn storage_with_privacy(
+        &self,
+        address: Address,
+        index: U256,
+        block_request: Option<BlockRequest>,
+    ) -> Result<FlaggedStorage, BlockchainError> {
+        self.with_database_at(block_request, |db, _| {
+            trace!(target: "backend", "get storage with privacy for {:?} at {:?}", address, index);
+            Ok(db.storage_ref(address, index)?)
         })
         .await?
     }

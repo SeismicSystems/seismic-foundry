@@ -10,12 +10,12 @@ export const repos: Repo[] = [
   //   repo: "forge-std",
   //   remote: "git@github.com:foundry-rs/forge-std.git",
   // },
-  {
-    repo: "moonhatch",
-    contracts: "contracts",
-    remote: "git@github.com:SeismicSystems/moonhatch.git",
-    clone: false,
-  },
+  // {
+  //   repo: "moonhatch",
+  //   contracts: "contracts",
+  //   remote: "git@github.com:SeismicSystems/moonhatch.git",
+  //   clone: false,
+  // },
   {
     repo: "poker",
     contracts: "contracts",
