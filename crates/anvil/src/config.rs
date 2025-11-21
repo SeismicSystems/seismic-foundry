@@ -38,7 +38,7 @@ use foundry_common::{
 use foundry_config::Config;
 use foundry_evm::{
     backend::{BlockchainDb, BlockchainDbMeta, SharedBackend},
-    constants::DEFAULT_CREATE2_DEPLOYER,
+    constants::{AES_LIB, DEFAULT_CREATE2_DEPLOYER, INTELLIGENCE},
     utils::{apply_chain_and_block_specific_env_changes, get_blob_base_fee_update_fraction},
 };
 use foundry_evm_core::AsEnvMut;
@@ -1195,6 +1195,11 @@ impl NodeConfig {
             Arc::new(TokioRwLock::new(self.clone())),
         )
         .await?;
+
+        backend
+            .set_intelligence(AES_LIB, INTELLIGENCE)
+            .await
+            .wrap_err("failed to create intelligence contract")?;
 
         // Writes the default create2 deployer to the backend,
         // if the option is not disabled and we are not forking.
