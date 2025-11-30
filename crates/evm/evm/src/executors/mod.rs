@@ -23,8 +23,9 @@ use foundry_evm_core::{
     EvmEnv,
     backend::{Backend, BackendError, BackendResult, CowBackend, DatabaseExt, GLOBAL_FAIL_SLOT},
     constants::{
-        CALLER, CHEATCODE_ADDRESS, CHEATCODE_CONTRACT_HASH, DEFAULT_CREATE2_DEPLOYER,
-        DEFAULT_CREATE2_DEPLOYER_CODE, DEFAULT_CREATE2_DEPLOYER_DEPLOYER,
+        AES_LIB, AES_LIB_RUNTIME_CODE, CALLER, CHEATCODE_ADDRESS, CHEATCODE_CONTRACT_HASH,
+        DEFAULT_CREATE2_DEPLOYER, DEFAULT_CREATE2_DEPLOYER_CODE, DEFAULT_CREATE2_DEPLOYER_DEPLOYER,
+        DIRECTORY, DIRECTORY_RUNTIME_CODE, INTELLIGENCE, INTELLIGENCE_RUNTIME_CODE,
     },
     decode::{RevertDecoder, SkipReason},
     utils::StateChangeset,
@@ -237,6 +238,22 @@ impl Executor {
 
             self.set_balance(creator, initial_balance)?;
         }
+        Ok(())
+    }
+
+    /// Creates the Directory contract, along with its AES lib dependency.
+    pub fn set_directory(&mut self) -> eyre::Result<()> {
+        self.set_code(AES_LIB, Bytecode::new_raw(Bytes::from_static(AES_LIB_RUNTIME_CODE)))?;
+        self.set_code(DIRECTORY, Bytecode::new_raw(Bytes::from_static(DIRECTORY_RUNTIME_CODE)))?;
+        Ok(())
+    }
+
+    /// Creates the Intelligence contract.
+    pub fn set_intelligence(&mut self) -> eyre::Result<()> {
+        self.set_code(
+            INTELLIGENCE,
+            Bytecode::new_raw(Bytes::from_static(INTELLIGENCE_RUNTIME_CODE)),
+        )?;
         Ok(())
     }
 
