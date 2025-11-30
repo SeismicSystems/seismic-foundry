@@ -92,7 +92,7 @@ use eyre::{Context, Result};
 use flate2::{Compression, read::GzDecoder, write::GzEncoder};
 use foundry_evm::{
     backend::{DatabaseError, DatabaseResult, RevertStateSnapshotAction},
-    constants::{DEFAULT_CREATE2_DEPLOYER_RUNTIME_CODE, AES_LIB_RUNTIME_CODE, INTELLIGENCE_RUNTIME_CODE},
+    constants::{DEFAULT_CREATE2_DEPLOYER_RUNTIME_CODE, AES_LIB_RUNTIME_CODE, DIRECTORY_RUNTIME_CODE, INTELLIGENCE_RUNTIME_CODE},
     decode::RevertDecoder,
     inspectors::AccessListInspector,
     traces::{CallTraceDecoder, TracingInspectorConfig},
@@ -399,10 +399,18 @@ impl Backend {
         Ok(backend)
     }
 
-    /// Writes blockchain intelligence code, and accompanying AES library, directly 
-    /// to the database at the addresses provided.
-    pub async fn set_intelligence(&self, aes_address: Address, intelligence_address: Address) -> DatabaseResult<()> {
+    /// Writes Directory code, and accompanying AES library, directly to the 
+    /// database at the addresses provided.
+    pub async fn set_directory(&self, aes_address: Address, directory_address: Address) -> DatabaseResult<()> {
         self.set_code(aes_address, Bytes::from_static(AES_LIB_RUNTIME_CODE)).await?;
+        self.set_code(directory_address, Bytes::from_static(DIRECTORY_RUNTIME_CODE)).await?;
+
+        Ok(())
+    }
+
+    /// Writes Intelligence code directly to the database at the addresses 
+    /// provided.
+    pub async fn set_intelligence(&self, intelligence_address: Address) -> DatabaseResult<()> {
         self.set_code(intelligence_address, Bytes::from_static(INTELLIGENCE_RUNTIME_CODE)).await?;
 
         Ok(())

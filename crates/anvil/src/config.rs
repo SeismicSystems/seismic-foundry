@@ -38,7 +38,7 @@ use foundry_common::{
 use foundry_config::Config;
 use foundry_evm::{
     backend::{BlockchainDb, BlockchainDbMeta, SharedBackend},
-    constants::{AES_LIB, DEFAULT_CREATE2_DEPLOYER, INTELLIGENCE},
+    constants::{AES_LIB, DEFAULT_CREATE2_DEPLOYER, DIRECTORY, INTELLIGENCE},
     utils::{apply_chain_and_block_specific_env_changes, get_blob_base_fee_update_fraction},
 };
 use foundry_evm_core::AsEnvMut;
@@ -1197,9 +1197,14 @@ impl NodeConfig {
         .await?;
 
         backend
-            .set_intelligence(AES_LIB, INTELLIGENCE)
+            .set_directory(AES_LIB, DIRECTORY)
             .await
-            .wrap_err("failed to create intelligence contract")?;
+            .wrap_err("failed to create Directory contract")?;
+
+        backend
+            .set_intelligence(INTELLIGENCE)
+            .await
+            .wrap_err("failed to create Intelligence contract")?;
 
         // Writes the default create2 deployer to the backend,
         // if the option is not disabled and we are not forking.
