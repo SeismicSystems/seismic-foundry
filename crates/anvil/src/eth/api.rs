@@ -43,7 +43,7 @@ use alloy_network::{
     BlockResponse, NetworkWallet, TransactionBuilder, TransactionResponse, eip2718::Decodable2718,
 };
 use alloy_primitives::{
-    Address, B64, B256, Bytes, Signature, TxHash, TxKind, U64, U256,
+    Address, B64, B256, Bytes, FlaggedStorage, Signature, TxHash, TxKind, U64, U256,
     map::{HashMap, HashSet},
 };
 use alloy_provider::utils::{
@@ -218,6 +218,9 @@ impl EthApi {
             EthRequest::EthBlockNumber(_) => self.block_number().to_rpc_result(),
             EthRequest::EthGetStorageAt(addr, slot, block) => {
                 self.storage_at(addr, slot, block).await.to_rpc_result()
+            }
+            EthRequest::EthGetStorageWithPrivacy(addr, slot, block) => {
+                self.storage_with_privacy(addr, slot, block).await.to_rpc_result()
             }
             EthRequest::EthGetBlockByHash(hash, full) => {
                 if full {
@@ -821,6 +824,35 @@ impl EthApi {
         }
 
         self.backend.storage_at(address, index, Some(block_request)).await
+    }
+
+    /// Returns content of the storage at given address with privacy flag.
+    ///
+    /// Handler for custom RPC call: `eth_getStorageWithPrivacy`
+    pub async fn storage_with_privacy(
+        &self,
+        address: Address,
+        index: U256,
+        block_number: Option<BlockId>,
+    ) -> Result<FlaggedStorage> {
+        node_info!("eth_getStorageWithPrivacy");
+        let block_request = self.block_request(block_number).await?;
+
+        // check if the number predates the fork, if in fork mode
+        if let BlockRequest::Number(number) = block_request
+            && let Some(fork) = self.get_fork()
+            && fork.predates_fork(number)
+        {
+            // For forked data, we don't have privacy info, assume public
+            return Ok(FlaggedStorage::from(
+                fork.storage_at(address, index, Some(BlockNumber::Number(number))).await?,
+            ));
+        }
+
+        self.backend
+            .storage_with_privacy(address, index, Some(block_request))
+            .await
+            .map_err(|e| e.into())
     }
 
     /// Returns block with given hash.
