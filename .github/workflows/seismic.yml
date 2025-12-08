@@ -39,7 +39,7 @@ jobs:
             name: Linux x64
           
           # macOS Intel
-          - os: macos-13
+          - os: macos-15-intel
             target: x86_64-apple-darwin
             name: macOS Intel
           
@@ -179,4 +179,3 @@ jobs:
           $HOME/.seismic/bin/sforge --version || echo "sforge failed to run"
       - name: Run contract tests with sforge
         run: bun forge:test
-        
