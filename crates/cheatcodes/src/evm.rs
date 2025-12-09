@@ -53,6 +53,7 @@ pub(crate) mod mapping;
 pub(crate) mod mock;
 pub(crate) mod prank;
 
+
 /// Records storage slots reads and writes.
 #[derive(Clone, Debug, Default)]
 pub struct RecordAccess {
@@ -558,7 +559,7 @@ impl Cheatcode for txGasPriceCall {
 impl Cheatcode for warpCall {
     fn apply_stateful(&self, ccx: &mut CheatsCtxt) -> Result {
         let Self { newTimestamp } = self;
-        ccx.ecx.block.timestamp = *newTimestamp;
+        ccx.ecx.block.timestamp = *newTimestamp * U256::from(1000); // convert to milliseconds
         Ok(Default::default())
     }
 }
@@ -566,7 +567,7 @@ impl Cheatcode for warpCall {
 impl Cheatcode for getBlockTimestampCall {
     fn apply_stateful(&self, ccx: &mut CheatsCtxt) -> Result {
         let Self {} = self;
-        Ok(ccx.ecx.block.timestamp.abi_encode())
+        Ok((ccx.ecx.block.timestamp / U256::from(1000)).abi_encode()) // convert to seconds since we return block.timestamp in milliseconds
     }
 }
 
