@@ -53,7 +53,6 @@ pub(crate) mod mapping;
 pub(crate) mod mock;
 pub(crate) mod prank;
 
-
 /// Records storage slots reads and writes.
 #[derive(Clone, Debug, Default)]
 pub struct RecordAccess {
