@@ -828,14 +828,14 @@ impl EthApi {
 
     /// Returns content of the storage at given address with privacy flag.
     ///
-    /// Handler for custom RPC call: `eth_getStorageWithPrivacy`
+    /// Handler for custom RPC call: `eth_getFlaggedStorageAt`
     pub async fn flagged_storage_at(
         &self,
         address: Address,
         index: U256,
         block_number: Option<BlockId>,
     ) -> Result<FlaggedStorage> {
-        node_info!("eth_getStorageWithPrivacy");
+        node_info!("eth_getFlaggedStorageAt");
         let block_request = self.block_request(block_number).await?;
 
         // check if the number predates the fork, if in fork mode
@@ -850,7 +850,7 @@ impl EthApi {
         }
 
         self.backend
-            .storage_with_privacy(address, index, Some(block_request))
+            .flagged_storage_at(address, index, Some(block_request))
             .await
             .map_err(|e| e.into())
     }

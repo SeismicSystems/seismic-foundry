@@ -2666,8 +2666,8 @@ impl Backend {
 
     /// Returns storage at given address and index with privacy flag
     ///
-    /// Handler for custom RPC call: `eth_getStorageWithPrivacy`
-    pub async fn storage_with_privacy(
+    /// Handler for custom RPC call: `eth_getFlaggedStorageAt`
+    pub async fn flagged_storage_at(
         &self,
         address: Address,
         index: U256,
