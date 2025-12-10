@@ -465,6 +465,8 @@ pub struct Backend {
     active_fork_ids: Option<(LocalForkId, ForkLookupIndex)>,
     /// holds additional Backend data
     inner: BackendInner,
+    /// Whether to allow scripts to run when encountering private storage slots.
+    unsafe_private_storage: bool,
 }
 
 impl Backend {
@@ -490,12 +492,15 @@ impl Backend {
             ..Default::default()
         };
 
+        let unsafe_private_storage = fork.as_ref().map(|fork| fork.evm_opts.unsafe_private_storage).unwrap_or(false);
+
         let mut backend = Self {
             forks,
             mem_db: CacheDB::new(Default::default()),
             fork_init_journaled_state: inner.new_journaled_state(),
             active_fork_ids: None,
             inner,
+            unsafe_private_storage,
         };
 
         if let Some(fork) = fork {
@@ -537,6 +542,7 @@ impl Backend {
             fork_init_journaled_state: self.inner.new_journaled_state(),
             active_fork_ids: None,
             inner: Default::default(),
+            unsafe_private_storage: self.unsafe_private_storage,
         }
     }
 
@@ -1528,10 +1534,16 @@ impl DatabaseRef for Backend {
         address: Address,
         index: U256,
     ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
-        if let Some(db) = self.active_fork_db() {
-            DatabaseRef::storage_ref(db, address, index)
+        let result = if let Some(db) = self.active_fork_db() {
+            DatabaseRef::storage_ref(db, address, index)?
         } else {
-            Ok(DatabaseRef::storage_ref(&self.mem_db, address, index)?)
+            DatabaseRef::storage_ref(&self.mem_db, address, index)?
+        };
+        
+        if result.is_private && !self.unsafe_private_storage {
+            Err(DatabaseError::PrivateStorage(address, index))
+        } else {
+            Ok(result)
         }
     }
 

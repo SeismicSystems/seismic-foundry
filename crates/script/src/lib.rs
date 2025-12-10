@@ -193,6 +193,14 @@ pub struct ScriptArgs {
     #[arg(long)]
     pub verify: bool,
 
+    /// Allow scripts to run when encountering private storage slots.
+    ///
+    /// When this flag is set, private storage slots will be treated as zero
+    /// and a warning will be logged. Without this flag, encountering a private
+    /// storage slot will cause a hard error.
+    #[arg(long)]
+    pub unsafe_private_storage: bool,
+
     /// Gas price for legacy transactions, or max fee per gas for EIP1559 transactions, either
     /// specified in wei, or as a string with a unit type.
     ///
@@ -230,6 +238,8 @@ impl ScriptArgs {
         let script_wallets = Wallets::new(self.wallets.get_multi_wallet().await?, self.evm.sender);
 
         let (config, mut evm_opts) = self.load_config_and_evm_opts()?;
+
+        evm_opts.unsafe_private_storage = self.unsafe_private_storage;
 
         if let Some(sender) = self.maybe_load_private_key()? {
             evm_opts.sender = sender;
