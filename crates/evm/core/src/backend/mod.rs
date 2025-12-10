@@ -492,7 +492,8 @@ impl Backend {
             ..Default::default()
         };
 
-        let unsafe_private_storage = fork.as_ref().map(|fork| fork.evm_opts.unsafe_private_storage).unwrap_or(false);
+        let unsafe_private_storage =
+            fork.as_ref().map(|fork| fork.evm_opts.unsafe_private_storage).unwrap_or(false);
 
         let mut backend = Self {
             forks,
@@ -1539,7 +1540,7 @@ impl DatabaseRef for Backend {
         } else {
             DatabaseRef::storage_ref(&self.mem_db, address, index)?
         };
-        
+
         if result.is_private && !self.unsafe_private_storage {
             Err(DatabaseError::PrivateStorage(address, index))
         } else {
