@@ -84,8 +84,8 @@ pub enum EthRequest {
     #[serde(rename = "eth_getStorageAt")]
     EthGetStorageAt(Address, U256, Option<BlockId>),
 
-    #[serde(rename = "eth_getStorageWithPrivacy")]
-    EthGetStorageWithPrivacy(Address, U256, Option<BlockId>),
+    #[serde(rename = "eth_getFlaggedStorageAt")]
+    EthGetFlaggedStorageAt(Address, U256, Option<BlockId>),
 
     #[serde(rename = "eth_getBlockByHash")]
     EthGetBlockByHash(B256, bool),
