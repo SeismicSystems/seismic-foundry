@@ -3169,3 +3169,113 @@ Traces:
 Error: script failed: call to non-contract address [..]
 "#]]);
 });
+
+// Tests for --unsafe-private-storage flag with seismic transactions
+
+use alloy_network::TransactionBuilder;
+use alloy_primitives::TxKind;
+use alloy_provider::Provider;
+use seismic_prelude::foundry::{EthereumWallet, SeismicSignedProvider, test_utils, tx_builder};
+
+/// Helper to deploy a contract via a Seismic transaction, which creates private storage
+async fn deploy_contract_with_private_storage(handle: &anvil::NodeHandle) -> (Address, String) {
+    let signer = handle.dev_wallets().next().unwrap();
+    let provider = SeismicSignedProvider::new(
+        EthereumWallet::new(signer.clone()),
+        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
+    );
+    let deployer = handle.dev_accounts().next().unwrap();
+
+    let plaintext_bytecode = test_utils::ContractTestContext::get_deploy_input_plaintext();
+
+    let req = tx_builder()
+        .with_from(deployer)
+        .with_kind(TxKind::Create)
+        .with_input(plaintext_bytecode.clone())
+        .into();
+
+    let contract_address = provider
+        .send_transaction(req.into())
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+
+    (contract_address, handle.http_endpoint())
+}
+
+// Test that reading private storage fails without --unsafe-private-storage flag
+forgetest_async!(private_storage_blocked_without_flag, |prj, cmd| {
+    // foundry_test_utils::util::initialize(prj.root());
+
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    api.anvil_set_auto_mine(true).await.unwrap();
+
+    let (contract_address, rpc_url) = deploy_contract_with_private_storage(&handle).await;
+
+    prj.insert_vm();
+
+    let script = prj.add_source(
+        "ReadPrivateStorage",
+        &format!(
+            r#"
+import "forge-std/Script.sol";
+
+contract ReadPrivateStorage is Script {{
+    function run() external view {{
+        // Try to read slot 0 from the contract with private storage
+        bytes32 value = vm.load(address({:#x}), bytes32(0));
+    }}
+}}
+"#,
+            contract_address
+        ),
+    );
+
+    // Run script WITHOUT --unsafe-private-storage flag - should FAIL
+    cmd.arg("script")
+        .arg(&script)
+        .args(["--fork-url", &rpc_url])
+        .assert_failure()
+        .stderr_eq(str![[r#"
+Error: attempted to read private storage slot [..] at address [..]. Use --unsafe-private-storage to allow this.
+"#]]);
+});
+
+// Test that reading private storage succeeds with --unsafe-private-storage flag
+forgetest_async!(private_storage_allowed_with_flag, |prj, cmd| {
+    // foundry_test_utils::util::initialize(prj.root());
+
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    api.anvil_set_auto_mine(true).await.unwrap();
+
+    let (contract_address, rpc_url) = deploy_contract_with_private_storage(&handle).await;
+
+    prj.insert_vm();
+
+    let script = prj.add_source(
+        "ReadPrivateStorage",
+        &format!(
+            r#"
+import "forge-std/Script.sol";
+
+contract ReadPrivateStorage is Script {{
+    function run() external view {{
+        // Try to read slot 0 from the contract with private storage
+        bytes32 value = vm.load(address({:#x}), bytes32(0));
+    }}
+}}
+"#,
+            contract_address
+        ),
+    );
+
+    // Run script WITH --unsafe-private-storage flag - should SUCCEED
+    cmd.arg("script")
+        .arg(&script)
+        .args(["--fork-url", &rpc_url, "--unsafe-private-storage"])
+        .assert_success();
+});
