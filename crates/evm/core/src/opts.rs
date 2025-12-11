@@ -84,6 +84,7 @@ pub struct EvmOpts {
     pub create2_deployer: Address,
 
     /// Whether to allow scripts to run when encountering private storage slots.
+    #[serde(default)]
     pub unsafe_private_storage: bool,
 }
 
