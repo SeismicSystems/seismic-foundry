@@ -3222,6 +3222,9 @@ forgetest_async!(private_storage_blocked_without_flag, |prj, cmd| {
         "ReadPrivateStorage",
         &format!(
             r#"
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
+
 import "forge-std/Script.sol";
 
 contract ReadPrivateStorage is Script {{
@@ -3260,6 +3263,9 @@ forgetest_async!(private_storage_allowed_with_flag, |prj, cmd| {
         "ReadPrivateStorage",
         &format!(
             r#"
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
+
 import "forge-std/Script.sol";
 
 contract ReadPrivateStorage is Script {{

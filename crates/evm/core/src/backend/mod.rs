@@ -527,8 +527,10 @@ impl Backend {
         id: &ForkId,
         fork: Fork,
         journaled_state: JournaledState,
+        unsafe_private_storage: bool,
     ) -> eyre::Result<Self> {
         let mut backend = Self::spawn(None)?;
+        backend.unsafe_private_storage = unsafe_private_storage;
         let fork_ids = backend.inner.insert_new_fork(id.clone(), fork.db, journaled_state);
         backend.inner.launched_with_fork = Some((id.clone(), fork_ids.0, fork_ids.1));
         backend.active_fork_ids = Some(fork_ids);
@@ -917,6 +919,7 @@ impl Backend {
                 &fork_id,
                 &persistent_accounts,
                 &mut NoOpInspector,
+                self.unsafe_private_storage,
             )?;
         }
 
@@ -1311,6 +1314,7 @@ impl DatabaseExt for Backend {
             &fork_id,
             &persistent_accounts,
             inspector,
+            self.unsafe_private_storage,
         )
     }
 
@@ -1996,6 +2000,7 @@ fn commit_transaction(
     fork_id: &ForkId,
     persistent_accounts: &HashSet<Address>,
     inspector: &mut dyn InspectorExt,
+    unsafe_private_storage: bool,
 ) -> eyre::Result<()> {
     configure_tx_env(env, tx);
 
@@ -2004,7 +2009,8 @@ fn commit_transaction(
         let fork = fork.clone();
         let journaled_state = journaled_state.clone();
         let depth = journaled_state.depth;
-        let mut db = Backend::new_with_fork(fork_id, fork, journaled_state)?;
+        let mut db =
+            Backend::new_with_fork(fork_id, fork, journaled_state, unsafe_private_storage)?;
 
         let mut evm = crate::evm::new_evm_with_inspector(&mut db as _, env.to_owned(), inspector);
         // Adjust inner EVM depth to ensure that inspectors receive accurate data.
