@@ -2056,7 +2056,7 @@ fn apply_state_changeset(
 #[cfg(test)]
 mod tests {
     use crate::{backend::Backend, fork::CreateFork, opts::EvmOpts};
-    use alloy_primitives::{Address, U256};
+    use alloy_primitives::{Address, FlaggedStorage, U256, address};
     use alloy_provider::Provider;
     use foundry_common::provider::get_http_provider;
     use foundry_config::{Config, NamedChain};
@@ -2115,5 +2115,44 @@ mod tests {
         assert!(db.accounts().read().contains_key(&address));
         assert!(db.storage().read().contains_key(&address));
         assert_eq!(db.storage().read().get(&address).unwrap().len(), num_slots as usize);
+    }
+
+    #[test]
+    fn test_private_storage_blocked_without_flag() {
+        let mut backend = Backend::spawn(None).unwrap();
+
+        let test_addr: Address = address!("0x1234567890123456789012345678901234567890");
+
+        let private_storage = FlaggedStorage { value: U256::from(42), is_private: true };
+
+        backend.insert_account_storage(test_addr, U256::ZERO, private_storage).unwrap();
+
+        let result = backend.storage_ref(test_addr, U256::ZERO);
+        assert!(result.is_err(), "Should fail when reading private storage without flag");
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, foundry_fork_db::DatabaseError::PrivateStorage(_, _)),
+            "Should be PrivateStorage error"
+        );
+    }
+
+    #[test]
+    fn test_private_storage_allowed_with_flag() {
+        let mut backend = Backend::spawn(None).unwrap();
+        backend.unsafe_private_storage = true;
+
+        let test_addr: Address = address!("0x1234567890123456789012345678901234567890");
+
+        let private_storage = FlaggedStorage { value: U256::from(42), is_private: true };
+
+        backend.insert_account_storage(test_addr, U256::ZERO, private_storage).unwrap();
+
+        let result = backend.storage_ref(test_addr, U256::ZERO);
+        assert!(result.is_ok(), "Should succeed when reading private storage with flag");
+
+        let storage = result.unwrap();
+        assert_eq!(storage.value, U256::from(42));
+        assert!(storage.is_private);
     }
 }
