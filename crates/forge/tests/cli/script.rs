@@ -3209,7 +3209,7 @@ async fn deploy_contract_with_private_storage(handle: &anvil::NodeHandle) -> (Ad
 
 // Test that reading private storage fails without --unsafe-private-storage flag
 forgetest_async!(private_storage_blocked_without_flag, |prj, cmd| {
-    // foundry_test_utils::util::initialize(prj.root());
+    foundry_test_utils::util::initialize(prj.root());
 
     let (api, handle) = spawn(NodeConfig::test()).await;
     api.anvil_set_auto_mine(true).await.unwrap();
@@ -3250,7 +3250,7 @@ Error: attempted to read private storage slot [..] at address [..]. Use --unsafe
 
 // Test that reading private storage succeeds with --unsafe-private-storage flag
 forgetest_async!(private_storage_allowed_with_flag, |prj, cmd| {
-    // foundry_test_utils::util::initialize(prj.root());
+    foundry_test_utils::util::initialize(prj.root());
 
     let (api, handle) = spawn(NodeConfig::test()).await;
     api.anvil_set_auto_mine(true).await.unwrap();
