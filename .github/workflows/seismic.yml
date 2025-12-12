@@ -63,13 +63,27 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "test-cache"
+      - name: Install ssolc
+        run: |
+          # Fetch the latest release asset ID
+          ASSET_ID=$(curl -s https://api.github.com/repos/SeismicSystems/seismic-solidity/releases/latest | \
+            jq -r '.assets[] | select(.name == "ssolc-linux-x86_64.tar.gz") | .id')
+          # Download the asset
+          curl -L -H "Accept: application/octet-stream" \
+            -o ssolc.tar.gz \
+            "https://api.github.com/repos/SeismicSystems/seismic-solidity/releases/assets/$ASSET_ID"
+          # Extract - the binary is at solc/solc inside the archive
+          tar -xzf ssolc.tar.gz
+          sudo mv solc/solc /usr/local/bin/ssolc
+          sudo chmod +x /usr/local/bin/ssolc
+          ssolc --version
       - name: seismic unit tests
         run: cargo nextest run test_seismic_tx_encoding
       - name: seismic integration tests
         run: cargo nextest run test_seismic_
       - name: private storage tests
         run: cargo nextest run private_storage_
-      # TODO: make these work & run
+      # TODO: make these work & run  
       # - name: sforge tests
       #   run: cargo test --bin sforge
       # - name: sanvil tests
