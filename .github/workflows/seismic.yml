@@ -67,6 +67,8 @@ jobs:
         run: cargo nextest run test_seismic_tx_encoding
       - name: seismic integration tests
         run: cargo nextest run test_seismic_
+      - name: private storage tests
+        run: cargo nextest run private_storage_
       # TODO: make these work & run
       # - name: sforge tests
       #   run: cargo test --bin sforge
