@@ -3230,7 +3230,7 @@ import "forge-std/Script.sol";
 contract ReadPrivateStorage is Script {{
     function run() external view {{
         // Try to read slot 0 from the contract with private storage
-        bytes32 value = vm.load(address({:#x}), bytes32(0));
+        bytes32 value = vm.load(address({}), bytes32(0));
     }}
 }}
 "#,
@@ -3244,7 +3244,7 @@ contract ReadPrivateStorage is Script {{
         .args(["--fork-url", &rpc_url])
         .assert_failure()
         .stderr_eq(str![[r#"
-Error: attempted to read private storage slot [..] at address [..]. Use --unsafe-private-storage to allow this.
+Error: script failed: vm.load: attempted to read private storage slot [..] at address [..]. Use --unsafe-private-storage to allow this.
 "#]]);
 });
 
@@ -3271,7 +3271,7 @@ import "forge-std/Script.sol";
 contract ReadPrivateStorage is Script {{
     function run() external view {{
         // Try to read slot 0 from the contract with private storage
-        bytes32 value = vm.load(address({:#x}), bytes32(0));
+        bytes32 value = vm.load(address({}), bytes32(0));
     }}
 }}
 "#,
