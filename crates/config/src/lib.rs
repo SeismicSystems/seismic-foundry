@@ -1144,7 +1144,7 @@ impl Config {
             if let Some(ref solc_req) = self.solc {
                 match solc_req {
                     SolcReq::Version(version) => {
-                        if version.to_string() == "0.8.28" {
+                        if version.to_string() == "0.8.31" {
                             let default_solc_path = self.get_default_ssolc_path()?;
                             return Ok(Some(Solc::new(default_solc_path)?));
                         } else {
