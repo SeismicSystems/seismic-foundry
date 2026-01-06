@@ -9379,7 +9379,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-consensus"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=58d05b2724f901f550b1a89affea786a10d37c91#58d05b2724f901f550b1a89affea786a10d37c91"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#4c068b25ff47525be9a4ab21d03d90671f7b32c4"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -9402,7 +9402,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-network"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=58d05b2724f901f550b1a89affea786a10d37c91#58d05b2724f901f550b1a89affea786a10d37c91"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#4c068b25ff47525be9a4ab21d03d90671f7b32c4"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
@@ -9425,7 +9425,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-provider"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=58d05b2724f901f550b1a89affea786a10d37c91#58d05b2724f901f550b1a89affea786a10d37c91"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#4c068b25ff47525be9a4ab21d03d90671f7b32c4"
 dependencies = [
  "alloy-network",
  "alloy-primitives",
@@ -9443,7 +9443,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-rpc-types"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=58d05b2724f901f550b1a89affea786a10d37c91#58d05b2724f901f550b1a89affea786a10d37c91"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#4c068b25ff47525be9a4ab21d03d90671f7b32c4"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -9461,7 +9461,7 @@ dependencies = [
 [[package]]
 name = "seismic-enclave"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=ef9a53d84dc25596f66ccf438cfd3374a5b0eabc#ef9a53d84dc25596f66ccf438cfd3374a5b0eabc"
+source = "git+https://github.com/SeismicSystems/enclave.git?branch=audit-seismic-tx#e7769bf090388d67f3a9b3d95b425dc385fd1b7a"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -9477,7 +9477,7 @@ dependencies = [
 [[package]]
 name = "seismic-prelude"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=58d05b2724f901f550b1a89affea786a10d37c91#58d05b2724f901f550b1a89affea786a10d37c91"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#4c068b25ff47525be9a4ab21d03d90671f7b32c4"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",

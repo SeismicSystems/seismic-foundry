@@ -73,7 +73,14 @@ pub fn get_seismic_elements() -> TxSeismicElements {
     let encryption_sk = get_encryption_private_key();
     let encryption_pk = PublicKey::from_secret_key_global(&encryption_sk);
     let encryption_nonce = get_encryption_nonce();
-    TxSeismicElements { encryption_pubkey: encryption_pk, encryption_nonce, message_version: 0 }
+    TxSeismicElements {
+        encryption_pubkey: encryption_pk,
+        encryption_nonce,
+        message_version: 0,
+        recent_block_hash: alloy_primitives::B256::from_slice(&[1u8; 32]),
+        expires_at_block: 1000000,
+        signed_read: false,
+    }
 }
 
 pub fn get_encryption_private_key() -> SecretKey {

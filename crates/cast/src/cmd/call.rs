@@ -70,7 +70,14 @@ fn create_seismic_elements(encryption_sk: &SecretKey) -> TxSeismicElements {
     let encryption_pk = PublicKey::from_secret_key(&secp, encryption_sk);
     // randomly generate a nonce
     let encryption_nonce = U96::random();
-    TxSeismicElements { encryption_pubkey: encryption_pk, encryption_nonce, message_version: 0 }
+    TxSeismicElements {
+        encryption_pubkey: encryption_pk,
+        encryption_nonce,
+        message_version: 0,
+        recent_block_hash: alloy_primitives::B256::from_slice(&[1u8; 32]),
+        expires_at_block: 1000000,
+        signed_read: false,
+    }
 }
 
 /// CLI arguments for `cast call`.

@@ -1954,6 +1954,9 @@ mod tests {
                 encryption_pubkey: TxSeismicElements::get_rand_encryption_keypair().public_key(),
                 encryption_nonce: TxSeismicElements::get_rand_encryption_nonce(),
                 message_version: 0,
+                recent_block_hash: alloy_primitives::B256::from_slice(&[1u8; 32]),
+                expires_at_block: 1000000,
+                signed_read: false,
             },
             input: decrypted_input.clone(),
         };
