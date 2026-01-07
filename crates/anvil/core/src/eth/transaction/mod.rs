@@ -382,7 +382,7 @@ pub fn to_alloy_transaction_with_hash_and_sender(
                 transaction_index: None,
                 effective_gas_price: None,
                 inner: Recovered::new_unchecked(
-                    TxEnvelope::Eip4844(Signed::new_unchecked(tx, sig, hash)),
+                    TxEnvelope::Eip4844(Signed::new_unchecked(tx.into(), sig, hash)),
                     from,
                 ),
             }
@@ -672,6 +672,7 @@ impl PendingTransaction {
                 } = &tx.tx();
 
                 let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
+                let metadata = tx.tx().create_metadata();
 
                 OpTransaction::new(TxEnv {
                     caller,
@@ -679,7 +680,7 @@ impl PendingTransaction {
                     // these two have already been validated in TransactionValidator,
                     // so we simply unwrap here
                     data: seismic_elements
-                        .decrypt(&tx_io_sk, &input)
+                        .decrypt(&tx_io_sk, &input, &metadata)
                         .expect("failed to decrypt seismic elements")
                         .into(),
                     chain_id: Some(*chain_id),
@@ -1208,7 +1209,7 @@ impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
     }
 
     fn fallback_decode(buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
-        match TxEnvelope::fallback_decode(buf)? {
+        match TxEnvelope::<TxEip4844Variant>::fallback_decode(buf)? {
             TxEnvelope::Legacy(tx) => Ok(Self::Legacy(tx)),
             _ => Err(Eip2718Error::RlpError(alloy_rlp::Error::Custom("unexpected tx type"))),
         }
@@ -1228,7 +1229,7 @@ impl From<TxEnvelope> for TypedTransaction {
             TxEnvelope::Legacy(tx) => Self::Legacy(tx),
             TxEnvelope::Eip2930(tx) => Self::EIP2930(tx),
             TxEnvelope::Eip1559(tx) => Self::EIP1559(tx),
-            TxEnvelope::Eip4844(tx) => Self::EIP4844(tx),
+            TxEnvelope::Eip4844(tx) => Self::EIP4844(tx.into()),
             TxEnvelope::Eip7702(tx) => Self::EIP7702(tx),
         }
     }

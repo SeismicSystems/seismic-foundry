@@ -1719,10 +1719,21 @@ impl Backend {
         let data = input.into_input().unwrap_or_default();
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
         let data = match request.inner.seismic_elements {
-            Some(seismic_elements) => seismic_elements
-                .decrypt(&tx_io_sk, &data)
-                .expect("failed to decrypt seismic elements")
-                .into(),
+            Some(seismic_elements) => {
+                if let Ok(typed_tx) = request.inner.clone().build_typed_tx() {
+                    if let seismic_alloy_consensus::SeismicTypedTransaction::Seismic(tx) = typed_tx {
+                        let metadata = tx.create_metadata();
+                        seismic_elements
+                            .decrypt(&tx_io_sk, &data, &metadata)
+                            .expect("failed to decrypt seismic elements")
+                            .into()
+                    } else {
+                        data.into()
+                    }
+                } else {
+                    data.into()
+                }
+            }
             None => data.into(),
         };
         let mut base = TxEnv {
@@ -2061,13 +2072,26 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let seismic_elements = request.inner.seismic_elements;
+        let tx_metadata = if let Some(_) = seismic_elements {
+            if let Ok(typed_tx) = request.inner.clone().build_typed_tx() {
+                if let seismic_alloy_consensus::SeismicTypedTransaction::Seismic(tx) = typed_tx {
+                    Some(tx.create_metadata())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
         let (exit_reason, out, gas_used, state) =
             self.call_with_state(state, request, fee_details, block_env)?;
         let output_data = out
-            .map(|plaintext_output| match seismic_elements {
-                Some(seismic_elements) => seismic_elements
-                    .encrypt(&tx_io_sk, &plaintext_output.data())
+            .map(|plaintext_output| match (seismic_elements, tx_metadata) {
+                (Some(seismic_elements), Some(metadata)) => seismic_elements
+                    .encrypt(&tx_io_sk, &plaintext_output.data(), &metadata)
                     .map_err(|e| {
                         BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                     })
@@ -2075,7 +2099,7 @@ impl Backend {
                         Output::Call(_data) => Output::Call(ciphertext),
                         Output::Create(_data, address) => Output::Create(ciphertext, address),
                     }),
-                None => Ok(plaintext_output),
+                (_, _) => Ok(plaintext_output),
             })
             .transpose()?;
 
@@ -3690,9 +3714,10 @@ impl TransactionValidator for Backend {
         if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
             // check that decryption works before we create tx env for it
             let inner = seismic_tx.tx();
+            let metadata = inner.create_metadata();
             let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
             let _decrypted_data =
-                inner.seismic_elements.decrypt(&tx_io_sk, &inner.input).map_err(|_e| {
+                inner.seismic_elements.decrypt(&tx_io_sk, &inner.input, &metadata).map_err(|_e| {
                     InvalidTransactionError::SeismicDecryptionFailed(format!(
                         "Failed to decrypt seismic calldata"
                     ))
