@@ -1696,7 +1696,8 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 mod tests {
     use super::*;
     use alloy_consensus::SignableTransaction;
-    use alloy_primitives::{FixedBytes, LogData, b256, hex};
+    use alloy_primitives::{FixedBytes, LogData, aliases::U96, b256, hex};
+    use seismic_enclave::get_unsecure_sample_secp256k1_pk;
     use std::str::FromStr;
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
@@ -1951,8 +1952,8 @@ mod tests {
             to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
             value: U256::from(1000000000000000u64),
             seismic_elements: TxSeismicElements {
-                encryption_pubkey: TxSeismicElements::get_rand_encryption_keypair().public_key(),
-                encryption_nonce: TxSeismicElements::get_rand_encryption_nonce(),
+                encryption_pubkey: get_unsecure_sample_secp256k1_pk(),
+                encryption_nonce: U96::ZERO,
                 message_version: 0,
                 recent_block_hash: FixedBytes::<32>::ZERO,
                 expires_at_block: 100,
@@ -1980,5 +1981,6 @@ mod tests {
         let decoded_tx = TypedTransaction::decode(&mut buf).unwrap();
 
         assert_eq!(decoded_tx, signed_tt);
+        println!("Encoded: {:0x}", Bytes::from(encoded_tx));
     }
 }
