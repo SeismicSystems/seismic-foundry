@@ -465,6 +465,8 @@ pub struct Backend {
     active_fork_ids: Option<(LocalForkId, ForkLookupIndex)>,
     /// holds additional Backend data
     inner: BackendInner,
+    /// Whether to allow scripts to run when encountering private storage slots.
+    unsafe_private_storage: bool,
 }
 
 impl Backend {
@@ -490,12 +492,16 @@ impl Backend {
             ..Default::default()
         };
 
+        let unsafe_private_storage =
+            fork.as_ref().map(|fork| fork.evm_opts.unsafe_private_storage).unwrap_or(false);
+
         let mut backend = Self {
             forks,
             mem_db: CacheDB::new(Default::default()),
             fork_init_journaled_state: inner.new_journaled_state(),
             active_fork_ids: None,
             inner,
+            unsafe_private_storage,
         };
 
         if let Some(fork) = fork {
@@ -521,8 +527,10 @@ impl Backend {
         id: &ForkId,
         fork: Fork,
         journaled_state: JournaledState,
+        unsafe_private_storage: bool,
     ) -> eyre::Result<Self> {
         let mut backend = Self::spawn(None)?;
+        backend.unsafe_private_storage = unsafe_private_storage;
         let fork_ids = backend.inner.insert_new_fork(id.clone(), fork.db, journaled_state);
         backend.inner.launched_with_fork = Some((id.clone(), fork_ids.0, fork_ids.1));
         backend.active_fork_ids = Some(fork_ids);
@@ -537,6 +545,7 @@ impl Backend {
             fork_init_journaled_state: self.inner.new_journaled_state(),
             active_fork_ids: None,
             inner: Default::default(),
+            unsafe_private_storage: self.unsafe_private_storage,
         }
     }
 
@@ -910,6 +919,7 @@ impl Backend {
                 &fork_id,
                 &persistent_accounts,
                 &mut NoOpInspector,
+                self.unsafe_private_storage,
             )?;
         }
 
@@ -1304,6 +1314,7 @@ impl DatabaseExt for Backend {
             &fork_id,
             &persistent_accounts,
             inspector,
+            self.unsafe_private_storage,
         )
     }
 
@@ -1528,10 +1539,16 @@ impl DatabaseRef for Backend {
         address: Address,
         index: U256,
     ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
-        if let Some(db) = self.active_fork_db() {
-            DatabaseRef::storage_ref(db, address, index)
+        let result = if let Some(db) = self.active_fork_db() {
+            DatabaseRef::storage_ref(db, address, index)?
         } else {
-            Ok(DatabaseRef::storage_ref(&self.mem_db, address, index)?)
+            DatabaseRef::storage_ref(&self.mem_db, address, index)?
+        };
+
+        if result.is_private && !self.unsafe_private_storage {
+            Err(DatabaseError::PrivateStorage(address, index))
+        } else {
+            Ok(result)
         }
     }
 
@@ -1983,6 +2000,7 @@ fn commit_transaction(
     fork_id: &ForkId,
     persistent_accounts: &HashSet<Address>,
     inspector: &mut dyn InspectorExt,
+    unsafe_private_storage: bool,
 ) -> eyre::Result<()> {
     configure_tx_env(env, tx);
 
@@ -1991,7 +2009,8 @@ fn commit_transaction(
         let fork = fork.clone();
         let journaled_state = journaled_state.clone();
         let depth = journaled_state.depth;
-        let mut db = Backend::new_with_fork(fork_id, fork, journaled_state)?;
+        let mut db =
+            Backend::new_with_fork(fork_id, fork, journaled_state, unsafe_private_storage)?;
 
         let mut evm = crate::evm::new_evm_with_inspector(&mut db as _, env.to_owned(), inspector);
         // Adjust inner EVM depth to ensure that inspectors receive accurate data.
@@ -2043,7 +2062,7 @@ fn apply_state_changeset(
 #[cfg(test)]
 mod tests {
     use crate::{backend::Backend, fork::CreateFork, opts::EvmOpts};
-    use alloy_primitives::{Address, U256};
+    use alloy_primitives::{Address, FlaggedStorage, U256, address};
     use alloy_provider::Provider;
     use foundry_common::provider::get_http_provider;
     use foundry_config::{Config, NamedChain};
@@ -2102,5 +2121,44 @@ mod tests {
         assert!(db.accounts().read().contains_key(&address));
         assert!(db.storage().read().contains_key(&address));
         assert_eq!(db.storage().read().get(&address).unwrap().len(), num_slots as usize);
+    }
+
+    #[test]
+    fn test_private_storage_blocked_without_flag() {
+        let mut backend = Backend::spawn(None).unwrap();
+
+        let test_addr: Address = address!("0x1234567890123456789012345678901234567890");
+
+        let private_storage = FlaggedStorage { value: U256::from(42), is_private: true };
+
+        backend.insert_account_storage(test_addr, U256::ZERO, private_storage).unwrap();
+
+        let result = backend.storage_ref(test_addr, U256::ZERO);
+        assert!(result.is_err(), "Should fail when reading private storage without flag");
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, foundry_fork_db::DatabaseError::PrivateStorage(_, _)),
+            "Should be PrivateStorage error"
+        );
+    }
+
+    #[test]
+    fn test_private_storage_allowed_with_flag() {
+        let mut backend = Backend::spawn(None).unwrap();
+        backend.unsafe_private_storage = true;
+
+        let test_addr: Address = address!("0x1234567890123456789012345678901234567890");
+
+        let private_storage = FlaggedStorage { value: U256::from(42), is_private: true };
+
+        backend.insert_account_storage(test_addr, U256::ZERO, private_storage).unwrap();
+
+        let result = backend.storage_ref(test_addr, U256::ZERO);
+        assert!(result.is_ok(), "Should succeed when reading private storage with flag");
+
+        let storage = result.unwrap();
+        assert_eq!(storage.value, U256::from(42));
+        assert!(storage.is_private);
     }
 }

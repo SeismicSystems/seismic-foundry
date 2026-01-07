@@ -219,8 +219,8 @@ impl EthApi {
             EthRequest::EthGetStorageAt(addr, slot, block) => {
                 self.storage_at(addr, slot, block).await.to_rpc_result()
             }
-            EthRequest::EthGetStorageWithPrivacy(addr, slot, block) => {
-                self.storage_with_privacy(addr, slot, block).await.to_rpc_result()
+            EthRequest::EthGetFlaggedStorageAt(addr, slot, block) => {
+                self.flagged_storage_at(addr, slot, block).await.to_rpc_result()
             }
             EthRequest::EthGetBlockByHash(hash, full) => {
                 if full {
@@ -828,14 +828,14 @@ impl EthApi {
 
     /// Returns content of the storage at given address with privacy flag.
     ///
-    /// Handler for custom RPC call: `eth_getStorageWithPrivacy`
-    pub async fn storage_with_privacy(
+    /// Handler for custom RPC call: `eth_getFlaggedStorageAt`
+    pub async fn flagged_storage_at(
         &self,
         address: Address,
         index: U256,
         block_number: Option<BlockId>,
     ) -> Result<FlaggedStorage> {
-        node_info!("eth_getStorageWithPrivacy");
+        node_info!("eth_getFlaggedStorageAt");
         let block_request = self.block_request(block_number).await?;
 
         // check if the number predates the fork, if in fork mode
@@ -850,7 +850,7 @@ impl EthApi {
         }
 
         self.backend
-            .storage_with_privacy(address, index, Some(block_request))
+            .flagged_storage_at(address, index, Some(block_request))
             .await
             .map_err(|e| e.into())
     }
