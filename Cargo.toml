@@ -375,7 +375,7 @@ rexpect = { git = "https://github.com/rust-cli/rexpect", rev = "2ed0b1898d7edaf6
 # If our dependencies depend on these things,
 # then this will override whatever versions they point to
 # and instead use our local version
-seismic-enclave =  { git = "https://github.com/SeismicSystems/enclave.git", rev = "ef9a53d84dc25596f66ccf438cfd3374a5b0eabc" }
+seismic-enclave =  { git = "https://github.com/SeismicSystems/enclave.git", branch = "audit-seismic-tx" }
 
 # seismic-alloy-core
 alloy-dyn-abi = { git = "https://github.com/SeismicSystems/seismic-alloy-core.git", rev = "68313cb636365501a699c47865807158544eace1" }
@@ -400,11 +400,11 @@ seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev
 revm-inspectors = { git = "https://github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "9e26c0a55f522ad7d8cf4716d9df9d79b8116d52" }
 
 # seismic-alloy
-seismic-alloy-consensus = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "4be965355a106f64356d0533ddc318d5b4800abe" }
-seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "4be965355a106f64356d0533ddc318d5b4800abe" }
-seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "4be965355a106f64356d0533ddc318d5b4800abe" }
-seismic-alloy-rpc-types = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "4be965355a106f64356d0533ddc318d5b4800abe" }
-seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "4be965355a106f64356d0533ddc318d5b4800abe" }
+seismic-alloy-consensus = { git = "https://github.com/SeismicSystems/seismic-alloy.git", branch = "audit-seismic-tx" }
+seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-alloy.git", branch = "audit-seismic-tx" }
+seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-alloy.git", branch = "audit-seismic-tx" }
+seismic-alloy-rpc-types = { git = "https://github.com/SeismicSystems/seismic-alloy.git", branch = "audit-seismic-tx" }
+seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git", branch = "audit-seismic-tx" }
 
 # alloy-evm
 alloy-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "db34d7185e62c57f7fa4ac67f169113b14097a99" }
@@ -418,4 +418,4 @@ foundry-compilers-artifacts-solc = { git = "https://github.com/SeismicSystems/se
 foundry-compilers-artifacts-vyper = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "5477a89ae892229a90af58580daa8ef4575f00a6" }
 foundry-compilers-core = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "5477a89ae892229a90af58580daa8ef4575f00a6" }
 
-foundry-fork-db = { git = "https://github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "9fe4edc" }
+foundry-fork-db = { git = "https://github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "e5fb1f8838b517dbaaccc08a8af6767fe2e70c4e" }
