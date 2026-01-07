@@ -672,14 +672,14 @@ impl PendingTransaction {
                 } = &tx.tx();
 
                 let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
-
+                let tx_metadata = tx.tx().tx_metadata();
                 OpTransaction::new(TxEnv {
                     caller,
                     kind: transact_to(to),
                     // these two have already been validated in TransactionValidator,
                     // so we simply unwrap here
                     data: seismic_elements
-                        .decrypt(&tx_io_sk, &input)
+                        .decrypt(&tx_io_sk, &input, &tx_metadata)
                         .expect("failed to decrypt seismic elements")
                         .into(),
                     chain_id: Some(*chain_id),
@@ -1696,7 +1696,7 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 mod tests {
     use super::*;
     use alloy_consensus::SignableTransaction;
-    use alloy_primitives::{LogData, b256, hex};
+    use alloy_primitives::{FixedBytes, LogData, b256, hex};
     use std::str::FromStr;
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
@@ -1954,6 +1954,9 @@ mod tests {
                 encryption_pubkey: TxSeismicElements::get_rand_encryption_keypair().public_key(),
                 encryption_nonce: TxSeismicElements::get_rand_encryption_nonce(),
                 message_version: 0,
+                recent_block_hash: FixedBytes::<32>::ZERO,
+                expires_at_block: 100,
+                signed_read: false,
             },
             input: decrypted_input.clone(),
         };

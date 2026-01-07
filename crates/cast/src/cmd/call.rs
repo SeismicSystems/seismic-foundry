@@ -40,7 +40,7 @@ use std::{str::FromStr, sync::LazyLock};
 use alloy_primitives::aliases::U96;
 use rand::RngCore;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
-use seismic_prelude::foundry::{EthereumWallet, SeismicProviderExt, TxSeismicElements};
+use seismic_prelude::foundry::{EthereumWallet, SeismicProviderExt, TxSeismicElements, TxSeismicMetadata, TxLegacyFields};
 
 // matches override pattern <address>:<slot>:<value>
 // e.g. 0x123:0x1:0x1234
@@ -65,12 +65,19 @@ fn get_or_generate_encryption_key(provided_key: Option<String>) -> Result<Secret
 }
 
 /// Helper function to create seismic elements from private key
-fn create_seismic_elements(encryption_sk: &SecretKey) -> TxSeismicElements {
+fn create_seismic_elements(encryption_sk: &SecretKey, signed_read: bool) -> TxSeismicElements {
     let secp = Secp256k1::new();
     let encryption_pk = PublicKey::from_secret_key(&secp, encryption_sk);
     // randomly generate a nonce
     let encryption_nonce = U96::random();
-    TxSeismicElements { encryption_pubkey: encryption_pk, encryption_nonce, message_version: 0 }
+    TxSeismicElements {
+        encryption_pubkey: encryption_pk,
+        encryption_nonce,
+        message_version: 0,
+        recent_block_hash: B256::ZERO,
+        expires_at_block: u64::MAX,
+        signed_read,
+    }
 }
 
 /// CLI arguments for `cast call`.
@@ -395,7 +402,7 @@ impl CallArgs {
         // Always do encryption/decryption logic
         // Get or generate encryption key (generates temporary key if not provided)
         let encryption_sk = get_or_generate_encryption_key(encryption_private_key)?;
-        let seismic_elements = create_seismic_elements(&encryption_sk);
+        let seismic_elements = create_seismic_elements(&encryption_sk, true);
 
         // Get the network's TEE public key
         let network_pubkey = provider.get_tee_pubkey().await?;
@@ -403,9 +410,20 @@ impl CallArgs {
         // Get the original transaction input data
         let original_input = tx.inner.input.input().unwrap_or_default().clone();
 
+        // Create metadata for encryption
+        let legacy_fields = TxLegacyFields {
+            chain_id: tx.chain_id.unwrap_or_default(),
+            nonce: tx.nonce.unwrap_or_default(),
+            gas_price: tx.gas_price.unwrap_or_default(),
+            gas_limit: tx.gas.unwrap_or_default(),
+            to: tx.to.unwrap_or_default(),
+            value: tx.value.unwrap_or_default(),
+        };
+        let metadata = TxSeismicMetadata { legacy_fields, seismic_elements: seismic_elements.clone() };
+
         // Encrypt the input data
         let encrypted_input = seismic_elements
-            .client_encrypt(&original_input, &network_pubkey, &encryption_sk)
+            .client_encrypt(&original_input, &network_pubkey, &encryption_sk, &metadata)
             .map_err(|e| eyre::eyre!("Failed to encrypt input data: {}", e))?;
 
         // Create encrypted transaction
@@ -436,7 +454,7 @@ impl CallArgs {
 
         // Decrypt the response (seismic_call should return Bytes directly, no need to decode hex)
         let decrypted_response = seismic_elements
-            .client_decrypt(&encrypted_response, &network_pubkey, &encryption_sk)
+            .client_decrypt(&encrypted_response, &network_pubkey, &encryption_sk, &metadata)
             .map_err(|e| eyre::eyre!("Failed to decrypt response: {}", e))?;
 
         let response = alloy_primitives::hex::encode_prefixed(&decrypted_response);
