@@ -3245,6 +3245,7 @@ contract ReadPrivateStorage is Script {{
         .assert_failure()
         .stderr_eq(str![[r#"
 Error: script failed: vm.load: attempted to read private storage slot [..] at address [..]. Use --unsafe-private-storage to allow this.
+
 "#]]);
 });
 
