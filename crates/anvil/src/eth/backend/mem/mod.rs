@@ -3706,6 +3706,7 @@ impl TransactionValidator for Backend {
             let inner = seismic_tx.tx();
             let tx_metadata = inner.tx_metadata();
             let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
+            println!("Input (decrypted): {:0x}", inner.input);
             let _decrypted_data = inner
                 .seismic_elements
                 .decrypt(&tx_io_sk, &inner.input, &tx_metadata)

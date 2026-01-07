@@ -1696,9 +1696,9 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 mod tests {
     use super::*;
     use alloy_consensus::SignableTransaction;
-    use alloy_primitives::{FixedBytes, LogData, aliases::U96, b256, hex};
+    use alloy_primitives::{FixedBytes, LogData, aliases::U96, b256, hex::{self, FromHex}};
     use seismic_enclave::get_unsecure_sample_secp256k1_pk;
-    use std::str::FromStr;
+    use std::{str::FromStr, u64};
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
     #[test]
@@ -1955,8 +1955,8 @@ mod tests {
                 encryption_pubkey: get_unsecure_sample_secp256k1_pk(),
                 encryption_nonce: U96::ZERO,
                 message_version: 0,
-                recent_block_hash: FixedBytes::<32>::ZERO,
-                expires_at_block: 100,
+                recent_block_hash: FixedBytes::from_str("0xe3e59282e5c8e00876114bb9a9912e98682670da653fa53059de0f0cf2b80878").unwrap(),
+                expires_at_block: u64::MAX,
                 signed_read: false,
             },
             input: decrypted_input.clone(),
@@ -1981,6 +1981,159 @@ mod tests {
         let decoded_tx = TypedTransaction::decode(&mut buf).unwrap();
 
         assert_eq!(decoded_tx, signed_tt);
-        println!("Encoded: {:0x}", Bytes::from(encoded_tx));
+        println!("Encoded (with RLP wrapper): {:0x}", Bytes::from(encoded_tx.clone()));
+
+        // Also print EIP-2718 encoding (without wrapper) for comparison with TypeScript/viem
+        let mut eip2718_encoded = Vec::new();
+        signed_tt.encode_2718(&mut eip2718_encoded);
+        println!("EIP-2718 encoded (for network): {:0x}", Bytes::from(eip2718_encoded));
+    }
+
+    #[test]
+    fn test_seismic_aead_encryption_decryption() {
+        use seismic_enclave::get_unsecure_sample_secp256k1_sk;
+
+        println!("\n=== Testing AEAD Encryption/Decryption ===\n");
+
+        // Fixed secret key for deterministic testing
+        let secret_key = get_unsecure_sample_secp256k1_sk();
+        println!("Secret Key: {:0x}", Bytes::from(secret_key.secret_bytes()));
+
+        // Fixed plaintext to encrypt
+        let plaintext = Bytes::from_str("0xdeadbeef").unwrap();
+        println!("Plaintext: {:0x}", plaintext);
+
+        // Create transaction with fixed values
+        let tx = TxSeismic {
+            chain_id: 31337u64,
+            nonce: 2,
+            gas_price: 1000000000,
+            gas_limit: 100000,
+            to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
+            value: U256::from(1000000000000000u64),
+            seismic_elements: TxSeismicElements {
+                encryption_pubkey: get_unsecure_sample_secp256k1_pk(),
+                encryption_nonce: U96::ZERO,
+                message_version: 0,
+                recent_block_hash: FixedBytes::from_str("0xe3e59282e5c8e00876114bb9a9912e98682670da653fa53059de0f0cf2b80878").unwrap(),
+                expires_at_block: u64::MAX,
+                signed_read: false,
+            },
+            input: Bytes::new(), // Will be set to encrypted data
+        };
+
+        println!("\nTransaction metadata:");
+        println!("  chain_id: {}", tx.chain_id);
+        println!("  nonce: {}", tx.nonce);
+        println!("  gas_price: {}", tx.gas_price);
+        println!("  gas_limit: {}", tx.gas_limit);
+        println!("  to: {:?}", tx.to);
+        println!("  value: {}", tx.value);
+        println!("  encryption_pubkey: {:0x}", tx.seismic_elements.encryption_pubkey);
+        println!("  encryption_nonce: {:0x}", tx.seismic_elements.encryption_nonce);
+        println!("  message_version: {}", tx.seismic_elements.message_version);
+        println!("  recent_block_hash: {:0x}", tx.seismic_elements.recent_block_hash);
+        println!("  expires_at_block: {}", tx.seismic_elements.expires_at_block);
+        println!("  signed_read: {}", tx.seismic_elements.signed_read);
+
+        // Get and print AAD
+        let metadata = tx.tx_metadata();
+        let aad = metadata.encode_as_aad();
+        println!("\nAAD (Additional Authenticated Data): {:0x}", Bytes::from(aad.clone()));
+        println!("AAD length: {} bytes", aad.len());
+
+        // Manually compute shared secret for debugging
+        println!("\nDebug ECDH computation:");
+        use seismic_enclave::secp256k1::ecdh::SharedSecret as EcdhSharedSecret;
+        let shared_secret = EcdhSharedSecret::new(&tx.seismic_elements.encryption_pubkey, &secret_key);
+        println!("  Shared secret (after SHA-256): {:0x}", Bytes::from(shared_secret.secret_bytes()));
+
+        // Encrypt the plaintext
+        let ciphertext = tx.encrypt_input_aead(&secret_key, &plaintext).unwrap();
+        println!("\nCiphertext: {:0x}", ciphertext);
+        println!("Ciphertext length: {} bytes", ciphertext.len());
+
+        // Create a new tx with the ciphertext as input
+        let mut tx_with_ciphertext = tx.clone();
+        tx_with_ciphertext.input = ciphertext.clone();
+
+        // Decrypt the ciphertext
+        let decrypted = tx_with_ciphertext.decrypt_input_aead(&secret_key, &ciphertext).unwrap();
+        let decrypted_bytes = Bytes::from(decrypted.clone());
+        println!("\nDecrypted: {:0x}", decrypted_bytes);
+
+        // Verify round trip
+        assert_eq!(plaintext, decrypted_bytes, "Decrypted data should match original plaintext");
+        println!("\n✅ AEAD encryption/decryption round trip successful!");
+    }
+
+    #[test]
+    fn test_encrypt_calldata_rust_vs_typescript() {
+        use seismic_enclave::get_unsecure_sample_secp256k1_sk;
+
+        println!("\n=== Rust: Encrypting Calldata for Comparison with TypeScript ===\n");
+
+        // Fixed parameters that must match TypeScript
+        let client_sk = get_unsecure_sample_secp256k1_sk();
+        let network_pk = get_unsecure_sample_secp256k1_pk();
+
+        println!("Client secret key: {}", hex::encode(client_sk.secret_bytes()));
+        println!("Network public key: {}", hex::encode(network_pk.serialize()));
+
+        // Fixed plaintext calldata
+        let plaintext = Bytes::from_str("0xdeadbeef").unwrap();
+        println!("\nPlaintext calldata: {:0x}", plaintext);
+
+        // Fixed encryption nonce (must be 12 bytes, no leading zeros)
+        let encryption_nonce = U96::from_str("0xec52a3363608e85a675ce99a").unwrap();
+        println!("Encryption nonce: {:0x}", encryption_nonce);
+
+        // Fixed transaction metadata
+        let tx = TxSeismic {
+            chain_id: 31337u64,
+            nonce: 13,
+            gas_price: 1419962928,
+            gas_limit: 30000000,
+            to: Address::from_str("0000000000000000000000000000000000000001").unwrap().into(),
+            value: U256::from(1u64),
+            seismic_elements: TxSeismicElements {
+                encryption_pubkey: network_pk,
+                encryption_nonce,
+                message_version: 0,
+                recent_block_hash: FixedBytes::from_str("0xe2b44b267afc1214aabb5aa349bb61b5832062bb2fc310adb2fd3107b725894f").unwrap(),
+                expires_at_block: 113,
+                signed_read: false,
+            },
+            input: Bytes::new(),
+        };
+
+        println!("\nTransaction metadata:");
+        println!("  chain_id: {}", tx.chain_id);
+        println!("  nonce: {}", tx.nonce);
+        println!("  gas_price: {}", tx.gas_price);
+        println!("  gas_limit: {}", tx.gas_limit);
+        println!("  to: {:?}", tx.to);
+        println!("  value: {}", tx.value);
+        println!("  encryption_pubkey: {}", hex::encode(tx.seismic_elements.encryption_pubkey.serialize()));
+        println!("  encryption_nonce: {:0x}", tx.seismic_elements.encryption_nonce);
+        println!("  message_version: {}", tx.seismic_elements.message_version);
+        println!("  recent_block_hash: {:0x}", tx.seismic_elements.recent_block_hash);
+        println!("  expires_at_block: {}", tx.seismic_elements.expires_at_block);
+        println!("  signed_read: {}", tx.seismic_elements.signed_read);
+
+        // Encrypt using the transaction's encrypt_input_aead method
+        let ciphertext = tx.encrypt_input_aead(&client_sk, &plaintext).unwrap();
+
+        println!("\n✅ Rust Encrypted calldata: {:0x}", ciphertext);
+        println!("✅ Ciphertext length: {} bytes", ciphertext.len());
+
+        // Verify decryption works
+        let mut tx_with_ciphertext = tx.clone();
+        tx_with_ciphertext.input = ciphertext.clone();
+        let decrypted = tx_with_ciphertext.decrypt_input_aead(&client_sk, &ciphertext).unwrap();
+        let decrypted_bytes = Bytes::from(decrypted);
+
+        assert_eq!(plaintext, decrypted_bytes, "Round-trip encryption/decryption failed");
+        println!("\n✅ Round-trip successful: decrypted back to {:0x}", decrypted_bytes);
     }
 }
