@@ -40,7 +40,9 @@ use std::{str::FromStr, sync::LazyLock};
 use alloy_primitives::aliases::U96;
 use rand::RngCore;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
-use seismic_prelude::foundry::{EthereumWallet, SeismicProviderExt, TxSeismicElements, TxSeismicMetadata, TxLegacyFields};
+use seismic_prelude::foundry::{
+    EthereumWallet, SeismicProviderExt, TxLegacyFields, TxSeismicElements, TxSeismicMetadata,
+};
 
 // matches override pattern <address>:<slot>:<value>
 // e.g. 0x123:0x1:0x1234
@@ -65,7 +67,7 @@ fn get_or_generate_encryption_key(provided_key: Option<String>) -> Result<Secret
 }
 
 /// Helper function to create seismic elements from private key
-fn create_seismic_elements(encryption_sk: &SecretKey, signed_read: bool) -> TxSeismicElements {
+fn create_seismic_elements(encryption_sk: &SecretKey) -> TxSeismicElements {
     let secp = Secp256k1::new();
     let encryption_pk = PublicKey::from_secret_key(&secp, encryption_sk);
     // randomly generate a nonce
@@ -76,7 +78,7 @@ fn create_seismic_elements(encryption_sk: &SecretKey, signed_read: bool) -> TxSe
         message_version: 0,
         recent_block_hash: B256::ZERO,
         expires_at_block: u64::MAX,
-        signed_read,
+        signed_read: true,
     }
 }
 
@@ -402,7 +404,7 @@ impl CallArgs {
         // Always do encryption/decryption logic
         // Get or generate encryption key (generates temporary key if not provided)
         let encryption_sk = get_or_generate_encryption_key(encryption_private_key)?;
-        let seismic_elements = create_seismic_elements(&encryption_sk, true);
+        let seismic_elements = create_seismic_elements(&encryption_sk);
 
         // Get the network's TEE public key
         let network_pubkey = provider.get_tee_pubkey().await?;
@@ -419,7 +421,8 @@ impl CallArgs {
             to: tx.to.unwrap_or_default(),
             value: tx.value.unwrap_or_default(),
         };
-        let metadata = TxSeismicMetadata { legacy_fields, seismic_elements: seismic_elements.clone() };
+        let metadata =
+            TxSeismicMetadata { legacy_fields, seismic_elements: seismic_elements.clone() };
 
         // Encrypt the input data
         let encrypted_input = seismic_elements

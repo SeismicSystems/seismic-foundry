@@ -134,7 +134,9 @@ use tokio::sync::RwLock as AsyncRwLock;
 
 use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
 use seismic_prelude::foundry::{
-    AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, OpHaltReason, OpTransaction, SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload, SpecId, TransactionReceipt, TransactionRequest, TxEnvelope, InputDecryptionElements,
+    AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, InputDecryptionElements,
+    OpHaltReason, OpTransaction, SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload,
+    SpecId, TransactionReceipt, TransactionRequest, TxEnvelope,
 };
 
 pub mod cache;
@@ -1717,7 +1719,7 @@ impl Backend {
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
         let data = input.into_input().unwrap_or_default();
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
-        
+
         let kind = match to {
             Some(addr) => TxKind::Call(*addr),
             None => TxKind::Create,
@@ -1731,7 +1733,7 @@ impl Backend {
                     .decrypt(&tx_io_sk, &data, &tx_metadata)
                     .expect("failed to decrypt seismic elements")
                     .into()
-            },
+            }
             None => data.into(),
         };
         let mut base = TxEnv {
@@ -2074,7 +2076,9 @@ impl Backend {
         let output_data = out
             .map(|plaintext_output| match seismic_elements {
                 Some(seismic_elements) => {
-                    let tx_metadata = cloned_inner.metadata().map_err(|_e| BlockchainError::MissingRequiredFields)?;
+                    let tx_metadata = cloned_inner
+                        .metadata()
+                        .map_err(|_e| BlockchainError::MissingRequiredFields)?;
                     seismic_elements
                         .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
                         .map_err(|e| {
@@ -2084,7 +2088,7 @@ impl Backend {
                             Output::Call(_data) => Output::Call(ciphertext),
                             Output::Create(_data, address) => Output::Create(ciphertext, address),
                         })
-                },
+                }
                 None => Ok(plaintext_output),
             })
             .transpose()?;
@@ -3702,8 +3706,10 @@ impl TransactionValidator for Backend {
             let inner = seismic_tx.tx();
             let tx_metadata = inner.tx_metadata();
             let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
-            let _decrypted_data =
-                inner.seismic_elements.decrypt(&tx_io_sk, &inner.input, &tx_metadata).map_err(|_e| {
+            let _decrypted_data = inner
+                .seismic_elements
+                .decrypt(&tx_io_sk, &inner.input, &tx_metadata)
+                .map_err(|_e| {
                     InvalidTransactionError::SeismicDecryptionFailed(format!(
                         "Failed to decrypt seismic calldata"
                     ))
