@@ -382,7 +382,7 @@ pub fn to_alloy_transaction_with_hash_and_sender(
                 transaction_index: None,
                 effective_gas_price: None,
                 inner: Recovered::new_unchecked(
-                    TxEnvelope::Eip4844(Signed::new_unchecked(tx, sig, hash)),
+                    TxEnvelope::Eip4844(Signed::new_unchecked(tx.into(), sig, hash)),
                     from,
                 ),
             }
@@ -1168,7 +1168,7 @@ impl alloy_eips::eip2718::Encodable2718 for TypedTransaction {
             Self::Legacy(tx) => TxEnvelope::from(tx.clone()).encode_2718_len(),
             Self::EIP2930(tx) => TxEnvelope::from(tx.clone()).encode_2718_len(),
             Self::EIP1559(tx) => TxEnvelope::from(tx.clone()).encode_2718_len(),
-            Self::EIP4844(tx) => TxEnvelope::from(tx.clone()).encode_2718_len(),
+            Self::EIP4844(tx) => TxEnvelope::from(tx.clone()).eip2718_encoded_length(),
             Self::EIP7702(tx) => TxEnvelope::from(tx.clone()).encode_2718_len(),
             Self::Deposit(tx) => 1 + tx.length(),
             Self::Seismic(tx) => TxEnvelope::from(tx.clone()).encode_2718_len(),
@@ -1180,7 +1180,7 @@ impl alloy_eips::eip2718::Encodable2718 for TypedTransaction {
             Self::Legacy(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
             Self::EIP2930(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
             Self::EIP1559(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
-            Self::EIP4844(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
+            Self::EIP4844(tx) => tx.encode_2718(out),
             Self::EIP7702(tx) => TxEnvelope::from(tx.clone()).encode_2718(out),
             Self::Deposit(tx) => {
                 tx.encode_2718(out);
@@ -1208,7 +1208,7 @@ impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
     }
 
     fn fallback_decode(buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
-        match TxEnvelope::fallback_decode(buf)? {
+        match TxEnvelope::<TxEip4844>::fallback_decode(buf)? {
             TxEnvelope::Legacy(tx) => Ok(Self::Legacy(tx)),
             _ => Err(Eip2718Error::RlpError(alloy_rlp::Error::Custom("unexpected tx type"))),
         }
@@ -1228,7 +1228,7 @@ impl From<TxEnvelope> for TypedTransaction {
             TxEnvelope::Legacy(tx) => Self::Legacy(tx),
             TxEnvelope::Eip2930(tx) => Self::EIP2930(tx),
             TxEnvelope::Eip1559(tx) => Self::EIP1559(tx),
-            TxEnvelope::Eip4844(tx) => Self::EIP4844(tx),
+            TxEnvelope::Eip4844(tx) => Self::EIP4844(tx.into()),
             TxEnvelope::Eip7702(tx) => Self::EIP7702(tx),
         }
     }

@@ -3814,7 +3814,7 @@ pub fn transaction_build(
         TxEnvelope::Eip4844(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip4844(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip4844(new_signed.into()))
         }
         TxEnvelope::Eip7702(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
