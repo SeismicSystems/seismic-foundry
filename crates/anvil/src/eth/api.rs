@@ -1286,6 +1286,7 @@ impl EthApi {
                     "not available on past forked blocks".to_string(),
                 ));
             }
+            // TODO: allow them to make seismic calls on forks
             return Ok(fork.call(&seismic_request, Some(number.into())).await?);
         }
 

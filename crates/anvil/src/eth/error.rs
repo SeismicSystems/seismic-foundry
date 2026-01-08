@@ -229,6 +229,9 @@ pub enum InvalidTransactionError {
     /// Thrown when a seismic transaction is invalid
     #[error("Seismic decryption failed: {0}")]
     SeismicDecryptionFailed(String),
+    /// Signed read was sent as a write transaction
+    #[error("Seismic tx was marked as signed read, but sent as a write")]
+    SignedReadMismatch,
     /// returned if the nonce of a transaction is lower than the one present in the local chain.
     #[error("nonce too low")]
     NonceTooLow,

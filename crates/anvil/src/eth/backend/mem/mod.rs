@@ -1728,7 +1728,7 @@ impl Backend {
         let chain_id = chain_id.unwrap_or(self.env.read().evm_env.cfg_env.chain_id);
         let data = match request.inner.seismic_elements.clone() {
             Some(seismic_elements) => {
-                let tx_metadata = cloned_inner.metadata().expect("Invalid metadata for seismic tx");
+                let tx_metadata = cloned_inner.metadata(caller).expect("Invalid metadata for seismic tx");
                 seismic_elements
                     .decrypt(&tx_io_sk, &data, &tx_metadata)
                     .expect("failed to decrypt seismic elements")
@@ -2068,7 +2068,17 @@ impl Backend {
         fee_details: FeeDetails,
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
-        let cloned_inner = request.inner.clone();
+        let sender = match request.from {
+            Some(addr) => addr,
+            None => {
+                return Err(BlockchainError::MissingRequiredFields);
+            }
+        };
+        let tx_metadata = request.inner.metadata(sender).map_err(|_e| BlockchainError::MissingRequiredFields)?;
+        if !tx_metadata.seismic_elements.signed_read {
+            return Err(BlockchainError::Message("Seismic call has signed_read set to false".into()));
+        }
+
         let seismic_elements = request.inner.seismic_elements.clone();
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
         let (exit_reason, out, gas_used, state) =
@@ -2076,9 +2086,6 @@ impl Backend {
         let output_data = out
             .map(|plaintext_output| match seismic_elements {
                 Some(seismic_elements) => {
-                    let tx_metadata = cloned_inner
-                        .metadata()
-                        .map_err(|_e| BlockchainError::MissingRequiredFields)?;
                     seismic_elements
                         .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
                         .map_err(|e| {
@@ -3704,7 +3711,10 @@ impl TransactionValidator for Backend {
         if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
             // check that decryption works before we create tx env for it
             let inner = seismic_tx.tx();
-            let tx_metadata = inner.tx_metadata();
+            let tx_metadata = inner.tx_metadata(*pending.sender());
+            if tx_metadata.seismic_elements.signed_read {
+                return Err(InvalidTransactionError::SignedReadMismatch);
+            }
             let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
             let _decrypted_data = inner
                 .seismic_elements

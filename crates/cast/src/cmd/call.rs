@@ -416,13 +416,11 @@ impl CallArgs {
         let legacy_fields = TxLegacyFields {
             chain_id: tx.chain_id.unwrap_or_default(),
             nonce: tx.nonce.unwrap_or_default(),
-            gas_price: tx.gas_price.unwrap_or_default(),
-            gas_limit: tx.gas.unwrap_or_default(),
             to: tx.to.unwrap_or_default(),
             value: tx.value.unwrap_or_default(),
         };
         let metadata =
-            TxSeismicMetadata { legacy_fields, seismic_elements: seismic_elements.clone() };
+            TxSeismicMetadata { sender: from, legacy_fields, seismic_elements: seismic_elements.clone() };
 
         // Encrypt the input data
         let encrypted_input = seismic_elements

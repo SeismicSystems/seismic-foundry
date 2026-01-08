@@ -407,9 +407,9 @@ seismic-alloy-rpc-types = { git = "https://github.com/SeismicSystems/seismic-all
 seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git", branch = "audit-seismic-tx" }
 
 # alloy-evm
-alloy-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "db34d7185e62c57f7fa4ac67f169113b14097a99" }
-alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "db34d7185e62c57f7fa4ac67f169113b14097a99" }
-alloy-seismic-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "db34d7185e62c57f7fa4ac67f169113b14097a99" }
+alloy-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", branch = "audit-seismic-tx" }
+alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", branch = "audit-seismic-tx" }
+alloy-seismic-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", branch = "audit-seismic-tx" }
 
 # foundry
 foundry-compilers = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "5477a89ae892229a90af58580daa8ef4575f00a6" }
