@@ -447,7 +447,7 @@ async fn test_seismic_precompiles_end_to_end() {
     let unencrypted_decrypt_call = Bytes::from(call.abi_encode());
 
     // Create a seismic read call (signed_read: true for onlyOwner functions)
-    let mut seismic_elements = get_seismic_elements(true);
+    let seismic_elements = get_seismic_elements(true);
 
     let chain_id = provider.get_chain_id().await.unwrap();
     let tx_nonce = provider.get_transaction_count(from).await.unwrap();
