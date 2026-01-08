@@ -133,10 +133,13 @@ use storage::{Blockchain, DEFAULT_HISTORY_LIMIT, MinedTransaction};
 use tokio::sync::RwLock as AsyncRwLock;
 
 use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
-use seismic_prelude::foundry::{
-    AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, InputDecryptionElements,
-    OpHaltReason, OpTransaction, SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload,
-    SpecId, TransactionReceipt, TransactionRequest, TxEnvelope,
+use seismic_prelude::{
+    foundry::{
+        AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, InputDecryptionElements,
+        OpHaltReason, OpTransaction, SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload,
+        SpecId, TransactionReceipt, TransactionRequest, TxEnvelope,
+    },
+    reth::SEISMIC_TX_TYPE_ID,
 };
 
 pub mod cache;
@@ -2069,28 +2072,52 @@ impl Backend {
         fee_details: FeeDetails,
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
-        let sender = match request.from {
-            Some(addr) => addr,
-            None => {
-                return Err(BlockchainError::MissingRequiredFields);
+        let seismic_elements = request.inner.seismic_elements.clone();
+        let tx_metadata = match request.transaction_type {
+            Some(SEISMIC_TX_TYPE_ID) => {
+                if seismic_elements.is_none() {
+                    return Err(BlockchainError::MissingRequiredFields);
+                }
+                let sender = match request.from {
+                    Some(addr) => addr,
+                    None => {
+                        // this should never happen in practice,
+                        // because we patch the 'from' field manually
+                        return Err(BlockchainError::Message(
+                            "Failed to parse 'from' field for Seismic tx".into(),
+                        ));
+                    }
+                };
+                let tx_metadata = request
+                    .inner
+                    .metadata(sender)
+                    .map_err(|_e| BlockchainError::MissingRequiredFields)?;
+                if !tx_metadata.seismic_elements.signed_read {
+                    return Err(BlockchainError::Message(
+                        "Seismic call has signed_read set to false".into(),
+                    ));
+                }
+                Some(tx_metadata)
+            }
+            _ => {
+                if seismic_elements.is_some() {
+                    return Err(BlockchainError::Message(
+                        "Non-seismic tx has seismic fields".into(),
+                    ));
+                }
+                None
             }
         };
-        let tx_metadata =
-            request.inner.metadata(sender).map_err(|_e| BlockchainError::MissingRequiredFields)?;
-        if !tx_metadata.seismic_elements.signed_read {
-            return Err(BlockchainError::Message(
-                "Seismic call has signed_read set to false".into(),
-            ));
-        }
 
-        let seismic_elements = request.inner.seismic_elements.clone();
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
         let (exit_reason, out, gas_used, state) =
             self.call_with_state(state, request, fee_details, block_env)?;
         let output_data = out
             .map(|plaintext_output| match seismic_elements {
                 Some(seismic_elements) => seismic_elements
-                    .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
+                    // unwrapping tx_metadata is okay because seismic elements existing <=> tx
+                    // metadata is Some
+                    .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata.unwrap())
                     .map_err(|e| {
                         BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                     })
