@@ -2095,7 +2095,7 @@ impl Backend {
                     .metadata(sender)
                     .map_err(|_e| BlockchainError::MissingRequiredFields)?;
                 /*
-                NOTE: we allow them to make signed 
+                NOTE: we allow them to make signed
                 if !tx_metadata.seismic_elements.signed_read {
                     return Err(BlockchainError::Message(
                         "Seismic call has signed_read set to false".into(),
