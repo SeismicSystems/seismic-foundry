@@ -139,7 +139,7 @@ use seismic_prelude::{
         OpHaltReason, OpTransaction, SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload,
         SpecId, TransactionReceipt, TransactionRequest, TxEnvelope,
     },
-    reth::SEISMIC_TX_TYPE_ID,
+    reth::{SEISMIC_TX_TYPE_ID, TxSeismicMetadata},
 };
 
 pub mod cache;
@@ -2065,17 +2065,19 @@ impl Backend {
         Ok((exit_reason, out, gas_used as u128, state))
     }
 
-    pub fn seismic_call_with_state(
-        &self,
-        state: &dyn DatabaseRef<Error = DatabaseError>,
-        request: WithOtherFields<TransactionRequest>,
-        fee_details: FeeDetails,
-        block_env: BlockEnv,
-    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
-        let seismic_elements = request.inner.seismic_elements.clone();
-        let tx_metadata = match request.transaction_type {
+    /// If the request is a seismic tx, then make sure it has:
+    /// - seismic elements
+    /// - a 'from' field set (from the recovered signer)
+    /// - and it's marked as a signed read
+    /// ... and then create the metadata
+    ///
+    /// If not, then make sure it does not have seismic elements
+    fn validate_seismic_call_tx_metadata(
+        request: &WithOtherFields<TransactionRequest>,
+    ) -> Result<Option<TxSeismicMetadata>, BlockchainError> {
+        match request.transaction_type {
             Some(SEISMIC_TX_TYPE_ID) => {
-                if seismic_elements.is_none() {
+                if request.inner.seismic_elements.is_none() {
                     return Err(BlockchainError::MissingRequiredFields);
                 }
                 let sender = match request.from {
@@ -2097,27 +2099,35 @@ impl Backend {
                         "Seismic call has signed_read set to false".into(),
                     ));
                 }
-                Some(tx_metadata)
+                Ok(Some(tx_metadata))
             }
             _ => {
-                if seismic_elements.is_some() {
+                if request.inner.seismic_elements.is_some() {
                     return Err(BlockchainError::Message(
                         "Non-seismic tx has seismic fields".into(),
                     ));
                 }
-                None
+                Ok(None)
             }
-        };
+        }
+    }
 
+    pub fn seismic_call_with_state(
+        &self,
+        state: &dyn DatabaseRef<Error = DatabaseError>,
+        request: WithOtherFields<TransactionRequest>,
+        fee_details: FeeDetails,
+        block_env: BlockEnv,
+    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
+        let tx_metadata = Self::validate_seismic_call_tx_metadata(&request)?;
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
         let (exit_reason, out, gas_used, state) =
             self.call_with_state(state, request, fee_details, block_env)?;
         let output_data = out
-            .map(|plaintext_output| match seismic_elements {
-                Some(seismic_elements) => seismic_elements
-                    // unwrapping tx_metadata is okay because seismic elements existing <=> tx
-                    // metadata is Some
-                    .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata.unwrap())
+            .map(|plaintext_output| match tx_metadata {
+                Some(tx_metadata) => tx_metadata
+                    .seismic_elements
+                    .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
                     .map_err(|e| {
                         BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                     })
