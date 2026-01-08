@@ -1696,8 +1696,14 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 mod tests {
     use super::*;
     use alloy_consensus::SignableTransaction;
-    use alloy_primitives::{FixedBytes, LogData, aliases::U96, b256, hex};
-    use seismic_enclave::get_unsecure_sample_secp256k1_pk;
+    use alloy_primitives::{
+        FixedBytes, LogData,
+        aliases::U96,
+        b256,
+        hex::{self, FromHex},
+    };
+    use seismic_enclave::{get_unsecure_sample_secp256k1_pk, get_unsecure_sample_secp256k1_sk};
+    use seismic_prelude::reth::InputDecryptionElements;
     use std::str::FromStr;
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
