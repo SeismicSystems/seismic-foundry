@@ -672,7 +672,7 @@ impl PendingTransaction {
                 } = &tx.tx();
 
                 let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
-                let tx_metadata = tx.tx().tx_metadata();
+                let tx_metadata = tx.tx().tx_metadata(caller);
                 OpTransaction::new(TxEnv {
                     caller,
                     kind: transact_to(to),

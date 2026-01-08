@@ -2392,9 +2392,9 @@ dependencies = [
 
 [[package]]
 name = "bon"
-version = "3.8.1"
+version = "3.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebeb9aaf9329dff6ceb65c689ca3db33dbf15f324909c60e4e5eef5701ce31b1"
+checksum = "234655ec178edd82b891e262ea7cf71f6584bcd09eff94db786be23f1821825c"
 dependencies = [
  "bon-macros",
  "rustversion",
@@ -2402,11 +2402,11 @@ dependencies = [
 
 [[package]]
 name = "bon-macros"
-version = "3.8.1"
+version = "3.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77e9d642a7e3a318e37c2c9427b5a6a48aa1ad55dcd986f3034ab2239045a645"
+checksum = "89ec27229c38ed0eb3c0feee3d2c1d6a4379ae44f418a29a658890e062d8f365"
 dependencies = [
- "darling 0.21.3",
+ "darling 0.23.0",
  "ident_case",
  "prettyplease",
  "proc-macro2",
@@ -6730,9 +6730,9 @@ checksum = "db13adb97ab515a3691f56e4dbab09283d0b86cb45abd991d8634a9d6f501760"
 
 [[package]]
 name = "libc"
-version = "0.2.179"
+version = "0.2.180"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5a2d376baa530d1238d133232d15e239abad80d05838b4b59354e5268af431f"
+checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
 
 [[package]]
 name = "libm"
@@ -9420,7 +9420,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-consensus"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5f1d6d0efabf30a3b08b61399c4a228afd8292e"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5bbcf88db0de178d07b6ff1a85c1f03aacfc0a1"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -9443,7 +9443,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-network"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5f1d6d0efabf30a3b08b61399c4a228afd8292e"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5bbcf88db0de178d07b6ff1a85c1f03aacfc0a1"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
@@ -9466,7 +9466,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-provider"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5f1d6d0efabf30a3b08b61399c4a228afd8292e"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5bbcf88db0de178d07b6ff1a85c1f03aacfc0a1"
 dependencies = [
  "alloy-network",
  "alloy-primitives",
@@ -9484,7 +9484,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-rpc-types"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5f1d6d0efabf30a3b08b61399c4a228afd8292e"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5bbcf88db0de178d07b6ff1a85c1f03aacfc0a1"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -9518,7 +9518,7 @@ dependencies = [
 [[package]]
 name = "seismic-prelude"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5f1d6d0efabf30a3b08b61399c4a228afd8292e"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#f5bbcf88db0de178d07b6ff1a85c1f03aacfc0a1"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
