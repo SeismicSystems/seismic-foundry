@@ -220,8 +220,11 @@ impl SendTxArgs {
                 to: tx.to.unwrap_or_default(),
                 value: tx.value.unwrap_or_default(),
             };
-            let metadata =
-                TxSeismicMetadata { sender: from, legacy_fields, seismic_elements: seismic_elements.clone() };
+            let metadata = TxSeismicMetadata {
+                sender: from,
+                legacy_fields,
+                seismic_elements: seismic_elements.clone(),
+            };
 
             // Encrypt the input data
             let encrypted_input = seismic_elements

@@ -1728,7 +1728,8 @@ impl Backend {
         let chain_id = chain_id.unwrap_or(self.env.read().evm_env.cfg_env.chain_id);
         let data = match request.inner.seismic_elements.clone() {
             Some(seismic_elements) => {
-                let tx_metadata = cloned_inner.metadata(caller).expect("Invalid metadata for seismic tx");
+                let tx_metadata =
+                    cloned_inner.metadata(caller).expect("Invalid metadata for seismic tx");
                 seismic_elements
                     .decrypt(&tx_io_sk, &data, &tx_metadata)
                     .expect("failed to decrypt seismic elements")
@@ -2074,9 +2075,12 @@ impl Backend {
                 return Err(BlockchainError::MissingRequiredFields);
             }
         };
-        let tx_metadata = request.inner.metadata(sender).map_err(|_e| BlockchainError::MissingRequiredFields)?;
+        let tx_metadata =
+            request.inner.metadata(sender).map_err(|_e| BlockchainError::MissingRequiredFields)?;
         if !tx_metadata.seismic_elements.signed_read {
-            return Err(BlockchainError::Message("Seismic call has signed_read set to false".into()));
+            return Err(BlockchainError::Message(
+                "Seismic call has signed_read set to false".into(),
+            ));
         }
 
         let seismic_elements = request.inner.seismic_elements.clone();
@@ -2085,17 +2089,15 @@ impl Backend {
             self.call_with_state(state, request, fee_details, block_env)?;
         let output_data = out
             .map(|plaintext_output| match seismic_elements {
-                Some(seismic_elements) => {
-                    seismic_elements
-                        .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
-                        .map_err(|e| {
-                            BlockchainError::Message(format!("Failed to encrypt output: {}", e))
-                        })
-                        .map(|ciphertext| match plaintext_output {
-                            Output::Call(_data) => Output::Call(ciphertext),
-                            Output::Create(_data, address) => Output::Create(ciphertext, address),
-                        })
-                }
+                Some(seismic_elements) => seismic_elements
+                    .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
+                    .map_err(|e| {
+                        BlockchainError::Message(format!("Failed to encrypt output: {}", e))
+                    })
+                    .map(|ciphertext| match plaintext_output {
+                        Output::Call(_data) => Output::Call(ciphertext),
+                        Output::Create(_data, address) => Output::Create(ciphertext, address),
+                    }),
                 None => Ok(plaintext_output),
             })
             .transpose()?;
