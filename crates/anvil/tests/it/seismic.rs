@@ -70,7 +70,7 @@ pub fn get_encryption_nonce() -> U96 {
     U96::MAX
 }
 
-pub fn get_seismic_elements() -> TxSeismicElements {
+pub fn get_seismic_elements(signed_read: bool) -> TxSeismicElements {
     let encryption_sk = get_encryption_private_key();
     let encryption_pk = PublicKey::from_secret_key_global(&encryption_sk);
     let encryption_nonce = get_encryption_nonce();
@@ -80,7 +80,7 @@ pub fn get_seismic_elements() -> TxSeismicElements {
         message_version: 0,
         recent_block_hash: B256::ZERO,
         expires_at_block: u64::MAX,
-        signed_read: false,
+        signed_read,
     }
 }
 
@@ -96,9 +96,10 @@ pub async fn get_unsigned_seismic_tx_request(
     to: TxKind,
     chain_id: u64,
     plaintext: Bytes,
+    signed_read: bool,
 ) -> TransactionRequest {
     let sender = signer.address();
-    let seismic_elements = get_seismic_elements();
+    let seismic_elements = get_seismic_elements(signed_read);
     let value = U256::from(0);
 
     // Create metadata for encryption
@@ -140,9 +141,10 @@ pub async fn get_signed_seismic_tx_typed_data(
     to: TxKind,
     chain_id: u64,
     plaintext: Bytes,
+    signed_read: bool,
 ) -> TypedDataRequest {
     let sender = signer.address();
-    let mut seismic_elements = get_seismic_elements();
+    let mut seismic_elements = get_seismic_elements(signed_read);
     seismic_elements = seismic_elements.with_message_version(2);
 
     let gas_limit = 6000000;
@@ -259,6 +261,7 @@ async fn test_seismic_transaction_rpc() {
                 TxKind::Create,
                 provider.get_chain_id().await.unwrap(),
                 plaintext_bytecode.clone(),
+                false,
             )
             .await,
         )
@@ -281,6 +284,7 @@ async fn test_seismic_transaction_rpc() {
                     TxKind::Create,
                     provider.get_chain_id().await.unwrap(),
                     plaintext_bytecode.clone(),
+                    true,
                 )
                 .await,
             ),
@@ -291,7 +295,7 @@ async fn test_seismic_transaction_rpc() {
         .unwrap();
 
     // Create metadata for decryption (matching the encrypted call with message_version: 2)
-    let seismic_elements = get_seismic_elements().with_message_version(2);
+    let seismic_elements = get_seismic_elements(true).with_message_version(2);
     let nonce = provider.get_transaction_count(deployer).await.unwrap();
     let chain_id = provider.get_chain_id().await.unwrap();
     let legacy_fields = TxLegacyFields { chain_id, nonce, to: TxKind::Create, value: U256::ZERO };
@@ -319,6 +323,7 @@ async fn test_seismic_transaction_rpc() {
                     TxKind::Create,
                     chain_id,
                     plaintext_bytecode.clone(),
+                    true,
                 )
                 .await,
             ),
@@ -442,8 +447,7 @@ async fn test_seismic_precompiles_end_to_end() {
     let unencrypted_decrypt_call = Bytes::from(call.abi_encode());
 
     // Create a seismic read call (signed_read: true for onlyOwner functions)
-    let mut seismic_elements = get_seismic_elements();
-    seismic_elements.signed_read = true;
+    let mut seismic_elements = get_seismic_elements(true);
 
     let chain_id = provider.get_chain_id().await.unwrap();
     let tx_nonce = provider.get_transaction_count(from).await.unwrap();
