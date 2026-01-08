@@ -142,7 +142,6 @@ pub async fn get_signed_seismic_tx_typed_data(
     plaintext: Bytes,
 ) -> TypedDataRequest {
     let sender = signer.address();
-    // Create seismic elements with message_version 2 from the start
     let mut seismic_elements = get_seismic_elements();
     seismic_elements = seismic_elements.with_message_version(2);
 
@@ -485,15 +484,12 @@ async fn test_seismic_precompiles_end_to_end() {
     tx_req.inner.transaction_type = Some(TxSeismic::TX_TYPE);
     tx_req.seismic_elements = Some(seismic_elements.clone());
 
-    // Sign and send as a seismic call
     let signed_tx = provider.sign_transaction(tx_req.into()).await.unwrap();
     let mut buf: &[u8] = signed_tx.iter().as_slice();
     let envelope = AnyTxEnvelope::decode_2718(&mut buf).unwrap();
 
-    // Perform the read call with encryption
     let encrypted_output = provider.seismic_call(SendableTx::Envelope(envelope)).await.unwrap();
 
-    // Decrypt the response
     let output = seismic_elements
         .client_decrypt(
             &encrypted_output,
