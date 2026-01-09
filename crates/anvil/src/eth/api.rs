@@ -3309,10 +3309,10 @@ impl EthApi {
         // Binary search for the ideal gas limit
         while (highest_gas_limit - lowest_gas_limit) > 1 {
             seismic_request.set_gas_limit(mid_gas_limit as u64);
-            let request = seismic_request.clone().inner.inner;
+            let request = seismic_request.clone().inner;
             let ethres = self.backend.call_with_state(
                 &state,
-                WithOtherFields::new(request.clone().into()),
+                WithOtherFields::new(request.clone()),
                 fees.clone(),
                 block_env.clone(),
             );
