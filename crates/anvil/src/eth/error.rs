@@ -236,6 +236,12 @@ pub enum InvalidTransactionError {
     /// Signed read was sent as a write transaction
     #[error("Seismic tx was marked as signed read, but sent as a write")]
     SignedReadMismatch,
+    /// Thrown when the recent_block_hash is too old
+    #[error("recent_block_hash is too old or not found")]
+    RecentBlockHashTooOld,
+    /// Thrown when the transaction has expired
+    #[error("transaction expired: current block {current} exceeds expiry block {expires_at}")]
+    TransactionExpired { current: u64, expires_at: u64 },
     /// returned if the nonce of a transaction is lower than the one present in the local chain.
     #[error("nonce too low")]
     NonceTooLow,

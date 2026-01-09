@@ -161,6 +161,8 @@ impl DatabaseRef for dyn crate::eth::backend::db::Db {}
 pub const MIN_TRANSACTION_GAS: u128 = 21000;
 // Gas per transaction creating a contract.
 pub const MIN_CREATE_GAS: u128 = 53000;
+/// Maximum number of blocks a recent_block_hash can be old
+pub const MAX_BLOCK_HASH_AGE: u64 = 1000;
 // Executor
 pub const EXECUTOR: Address = address!("0x6634F723546eCc92277e8a2F93d4f248bf1189ea");
 pub const EXECUTOR_PK: &str = "0x502d47e1421cb9abef497096728e69f07543232b93ef24de4998e18b5fd9ba0f";
@@ -2094,7 +2096,7 @@ impl Backend {
                         // this should never happen in practice,
                         // because we patch the 'from' field manually
                         return Err(BlockchainError::Message(
-                            "Failed to parse 'from' field for Seismic tx".into(),
+                            "To make a seismic call, you must send a signed seismic transaction".into(),
                         ));
                     }
                 };
@@ -3774,6 +3776,33 @@ impl TransactionValidator for Backend {
             if tx_metadata.seismic_elements.signed_read {
                 return Err(InvalidTransactionError::SignedReadMismatch);
             }
+
+            // Replay protection checks
+            let current_block = env.evm_env.block_env.number.saturating_to::<u64>();
+
+            // Check if transaction has expired
+            if current_block > tx_metadata.seismic_elements.expires_at_block {
+                return Err(InvalidTransactionError::TransactionExpired {
+                    current: current_block,
+                    expires_at: tx_metadata.seismic_elements.expires_at_block,
+                });
+            }
+
+            // Check if recent_block_hash is too old
+            let storage = self.blockchain.storage.read();
+            let recent_block_hash = tx_metadata.seismic_elements.recent_block_hash;
+
+            // Search for the block with this hash
+            let recent_block_num = storage.hashes.iter()
+                .find(|(_, hash)| **hash == recent_block_hash)
+                .map(|(num, _)| *num)
+                .ok_or(InvalidTransactionError::RecentBlockHashTooOld)?;
+
+            let block_age = current_block.saturating_sub(recent_block_num);
+            if block_age > MAX_BLOCK_HASH_AGE {
+                return Err(InvalidTransactionError::RecentBlockHashTooOld);
+            }
+
             let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
             let _decrypted_data = inner
                 .seismic_elements

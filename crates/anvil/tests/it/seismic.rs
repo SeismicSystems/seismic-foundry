@@ -9,7 +9,8 @@ use alloy_primitives::{
 };
 use alloy_provider::{Provider, SendableTx};
 use alloy_rpc_types::{
-    TransactionInput, TransactionRequest as AlloyTransactionRequest, state::EvmOverrides,
+    BlockNumberOrTag, TransactionInput, TransactionRequest as AlloyTransactionRequest,
+    state::EvmOverrides,
 };
 use alloy_serde::WithOtherFields;
 use alloy_signer_local::PrivateKeySigner;
@@ -71,6 +72,14 @@ pub fn get_encryption_nonce() -> U96 {
 }
 
 pub fn get_seismic_elements(signed_read: bool) -> TxSeismicElements {
+    get_seismic_elements_with_replay_protection(signed_read, B256::ZERO, u64::MAX)
+}
+
+pub fn get_seismic_elements_with_replay_protection(
+    signed_read: bool,
+    recent_block_hash: B256,
+    expires_at_block: u64,
+) -> TxSeismicElements {
     let encryption_sk = get_encryption_private_key();
     let encryption_pk = PublicKey::from_secret_key_global(&encryption_sk);
     let encryption_nonce = get_encryption_nonce();
@@ -78,8 +87,8 @@ pub fn get_seismic_elements(signed_read: bool) -> TxSeismicElements {
         encryption_pubkey: encryption_pk,
         encryption_nonce,
         message_version: 0,
-        recent_block_hash: B256::ZERO,
-        expires_at_block: u64::MAX,
+        recent_block_hash,
+        expires_at_block,
         signed_read,
     }
 }
@@ -143,8 +152,27 @@ pub async fn get_signed_seismic_tx_typed_data(
     plaintext: Bytes,
     signed_read: bool,
 ) -> TypedDataRequest {
+    get_signed_seismic_tx_typed_data_with_replay_protection(
+        signer, pk, nonce, to, chain_id, plaintext, signed_read, B256::ZERO, u64::MAX,
+    )
+    .await
+}
+
+/// Create a seismic transaction with typed data and replay protection
+pub async fn get_signed_seismic_tx_typed_data_with_replay_protection(
+    signer: &PrivateKeySigner,
+    pk: &PublicKey,
+    nonce: u64,
+    to: TxKind,
+    chain_id: u64,
+    plaintext: Bytes,
+    signed_read: bool,
+    recent_block_hash: B256,
+    expires_at_block: u64,
+) -> TypedDataRequest {
     let sender = signer.address();
-    let mut seismic_elements = get_seismic_elements(signed_read);
+    let mut seismic_elements =
+        get_seismic_elements_with_replay_protection(signed_read, recent_block_hash, expires_at_block);
     seismic_elements = seismic_elements.with_message_version(2);
 
     let gas_limit = 6000000;
@@ -252,9 +280,15 @@ async fn test_seismic_transaction_rpc() {
     assert_eq!(res, test_utils::ContractTestContext::get_code());
 
     // send a signed typed data transaction
+    // Get the latest block hash for replay protection
+    let latest_block = provider.get_block_by_number(BlockNumberOrTag::Latest).await.unwrap().unwrap();
+    let recent_block_hash = latest_block.header.hash;
+    let current_block_number = latest_block.header.number;
+    let expires_at_block = current_block_number + 1000;
+
     let tx_hash = api
         .send_signed_typed_data_tx(
-            get_signed_seismic_tx_typed_data(
+            get_signed_seismic_tx_typed_data_with_replay_protection(
                 &signer,
                 &network_pubkey,
                 provider.get_transaction_count(deployer).await.unwrap(),
@@ -262,6 +296,8 @@ async fn test_seismic_transaction_rpc() {
                 provider.get_chain_id().await.unwrap(),
                 plaintext_bytecode.clone(),
                 false,
+                recent_block_hash,
+                expires_at_block,
             )
             .await,
         )

@@ -1323,7 +1323,9 @@ impl EthApi {
         block_number: Option<BlockId>,
         overrides: EvmOverrides,
     ) -> Result<Bytes> {
-        match request.into() {
+        let req_into = request.into();
+        println!("eth_call request: {:?}", req_into);
+        match req_into {
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 let user_provided_from = tx.inner.from;
 
