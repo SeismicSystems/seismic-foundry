@@ -1735,6 +1735,8 @@ impl Backend {
                     cloned_inner.metadata(caller).expect("Invalid metadata for seismic tx");
                 seismic_elements
                     .decrypt(&tx_io_sk, &data, &tx_metadata)
+                    // NOTE: panicking here is fine because we check that
+                    // the decryption works before calling this
                     .expect("failed to decrypt seismic elements")
                     .into()
             }
@@ -2124,6 +2126,12 @@ impl Backend {
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let tx_metadata = Self::validate_seismic_call_tx_metadata(&request)?;
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
+        if let Some(metadata) = &tx_metadata {
+            let encrypted_input = request.inner.input.clone().input.unwrap_or(Bytes::new()).clone();
+            if let Err(e) = metadata.seismic_elements.decrypt(&tx_io_sk, &encrypted_input, &metadata) {
+                return Err(BlockchainError::Message(format!("Unable to decrypt ciphertext: {e}")));
+            }
+        }
         let (exit_reason, out, gas_used, state) =
             self.call_with_state(state, request, fee_details, block_env)?;
         let output_data = out
