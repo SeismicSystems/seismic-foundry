@@ -20,10 +20,14 @@ use revm::{
 use serde::Serialize;
 use tokio::time::Duration;
 
+use seismic_prelude::foundry::InputDecryptionElementsError;
+
 pub(crate) type Result<T> = std::result::Result<T, BlockchainError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BlockchainError {
+    #[error("{0}")]
+    FailedToDecryptCalldata(InputDecryptionElementsError),
     #[error(transparent)]
     Pool(#[from] PoolError),
     #[error("No signer available")]
@@ -567,6 +571,9 @@ impl<T: Serialize> ToRpcResponseResult for Result<T> {
                 }
                 err @ BlockchainError::MissingRequiredFields => {
                     RpcError::invalid_params(err.to_string())
+                }
+                BlockchainError::FailedToDecryptCalldata(e) => {
+                    RpcError::invalid_params(e.to_string())
                 }
             }
             .into(),

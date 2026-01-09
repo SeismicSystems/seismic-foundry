@@ -8,7 +8,7 @@ use crate::{
         backend::{
             self,
             db::SerializableState,
-            mem::{MIN_CREATE_GAS, MIN_TRANSACTION_GAS},
+            mem::{MIN_CREATE_GAS, MIN_TRANSACTION_GAS, storage::Blockchain},
             notifications::NewBlockNotifications,
             validate::TransactionValidator,
         },
@@ -103,10 +103,13 @@ use tokio::{
 };
 use yansi::Paint;
 
-use seismic_prelude::{foundry::{
-    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
-    SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest, tx_builder,
-}, reth::InputDecryptionElements};
+use seismic_prelude::{
+    foundry::{
+        AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
+        SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest, tx_builder,
+    },
+    reth::InputDecryptionElements,
+};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -1359,13 +1362,11 @@ impl EthApi {
                         e
                     ))
                 })?;
-                println!("Typed tx: {typed_tx:?}");
                 let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
                     BlockchainError::Message(
                         "Failed to decode bytes to transaction request".to_string(),
                     )
                 })?;
-                println!("TX request: {tx:?}");
 
                 let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
                     "Can only make signedCall with Seismic Transactions".to_string(),
@@ -1375,13 +1376,11 @@ impl EthApi {
                 let sender = signed_seismic_tx.recover_signer().map_err(|e| {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
-                let metadata = signed_seismic_tx.tx().metadata(sender).unwrap();
-                println!("Metadata: {metadata:?}");
-                println!("Encoded: {:0x}", Bytes::from(metadata.encode_as_aad()));
-                println!("Sender: {sender:0x}");
+                if let Err(e) = signed_seismic_tx.tx().metadata(sender) {
+                    return Err(BlockchainError::FailedToDecryptCalldata(e));
+                };
                 let mut request = WithOtherFields::new(tx);
                 request.inner.inner.from = Some(sender);
-                println!("Request: {request:#?}");
 
                 self.seismic_call(request, block_number, overrides).await
             }

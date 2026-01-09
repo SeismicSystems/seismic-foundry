@@ -680,7 +680,7 @@ impl PendingTransaction {
                     // so we simply unwrap here
                     data: seismic_elements
                         .decrypt(&tx_io_sk, &input, &tx_metadata)
-                        .expect("failed to decrypt seismic elements")
+                        .expect("failed to decrypt ciphertext")
                         .into(),
                     chain_id: Some(*chain_id),
                     nonce: *nonce,
@@ -1963,7 +1963,10 @@ mod tests {
                 encryption_pubkey: get_unsecure_sample_secp256k1_pk(),
                 encryption_nonce: U96::from_str("0x46a2b6020bba77fcb1e676a6").unwrap(),
                 message_version: 0,
-                recent_block_hash: FixedBytes::<32>::from_hex("0x934207181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f90").unwrap(),
+                recent_block_hash: FixedBytes::<32>::from_hex(
+                    "0x934207181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f90",
+                )
+                .unwrap(),
                 expires_at_block: 100,
                 signed_read: false,
             },
@@ -1982,7 +1985,8 @@ mod tests {
         let signed_tx: Signed<TxSeismic> = orig_decoded_tx.into_signed(signature);
 
         let signer = signed_tx.recover_signer().unwrap();
-        let expected_signer = Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap();
+        let expected_signer =
+            Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap();
         assert_eq!(signer, expected_signer);
 
         let signed_tt = TypedTransaction::Seismic(signed_tx);

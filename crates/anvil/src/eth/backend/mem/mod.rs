@@ -120,6 +120,7 @@ use revm::{
     primitives::{FlaggedStorage, KECCAK_EMPTY, hardfork::SpecId as RevmSpecId},
     state::AccountInfo,
 };
+use seismic_enclave::get_unsecure_sample_secp256k1_sk;
 use std::{
     collections::BTreeMap,
     fmt::Debug,
@@ -1653,6 +1654,19 @@ impl Backend {
         }).await?
     }
 
+    fn check_calldata_decryption(
+        seismic_request: &TransactionRequest,
+    ) -> Result<(), BlockchainError> {
+        match seismic_request.to_transaction_request(&get_unsecure_sample_secp256k1_sk()) {
+            // check if we can decrypt calldata before building call env
+            // because it will panic inside there
+            Ok(_) => Ok(()),
+            Err(e) => {
+                return Err(BlockchainError::FailedToDecryptCalldata(e));
+            }
+        }
+    }
+
     /// ## EVM settings
     ///
     /// This modifies certain EVM settings to mirror geth's `SkipAccountChecks` when transacting requests, see also: <https://github.com/ethereum/go-ethereum/blob/380688c636a654becc8f114438c2a5d93d2db032/core/state_transition.go#L145-L148>:
@@ -1678,7 +1692,6 @@ impl Backend {
                         to,
                         gas,
                         value,
-                        input,
                         access_list,
                         blob_versioned_hashes,
                         authorization_list,
@@ -1720,7 +1733,6 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-        let data = input.into_input().unwrap_or_default();
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
 
         let kind = match to {
@@ -1729,18 +1741,11 @@ impl Backend {
         };
         let value = value.unwrap_or_default();
         let chain_id = chain_id.unwrap_or(self.env.read().evm_env.cfg_env.chain_id);
-        let data = match request.inner.seismic_elements.clone() {
-            Some(seismic_elements) => {
-                let tx_metadata =
-                    cloned_inner.metadata(caller).expect("Invalid metadata for seismic tx");
-                seismic_elements
-                    .decrypt(&tx_io_sk, &data, &tx_metadata)
-                    // NOTE: panicking here is fine because we check that
-                    // the decryption works before calling this
-                    .expect("failed to decrypt seismic elements")
-                    .into()
+        let data = match cloned_inner.to_transaction_request(&tx_io_sk) {
+            Ok(tx_req) => tx_req.input.normalized_input().input.unwrap_or_default(),
+            Err(e) => {
+                panic!("Failed to decrypt seismic tx calldata: {e}")
             }
-            None => data.into(),
         };
         let mut base = TxEnv {
             caller,
@@ -1863,6 +1868,7 @@ impl Backend {
                     )?
                     .or_zero_fees();
 
+                    Self::check_calldata_decryption(&seismic_request)?;
                     let mut env = self.build_call_env(
                         WithOtherFields::new(seismic_request.clone()),
                         fee_details,
@@ -2042,7 +2048,7 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let mut inspector = self.build_inspector();
-
+        Self::check_calldata_decryption(&request)?;
         let env = self.build_call_env(request, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state } = evm.transact(env.tx)?;
@@ -2128,8 +2134,8 @@ impl Backend {
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
         if let Some(metadata) = &tx_metadata {
             let encrypted_input = request.inner.input.clone().input.unwrap_or(Bytes::new()).clone();
-            if let Err(e) = metadata.seismic_elements.decrypt(&tx_io_sk, &encrypted_input, &metadata) {
-                return Err(BlockchainError::Message(format!("Unable to decrypt ciphertext: {e}")));
+            if let Err(e) = metadata.decrypt(&tx_io_sk, &encrypted_input) {
+                return Err(BlockchainError::Message(format!("Invalid AEAD metadata: {e}")));
             }
         }
         let (exit_reason, out, gas_used, state) =
@@ -2187,7 +2193,7 @@ impl Backend {
                             let mut inspector = self.build_inspector().with_tracing_config(
                                 TracingInspectorConfig::from_geth_call_config(&call_config),
                             );
-
+                            Self::check_calldata_decryption(&request)?;
                             let env = self.build_call_env(request, fee_details, block);
                             let mut evm =
                                 self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
@@ -2221,6 +2227,7 @@ impl Backend {
                             revm_inspectors::tracing::js::JsInspector::new(code, config)
                                 .map_err(|err| BlockchainError::Message(err.to_string()))?;
 
+                        Self::check_calldata_decryption(&request)?;
                         let env = self.build_call_env(request, fee_details, block.clone());
                         let mut evm =
                             self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
@@ -2240,6 +2247,7 @@ impl Backend {
                 .build_inspector()
                 .with_tracing_config(TracingInspectorConfig::from_geth_config(&config));
 
+            Self::check_calldata_decryption(&request)?;
             let env = self.build_call_env(request, fee_details, block);
             let mut evm = self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
             let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
@@ -2282,6 +2290,7 @@ impl Backend {
         let mut inspector =
             AccessListInspector::new(request.inner.inner.access_list.clone().unwrap_or_default());
 
+        Self::check_calldata_decryption(&request)?;
         let env = self.build_call_env(request, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state: _ } = evm.transact(env.tx)?;

@@ -9420,7 +9420,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-consensus"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#871ec4b14e88325415ccd98681a082f74c571c5b"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#d64dcb98769b30da079cd1c68360dbd4db8076a6"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -9443,7 +9443,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-network"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#871ec4b14e88325415ccd98681a082f74c571c5b"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#d64dcb98769b30da079cd1c68360dbd4db8076a6"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
@@ -9466,7 +9466,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-provider"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#871ec4b14e88325415ccd98681a082f74c571c5b"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#d64dcb98769b30da079cd1c68360dbd4db8076a6"
 dependencies = [
  "alloy-network",
  "alloy-primitives",
@@ -9484,7 +9484,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-rpc-types"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#871ec4b14e88325415ccd98681a082f74c571c5b"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#d64dcb98769b30da079cd1c68360dbd4db8076a6"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -9518,7 +9518,7 @@ dependencies = [
 [[package]]
 name = "seismic-prelude"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#871ec4b14e88325415ccd98681a082f74c571c5b"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?branch=audit-seismic-tx#d64dcb98769b30da079cd1c68360dbd4db8076a6"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
