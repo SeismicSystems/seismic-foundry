@@ -1702,8 +1702,7 @@ mod tests {
         b256,
         hex::{self, FromHex},
     };
-    use seismic_enclave::{get_unsecure_sample_secp256k1_pk, get_unsecure_sample_secp256k1_sk};
-    use seismic_prelude::reth::InputDecryptionElements;
+    use seismic_enclave::get_unsecure_sample_secp256k1_pk;
     use std::str::FromStr;
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
