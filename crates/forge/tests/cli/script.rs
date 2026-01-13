@@ -3183,7 +3183,9 @@ async fn deploy_contract_with_private_storage(handle: &anvil::NodeHandle) -> (Ad
     let provider = SeismicSignedProvider::new(
         EthereumWallet::new(signer.clone()),
         reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
-    );
+    )
+    .await
+    .unwrap();
     let deployer = handle.dev_accounts().next().unwrap();
 
     let plaintext_bytecode = test_utils::ContractTestContext::get_deploy_input_plaintext();
