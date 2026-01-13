@@ -71,7 +71,7 @@ async fn test_solc_revert_example() {
     let provider = handle.http_provider();
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
-    let seismic_provider = sfoundry_signed_provider(wallet.clone(), node_url);
+    let seismic_provider = sfoundry_signed_provider(wallet.clone(), node_url).await.unwrap();
 
     let contract = VendingMachine::deploy(&provider).await.unwrap();
     let tx = contract.buy(U256::from(100)).into_transaction_request();

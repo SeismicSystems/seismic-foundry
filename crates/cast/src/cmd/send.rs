@@ -16,11 +16,12 @@ use foundry_cli::{
 use std::{path::PathBuf, str::FromStr};
 
 // Seismic imports for encryption/decryption
-use alloy_primitives::{Bytes, aliases::U96};
+use alloy_primitives::{B256, Bytes, aliases::U96};
 use rand::RngCore;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use seismic_prelude::foundry::{
-    AnyNetwork, EthereumWallet, SeismicProviderExt, TransactionRequest, TxSeismicElements,
+    AnyNetwork, EthereumWallet, SeismicProviderExt, TransactionRequest, TxLegacyFields,
+    TxSeismicElements, TxSeismicMetadata,
 };
 
 /// Helper function to create seismic elements from private key
@@ -29,7 +30,14 @@ fn create_seismic_elements(encryption_sk: &SecretKey) -> TxSeismicElements {
     let encryption_pk = PublicKey::from_secret_key(&secp, encryption_sk);
     // randomly generate a nonce
     let encryption_nonce = U96::random();
-    TxSeismicElements { encryption_pubkey: encryption_pk, encryption_nonce, message_version: 0 }
+    TxSeismicElements {
+        encryption_pubkey: encryption_pk,
+        encryption_nonce,
+        message_version: 0,
+        recent_block_hash: B256::ZERO,
+        expires_at_block: u64::MAX,
+        signed_read: false,
+    }
 }
 
 /// Helper function to get or generate encryption private key
@@ -205,9 +213,22 @@ impl SendTxArgs {
             // Get the original transaction input data
             let original_input = tx.inner.input.input().unwrap_or_default().clone();
 
+            // Create metadata for encryption
+            let legacy_fields = TxLegacyFields {
+                chain_id: tx.chain_id.unwrap_or_default(),
+                nonce: tx.nonce.unwrap_or_default(),
+                to: tx.to.unwrap_or_default(),
+                value: tx.value.unwrap_or_default(),
+            };
+            let metadata = TxSeismicMetadata {
+                sender: from,
+                legacy_fields,
+                seismic_elements: seismic_elements.clone(),
+            };
+
             // Encrypt the input data
             let encrypted_input = seismic_elements
-                .client_encrypt(&original_input, &network_pubkey, &encryption_sk)
+                .client_encrypt(&original_input, &network_pubkey, &encryption_sk, &metadata)
                 .map_err(|e| eyre::eyre!("Failed to encrypt input data: {}", e))?;
 
             // Create encrypted transaction

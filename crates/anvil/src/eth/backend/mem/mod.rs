@@ -120,6 +120,7 @@ use revm::{
     primitives::{FlaggedStorage, KECCAK_EMPTY, hardfork::SpecId as RevmSpecId},
     state::AccountInfo,
 };
+use seismic_enclave::get_unsecure_sample_secp256k1_sk;
 use std::{
     collections::BTreeMap,
     fmt::Debug,
@@ -133,10 +134,13 @@ use storage::{Blockchain, DEFAULT_HISTORY_LIMIT, MinedTransaction};
 use tokio::sync::RwLock as AsyncRwLock;
 
 use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
-use seismic_prelude::foundry::{
-    AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, OpHaltReason, OpTransaction,
-    SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload, SpecId, TransactionReceipt,
-    TransactionRequest, TxEnvelope,
+use seismic_prelude::{
+    foundry::{
+        AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, InputDecryptionElements,
+        OpHaltReason, OpTransaction, SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload,
+        SpecId, TransactionReceipt, TransactionRequest, TxEnvelope,
+    },
+    reth::{SEISMIC_TX_TYPE_ID, TxSeismicMetadata},
 };
 
 pub mod cache;
@@ -1650,6 +1654,19 @@ impl Backend {
         }).await?
     }
 
+    fn check_calldata_decryption(
+        seismic_request: &TransactionRequest,
+    ) -> Result<(), BlockchainError> {
+        match seismic_request.to_transaction_request(&get_unsecure_sample_secp256k1_sk()) {
+            // check if we can decrypt calldata before building call env
+            // because it will panic inside there
+            Ok(_) => Ok(()),
+            Err(e) => {
+                return Err(BlockchainError::FailedToDecryptCalldata(e));
+            }
+        }
+    }
+
     /// ## EVM settings
     ///
     /// This modifies certain EVM settings to mirror geth's `SkipAccountChecks` when transacting requests, see also: <https://github.com/ethereum/go-ethereum/blob/380688c636a654becc8f114438c2a5d93d2db032/core/state_transition.go#L145-L148>:
@@ -1665,6 +1682,7 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Env {
         let tx_type = request.minimal_tx_type() as u8;
+        let cloned_inner = request.inner.clone();
 
         let WithOtherFields::<TransactionRequest> {
             inner:
@@ -1674,7 +1692,6 @@ impl Backend {
                         to,
                         gas,
                         value,
-                        input,
                         access_list,
                         blob_versioned_hashes,
                         authorization_list,
@@ -1716,14 +1733,19 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-        let data = input.into_input().unwrap_or_default();
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
-        let data = match request.inner.seismic_elements {
-            Some(seismic_elements) => seismic_elements
-                .decrypt(&tx_io_sk, &data)
-                .expect("failed to decrypt seismic elements")
-                .into(),
-            None => data.into(),
+
+        let kind = match to {
+            Some(addr) => TxKind::Call(*addr),
+            None => TxKind::Create,
+        };
+        let value = value.unwrap_or_default();
+        let chain_id = chain_id.unwrap_or(self.env.read().evm_env.cfg_env.chain_id);
+        let data = match cloned_inner.to_transaction_request(&tx_io_sk) {
+            Ok(tx_req) => tx_req.input.normalized_input().input.unwrap_or_default(),
+            Err(e) => {
+                panic!("Failed to decrypt seismic tx calldata: {e}")
+            }
         };
         let mut base = TxEnv {
             caller,
@@ -1739,14 +1761,11 @@ impl Backend {
                     }
                 })
                 .unwrap_or_default(),
-            kind: match to {
-                Some(addr) => TxKind::Call(*addr),
-                None => TxKind::Create,
-            },
+            kind,
             tx_type,
-            value: value.unwrap_or_default(),
+            value,
             data,
-            chain_id: Some(chain_id.unwrap_or(self.env.read().evm_env.cfg_env.chain_id)),
+            chain_id: Some(chain_id),
             access_list: access_list.unwrap_or_default(),
             blob_hashes,
             ..Default::default()
@@ -1849,6 +1868,7 @@ impl Backend {
                     )?
                     .or_zero_fees();
 
+                    Self::check_calldata_decryption(&seismic_request)?;
                     let mut env = self.build_call_env(
                         WithOtherFields::new(seismic_request.clone()),
                         fee_details,
@@ -2028,7 +2048,7 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let mut inspector = self.build_inspector();
-
+        Self::check_calldata_decryption(&request)?;
         let env = self.build_call_env(request, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state } = evm.transact(env.tx)?;
@@ -2053,6 +2073,56 @@ impl Backend {
         Ok((exit_reason, out, gas_used as u128, state))
     }
 
+    /// If the request is a seismic tx, then make sure it has:
+    /// - seismic elements
+    /// - a 'from' field set (from the recovered signer)
+    /// - and it's marked as a signed read
+    /// ... and then create the metadata
+    ///
+    /// If not, then make sure it does not have seismic elements
+    fn validate_seismic_call_tx_metadata(
+        request: &WithOtherFields<TransactionRequest>,
+    ) -> Result<Option<TxSeismicMetadata>, BlockchainError> {
+        match request.transaction_type {
+            Some(SEISMIC_TX_TYPE_ID) => {
+                if request.inner.seismic_elements.is_none() {
+                    return Err(BlockchainError::MissingRequiredFields);
+                }
+                let sender = match request.from {
+                    Some(addr) => addr,
+                    None => {
+                        // this should never happen in practice,
+                        // because we patch the 'from' field manually
+                        return Err(BlockchainError::Message(
+                            "Failed to parse 'from' field for Seismic tx".into(),
+                        ));
+                    }
+                };
+                let tx_metadata = request
+                    .inner
+                    .metadata(sender)
+                    .map_err(|_e| BlockchainError::MissingRequiredFields)?;
+                /*
+                NOTE: we allow them to make signed
+                if !tx_metadata.seismic_elements.signed_read {
+                    return Err(BlockchainError::Message(
+                        "Seismic call has signed_read set to false".into(),
+                    ));
+                }
+                */
+                Ok(Some(tx_metadata))
+            }
+            _ => {
+                if request.inner.seismic_elements.is_some() {
+                    return Err(BlockchainError::Message(
+                        "Non-seismic tx has seismic fields".into(),
+                    ));
+                }
+                Ok(None)
+            }
+        }
+    }
+
     pub fn seismic_call_with_state(
         &self,
         state: &dyn DatabaseRef<Error = DatabaseError>,
@@ -2060,14 +2130,21 @@ impl Backend {
         fee_details: FeeDetails,
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
-        let seismic_elements = request.inner.seismic_elements;
+        let tx_metadata = Self::validate_seismic_call_tx_metadata(&request)?;
         let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
+        if let Some(metadata) = &tx_metadata {
+            let encrypted_input = request.inner.input.clone().input.unwrap_or(Bytes::new()).clone();
+            if let Err(e) = metadata.decrypt(&tx_io_sk, &encrypted_input) {
+                return Err(BlockchainError::Message(format!("Invalid AEAD metadata: {e}")));
+            }
+        }
         let (exit_reason, out, gas_used, state) =
             self.call_with_state(state, request, fee_details, block_env)?;
         let output_data = out
-            .map(|plaintext_output| match seismic_elements {
-                Some(seismic_elements) => seismic_elements
-                    .encrypt(&tx_io_sk, &plaintext_output.data())
+            .map(|plaintext_output| match tx_metadata {
+                Some(tx_metadata) => tx_metadata
+                    .seismic_elements
+                    .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
                     .map_err(|e| {
                         BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                     })
@@ -2116,7 +2193,7 @@ impl Backend {
                             let mut inspector = self.build_inspector().with_tracing_config(
                                 TracingInspectorConfig::from_geth_call_config(&call_config),
                             );
-
+                            Self::check_calldata_decryption(&request)?;
                             let env = self.build_call_env(request, fee_details, block);
                             let mut evm =
                                 self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
@@ -2150,6 +2227,7 @@ impl Backend {
                             revm_inspectors::tracing::js::JsInspector::new(code, config)
                                 .map_err(|err| BlockchainError::Message(err.to_string()))?;
 
+                        Self::check_calldata_decryption(&request)?;
                         let env = self.build_call_env(request, fee_details, block.clone());
                         let mut evm =
                             self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
@@ -2169,6 +2247,7 @@ impl Backend {
                 .build_inspector()
                 .with_tracing_config(TracingInspectorConfig::from_geth_config(&config));
 
+            Self::check_calldata_decryption(&request)?;
             let env = self.build_call_env(request, fee_details, block);
             let mut evm = self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
             let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
@@ -2211,6 +2290,7 @@ impl Backend {
         let mut inspector =
             AccessListInspector::new(request.inner.inner.access_list.clone().unwrap_or_default());
 
+        Self::check_calldata_decryption(&request)?;
         let env = self.build_call_env(request, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
@@ -3690,9 +3770,15 @@ impl TransactionValidator for Backend {
         if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
             // check that decryption works before we create tx env for it
             let inner = seismic_tx.tx();
+            let tx_metadata = inner.tx_metadata(*pending.sender());
+            if tx_metadata.seismic_elements.signed_read {
+                return Err(InvalidTransactionError::SignedReadMismatch);
+            }
             let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
-            let _decrypted_data =
-                inner.seismic_elements.decrypt(&tx_io_sk, &inner.input).map_err(|_e| {
+            let _decrypted_data = inner
+                .seismic_elements
+                .decrypt(&tx_io_sk, &inner.input, &tx_metadata)
+                .map_err(|_e| {
                     InvalidTransactionError::SeismicDecryptionFailed(format!(
                         "Failed to decrypt seismic calldata"
                     ))

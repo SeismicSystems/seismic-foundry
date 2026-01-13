@@ -196,7 +196,6 @@ impl ClientFork {
         block: Option<BlockNumber>,
     ) -> Result<Bytes, TransportError> {
         let block = block.unwrap_or(BlockNumber::Latest);
-        // TODO: seismic provider
         let res = self.provider().call(request.clone()).block(block.into()).await?;
 
         Ok(res)

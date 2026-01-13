@@ -672,15 +672,15 @@ impl PendingTransaction {
                 } = &tx.tx();
 
                 let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
-
+                let tx_metadata = tx.tx().tx_metadata(caller);
                 OpTransaction::new(TxEnv {
                     caller,
                     kind: transact_to(to),
                     // these two have already been validated in TransactionValidator,
                     // so we simply unwrap here
                     data: seismic_elements
-                        .decrypt(&tx_io_sk, &input)
-                        .expect("failed to decrypt seismic elements")
+                        .decrypt(&tx_io_sk, &input, &tx_metadata)
+                        .expect("failed to decrypt ciphertext")
                         .into(),
                     chain_id: Some(*chain_id),
                     nonce: *nonce,
@@ -1696,7 +1696,13 @@ pub fn convert_to_anvil_receipt(receipt: AnyTransactionReceipt) -> Option<Receip
 mod tests {
     use super::*;
     use alloy_consensus::SignableTransaction;
-    use alloy_primitives::{LogData, b256, hex};
+    use alloy_primitives::{
+        FixedBytes, LogData,
+        aliases::U96,
+        b256,
+        hex::{self, FromHex},
+    };
+    use seismic_enclave::get_unsecure_sample_secp256k1_pk;
     use std::str::FromStr;
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
@@ -1942,7 +1948,9 @@ mod tests {
 
     #[test]
     fn test_seismic_tx_encoding() {
-        let decrypted_input = Bytes::from_str("0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875").unwrap();
+        // mirrors values in seismic-viem-tests/testSeismicTxEncoding
+        let _decrypted_input = Bytes::from_str("0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875").unwrap();
+        let encrypted_input = Bytes::from_str("0xbf645e68de8096b62950fac2d5bceb71ab1a085aed2e973a8b4f961ca77209f99116130edecd27c39fc62e1b3c05ff42d9e4382f987fc55c2011f8e4f2e66204e17174e9d2756bb20f4cdfe48bd5d237").unwrap();
         let orig_decoded_tx = TxSeismic {
             chain_id: 31337u64,
             nonce: 2,
@@ -1951,22 +1959,34 @@ mod tests {
             to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
             value: U256::from(1000000000000000u64),
             seismic_elements: TxSeismicElements {
-                encryption_pubkey: TxSeismicElements::get_rand_encryption_keypair().public_key(),
-                encryption_nonce: TxSeismicElements::get_rand_encryption_nonce(),
+                encryption_pubkey: get_unsecure_sample_secp256k1_pk(),
+                encryption_nonce: U96::from_str("0x46a2b6020bba77fcb1e676a6").unwrap(),
                 message_version: 0,
+                recent_block_hash: FixedBytes::<32>::from_hex(
+                    "0x934207181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f90",
+                )
+                .unwrap(),
+                expires_at_block: 100,
+                signed_read: false,
             },
-            input: decrypted_input.clone(),
+            input: encrypted_input.clone(),
         };
 
+        // Signature comes from seismic-viem-tests/testSeismicTxEncoding
         let r =
-            U256::from_str("0x1e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04")
+            U256::from_str("0xfea7db32f4e44d75eb13f84d2cf04c2808a5c8dba8dac629476fe27e04c7629f")
                 .unwrap();
         let s =
-            U256::from_str("0x779d1157c4734323923df2f41073ecb016719a577ce774ef4478c9b443caacb3")
+            U256::from_str("0x01f17d58cf879dc2c787d526b90a17b6d7bcbf4fbd581215ae3f6099e43c84c5")
                 .unwrap();
 
-        let signature = Signature::new(r, s, true);
+        let signature = Signature::new(r, s, false);
         let signed_tx: Signed<TxSeismic> = orig_decoded_tx.into_signed(signature);
+
+        let signer = signed_tx.recover_signer().unwrap();
+        let expected_signer =
+            Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap();
+        assert_eq!(signer, expected_signer);
 
         let signed_tt = TypedTransaction::Seismic(signed_tx);
 
