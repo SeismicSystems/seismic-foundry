@@ -86,8 +86,14 @@ const ensureRepoExists = async (repo: Repo): Promise<boolean> => {
   const repoLocation = getRepoLocation(repo)
   const repoExists = await fs.exists(repoLocation)
   if (repoExists) {
+    // Force a clean checkout to ensure we match remote exactly
     await spawn("git", {
-      args: ["pull"],
+      args: ["fetch", "origin"],
+      cwd: repoLocation,
+      stdio: ["inherit", "pipe", "pipe"],
+    })
+    await spawn("git", {
+      args: ["reset", "--hard", "origin/master"],
       cwd: repoLocation,
       stdio: ["inherit", "pipe", "pipe"],
     })
