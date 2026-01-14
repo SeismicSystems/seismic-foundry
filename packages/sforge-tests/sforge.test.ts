@@ -121,17 +121,16 @@ const testContracts = async (
 ): Promise<{ build: CommandOutput; test?: CommandOutput }> => {
   const contractsPath = getRepoContractsPath(repo)
   await ensurePathExists(contractsPath)
-  const spawner = process.platform === "darwin" ? spawnScript : spawn
   const stdio = ["inherit", "pipe", "pipe"] as StdioOptions
   // Clean before build to ensure fresh compilation
-  await spawner(sforgeBinary, {
+  await spawnScript(sforgeBinary, {
     args: ["clean"],
     cwd: contractsPath,
     stdio,
   })
   // Check if it builds
   // NOTE: this is redundant because `sforge test` will fail if build fails
-  const build = await spawner(sforgeBinary, {
+  const build = await spawnScript(sforgeBinary, {
     args: ["build", "--color", "always"],
     cwd: contractsPath,
     stdio,
@@ -140,7 +139,7 @@ const testContracts = async (
     return { build }
   }
   // Check if the tests pass
-  const test = await spawner(sforgeBinary, {
+  const test = await spawnScript(sforgeBinary, {
     args: ["test", "--color", "always"],
     cwd: contractsPath,
     stdio,
