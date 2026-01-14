@@ -118,6 +118,8 @@ jobs:
       SFORGE_BINARY: /home/ubuntu/.seismic/bin/sforge
     steps:
       - uses: actions/checkout@v4
+      - name: Get runner public IP
+        run: curl -s ifconfig.me && echo ""
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.2.5
