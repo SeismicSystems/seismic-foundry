@@ -199,7 +199,7 @@ pub struct ScriptArgs {
     /// and a warning will be logged. Without this flag, encountering a private
     /// storage slot will cause a hard error.
     ///
-    /// Defaults to false for scripts (secure by default).
+    /// Defaults to false for forge scripts
     #[arg(long)]
     pub unsafe_private_storage: Option<bool>,
 
@@ -241,7 +241,7 @@ impl ScriptArgs {
 
         let (config, mut evm_opts) = self.load_config_and_evm_opts()?;
 
-        // Pass through the CLI flag; if None, it will default to false in Backend (secure default)
+        // Pass through flag from `sforge script`
         if let Some(value) = self.unsafe_private_storage {
             evm_opts.unsafe_private_storage = Some(value);
         }
