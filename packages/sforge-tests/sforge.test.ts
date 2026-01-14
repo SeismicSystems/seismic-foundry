@@ -86,6 +86,11 @@ const ensureRepoExists = async (repo: Repo): Promise<boolean> => {
   const repoLocation = getRepoLocation(repo)
   const repoExists = await fs.exists(repoLocation)
   if (repoExists) {
+    await spawn("git", {
+      args: ["pull"],
+      cwd: repoLocation,
+      stdio: ["inherit", "pipe", "pipe"],
+    })
     return true
   }
   if (!repo.clone) {
