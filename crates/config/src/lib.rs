@@ -1126,7 +1126,7 @@ impl Config {
         };
         if !default_solc_path.is_file() {
             return Err(SolcError::msg(format!(
-                "`ssolc` {} does not exist",
+                "`ssolc` {} does not exist.\nInstructions to install:\nhttps://docs.seismic.systems/getting-started/publish-your-docs#install-the-local-development-suite",
                 default_solc_path.display()
             )));
         }
@@ -1143,20 +1143,11 @@ impl Config {
         if self.seismic {
             if let Some(ref solc_req) = self.solc {
                 match solc_req {
-                    SolcReq::Version(version) => {
-                        if version.to_string() == "0.8.31" {
-                            let default_solc_path = self.get_default_ssolc_path()?;
-                            return Ok(Some(Solc::new(default_solc_path)?));
-                        } else {
-                            if let Some(solc) = Solc::find_svm_installed_version(version)? {
-                                return Ok(Some(solc));
-                            } else if self.offline {
-                                return Err(SolcError::msg(format!(
-                                    "can't install missing solc {version} in offline mode"
-                                )));
-                            }
-                            return Ok(Some(Solc::blocking_install(version)?));
-                        }
+                    SolcReq::Version(_) => {
+                        // Only allow the version they have downloaded
+                        // TODO: support using different versions
+                        let default_solc_path = self.get_default_ssolc_path()?;
+                        return Ok(Some(Solc::new(default_solc_path)?));
                     }
                     SolcReq::Local(local_solc_path) => {
                         if !local_solc_path.is_file() {
@@ -2407,7 +2398,7 @@ impl Default for Config {
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,
-            solc: Some(SolcReq::Version(Version::parse("0.8.28").unwrap())),
+            solc: Some(SolcReq::Version(Version::parse("0.8.30").unwrap())),
             vyper: Default::default(),
             auto_detect_solc: true,
             offline: false,
