@@ -198,8 +198,10 @@ pub struct ScriptArgs {
     /// When this flag is set, private storage slots will be treated as zero
     /// and a warning will be logged. Without this flag, encountering a private
     /// storage slot will cause a hard error.
+    ///
+    /// Defaults to false for scripts (secure by default).
     #[arg(long)]
-    pub unsafe_private_storage: bool,
+    pub unsafe_private_storage: Option<bool>,
 
     /// Gas price for legacy transactions, or max fee per gas for EIP1559 transactions, either
     /// specified in wei, or as a string with a unit type.
@@ -239,7 +241,10 @@ impl ScriptArgs {
 
         let (config, mut evm_opts) = self.load_config_and_evm_opts()?;
 
-        evm_opts.unsafe_private_storage = self.unsafe_private_storage;
+        // Pass through the CLI flag; if None, it will default to false in Backend (secure default)
+        if let Some(value) = self.unsafe_private_storage {
+            evm_opts.unsafe_private_storage = Some(value);
+        }
 
         if let Some(sender) = self.maybe_load_private_key()? {
             evm_opts.sender = sender;

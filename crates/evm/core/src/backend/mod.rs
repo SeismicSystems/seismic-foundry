@@ -497,8 +497,11 @@ impl Backend {
             ..Default::default()
         };
 
-        let unsafe_private_storage =
-            fork.as_ref().map(|fork| fork.evm_opts.unsafe_private_storage).unwrap_or(false);
+        // Default to false (secure for scripts), but tests will override this to true
+        let unsafe_private_storage = fork
+            .as_ref()
+            .and_then(|fork| fork.evm_opts.unsafe_private_storage)
+            .unwrap_or(false);
 
         let mut backend = Self {
             forks,

@@ -180,9 +180,8 @@ impl MultiContractRunner {
         // The DB backend that serves all the data.
         let mut db = Backend::spawn(self.fork.take())?;
         // For tests, default to allowing private storage access (pure testing environment).
-        // This can be overridden by explicitly setting unsafe_private_storage in config.
-        // Scripts will keep the default behavior (false unless explicitly enabled).
-        db.set_unsafe_private_storage(true);
+        // None means use true for tests, false for scripts (context-appropriate defaults).
+        db.set_unsafe_private_storage(self.evm_opts.unsafe_private_storage.unwrap_or(true));
 
         let find_timer = Instant::now();
         let contracts = self.matching_contracts(filter).collect::<Vec<_>>();
