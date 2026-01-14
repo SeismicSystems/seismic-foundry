@@ -1126,7 +1126,7 @@ impl Config {
         };
         if !default_solc_path.is_file() {
             return Err(SolcError::msg(format!(
-                "`ssolc` {} does not exist",
+                "`ssolc` {} does not exist.\nInstructions to install:\nhttps://docs.seismic.systems/getting-started/publish-your-docs#install-the-local-development-suite",
                 default_solc_path.display()
             )));
         }
