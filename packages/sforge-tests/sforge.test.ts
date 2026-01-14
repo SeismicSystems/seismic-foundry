@@ -123,6 +123,12 @@ const testContracts = async (
   await ensurePathExists(contractsPath)
   const spawner = process.platform === "darwin" ? spawnScript : spawn
   const stdio = ["inherit", "pipe", "pipe"] as StdioOptions
+  // Clean before build to ensure fresh compilation
+  await spawner(sforgeBinary, {
+    args: ["clean"],
+    cwd: contractsPath,
+    stdio,
+  })
   // Check if it builds
   // NOTE: this is redundant because `sforge test` will fail if build fails
   const build = await spawner(sforgeBinary, {
