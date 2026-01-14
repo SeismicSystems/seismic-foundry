@@ -13,7 +13,7 @@ For details about Seismic's modifications to reth, please see:
 - seismic-reth's [README](https://github.com/SeismicSystems/seismic-reth/blob/seismic/README.md)
 - Seismic's [Features](https://github.com/SeismicSystems/seismic-reth/blob/seismic/seismic-features.md)
 
-## Installation:
+## Installation
 
 ### Seismic Forge
 To build `sforge` from source, run this from the root of this repository:
