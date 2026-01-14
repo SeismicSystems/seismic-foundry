@@ -478,6 +478,11 @@ impl Backend {
         Self::new(MultiFork::spawn(), fork)
     }
 
+    /// Sets whether to allow accessing private storage slots.
+    pub fn set_unsafe_private_storage(&mut self, allow: bool) {
+        self.unsafe_private_storage = allow;
+    }
+
     /// Creates a new instance of `Backend`
     ///
     /// If `fork` is `Some` this will use a `fork` database, otherwise with an in-memory
