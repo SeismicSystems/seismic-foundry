@@ -9,7 +9,7 @@ This repository contains modified versions of Foundry's core tools:
 - [`sforge`](https://github.com/SeismicSystems/seismic-foundry/tree/seismic/crates/forge): Seismic's version of `forge`, for testing Ethereum smart contracts
 - [`sanvil`](https://github.com/SeismicSystems/seismic-foundry/tree/seismic/crates/anvil): Seismic's version of `anvil`, for running local Ethereum test networks
 - [`scast`](https://github.com/SeismicSystems/seismic-foundry/tree/seismic/crates/cast): Seismic's version of `cast`, for interacting with Ethereum
-> **NOTE:** seismic-foundry does not yet support foundry's or `chisel`
+> **NOTE:** seismic-foundry does not yet support Foundry's `chisel`
 
 For details about Seismic's modifications to Reth, please see:
 - seismic-reth's [README](https://github.com/SeismicSystems/seismic-reth/blob/seismic/README.md)
