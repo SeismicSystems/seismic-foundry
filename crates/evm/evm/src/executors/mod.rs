@@ -91,7 +91,7 @@ sol! {
 /// - `deploy`: a special case of `transact`, specialized for persisting the state of a contract
 ///   deployment
 /// - `setup`: a special case of `transact`, used to set up the environment for a test
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Executor {
     /// The underlying `revm::Database` that contains the EVM storage.
     // Note: We do not store an EVM here, since we are really

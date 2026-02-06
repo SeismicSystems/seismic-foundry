@@ -283,7 +283,7 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
     let provider = http_provider_with_signer(&handle.http_endpoint(), signer.clone());
-    let seismic_provider = sfoundry_signed_provider(signer.clone(), node_url);
+    let seismic_provider = sfoundry_signed_provider(signer.clone(), node_url).await.unwrap();
 
     api.anvil_set_auto_mine(true).await.unwrap();
 

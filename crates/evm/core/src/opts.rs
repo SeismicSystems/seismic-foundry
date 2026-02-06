@@ -82,6 +82,10 @@ pub struct EvmOpts {
 
     /// The CREATE2 deployer's address.
     pub create2_deployer: Address,
+
+    /// Whether to allow scripts to run when encountering private storage slots.
+    #[serde(default)]
+    pub unsafe_private_storage: bool,
 }
 
 impl Default for EvmOpts {
@@ -107,6 +111,7 @@ impl Default for EvmOpts {
             enable_tx_gas_limit: false,
             odyssey: false,
             create2_deployer: DEFAULT_CREATE2_DEPLOYER,
+            unsafe_private_storage: false,
         }
     }
 }

@@ -290,7 +290,7 @@ pub struct InnerContextData {
 /// us ability to create and execute separate EVM frames from inside cheatcodes while still having
 /// access to entire stack of inspectors and correctly handling traces, logs, debugging info
 /// collection, etc.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct InspectorStack {
     pub cheatcodes: Option<Box<Cheatcodes>>,
     pub inner: InspectorStackInner,
@@ -299,7 +299,7 @@ pub struct InspectorStack {
 /// All used inpectors besides [Cheatcodes].
 ///
 /// See [`InspectorStack`].
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct InspectorStackInner {
     // Inspectors.
     // These are boxed to reduce the size of the struct and slightly improve performance of the

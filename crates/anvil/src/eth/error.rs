@@ -20,10 +20,14 @@ use revm::{
 use serde::Serialize;
 use tokio::time::Duration;
 
+use seismic_prelude::foundry::InputDecryptionElementsError;
+
 pub(crate) type Result<T> = std::result::Result<T, BlockchainError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BlockchainError {
+    #[error("{0}")]
+    FailedToDecryptCalldata(InputDecryptionElementsError),
     #[error(transparent)]
     Pool(#[from] PoolError),
     #[error("No signer available")]
@@ -229,6 +233,9 @@ pub enum InvalidTransactionError {
     /// Thrown when a seismic transaction is invalid
     #[error("Seismic decryption failed: {0}")]
     SeismicDecryptionFailed(String),
+    /// Signed read was sent as a write transaction
+    #[error("Seismic tx was marked as signed read, but sent as a write")]
+    SignedReadMismatch,
     /// returned if the nonce of a transaction is lower than the one present in the local chain.
     #[error("nonce too low")]
     NonceTooLow,
@@ -564,6 +571,9 @@ impl<T: Serialize> ToRpcResponseResult for Result<T> {
                 }
                 err @ BlockchainError::MissingRequiredFields => {
                     RpcError::invalid_params(err.to_string())
+                }
+                BlockchainError::FailedToDecryptCalldata(e) => {
+                    RpcError::invalid_params(e.to_string())
                 }
             }
             .into(),

@@ -13,6 +13,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "seismic-viem-tests": "^0.0.15"
+    "seismic-viem-tests": "^0.1.1"
   }
 }

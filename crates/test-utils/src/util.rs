@@ -47,7 +47,7 @@ static TEMPLATE_LOCK: LazyLock<PathBuf> =
 static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
 /// The default Solc version used when compiling tests.
-pub const SOLC_VERSION: &str = "0.8.30";
+pub const SOLC_VERSION: &str = "0.8.31";
 
 /// Another Solc version used when compiling tests.
 ///
@@ -286,6 +286,7 @@ pub fn initialize(target: &Path) {
             cmd.args(["init", "--force"]).assert_success();
             prj.write_config(Config {
                 solc: Some(foundry_config::SolcReq::Version(SOLC_VERSION.parse().unwrap())),
+                evm_version: foundry_compilers::artifacts::EvmVersion::Mercury,
                 ..Default::default()
             });
 

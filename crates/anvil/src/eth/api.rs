@@ -103,10 +103,12 @@ use tokio::{
 };
 use yansi::Paint;
 
-use seismic_enclave::{keys::GetPurposeKeysRequest, rpc::SyncEnclaveApiClient};
-use seismic_prelude::foundry::{
-    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
-    SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest, tx_builder,
+use seismic_prelude::{
+    foundry::{
+        AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
+        SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest, tx_builder,
+    },
+    reth::InputDecryptionElements,
 };
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -182,10 +184,9 @@ impl EthApi {
         trace!(target: "rpc::api", "executing eth request");
         let response = match request.clone() {
             EthRequest::SeismicGetTeePublicKey(()) => {
-                let result = seismic_enclave::MockEnclaveClient::new()
-                    .get_purpose_keys(GetPurposeKeysRequest { epoch: 0 })
-                    .map_err(|e| BlockchainError::Internal(e.to_string()))
-                    .map(|r| r.tx_io_pk);
+                // Use the unsecure sample public key for mock/testing
+                let result: Result<seismic_enclave::secp256k1::PublicKey> =
+                    Ok(seismic_enclave::get_unsecure_sample_secp256k1_pk());
                 result.to_rpc_result()
             }
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),
@@ -221,8 +222,8 @@ impl EthApi {
             EthRequest::EthGetStorageAt(addr, slot, block) => {
                 self.storage_at(addr, slot, block).await.to_rpc_result()
             }
-            EthRequest::EthGetStorageWithPrivacy(addr, slot, block) => {
-                self.storage_with_privacy(addr, slot, block).await.to_rpc_result()
+            EthRequest::EthGetFlaggedStorageAt(addr, slot, block) => {
+                self.flagged_storage_at(addr, slot, block).await.to_rpc_result()
             }
             EthRequest::EthGetBlockByHash(hash, full) => {
                 if full {
@@ -830,14 +831,14 @@ impl EthApi {
 
     /// Returns content of the storage at given address with privacy flag.
     ///
-    /// Handler for custom RPC call: `eth_getStorageWithPrivacy`
-    pub async fn storage_with_privacy(
+    /// Handler for custom RPC call: `eth_getFlaggedStorageAt`
+    pub async fn flagged_storage_at(
         &self,
         address: Address,
         index: U256,
         block_number: Option<BlockId>,
     ) -> Result<FlaggedStorage> {
-        node_info!("eth_getStorageWithPrivacy");
+        node_info!("eth_getFlaggedStorageAt");
         let block_request = self.block_request(block_number).await?;
 
         // check if the number predates the fork, if in fork mode
@@ -852,7 +853,7 @@ impl EthApi {
         }
 
         self.backend
-            .storage_with_privacy(address, index, Some(block_request))
+            .flagged_storage_at(address, index, Some(block_request))
             .await
             .map_err(|e| e.into())
     }
@@ -1288,6 +1289,7 @@ impl EthApi {
                     "not available on past forked blocks".to_string(),
                 ));
             }
+            // TODO: allow them to make seismic calls on forks
             return Ok(fork.call(&seismic_request, Some(number.into())).await?);
         }
 
@@ -1374,6 +1376,9 @@ impl EthApi {
                 let sender = signed_seismic_tx.recover_signer().map_err(|e| {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
+                if let Err(e) = signed_seismic_tx.tx().metadata(sender) {
+                    return Err(BlockchainError::FailedToDecryptCalldata(e));
+                };
                 let mut request = WithOtherFields::new(tx);
                 request.inner.inner.from = Some(sender);
 
@@ -3304,10 +3309,10 @@ impl EthApi {
         // Binary search for the ideal gas limit
         while (highest_gas_limit - lowest_gas_limit) > 1 {
             seismic_request.set_gas_limit(mid_gas_limit as u64);
-            let request = seismic_request.clone().inner.inner;
+            let request = seismic_request.clone().inner;
             let ethres = self.backend.call_with_state(
                 &state,
-                WithOtherFields::new(request.clone().into()),
+                WithOtherFields::new(request.clone()),
                 fees.clone(),
                 block_env.clone(),
             );

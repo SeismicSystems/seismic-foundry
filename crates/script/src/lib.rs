@@ -193,6 +193,14 @@ pub struct ScriptArgs {
     #[arg(long)]
     pub verify: bool,
 
+    /// Allow scripts to run when encountering private storage slots.
+    ///
+    /// When this flag is set, private storage slots will be treated as zero
+    /// and a warning will be logged. Without this flag, encountering a private
+    /// storage slot will cause a hard error.
+    #[arg(long)]
+    pub unsafe_private_storage: bool,
+
     /// Gas price for legacy transactions, or max fee per gas for EIP1559 transactions, either
     /// specified in wei, or as a string with a unit type.
     ///
@@ -230,6 +238,8 @@ impl ScriptArgs {
         let script_wallets = Wallets::new(self.wallets.get_multi_wallet().await?, self.evm.sender);
 
         let (config, mut evm_opts) = self.load_config_and_evm_opts()?;
+
+        evm_opts.unsafe_private_storage = self.unsafe_private_storage;
 
         if let Some(sender) = self.maybe_load_private_key()? {
             evm_opts.sender = sender;
@@ -782,10 +792,10 @@ mod tests {
 
         let config = r#"
                 [profile.default]
-                etherscan_api_key = "mumbai"
+                etherscan_api_key = "amoy"
 
                 [etherscan]
-                mumbai = { key = "https://etherscan-mumbai.com/" }
+                amoy = { key = "https://etherscan-amoy.com/" }
             "#;
 
         let toml_file = root.join(Config::FILE_NAME);
@@ -794,14 +804,14 @@ mod tests {
             "foundry-cli",
             "Contract.sol",
             "--etherscan-api-key",
-            "mumbai",
+            "amoy",
             "--root",
             root.as_os_str().to_str().unwrap(),
         ]);
 
         let config = args.load_config().unwrap();
-        let mumbai = config.get_etherscan_api_key(Some(NamedChain::PolygonMumbai.into()));
-        assert_eq!(mumbai, Some("https://etherscan-mumbai.com/".to_string()));
+        let amoy = config.get_etherscan_api_key(Some(NamedChain::PolygonAmoy.into()));
+        assert_eq!(amoy, Some("https://etherscan-amoy.com/".to_string()));
     }
 
     #[test]

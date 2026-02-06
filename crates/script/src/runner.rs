@@ -18,7 +18,6 @@ use std::collections::VecDeque;
 use seismic_prelude::foundry::TransactionRequest;
 
 /// Drives script execution
-#[derive(Debug)]
 pub struct ScriptRunner {
     pub executor: Executor,
     pub evm_opts: EvmOpts,
