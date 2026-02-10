@@ -34,7 +34,6 @@ pub use env::*;
 pub mod backend;
 pub mod buffer;
 pub mod constants;
-pub mod seismic_constants;
 pub mod decode;
 pub mod either_evm;
 pub mod evm;
@@ -42,6 +41,7 @@ pub mod fork;
 pub mod ic;
 pub mod opts;
 pub mod precompiles;
+pub mod seismic_constants;
 pub mod state_snapshot;
 pub mod utils;
 
