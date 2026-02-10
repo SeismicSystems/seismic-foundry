@@ -27,6 +27,10 @@ use foundry_evm_core::{
         DEFAULT_CREATE2_DEPLOYER_CODE, DEFAULT_CREATE2_DEPLOYER_DEPLOYER,
     },
     decode::{RevertDecoder, SkipReason},
+    seismic_constants::{
+        AES_LIB, AES_LIB_RUNTIME_CODE, DIRECTORY, DIRECTORY_RUNTIME_CODE, INTELLIGENCE,
+        INTELLIGENCE_RUNTIME_CODE,
+    },
     utils::StateChangeset,
 };
 use foundry_evm_coverage::HitMaps;
@@ -237,6 +241,22 @@ impl Executor {
 
             self.set_balance(creator, initial_balance)?;
         }
+        Ok(())
+    }
+
+    /// Creates the Directory contract, along with its AES lib dependency.
+    pub fn set_directory(&mut self) -> eyre::Result<()> {
+        self.set_code(AES_LIB, Bytecode::new_raw(Bytes::from_static(AES_LIB_RUNTIME_CODE)))?;
+        self.set_code(DIRECTORY, Bytecode::new_raw(Bytes::from_static(DIRECTORY_RUNTIME_CODE)))?;
+        Ok(())
+    }
+
+    /// Creates the Intelligence contract.
+    pub fn set_intelligence(&mut self) -> eyre::Result<()> {
+        self.set_code(
+            INTELLIGENCE,
+            Bytecode::new_raw(Bytes::from_static(INTELLIGENCE_RUNTIME_CODE)),
+        )?;
         Ok(())
     }
 

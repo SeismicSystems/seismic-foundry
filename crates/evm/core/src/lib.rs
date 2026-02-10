@@ -41,6 +41,7 @@ pub mod fork;
 pub mod ic;
 pub mod opts;
 pub mod precompiles;
+pub mod seismic_constants;
 pub mod state_snapshot;
 pub mod utils;
 
