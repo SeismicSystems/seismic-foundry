@@ -34,6 +34,7 @@ pub use env::*;
 pub mod backend;
 pub mod buffer;
 pub mod constants;
+pub mod seismic_constants;
 pub mod decode;
 pub mod either_evm;
 pub mod evm;
