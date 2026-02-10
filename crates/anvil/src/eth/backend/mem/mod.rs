@@ -92,12 +92,10 @@ use eyre::{Context, Result};
 use flate2::{Compression, read::GzDecoder, write::GzEncoder};
 use foundry_evm::{
     backend::{DatabaseError, DatabaseResult, RevertStateSnapshotAction},
-    constants::{
-        AES_LIB_RUNTIME_CODE, DEFAULT_CREATE2_DEPLOYER_RUNTIME_CODE, DIRECTORY_RUNTIME_CODE,
-        INTELLIGENCE_RUNTIME_CODE,
-    },
+    constants::DEFAULT_CREATE2_DEPLOYER_RUNTIME_CODE,
     decode::RevertDecoder,
     inspectors::AccessListInspector,
+    seismic_constants::{AES_LIB_RUNTIME_CODE, DIRECTORY_RUNTIME_CODE, INTELLIGENCE_RUNTIME_CODE},
     traces::{CallTraceDecoder, TracingInspectorConfig},
     utils::{get_blob_base_fee_update_fraction, get_blob_base_fee_update_fraction_by_spec_id},
 };

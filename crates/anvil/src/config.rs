@@ -38,7 +38,8 @@ use foundry_common::{
 use foundry_config::Config;
 use foundry_evm::{
     backend::{BlockchainDb, BlockchainDbMeta, SharedBackend},
-    constants::{AES_LIB, DEFAULT_CREATE2_DEPLOYER, DIRECTORY, INTELLIGENCE},
+    constants::DEFAULT_CREATE2_DEPLOYER,
+    seismic_constants::{AES_LIB, DIRECTORY, INTELLIGENCE},
     utils::{apply_chain_and_block_specific_env_changes, get_blob_base_fee_update_fraction},
 };
 use foundry_evm_core::AsEnvMut;
