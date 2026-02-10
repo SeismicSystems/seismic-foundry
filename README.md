@@ -6,14 +6,13 @@ It provides a testing toolchain specifically designed for Seismic's [modified ve
 ## Overview
 
 This repository contains modified versions of Foundry's core tools:
-- [`sforge`](https://github.com/SeismicSystems/seismic-foundry/tree/seismic/crates/forge): Seismic's version of `forge`, for testing Ethereum smart contracts
-- [`sanvil`](https://github.com/SeismicSystems/seismic-foundry/tree/seismic/crates/anvil): Seismic's version of `anvil`, for running local Ethereum test networks
-- [`scast`](https://github.com/SeismicSystems/seismic-foundry/tree/seismic/crates/cast): Seismic's version of `cast`, for interacting with Ethereum
-> **NOTE:** seismic-foundry does not yet support Foundry's `chisel`
+- [`sforge`](https://github.com/SeismicSystems/seismic-foundry/tree/seismic/crates/forge): Seismic's version of `forge`, for testing Seismic/Ethereum smart contracts
+- [`sanvil`](https://github.com/SeismicSystems/seismic-foundry/tree/seismic/crates/anvil): Seismic's version of `anvil`, for running local Seismic/Ethereum test networks
+- [`scast`](https://github.com/SeismicSystems/seismic-foundry/tree/seismic/crates/cast): Seismic's version of `cast`, for interacting with Seismic/Ethereum networks
 
-For details about Seismic's modifications to Reth, please see:
-- seismic-reth's [README](https://github.com/SeismicSystems/seismic-reth/blob/seismic/README.md)
-- Seismic's [Features](https://github.com/SeismicSystems/seismic-reth/blob/seismic/seismic-features.md)
+For more info on our Seismic-specific changes (shielded transactions, private storage, SEVM, `ssolc` compiler), see the [contributors](docs/seismic/contributors.md) docs.
+
+> **NOTE:** seismic-foundry does not yet support Foundry's `chisel`
 
 ## Installation
 
