@@ -6,6 +6,7 @@ use alloy_rpc_types::BlockNumberOrTag;
 
 use op_revm::OpSpecId;
 use revm::primitives::hardfork::SpecId;
+use seismic_prelude::foundry::SeismicSpecId;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ChainHardfork {
@@ -125,8 +126,9 @@ impl FromStr for SeismicHardfork {
 impl From<SeismicHardfork> for SpecId {
     fn from(fork: SeismicHardfork) -> Self {
         match fork {
-            SeismicHardfork::Mercury => Self::MERCURY,
-            SeismicHardfork::Latest => Self::MERCURY,
+            SeismicHardfork::Mercury | SeismicHardfork::Latest => {
+                SeismicSpecId::MERCURY.into()
+            }
         }
     }
 }
