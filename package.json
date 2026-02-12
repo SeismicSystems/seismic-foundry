@@ -6,9 +6,5 @@
   "scripts": {
     "viem:test": "bun run --cwd packages/client-tests test",
     "forge:test": "bun run --cwd packages/sforge-tests test"
-  },
-  "dependencies": {
-    "seismic-viem": "^1.1.1",
-    "seismic-viem-tests": "^0.1.3"
   }
 }
