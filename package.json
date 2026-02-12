@@ -8,7 +8,7 @@
     "forge:test": "bun run --cwd packages/sforge-tests test"
   },
   "dependencies": {
-    "seismic-viem": "^1.1.0",
-    "seismic-viem-tests": "^0.1.1"
+    "seismic-viem": "^1.1.1",
+    "seismic-viem-tests": "^0.1.3"
   }
 }
