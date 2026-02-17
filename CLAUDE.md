@@ -25,7 +25,7 @@ pub use seismic_revm::SeismicEvm as RevmEvm;
 // ... etc
 ```
 
-Then in seismic-foundry source files, the import is the **only line that changes**:
+Then in seismic-foundry source files, the import is often the **only line that changes**, drastically reducing the diff:
 
 ```rust
 // Instead of: use alloy_consensus::TxEnvelope;
