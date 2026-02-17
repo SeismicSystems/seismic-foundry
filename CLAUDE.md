@@ -69,6 +69,20 @@ This means upstream PRs that reference `TxEnvelope`, `AnyNetwork`, `SpecId`, etc
 - **When upstream adds new code using these type names**: It compiles immediately — the prelude alias resolves it to the Seismic version.
 - All consuming files use `use seismic_prelude::foundry::{...}` — currently used across ~96 source files.
 
+### Comment-Out Strategy for Cleaner Diffs
+
+When removing upstream code, **prefer wrapping it in a multi-line comment** rather than deleting it:
+
+```rust
+/*
+fn upstream_function_we_dont_need() {
+    // original upstream code
+}
+*/
+```
+
+This tricks git/GitHub into presenting a cleaner diff — the lines show as modified rather than deleted+added, which makes upstream merges significantly easier to review and resolve.
+
 ---
 
 ## Build
@@ -134,7 +148,7 @@ Runs `packages/sforge-tests/` — clones Seismic contract repos (currently `poke
 
 ## Key Seismic Modifications
 
-This section maps every significant change from upstream Foundry. This is the delta — if it's not listed here, it's unchanged from upstream.
+This section maps the major changes from upstream Foundry. It covers the most important modifications but may not be exhaustive — when in doubt, check the actual code.
 
 ### Binary Renaming
 
