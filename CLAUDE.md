@@ -1,213 +1,321 @@
 # Seismic Foundry
 
-Fork of [Foundry](https://github.com/foundry-rs/foundry) that adds **shielded transactions and private storage** to the EVM toolchain. Provides three Seismic-specific binaries — `sforge`, `sanvil`, `scast` — that integrate with the Seismic Solidity compiler (`ssolc`) and Seismic EVM (`SEVM`) for privacy-aware smart contract development.
+Fork of [Foundry](https://github.com/foundry-rs/foundry) adding **shielded transactions and private storage** to the EVM toolchain. Provides three Seismic-specific binaries — `sforge`, `sanvil`, `scast` — that integrate with the Seismic Solidity compiler [`ssolc`](https://github.com/SeismicSystems/seismic-solidity) and the Mercury EVM for privacy-aware smart contract development.
 
-## What This Does
+---
 
-Standard Foundry tools (`forge`, `anvil`, `cast`) target public Ethereum. Seismic extends them with:
-- **`sforge`** — testing framework for shielded contracts; uses `ssolc` (at `/usr/local/bin/ssolc`) by default
-- **`sanvil`** — local node with native private storage and shielded transaction support (encryption/decryption done in-node, no TEE required)
-- **`scast`** — CLI with `--seismic` flag for client-side encryption of send/call transactions via secp256k1 key exchange
+## CRITICAL: The `seismic-prelude` Import Aliasing Strategy
 
-All three use Seismic-patched dependencies (`seismic-revm`, `seismic-alloy`, `seismic-evm`, etc.) pinned via `[patch.crates-io]` in the workspace `Cargo.toml`.
+**This is the single most important pattern in this codebase.** Understanding it is essential before making any changes.
+
+### The Problem
+
+Seismic replaces many core types (`TxEnvelope`, `AnyNetwork`, `SpecId`, etc.) with Seismic-aware versions (`SeismicTxEnvelope`, `SeismicFoundry`, `SeismicSpecId`, etc.). Naively, every function signature, return type, and variable using these types would need to change — creating massive diffs and guaranteed merge conflicts with upstream Foundry.
+
+### The Solution
+
+The `seismic-prelude` crate (lives in [`seismic-alloy/crates/prelude/`](https://github.com/SeismicSystems/seismic-alloy)) re-exports all Seismic types **aliased to their upstream names**:
+
+```rust
+// In seismic-prelude/src/foundry.rs:
+pub use seismic_alloy_consensus::SeismicTxEnvelope as TxEnvelope;
+pub use seismic_alloy_network::foundry::SeismicFoundry as AnyNetwork;
+pub use seismic_revm::SeismicSpecId as SpecId;
+pub use seismic_revm::SeismicEvm as RevmEvm;
+// ... etc
+```
+
+Then in seismic-foundry source files, the import is the **only line that changes**:
+
+```rust
+// Instead of: use alloy_consensus::TxEnvelope;
+use seismic_prelude::foundry::TxEnvelope;
+
+// The rest of the file uses `TxEnvelope` unchanged — zero diff from upstream
+fn process_tx(tx: TxEnvelope) -> Result<...> { ... }
+```
+
+This means upstream PRs that reference `TxEnvelope`, `AnyNetwork`, `SpecId`, etc. merge with near-zero friction — those names already resolve to Seismic equivalents via the prelude.
+
+### Key Aliases
+
+| Seismic Type (real name) | Alias (upstream name) |
+|---|---|
+| `SeismicTxEnvelope` | `TxEnvelope` |
+| `SeismicReceiptEnvelope` | `AnyReceiptEnvelope` |
+| `SeismicFoundry` | `AnyNetwork` |
+| `SeismicFoundryTxEnvelope` | `AnyTxEnvelope` |
+| `SeismicFoundryTypedTransaction` | `AnyTypedTransaction` |
+| `SeismicFoundryRpcBlock` | `AnyRpcBlock` |
+| `SeismicFoundryRpcTransaction` | `AnyRpcTransaction` |
+| `SeismicFoundryTransactionRequest` | `AnyTransactionRequest` |
+| `SeismicTransactionRequest` | `TransactionRequest` |
+| `SeismicTransactionReceipt` | `TransactionReceipt` |
+| `SeismicTransaction` (network) | `RpcTransaction` |
+| `SeismicGasFiller` | `GasFiller` |
+| `SeismicSpecId` | `SpecId` |
+| `SeismicEvm` | `RevmEvm` |
+| `SeismicContext` | `EthEvmContext` |
+| `SeismicInstructions` | `EthInstructions` |
+| `SeismicHaltReason` | `OpHaltReason` |
+| `SeismicTransaction` (revm) | `OpTransaction` |
+| `SeismicWallet<AnyNetwork>` | `EthereumWallet` |
+| `SeismicTransaction<RevmTxEnv>` | `TxEnv` |
+| `RevmCfgEnv<SeismicSpecId>` | `CfgEnv` |
+
+### Rules
+
+- **When adding a new Seismic type that replaces an upstream type**: Add the alias in `seismic-prelude/src/foundry.rs`, then import from `seismic_prelude::foundry::` in consuming files. Never rename at every call site.
+- **When upstream adds new code using these type names**: It compiles immediately — the prelude alias resolves it to the Seismic version.
+- All consuming files use `use seismic_prelude::foundry::{...}` — currently used across ~96 source files.
+
+---
 
 ## Build
 
-Rust workspace using Cargo. MSRV: **1.89**, edition: **2024**. Outputs are in `target/debug/` (or `target/release/`).
-
-### Prerequisites (all platforms)
-
-- Rust 1.89+ (stable toolchain)
-- `ssolc` binary at `/usr/local/bin/ssolc` (required for sforge tests; install via [sfoundryup](https://docs.seismic.systems/getting-started/installation))
-
-### macOS (arm64/x86_64)
-
 ```bash
-# Build individual binaries (recommended — faster than full workspace)
-cargo build --bin sforge
-cargo build --bin sanvil
-cargo build --bin scast
-
-# Or build all three
-cargo build --bin sforge --bin sanvil --bin scast
-```
-
-### Linux (Ubuntu/Debian)
-
-```bash
-sudo apt-get update
-sudo apt-get install -y build-essential pkg-config libssl-dev
-
+# Build individual binaries (recommended)
 cargo build --bin sforge
 cargo build --bin sanvil
 cargo build --bin scast
 ```
 
-### Full workspace build (includes all features)
+### Prerequisites
 
-```bash
-# The Makefile sets features: jemalloc aws-kms gcp-kms cli asm-keccak
-make build
-# Or with custom profile:
-make build PROFILE=release
-```
+- Rust (stable toolchain)
+- `ssolc` binary at `/usr/local/bin/ssolc` (required for sforge tests)
+  - Install via [sfoundryup](https://docs.seismic.systems/getting-started/installation)
+  - Or download from [seismic-solidity releases](https://github.com/SeismicSystems/seismic-solidity/releases)
 
-### Install to PATH
-
-```bash
-cargo install --root=$HOME/.seismic --path ./crates/forge --locked   # sforge
-cargo install --root=$HOME/.seismic --path ./crates/anvil --locked   # sanvil
-cargo install --root=$HOME/.seismic --path ./crates/cast --locked    # scast
-# Add $HOME/.seismic/bin to your PATH
-```
-
-### Verify
-
-```bash
-./target/debug/sforge --version   # sforge Version: 1.3.5-dev
-./target/debug/sanvil --version   # anvil Version: 1.3.5-dev
-./target/debug/scast --version    # cast Version: 1.3.5-dev
-```
+---
 
 ## Test
 
-### Seismic-specific tests (CI suite)
-
-These are the tests that CI runs on every PR. They all pass locally.
+### Seismic CI tests (what CI runs on every PR)
 
 ```bash
-# Seismic unit tests
 cargo nextest run test_seismic_tx_encoding
-
-# Seismic integration tests
 cargo nextest run test_seismic_
-
-# Private storage tests
 cargo nextest run private_storage_
-```
-
-### Full unit test suite
-
-Requires `cargo-nextest` (`cargo install cargo-nextest`).
-
-```bash
-# From bash (the ! in the filter expression requires bash, not zsh)
-bash -c 'cargo nextest run -E "kind(test) & !test(/\b(issue|ext_integration)/)"'
-
-# Or use make (runs via bash internally)
-make test-unit
-```
-
-### Doc tests
-
-```bash
-# All workspace doc tests (cast doctests require a running RPC node — expect failures)
-cargo test --doc --workspace
-
-# Doc tests excluding cast (all pass)
-cargo test --doc --workspace --exclude cast
 ```
 
 ### Viem integration tests
 
-Requires `bun` and a built `sanvil` binary.
+```bash
+bun install && bun viem:test
+```
+
+Runs `packages/client-tests/` — uses `seismic-viem` and `seismic-viem-tests` to test `sanvil` end-to-end. Covers: SeismicTx deployment and calls, typed data signing (EIP-712), WebSocket connections, all 6 Mercury precompiles (RNG, ECDH, HKDF, AES-GCM, secp256k1 sign), and transaction trace shielding. Requires a built `sanvil` binary.
+
+### Contract tests
 
 ```bash
-bun install
-bun viem:test    # runs packages/client-tests
+bun install && bun forge:test
 ```
 
-### Contract tests (sforge)
+Runs `packages/sforge-tests/` — clones Seismic contract repos (currently `poker`) and runs `sforge build` + `sforge test` against them. Verifies that real shielded contracts compile and pass their test suites with the current `sforge` binary. Requires an installed `sforge` in PATH.
 
-Requires `bun` and an installed `sforge` binary.
-
-```bash
-bun install
-bun forge:test   # runs packages/sforge-tests
-```
-
-## Project Layout
-
-```
-crates/
-  forge/               sforge binary — test framework for shielded contracts
-  anvil/               sanvil binary — local Seismic node
-    core/              Core transaction types (TxSeismic encoding)
-    rpc/               RPC server implementation
-    server/            HTTP/WS server
-  cast/                scast binary — CLI with --seismic encryption
-  cheatcodes/          EVM cheatcodes (+ spec/ for cheatcode definitions)
-  config/              Workspace config (seismic flag, seismic_version, ssolc path)
-  evm/
-    core/              EVM backend (private storage implementation)
-    evm/               Main EVM execution
-    coverage/          Code coverage
-    fuzz/              Fuzz testing with proptest
-    traces/            Execution traces
-  common/              Shared utilities (+ fmt/ for formatting)
-  cli/                 CLI framework shared by all binaries
-  fmt/                 Solidity formatter
-  lint/                Solidity linter
-  doc/                 Documentation generator
-  debugger/            Interactive debugger
-  wallets/             Wallet integration (HW wallets, AWS/GCP KMS)
-  script/              Script execution engine
-  script-sequence/     Script sequencing
-  verify/              Contract verification
-  chisel/              REPL (not yet supported for Seismic)
-  macros/              Proc macros
-  test-utils/          Test utilities
-  linking/             Contract linking
-  sol-macro-gen/       Solidity macro generation
-packages/
-  client-tests/        Viem integration tests (bun)
-  sforge-tests/        Contract tests via sforge (bun)
-npm/                   npm package wrappers for multi-platform distribution
-testdata/              Test fixtures
-docs/seismic/          Seismic-specific technical documentation
-sfoundryup/            Installation script
-```
-
-## Key Seismic Modifications
-
-- **Config**: `crates/config/src/lib.rs` — `seismic` flag (default: `true`), `seismic_version` for SEVM spec
-- **Private storage**: `crates/evm/core/` — backend support for shielded storage reads/writes
-- **Transaction types**: `crates/anvil/core/` — `TxSeismic` type with encryption parameters (public key, nonce, message version, block hash, expiry)
-- **scast encryption**: `crates/cast/` — `--seismic` flag for send, `--encryption-private-key` for call; fetches TEE pubkey via `get_tee_pubkey()` RPC
-- **Patched dependencies**: `Cargo.toml` `[patch.crates-io]` — Seismic forks of alloy-core, revm, alloy, compilers, fork-db, evm, trie
-
-## Code Style
-
-- **Rust formatting**: `rustfmt` (nightly) — `rustfmt.toml`: 100 char max width, crate-level import granularity
-- **Linting**: `clippy` (nightly) — disallows `std::print`/`println` (use `sh_print`/`sh_println` from `foundry_common::shell`)
-- **Other formatters**: `dprint` for Markdown, TOML, JSON, TypeScript, YAML (`dprint.json`)
-- **Spell check**: `typos` CLI (`typos.toml`)
-- **Lint commands**: `make fmt`, `make lint-clippy`, `make lint-typos`, `make lint` (all)
+---
 
 ## CI
 
-GitHub Actions (`.github/workflows/seismic.yml`):
+**`seismic.yml` is the only CI workflow we use.** The other workflow files (`test.yml`, `nextest.yml`, `benchmarks.yml`, etc.) are inherited from upstream Foundry and are not active on the `seismic` branch.
+
+`.github/workflows/seismic.yml` runs 6 jobs:
 
 1. **rustfmt** — `cargo fmt --all --check` (nightly)
 2. **build** — `cargo build --bin sforge` + `cargo build --bin sanvil`
-3. **warnings** — `RUSTFLAGS="-D warnings" cargo check --bin sforge/sanvil`
+3. **warnings** — `RUSTFLAGS="-D warnings" cargo check` on sforge and sanvil
 4. **test** — installs `ssolc`, runs `test_seismic_tx_encoding`, `test_seismic_`, `private_storage_`
 5. **viem** — builds `sanvil`, runs `bun viem:test`
 6. **contract-tests** — installs `sforge`, runs `bun forge:test`
+
+---
+
+## Key Seismic Modifications
+
+This section maps every significant change from upstream Foundry. This is the delta — if it's not listed here, it's unchanged from upstream.
+
+### Binary Renaming
+
+| Upstream | Seismic | Location |
+|----------|---------|----------|
+| `forge` | `sforge` | `crates/forge/Cargo.toml` `[[bin]]` |
+| `anvil` | `sanvil` | `crates/anvil/Cargo.toml` `[[bin]]` |
+| `cast` | `scast` | `crates/cast/Cargo.toml` `[[bin]]` |
+
+### Patched Dependencies (`Cargo.toml [patch.crates-io]`)
+
+All core Foundry dependencies are replaced with Seismic forks pinned to specific commits:
+
+| Seismic Fork Repo | What It Replaces |
+|---|---|
+| `seismic-alloy-core` | `alloy-primitives`, `alloy-sol-types`, `alloy-dyn-abi`, `alloy-json-abi`, `alloy-sol-macro*` — adds `FlaggedStorage`, shielded types |
+| `seismic-revm` | `revm`, `revm-interpreter`, `revm-primitives`, `revm-context-interface`, `op-revm` — Mercury EVM with CLOAD/CSTORE opcodes and 6 precompiles |
+| `seismic-alloy` | `seismic-alloy-consensus`, `seismic-alloy-network`, `seismic-alloy-provider`, `seismic-alloy-rpc-types`, `seismic-prelude` — TxSeismic, SeismicProviderExt, type aliasing |
+| `seismic-evm` | `alloy-evm`, `alloy-op-evm`, `alloy-seismic-evm` — block execution layer |
+| `seismic-compilers` | `foundry-compilers*` — compiler integration for `ssolc` |
+| `seismic-foundry-fork-db` | `foundry-fork-db` — fork DB with FlaggedStorage support |
+| `seismic-trie` | `alloy-trie` — Merkle trie with `is_private` flag per leaf |
+| `seismic-revm-inspectors` | `revm-inspectors` — EVM tracing for Seismic |
+| `enclave` | `seismic-enclave` — TEE mock (unsecure sample keys for local dev) |
+
+### `crates/config/` — Global Config
+
+- **`src/lib.rs`**: `seismic: bool` field on `Config` (default: `true`) — master switch for using `ssolc` instead of standard `solc`
+- `sanitize_seismic_settings()` — auto-sets `seismic = true` when `evm_version == Mercury`
+- `get_default_ssolc_path()` — `/usr/local/bin/ssolc` (Linux/macOS), `C:\Program Files\Seismic\bin\ssolc.exe` (Windows)
+- `ensure_solc()` — when `seismic = true`, overrides solc resolution to use `ssolc`
+
+### `crates/anvil/` — sanvil (largest set of changes)
+
+**`src/hardfork.rs`**:
+- `SeismicHardfork` enum (`Mercury`, `Latest`)
+- `ChainHardfork` enum wrapping Ethereum/Optimism/Seismic hardforks
+- Conversion: `SeismicHardfork` → `SeismicSpecId::MERCURY`
+
+**`src/config.rs`**:
+- `enable_seismic: bool` on `NodeConfig`, `with_seismic()` builder
+- Injects 3 system contracts at genesis: `AES_LIB`, `DIRECTORY`, `INTELLIGENCE` (addresses at `0x100000000000000000000000000000000000000{3,4,5}`)
+
+**`src/cmd.rs`**:
+- `--seismic` CLI flag on `AnvilEvmArgs`
+
+**`src/eth/api.rs`**:
+- `seismic_getTeePublicKey` RPC — returns the unsecure sample secp256k1 public key (TEE mock)
+- `eth_getFlaggedStorageAt` RPC — returns `FlaggedStorage` (value + `is_private` flag)
+- `seismic_call()` handler — executes encrypted calls
+
+**`src/eth/error.rs`**:
+- `FailedToDecryptCalldata`, `SeismicDecryptionFailed`, `SignedReadMismatch`, `MissingRequiredFields` error variants
+
+**`src/eth/backend/mem/mod.rs`** (the core):
+- System contract bytecode injection at startup
+- `seismic_call()` + `seismic_call_with_state()` — full encrypted call pipeline (decrypt input → execute → encrypt output)
+- `validate_seismic_call_tx_metadata()` — validates SeismicTx fields
+- `validate_pool_transaction()` — rejects invalid SeismicTx (bad signature, failed decryption, signed-read-as-write)
+- `flagged_storage_at()` — returns value + privacy flag
+- Uses `seismic_enclave::get_unsecure_sample_secp256k1_sk()` as mock TEE I/O key
+
+**`src/eth/backend/mem/state.rs`**:
+- `trie_storage()` passes `is_private` flag per leaf to `seismic-trie`
+
+**`src/eth/backend/db.rs`**:
+- `set_storage_at()` and `storage_ref()` use `FlaggedStorage` instead of `U256`
+- `SerializableAccountRecord.storage` is `BTreeMap<U256, FlaggedStorage>`
+
+**`src/eth/backend/env.rs`**:
+- `Env.is_seismic: bool` (hardcoded `true`)
+
+### `crates/anvil/core/` — Transaction Types
+
+**`src/eth/mod.rs`**:
+- `SeismicGetTeePublicKey` and `EthGetFlaggedStorageAt` variants in `EthRequest` enum
+
+**`src/eth/transaction/mod.rs`**:
+- `TypedTransaction::Seismic(Signed<TxSeismic>)` variant
+- `TypedTransactionRequest::Seismic(TxSeismic)` variant
+- `transaction_request_to_typed()` handles `SEISMIC_TX_TYPE_ID` (type 74)
+- `to_evm_tx_env()` decrypts SeismicTx calldata before EVM execution
+- `Decodable2718` recognizes type 74 and decodes into `Signed<TxSeismic>`
+- `test_seismic_tx_encoding()` — cross-checks encoding with `seismic-viem-tests`
+
+### `crates/cast/` — scast
+
+**`src/cmd/send.rs`**:
+- `--seismic [ENCRYPTION_PRIVATE_KEY]` flag
+- Fetches TEE pubkey via `provider.get_tee_pubkey()`, encrypts calldata via ECDH + AEAD
+- Converts EIP-1559 gas fields to legacy `gas_price` (SeismicTx uses legacy gas format)
+- Sets `transaction_type = TxSeismic::TX_TYPE` (74)
+
+**`src/cmd/call.rs`**:
+- `--encryption-private-key [KEY]` flag
+- Encrypts calldata, calls `provider.seismic_call()`, decrypts response
+
+**`src/cmd/da_estimate.rs`**:
+- Panics on SeismicTx — "Seismic transactions are not supported for DA estimates"
+
+### `crates/evm/core/` — EVM Backend
+
+**`src/seismic_constants.rs`** (new file):
+- Hardcoded addresses and runtime bytecodes for AES_LIB, DIRECTORY, INTELLIGENCE system contracts
+
+**`src/backend/mod.rs`**:
+- `unsafe_private_storage: bool` on `Backend` — **enforcement point**: if a private storage slot is read and this flag is `false`, returns `DatabaseError::PrivateStorage` instead of the value
+- `storage()` and `storage_ref()` return `FlaggedStorage` (not `U256`)
+
+**`src/opts.rs`**:
+- `unsafe_private_storage: bool` on `EvmOpts` (default `false`)
+
+**`src/evm.rs`**:
+- EVM construction uses `SeismicChain::default()` context, `SeismicPrecompiles`, `EthInstructions`
+- Type alias: `SeismicFoundryPrecompiles`
+
+**`src/either_evm.rs`**:
+- `EitherEvm` has only one variant: `Seismic(...)` — upstream Eth/Op variants are removed
+
+**`src/backend/snapshot.rs`**:
+- Storage snapshots use `HashMap<U256, FlaggedStorage>`
+
+### `crates/evm/evm/` — Executor Layer
+
+**`src/executors/mod.rs`**:
+- `insert_account_storage()` and `set_storage_at()` take `FlaggedStorage` instead of `U256`
+
+**`src/executors/trace.rs`**:
+- State map uses `HashMap<U256, FlaggedStorage>`
+
+### `crates/forge/` — sforge
+
+**`src/multi_runner.rs`**:
+- `db.set_unsafe_private_storage(true)` — all test runs unconditionally allow private storage access (tests need to read shielded state)
+
+**`tests/cli/script.rs`**:
+- `private_storage_blocked_without_flag` and `private_storage_allowed_with_flag` integration tests
+
+### `crates/script/`
+
+**`src/lib.rs`**:
+- `--unsafe-private-storage` CLI flag, propagated to `evm_opts.unsafe_private_storage`
+- `seismic_elements: None` set explicitly on `TransactionRequest` construction
+
+### `crates/cheatcodes/`
+
+**`src/inspector.rs`**:
+- Defensive `seismic_elements: None` in transaction request construction (no new Seismic cheatcodes added)
+
+### `crates/common/fmt/`
+
+**`src/ui.rs`**:
+- `UIfmt` implementation for `Signed<TxSeismic>` — pretty-prints `encryptionPubkey`, `encryptionNonce`, `messageVersion`
+
+### New Directories (Seismic-only, not in upstream)
+
+| Directory | Purpose |
+|---|---|
+| `packages/client-tests/` | Viem integration tests against sanvil (TypeScript/Bun) |
+| `packages/sforge-tests/` | Contract compilation/test validation with sforge (TypeScript/Bun) |
+| `sfoundryup/` | Installer script — installs `ssolc`, builds and installs `sforge`/`sanvil`/`scast` |
+| `docs/seismic/` | Seismic-specific technical documentation |
+| `.github/workflows/seismic.yml` | Seismic CI workflow (the only active one) |
+| `crates/anvil/tests/it/seismic.rs` | Anvil integration tests for SeismicTx and precompiles |
+
+### Pervasive Changes
+
+- **`FlaggedStorage` replaces `U256`** for all storage values throughout the EVM stack (backend, executor, snapshots, state trie, DB serialization)
+- **`seismic_prelude::foundry::*` imports** replace direct `alloy`/`revm` imports in ~96 files (see the import aliasing section above)
+
+---
 
 ## Branches
 
 - `seismic` — main branch (PR target)
 - Upstream Foundry is not tracked via a branch in this repo
 
-## Troubleshooting
+## Code Style
 
-| Problem | Fix |
-|---------|-----|
-| `make test-unit` fails with `expected expression` (filter parse error) | The `!` in the nextest filter is escaped by zsh. Run via `bash -c '...'` or use `make test-unit` which invokes through make's shell. |
-| `can_get_code_by_hash` test fails with DNS error | This is a forking test that requires network access to `eu-central-mainnet.rpc.ithaca.xyz`. Expected to fail offline. Not part of Seismic CI. |
-| `test_shanghai_fields` fails (blob_gas_used assertion) | Known upstream test incompatible with Seismic's hardfork changes. Not part of Seismic CI test suite. |
-| `cast` doc tests fail (20 failures) | All `cast` doc tests require a running RPC node. Run `cargo test --doc --workspace --exclude cast` to skip them. |
-| `sforge` tests fail with "ssolc not found" | Install `ssolc` to `/usr/local/bin/ssolc` via [sfoundryup](https://docs.seismic.systems/getting-started/installation) or download from [seismic-solidity releases](https://github.com/SeismicSystems/seismic-solidity/releases). |
-| Build slow on macOS | First build compiles ~500 crates (~2-3 min). Subsequent incremental builds are fast. Use `cargo build --bin sforge` instead of full workspace to reduce scope. |
-| `chisel` not supported | Seismic does not yet support the `chisel` REPL. Avoid `cargo build --workspace` if chisel deps cause issues. |
+- **Formatting**: `cargo +nightly fmt --all` (100 char max width, crate-level imports)
+- **Linting**: `cargo clippy` — disallows `std::print`/`println` (use `sh_print`/`sh_println` from `foundry_common::shell`)
+- **Other formatters**: `dprint` for Markdown, TOML, JSON, TypeScript, YAML
+- **Spell check**: `typos` CLI
+- **Lint commands**: `make fmt`, `make lint-clippy`, `make lint-typos`, `make lint` (all)
