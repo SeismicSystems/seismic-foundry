@@ -2256,7 +2256,12 @@ impl Backend {
                         let result = evm.transact(env.tx.clone())?;
                         let res = evm
                             .inspector_mut()
-                            .json_result(result, &env.tx.into_tx_env(), &block, &cache_db)
+                            .json_result(
+                                result,
+                                &IntoTxEnv::<TxEnv>::into_tx_env(env.tx),
+                                &block,
+                                &cache_db,
+                            )
                             .map_err(|err| BlockchainError::Message(err.to_string()))?;
 
                         Ok(GethTrace::JS(res))
@@ -3047,7 +3052,7 @@ impl Backend {
         let trace = inspector
             .json_result(
                 result,
-                &alloy_evm::IntoTxEnv::into_tx_env(tx_env),
+                &alloy_evm::IntoTxEnv::<TxEnv>::into_tx_env(tx_env),
                 &env.evm_env.block_env,
                 &cache_db,
             )
