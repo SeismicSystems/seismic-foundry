@@ -93,29 +93,29 @@ jobs:
           # `target`: Rust build target triple
           # `platform` and `arch`: Used in tarball names
           # `svm`: target platform to use for the Solc binary: https://github.com/roynalnaruto/svm-rs/blob/84cbe0ac705becabdc13168bae28a45ad2299749/svm-builds/build.rs#L4-L24
-          - runner: Linux-22.04
+          - runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             svm_target_platform: linux-amd64
             platform: linux
             arch: amd64
-          - runner: Linux-22.04
-            target: x86_64-unknown-linux-musl
-            svm_target_platform: linux-amd64
-            platform: alpine
-            arch: amd64
-          - runner: Linux-22.04
+          # Turning off musl since afaiu this is only needed when running inside Alpine Docker containers,
+          # which we don't even support atm.
+          # - runner: ubuntu-22.04
+          #   target: x86_64-unknown-linux-musl
+          #   svm_target_platform: linux-amd64
+          #   platform: alpine
+          #   arch: amd64
+          - runner: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             svm_target_platform: linux-aarch64
             platform: linux
             arch: arm64
-          - runner: Linux-22.04
-            target: aarch64-unknown-linux-musl
-            svm_target_platform: linux-aarch64
-            platform: alpine
-            arch: arm64
-          # This is pinned to `macos-13-large` to support old SDK versions.
-          # If the runner is deprecated it should be pinned to the oldest available version of the runner.
-          - runner: macos-13-large
+          # - runner: ubuntu-22.04
+          #   target: aarch64-unknown-linux-musl
+          #   svm_target_platform: linux-aarch64
+          #   platform: alpine
+          #   arch: arm64
+          - runner: macos-14-large
             target: x86_64-apple-darwin
             svm_target_platform: macosx-amd64
             platform: darwin
@@ -125,11 +125,12 @@ jobs:
             svm_target_platform: macosx-aarch64
             platform: darwin
             arch: arm64
-          - runner: Windows
-            target: x86_64-pc-windows-msvc
-            svm_target_platform: windows-amd64
-            platform: win32
-            arch: amd64
+          # Turning off Windows for now since I don't think we have any usecase for it.
+          # - runner: windows-latest
+          #   target: x86_64-pc-windows-msvc
+          #   svm_target_platform: windows-amd64
+          #   platform: win32
+          #   arch: amd64
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
