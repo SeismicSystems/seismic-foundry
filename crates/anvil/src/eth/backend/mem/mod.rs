@@ -2258,7 +2258,7 @@ impl Backend {
                             .inspector_mut()
                             .json_result(
                                 result,
-                                &alloy_evm::IntoTxEnv::<TxEnv>::into_tx_env(env.tx),
+                                &IntoTxEnv::<TxEnv>::into_tx_env(env.tx),
                                 &block,
                                 &cache_db,
                             )

@@ -980,7 +980,7 @@ fault: function(log) {}
 
     let result = api
         .debug_trace_call(
-            WithOtherFields::new(internal_call_tx),
+            WithOtherFields::new(internal_call_tx.into()),
             Some(BlockId::latest()),
             GethDebugTracingCallOptions::default()
                 .with_tracing_options(GethDebugTracingOptions::js_tracer(js_tracer_code)),
@@ -1047,7 +1047,9 @@ async fn test_debug_trace_transaction_js_tracer() {
         .with_max_priority_fee_per_gas(100_000_000_000);
 
     let receipt = provider
-        .send_transaction(internal_call_tx.into())
+        .send_transaction(
+            Into::<seismic_prelude::foundry::TransactionRequest>::into(internal_call_tx).into(),
+        )
         .await
         .unwrap()
         .get_receipt()

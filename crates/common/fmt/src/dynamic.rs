@@ -75,7 +75,7 @@ impl DynValueFormatter {
                     self.tuple(tuple, f)
                 }
             }
-            &DynSolValue::Sbool(Sbool(inner)) => write!(f, "{}", inner),
+            &DynSolValue::Sbool(Sbool(inner)) => write!(f, "{inner}"),
             &DynSolValue::Saddress(SAddress(inner)) => write!(f, "{inner}"),
             &DynSolValue::Sint(SInt(inner), _) => write!(f, "{inner}"),
             &DynSolValue::Suint(SUInt(inner), _) => write!(f, "{inner}"),
