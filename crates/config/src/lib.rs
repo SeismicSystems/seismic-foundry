@@ -538,7 +538,12 @@ pub struct Config {
 
     /// Seismic field (default: true)
     ///
-    /// Used for purposes of specifying Seismic-Solidity (solc)
+    /// When set to true, ssolc (seismic-solidity compiler) will be used instead of solc.
+    ///
+    /// TODO(samlaf): do we really need this? The compiler could be chosen purely based off of
+    /// evm_version config value (if mercury, use ssolc; else use solc).
+    /// Also should we just rename this to `use_ssolc` instead of seismic, which is a bit confusing
+    /// because it looks like it might also be used to configure execution (tests, anvil, etc).
     pub seismic: bool,
 
     /// Warnings gathered when loading the Config. See [`WarningsProvider`] for more information.
@@ -916,8 +921,12 @@ impl Config {
         config
     }
 
-    // Turn on seismic flag if evm version is seismic. For now this logic works.
+    // This is called on every foundry.toml config files right now, including on lib/ configs.
+    // TODO(samlaf): this might have weird side effects at some point if our library ecosystem
+    // grows.
     pub fn sanitize_seismic_settings(&mut self) {
+        // If Mercury feature set is required, then use seismic-compiler (self.seismic controls
+        // which compiler is used).
         if self.evm_version == EvmVersion::Mercury {
             self.seismic = true;
         }
@@ -2398,7 +2407,7 @@ impl Default for Config {
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,
-            solc: Some(SolcReq::Version(Version::parse("0.8.30").unwrap())),
+            solc: Some(SolcReq::Version(Version::parse("0.8.31").unwrap())),
             vyper: Default::default(),
             auto_detect_solc: true,
             offline: false,
