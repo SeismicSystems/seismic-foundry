@@ -4678,7 +4678,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=d24431fcbdc3b7a05e8657e76d56f5b8533cef0c#d24431fcbdc3b7a05e8657e76d56f5b8533cef0c"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=bbb38d77478f2d30013d5d5956ead23b520fd358#bbb38d77478f2d30013d5d5956ead23b520fd358"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4711,7 +4711,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=d24431fcbdc3b7a05e8657e76d56f5b8533cef0c#d24431fcbdc3b7a05e8657e76d56f5b8533cef0c"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=bbb38d77478f2d30013d5d5956ead23b520fd358#bbb38d77478f2d30013d5d5956ead23b520fd358"
 dependencies = [
  "foundry-compilers-artifacts-solc",
  "foundry-compilers-artifacts-vyper",
@@ -4720,7 +4720,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts-solc"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=d24431fcbdc3b7a05e8657e76d56f5b8533cef0c#d24431fcbdc3b7a05e8657e76d56f5b8533cef0c"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=bbb38d77478f2d30013d5d5956ead23b520fd358#bbb38d77478f2d30013d5d5956ead23b520fd358"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4742,7 +4742,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts-vyper"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=d24431fcbdc3b7a05e8657e76d56f5b8533cef0c#d24431fcbdc3b7a05e8657e76d56f5b8533cef0c"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=bbb38d77478f2d30013d5d5956ead23b520fd358#bbb38d77478f2d30013d5d5956ead23b520fd358"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4756,7 +4756,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-core"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=d24431fcbdc3b7a05e8657e76d56f5b8533cef0c#d24431fcbdc3b7a05e8657e76d56f5b8533cef0c"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=bbb38d77478f2d30013d5d5956ead23b520fd358#bbb38d77478f2d30013d5d5956ead23b520fd358"
 dependencies = [
  "alloy-primitives",
  "cfg-if",
