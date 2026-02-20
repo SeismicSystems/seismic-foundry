@@ -1,12 +1,13 @@
 name: release
 
 on:
-  push:
-    tags:
-      - "stable"
-      - "rc"
-      - "rc-*"
-      - "v*.*.*"
+  # TODO(samlaf): we need to figure out how to do (and semver) our seismic releases once we become more stable.
+  # push:
+  #   tags:
+  #     - "stable"
+  #     - "rc"
+  #     - "rc-*"
+  #     - "v*.*.*"
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
@@ -66,12 +67,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  release-docker:
-    name: Release Docker
-    needs: prepare
-    uses: ./.github/workflows/docker-publish.yml
-    with:
-      tag_name: ${{ needs.prepare.outputs.tag_name }}
+  # TODO(samlaf): turned this off because we only need binary releases to be used by sfoundryup and mise in the monorepo.
+  # We can turn this back on once we have a need for docker releases.
+  # release-docker:
+  #   name: Release Docker
+  #   needs: prepare
+  #   uses: ./.github/workflows/docker-publish.yml
+  #   with:
+  #     tag_name: ${{ needs.prepare.outputs.tag_name }}
 
   release:
     permissions:
@@ -174,7 +177,7 @@ jobs:
             cargo build "${flags[@]}"
           fi
 
-          bins=(anvil cast chisel forge)
+          bins=(sanvil scast schisel sforge)
           for name in "${bins[@]}"; do
             bin=$OUT_DIR/$name$ext
             echo ""
@@ -195,20 +198,20 @@ jobs:
         shell: bash
         run: |
           if [[ "$PLATFORM_NAME" == "linux" || "$PLATFORM_NAME" == "alpine" ]]; then
-            tar -czvf "foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR forge cast anvil chisel
-            echo "file_name=foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            tar -czvf "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR sforge scast sanvil schisel
+            echo "file_name=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
           elif [ "$PLATFORM_NAME" == "darwin" ]; then
             # We need to use gtar here otherwise the archive is corrupt.
             # See: https://github.com/actions/virtual-environments/issues/2619
-            gtar -czvf "foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR forge cast anvil chisel
-            echo "file_name=foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            gtar -czvf "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR sforge scast sanvil schisel
+            echo "file_name=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
           else
             cd $OUT_DIR
-            7z a -tzip "foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" forge.exe cast.exe anvil.exe chisel.exe
-            mv "foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
-            echo "file_name=foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" >> $GITHUB_OUTPUT
+            7z a -tzip "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" sforge.exe scast.exe sanvil.exe schisel.exe
+            mv "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
+            echo "file_name=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" >> $GITHUB_OUTPUT
           fi
-          echo "foundry_attestation=foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.attestation.txt" >> $GITHUB_OUTPUT
+          echo "sfoundry_attestation=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.attestation.txt" >> $GITHUB_OUTPUT
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -226,30 +229,30 @@ jobs:
         shell: bash
         run: |
           sudo apt-get -y install help2man
-          help2man -N $OUT_DIR/forge > forge.1
-          help2man -N $OUT_DIR/cast > cast.1
-          help2man -N $OUT_DIR/anvil > anvil.1
-          help2man -N $OUT_DIR/chisel > chisel.1
-          gzip forge.1
-          gzip cast.1
-          gzip anvil.1
-          gzip chisel.1
-          tar -czvf "foundry_man_${VERSION_NAME}.tar.gz" forge.1.gz cast.1.gz anvil.1.gz chisel.1.gz
-          echo "foundry_man=foundry_man_${VERSION_NAME}.tar.gz" >> $GITHUB_OUTPUT
+          help2man -N $OUT_DIR/sforge > sforge.1
+          help2man -N $OUT_DIR/scast > scast.1
+          help2man -N $OUT_DIR/sanvil > sanvil.1
+          help2man -N $OUT_DIR/schisel > schisel.1
+          gzip sforge.1
+          gzip scast.1
+          gzip sanvil.1
+          gzip schisel.1
+          tar -czvf "sfoundry_man_${VERSION_NAME}.tar.gz" sforge.1.gz scast.1.gz sanvil.1.gz schisel.1.gz
+          echo "sfoundry_man=sfoundry_man_${VERSION_NAME}.tar.gz" >> $GITHUB_OUTPUT
 
       - name: Binaries attestation
         id: attestation
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
-            ${{ env.anvil_bin_path }}
-            ${{ env.cast_bin_path }}
-            ${{ env.chisel_bin_path }}
-            ${{ env.forge_bin_path }}
+            ${{ env.sanvil_bin_path }}
+            ${{ env.scast_bin_path }}
+            ${{ env.schisel_bin_path }}
+            ${{ env.sforge_bin_path }}
 
       - name: Record attestation URL
         run: |
-          echo "${{ steps.attestation.outputs.attestation-url }}" > ${{ steps.artifacts.outputs.foundry_attestation }}
+          echo "${{ steps.attestation.outputs.attestation-url }}" > ${{ steps.artifacts.outputs.sfoundry_attestation }}
 
       # Creates the release for this specific version
       - name: Create release
@@ -261,11 +264,11 @@ jobs:
           body: ${{ needs.prepare.outputs.changelog }}
           files: |
             ${{ steps.artifacts.outputs.file_name }}
-            ${{ steps.artifacts.outputs.foundry_attestation }}
-            ${{ steps.man.outputs.foundry_man }}
+            ${{ steps.artifacts.outputs.sfoundry_attestation }}
+            ${{ steps.man.outputs.sfoundry_man }}
 
       # If this is a nightly release, it also updates the release
-      # tagged `nightly` for compatibility with `foundryup`
+      # tagged `nightly` for compatibility with `sfoundryup`
       - name: Update nightly release
         if: ${{ env.IS_NIGHTLY == 'true' }}
         uses: softprops/action-gh-release@v2.2.2
@@ -276,8 +279,8 @@ jobs:
           body: ${{ needs.prepare.outputs.changelog }}
           files: |
             ${{ steps.artifacts.outputs.file_name }}
-            ${{ steps.artifacts.outputs.foundry_attestation }}
-            ${{ steps.man.outputs.foundry_man }}
+            ${{ steps.artifacts.outputs.sfoundry_attestation }}
+            ${{ steps.man.outputs.sfoundry_man }}
 
   cleanup:
     name: Release cleanup
@@ -308,7 +311,8 @@ jobs:
   issue:
     name: Open an issue
     runs-on: ubuntu-latest
-    needs: [prepare, release-docker, release, cleanup]
+    # TODO(samlaf): add back release-docker step if we ever uncomment it.
+    needs: [prepare, release, cleanup]
     if: failure()
     steps:
       - uses: actions/checkout@v5
