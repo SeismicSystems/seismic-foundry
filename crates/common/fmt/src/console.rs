@@ -303,7 +303,7 @@ impl ConsoleFmt for Address {
 
 impl ConsoleFmt for SAddress {
     fn fmt(&self, spec: FormatSpec) -> String {
-        Address::from(self.0).fmt(spec)
+        self.0.fmt(spec)
     }
 }
 

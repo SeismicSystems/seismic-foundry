@@ -525,7 +525,7 @@ impl UIfmt for alloy_consensus::Signed<seismic_prelude::foundry::TxSeismic> {
             tx_seismic.seismic_elements.encryption_nonce,
             tx_seismic.seismic_elements.message_version
         );
-        format!("{}\n{}", legacy_pretty, seismic_elements_pretty)
+        format!("{legacy_pretty}\n{seismic_elements_pretty}")
     }
 }
 
