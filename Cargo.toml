@@ -412,10 +412,10 @@ alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev 
 alloy-seismic-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "039d51496b9b9a0cb4fea6d606e472211b462073" }
 
 # foundry
-foundry-compilers = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "bbb38d77478f2d30013d5d5956ead23b520fd358" }
-foundry-compilers-artifacts = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "bbb38d77478f2d30013d5d5956ead23b520fd358" }
-foundry-compilers-artifacts-solc = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "bbb38d77478f2d30013d5d5956ead23b520fd358" }
-foundry-compilers-artifacts-vyper = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "bbb38d77478f2d30013d5d5956ead23b520fd358" }
-foundry-compilers-core = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "bbb38d77478f2d30013d5d5956ead23b520fd358" }
+foundry-compilers = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "072eff160d978e5e4248af8d56cb2c7d95b40ba9" }
+foundry-compilers-artifacts = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "072eff160d978e5e4248af8d56cb2c7d95b40ba9" }
+foundry-compilers-artifacts-solc = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "072eff160d978e5e4248af8d56cb2c7d95b40ba9" }
+foundry-compilers-artifacts-vyper = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "072eff160d978e5e4248af8d56cb2c7d95b40ba9" }
+foundry-compilers-core = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "072eff160d978e5e4248af8d56cb2c7d95b40ba9" }
 
 foundry-fork-db = { git = "https://github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "e5fb1f8838b517dbaaccc08a8af6767fe2e70c4e" }
