@@ -1625,9 +1625,10 @@ impl Config {
             }),
             model_checker,
             via_ir: Some(self.via_ir),
-            // Only send when its explicitly set to true, since we plan for this option to be temporary,
-            // and so we want to remain backward and forward compatible with other ssolc compilers
-            // that might not recognize the option (hence sending false would break for no reason).
+            // Only send when its explicitly set to true, since we plan for this option to be
+            // temporary, and so we want to remain backward and forward compatible with
+            // other ssolc compilers that might not recognize the option (hence sending
+            // false would break for no reason).
             unsafe_via_ir: self.unsafe_via_ir.then_some(true),
             // Not used.
             stop_after: None,
