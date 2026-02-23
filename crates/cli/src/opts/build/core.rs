@@ -82,6 +82,11 @@ pub struct BuildOpts {
     #[serde(skip)]
     pub via_ir: bool,
 
+    /// Allow via-IR pipeline on Seismic's ssolc (experimental).
+    #[arg(long, help_heading = "Compiler options")]
+    #[serde(skip)]
+    pub unsafe_via_ir: bool,
+
     /// Changes compilation to only use literal content and not URLs.
     #[arg(long, help_heading = "Compiler options")]
     #[serde(skip)]
@@ -225,6 +230,10 @@ impl Provider for BuildOpts {
 
         if self.via_ir {
             dict.insert("via_ir".to_string(), true.into());
+        }
+
+        if self.unsafe_via_ir {
+            dict.insert("unsafe_via_ir".to_string(), true.into());
         }
 
         if self.use_literal_content {

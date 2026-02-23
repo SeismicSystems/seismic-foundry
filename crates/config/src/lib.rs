@@ -433,6 +433,8 @@ pub struct Config {
     /// If set to true, changes compilation pipeline to go through the Yul intermediate
     /// representation.
     pub via_ir: bool,
+    /// Allow via-IR pipeline on Seismic's ssolc (experimental, shielded type support incomplete).
+    pub unsafe_via_ir: bool,
     /// Whether to include the AST as JSON in the compiler output.
     pub ast: bool,
     /// RPC storage caching settings determines what chains and endpoints to cache
@@ -1623,6 +1625,11 @@ impl Config {
             }),
             model_checker,
             via_ir: Some(self.via_ir),
+            // Only send when its explicitly set to true, since we plan for this option to be
+            // temporary, and so we want to remain backward and forward compatible with
+            // other ssolc compilers that might not recognize the option (hence sending
+            // false would break for no reason).
+            unsafe_via_ir: self.unsafe_via_ir.then_some(true),
             // Not used.
             stop_after: None,
             // Set in project paths.
@@ -2472,6 +2479,7 @@ impl Default for Config {
             ignored_file_paths: vec![],
             deny_warnings: false,
             via_ir: false,
+            unsafe_via_ir: false,
             ast: false,
             rpc_storage_caching: Default::default(),
             rpc_endpoints: Default::default(),
