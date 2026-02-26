@@ -1263,6 +1263,7 @@ pub struct TransactionInfo {
     pub out: Option<Bytes>,
     pub nonce: u64,
     pub gas_used: u64,
+    #[serde(default)]
     pub tx_type: Option<isize>,
 }
 

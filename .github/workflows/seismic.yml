@@ -77,17 +77,55 @@ jobs:
           sudo mv solc/solc /usr/local/bin/ssolc
           sudo chmod +x /usr/local/bin/ssolc
           ssolc --version
+      # --- Seismic-specific tests ---
       - name: seismic unit tests
         run: cargo nextest run test_seismic_tx_encoding
       - name: seismic integration tests
         run: cargo nextest run test_seismic_
       - name: private storage tests
         run: cargo nextest run private_storage_
-      # TODO: make these work & run  
-      # - name: sforge tests
-      #   run: cargo test --bin sforge
-      # - name: sanvil tests
-      #   run: cargo test --bin sanvil
+
+      # --- Unit tests for core crates (no external dependencies) ---
+      - name: anvil-core unit tests
+        run: cargo nextest run -p anvil-core
+      - name: foundry-config unit tests
+        run: cargo nextest run -p foundry-config
+
+      # --- sanvil integration tests ---
+      # Runs all non-fork, non-optimism anvil integration tests, excluding known
+      # failures due to: hardcoded Mercury SpecId (pre-London tests), external RPC
+      # dependencies, Seismic EVM behavior differences (timestamp, traces, blob txs),
+      # and state deserialization needing #[serde(default)] in seismic-revm-inspectors.
+      # See docs/test-audit.md for the full classification.
+      - name: sanvil integration tests
+        run: |
+          cargo nextest run -p anvil --test it -E '
+            not test(/fork|optimism|simulate/)
+            & not test(=anvil::test_shanghai_fields)
+            & not test(=anvil::test_anvil_recover_signature)
+            & not test(=anvil_api::can_set_gas_price)
+            & not test(=anvil_api::can_get_node_info)
+            & not test(=anvil_api::can_impersonate_gnosis_safe)
+            & not test(=api::can_call_on_pending_block)
+            & not test(=api::can_call_with_undersized_max_fee_per_gas)
+            & not test(=traces::test_trace_address_fork)
+            & not test(=traces::test_trace_address_fork2)
+            & not test(=api::can_get_code_by_hash)
+            & not test(=eip4844::can_correctly_estimate_blob_gas_with_recommended_fillers_with_signer)
+            & not test(=eip4844::can_get_blobs_by_tx_hash)
+            & not test(=eip4844::can_mine_blobs_when_exceeds_max_blobs)
+            & not test(=eip4844::cannot_exceed_six_blobs)
+            & not test(=genesis::chain_id_precedence)
+            & not test(=otterscan::test_call_ots_trace_transaction)
+            & not test(=proof::test_account_proof)
+            & not test(=revert::test_solc_revert_example)
+            & not test(=state::can_load_existing_state)
+            & not test(=state::can_load_existing_state_legacy_stress)
+            & not test(=state::test_backward_compatibility_state_dump_deserialization_v1_2)
+            & not test(=transaction::can_send_tx_osaka_valid_with_limit_enabled)
+            & not test(=transaction::get_blocktimestamp_works)
+            & not test(=transaction::test_reject_eip1559_pre_london)
+          '
 
   viem:
     runs-on: large-github-runner
