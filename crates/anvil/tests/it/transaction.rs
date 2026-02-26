@@ -1237,6 +1237,9 @@ async fn can_call_with_high_gas_limit() {
     assert_eq!("Hello World!", greeting);
 }
 
+// Skipped in Seismic CI: sanvil always runs Mercury (SpecId::MERCURY), which supports
+// EIP-1559. This test requests Berlin (pre-EIP-1559) and expects the tx to be rejected,
+// but the hardfork flag is ignored so the tx succeeds.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_reject_eip1559_pre_london() {
     let (api, handle) =

@@ -40,6 +40,9 @@ use std::{
 
 use seismic_prelude::foundry::{EthereumWallet, tx_builder};
 
+// Skipped in Seismic CI: sanvil always runs Mercury (SpecId::MERCURY), which has EIP-1559
+// active. This test requests Berlin (pre-EIP-1559) to use anvil_setMinGasPrice, but the
+// hardfork flag is ignored so the RPC call is rejected.
 #[tokio::test(flavor = "multi_thread")]
 async fn can_set_gas_price() {
     let (api, handle) =
