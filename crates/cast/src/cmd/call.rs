@@ -302,9 +302,10 @@ impl CallArgs {
             .with_code_sig_and_args(code, sig, args)
             .await?
             // Upstream uses build_raw (skips filling nonce/gas) since eth_call doesn't need them.
-            // We use build (fills all fields) because the --seismic path needs nonce/gas for signing.
-            // The tx is built before branching, so both paths share this. The extra filling is
-            // harmless for non-seismic eth_call (the node ignores nonce/gas on calls).
+            // We use build (fills all fields) because the --seismic path needs nonce/gas for
+            // signing. The tx is built before branching, so both paths share this. The
+            // extra filling is harmless for non-seismic eth_call (the node ignores
+            // nonce/gas on calls).
             .build(sender)
             .await?;
 
