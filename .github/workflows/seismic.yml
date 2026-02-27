@@ -115,7 +115,6 @@ jobs:
             & not test(=genesis::chain_id_precedence)
 
             & not test(=state::can_load_existing_state)
-            & not test(=state::can_load_existing_state_legacy_stress)
             & not test(=state::test_backward_compatibility_state_dump_deserialization_v1_2)
             & not test(=transaction::can_send_tx_osaka_valid_with_limit_enabled)
             & not test(=transaction::test_reject_eip1559_pre_london)
