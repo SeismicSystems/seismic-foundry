@@ -81,6 +81,16 @@ pub struct SendTxArgs {
     #[arg(long, default_value = "1")]
     confirmations: u64,
 
+    /// Encrypt calldata via ECDH and send as a Seismic transaction (type 74).
+    ///
+    /// --seismic <SK>: use this hex-encoded private key for encryption
+    ///
+    /// --seismic: generate a random ephemeral key
+    ///
+    /// (omit flag): send a standard transaction
+    #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
+    pub seismic: Option<Option<String>>,
+
     #[command(subcommand)]
     command: Option<SendTxSubcommands>,
 
@@ -107,13 +117,6 @@ pub struct SendTxArgs {
         help_heading = "Transaction options"
     )]
     path: Option<PathBuf>,
-
-    /// Encrypt calldata via ECDH and send as a Seismic transaction (type 74).
-    ///
-    /// Accepts either a hex-encoded encryption private key or an empty value to generate a
-    /// random ephemeral key. Without this flag, sends a standard transaction.
-    #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
-    pub seismic: Option<Option<String>>,
 }
 
 #[derive(Debug, Parser)]

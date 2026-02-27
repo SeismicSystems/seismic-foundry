@@ -161,6 +161,16 @@ pub struct CallArgs {
     #[arg(long, alias = "alphanet")]
     pub odyssey: bool,
 
+    /// Encrypt calldata via ECDH and route through `seismic_call`.
+    ///
+    /// --seismic <SK>: use this hex-encoded private key for encryption
+    ///
+    /// --seismic: generate a random ephemeral key
+    ///
+    /// (omit flag): perform a standard `eth_call`
+    #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
+    pub seismic: Option<Option<String>>,
+
     #[command(subcommand)]
     command: Option<CallSubcommands>,
 
@@ -169,13 +179,6 @@ pub struct CallArgs {
 
     #[command(flatten)]
     eth: EthereumOpts,
-
-    /// Encrypt calldata via ECDH and route through `seismic_call`.
-    ///
-    /// Accepts either a hex-encoded encryption private key or an empty value to generate a
-    /// random ephemeral key. Without this flag, performs a standard `eth_call`.
-    #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
-    pub seismic: Option<Option<String>>,
 
     /// Use current project artifacts for trace decoding.
     #[arg(long, visible_alias = "la")]
