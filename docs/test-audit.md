@@ -43,122 +43,76 @@ Conducted against the `seismic` branch.
 | anvil | `test_immutable_fork_transaction_hash` | `crates/anvil/tests/it/fork.rs:1347` | `#[ignore]` | C | Immutable zkEVM external chain dependency |
 | cheatcodes/spec | `schema_up_to_date` | `crates/cheatcodes/spec/src/lib.rs:160` | `#[cfg(feature = "schema")]` | C | Requires optional `schema` feature flag |
 
-## CI-Level Excluded Anvil Integration Tests
+## CI-Level Excluded Anvil Integration Tests (15)
 
-These 25 tests are excluded from CI via nextest filter expressions. They were verified
-locally and fail due to known root causes documented below.
+These tests are excluded from CI via nextest filter expressions in `.github/workflows/seismic.yml`.
+They were verified locally and fail due to known root causes documented below.
 
-### Root Cause: Hardcoded `SpecId::MERCURY` (3 tests)
+### Permanent — Hardfork Incompatibility (5 tests)
 
-Seismic hardcodes `SpecId::MERCURY` in `crates/anvil/src/config.rs:1095-1096`, ignoring
-the hardfork specified by the test. Pre-London/pre-EIP-1559 tests are fundamentally
-incompatible.
+Mercury is the only supported hardfork. These tests explicitly require pre-London or
+non-Mercury hardfork behavior and are fundamentally incompatible.
 
-| Test | Error |
-|------|-------|
-| `anvil::test_shanghai_fields` | `blob_gas_used` is present (Mercury includes Cancun fields) |
-| `anvil_api::can_set_gas_price` | `anvil_setMinGasPrice` rejected because EIP-1559 is always active |
-| `transaction::test_reject_eip1559_pre_london` | EIP-1559 tx succeeds instead of being rejected |
+| Test | What it does | Why it fails |
+|------|-------------|-------------|
+| `anvil::test_shanghai_fields` | Asserts Shanghai blocks have `withdrawals_root` but no blob fields | Mercury is post-Cancun; blob fields are always present |
+| `anvil_api::can_set_gas_price` | Tests `anvil_set_min_gas_price` on Berlin (pre-EIP-1559) | Mercury always has EIP-1559; legacy gas price setting rejected |
+| `transaction::test_reject_eip1559_pre_london` | Asserts EIP-1559 txs rejected on Berlin | Mercury accepts EIP-1559 by design |
+| `transaction::can_send_tx_osaka_valid_with_limit_enabled` | Tests Osaka-specific TX_GAS_LIMIT_CAP enforcement | Mercury doesn't include Osaka gas limit caps |
+| `anvil::test_anvil_recover_signature` | Tests `ecrecover` precompile via signature impersonation | Mercury modifies `ecrecover` behavior (privacy design) |
 
-### Root Cause: Seismic EVM `block.timestamp` behavior (2 tests)
+### Permanent — External RPC / Fork Dependency (5 tests)
 
-The Mercury EVM returns a truncated `block.timestamp` in Solidity (~1000x smaller than
-the block header timestamp), suggesting a seconds-vs-milliseconds mismatch.
+Require network access to external RPC endpoints that CI doesn't provide.
 
-| Test | Error |
-|------|-------|
-| `transaction::get_blocktimestamp_works` | Contract returns truncated timestamp |
-| `api::can_call_on_pending_block` | Same timestamp mismatch |
+| Test | What it does | Why it fails |
+|------|-------------|-------------|
+| `anvil_api::can_impersonate_gnosis_safe` | Forks mainnet, fetches Gnosis Safe code, tests impersonation | Uses `fork_config()` — requires mainnet RPC |
+| `traces::test_trace_address_fork` | Replays mainnet block, checks trace address paths | Requires mainnet fork RPC |
+| `traces::test_trace_address_fork2` | Same as above, different block | Requires mainnet fork RPC |
+| `api::can_get_code_by_hash` | Calls `debug_getCodeByHash` on archive node | Requires `next_http_archive_rpc_url()` |
+| `genesis::chain_id_precedence` | Tests chain_id precedence (CLI > fork > genesis > default) | 3 of 6 scenarios use `fork_config()` requiring mainnet RPC |
 
-### Root Cause: Missing `#[serde(default)]` in `seismic-revm-inspectors` (3 tests)
+### Temporary — Needs Upstream Fix: `seismic-revm-inspectors` serde (3 tests)
 
 `CallTrace.tx_type` in `seismic-revm-inspectors` lacks `#[serde(default)]`. Old state
 dumps without `tx_type` in their trace data fail to deserialize. Fix requires a change
 in the external `seismic-revm-inspectors` repository.
 
-| Test | Error |
-|------|-------|
-| `state::test_backward_compatibility_state_dump_deserialization_v1_2` | Missing field `tx_type` |
-| `state::can_load_existing_state` | State fails to load (same root cause) |
-| `state::can_load_existing_state_legacy_stress` | State fails to load (same root cause) |
+| Test | What it does | Why it fails |
+|------|-------------|-------------|
+| `state::can_load_existing_state` | Loads `state-dump.json`, checks account state | Missing field `tx_type` during deserialization |
+| `state::can_load_existing_state_legacy_stress` | Loads legacy stress state dump | Same serde issue |
+| `state::test_backward_compatibility_state_dump_deserialization_v1_2` | Tests v1.2 state dump backward compat | Same serde issue + older dumps lack `is_private` flags |
 
-### Root Cause: Seismic system contracts change state trie (1 test)
+### Temporary — Seismic Trace Shielding (1 test)
 
-Three system contracts (AES_LIB, DIRECTORY, INTELLIGENCE) are injected at genesis,
-adding nodes to the Merkle trie and changing proof structure.
+Mercury intentionally strips calldata and return data from transaction traces for privacy.
 
-| Test | Error |
-|------|-------|
-| `proof::test_account_proof` | Proof array mismatch (extra trie nodes from system contracts) |
+| Test | What it does | Why it fails | Fix |
+|------|-------------|-------------|-----|
+| `otterscan::test_call_ots_trace_transaction` | Checks otterscan trace structure (input/output per call) | Trace shielding zeros out `input` on top-level CALL and `output` on STATICCALL | Rewrite test to expect shielded trace output |
 
-### Root Cause: Seismic `eth_call` error wrapping (1 test)
+### Temporary — Seismic Trie Structure (1 test)
 
-Seismic wraps `eth_call` errors with Seismic-specific messages about unsigned calls.
+`seismic-trie` adds `is_private` flag per leaf, plus system contracts (AES_LIB, DIRECTORY,
+INTELLIGENCE) are injected at genesis, changing the Merkle proof structure.
 
-| Test | Error |
-|------|-------|
-| `revert::test_solc_revert_example` | Error string wrapped by Seismic, assertion fails |
+| Test | What it does | Why it fails | Fix |
+|------|-------------|-------------|-----|
+| `proof::test_account_proof` | Validates Merkle proofs against hardcoded values | Proof hashes differ due to seismic-trie structure and system contracts | Update hardcoded proofs or validate generically |
 
-### Root Cause: Seismic EVM trace differences (1 test)
+## Previously Excluded, Now Fixed (5)
 
-Mercury EVM produces different trace data (stripped input/output in certain frames).
+These tests were fixed and re-enabled in CI:
 
-| Test | Error |
-|------|-------|
-| `otterscan::test_call_ots_trace_transaction` | Trace `input`/`output` fields are `0x` instead of expected data |
-
-### Root Cause: External RPC dependencies (4 tests)
-
-Require network access to external RPC endpoints.
-
-| Test | Error |
-|------|-------|
-| `genesis::chain_id_precedence` | DNS resolution failure to `eu-central-mainnet.rpc.ithaca.xyz` |
-| `api::can_get_code_by_hash` | DNS resolution failure to RPC endpoint |
-| `traces::test_trace_address_fork` | Requires fork RPC |
-| `traces::test_trace_address_fork2` | Requires fork RPC |
-
-### Root Cause: EIP-4844 blob transaction behavior under Mercury (4 tests)
-
-Blob transactions behave differently under the Mercury EVM.
-
-| Test | Error |
-|------|-------|
-| `eip4844::can_correctly_estimate_blob_gas_with_recommended_fillers_with_signer` | Send fails |
-| `eip4844::can_get_blobs_by_tx_hash` | Send fails |
-| `eip4844::can_mine_blobs_when_exceeds_max_blobs` | Send fails |
-| `eip4844::cannot_exceed_six_blobs` | Send fails |
-
-### Root Cause: Osaka hardfork behavior under Mercury (1 test)
-
-| Test | Error |
-|------|-------|
-| `transaction::can_send_tx_osaka_valid_with_limit_enabled` | Gas limit check behaves differently |
-
-### Root Cause: Seismic API differences (2 tests)
-
-| Test | Error |
-|------|-------|
-| `api::can_call_with_undersized_max_fee_per_gas` | `TransactionRequest.from()` returns `None` |
-| `anvil_api::can_impersonate_gnosis_safe` | Gnosis Safe interaction differs under Seismic |
-
-### Root Cause: `anvil_impersonate_signature` precompile behavior (1 test)
-
-| Test | Error |
-|------|-------|
-| `anvil::test_anvil_recover_signature` | ecrecover mismatch under Seismic precompile |
-
-### Root Cause: Seismic node info differs (1 test)
-
-| Test | Error |
-|------|-------|
-| `anvil_api::can_get_node_info` | Reports "Mercury" instead of "Prague" as default hardfork |
-
-## Deferred
-
-Tests that cannot be fixed without changes to external dependencies:
-
-1. **State deserialization tests** (`state::test_backward_compatibility_state_dump_deserialization_v1_2`, `state::can_load_existing_state`, `state::can_load_existing_state_legacy_stress`): Require adding `#[serde(default)]` to `CallTrace.tx_type` in `seismic-revm-inspectors` (external dependency). A `#[serde(default)]` was added to `TransactionInfo.tx_type` in `anvil-core` but the root deserialization failure is in the trace data from the inspectors crate.
+| Test | Root cause | Fix applied |
+|------|-----------|-------------|
+| `anvil_api::can_get_node_info` | Hardcoded `SpecId::PRAGUE` expected | Changed to `SpecId::MERCURY` |
+| `api::can_call_with_undersized_max_fee_per_gas` | Read `last_sender` from tx request instead of call result | Decode from `seismic_call()` return bytes via `abi_decode` |
+| `revert::test_solc_revert_example` | Unused `sender` variable and `with_from(sender)` incompatible with Seismic tx flow | Removed unused code |
+| `api::can_call_on_pending_block` | Compared block header timestamp (seconds) with Mercury EVM timestamp (milliseconds) directly | Divide header timestamp by 1000 before comparison |
+| `transaction::get_blocktimestamp_works` | Same timestamp mismatch + mock timestamp in wrong units | Divide header by 1000; multiply mock timestamp by 1000 |
 
 ## Summary
 
@@ -166,30 +120,31 @@ Tests that cannot be fixed without changes to external dependencies:
 |--------|--------|-------|
 | Tests with `#[ignore]` in code | 26 | 26 (unchanged — all inherited from upstream) |
 | Feature-gated tests | 1 | 1 (unchanged) |
-| Rust tests run in CI | **8** | **367** |
+| Rust tests run in CI | **8** | **372** |
 | — Seismic-specific tests | 8 | 8 |
 | — anvil-core unit tests | 0 | 72 |
 | — foundry-config unit tests | 0 | 122 |
-| — sanvil integration tests | 0 | 165 |
-| Tests excluded from CI (known failures) | 0 | 25 (documented above) |
-| Tests fixed | 0 | 0 (none were broken Seismic-specific tests) |
-| Tests deleted | 0 | 0 |
+| — sanvil integration tests | 0 | 170 |
+| Tests excluded from CI (known failures) | 0 | 15 (documented above) |
+| Tests fixed and re-enabled | 0 | 5 |
 | CI coverage improvement | — | **~46x increase** |
 
 ### Key Findings
 
 1. **No Class A tests found**: All Seismic-specific tests (`test_seismic_*`, `private_storage_*`) were already running in CI and not ignored.
 
-2. **The real gap was CI-level exclusion**: The CI filter patterns (`test_seismic_`, `private_storage_`) excluded ~99.5% of tests. Now the `test` job also runs anvil-core unit tests (72), foundry-config unit tests (122), and 165 sanvil integration tests.
+2. **The real gap was CI-level exclusion**: The CI filter patterns (`test_seismic_`, `private_storage_`) excluded ~99.5% of tests. Now the `test` job also runs anvil-core unit tests (72), foundry-config unit tests (122), and 170 sanvil integration tests.
 
-3. **25 anvil integration tests are excluded with documented reasons**: Grouped into 12 root cause categories. The most common causes are hardcoded Mercury SpecId (incompatible with pre-London tests), external RPC dependencies, and Seismic EVM behavior differences.
+3. **15 anvil integration tests are excluded with documented reasons**: The most common causes are hardcoded Mercury SpecId (5 tests), external RPC dependencies (5 tests), and state deserialization needing upstream serde fixes (3 tests).
 
-4. **One code fix applied**: Added `#[serde(default)]` to `TransactionInfo.tx_type` in `crates/anvil/core/src/eth/transaction/mod.rs:1266` for backward compatibility with old state dumps. The full fix also requires a change in `seismic-revm-inspectors`.
+4. **5 tests were fixed and re-enabled**: Fixes ranged from correcting expected hardfork values to accounting for Mercury's millisecond timestamps and adapting to the Seismic call flow.
 
-5. **All `#[ignore]` tests are inherited from upstream Foundry**: They were already skipped before Seismic forked. No changes were made to these — they are primarily flaky tests depending on external RPCs, filesystem isolation issues, or performance concerns.
+5. **All `#[ignore]` tests are inherited from upstream Foundry**: They were already skipped before Seismic forked. No changes were made to these.
 
-### Patterns Observed
+### Remaining Fixable Items
 
-- **Hardcoded Mercury SpecId** is the largest source of test incompatibility. Seismic's `config.rs` always sets `SpecId::MERCURY` regardless of the hardfork requested. This breaks all tests that assume pre-London/pre-EIP-1559 behavior.
-- **Fork-dependent tests** (requiring external RPC access) make up a significant portion of the untested surface. These are excluded from CI because they need network access.
-- **The `seismic-revm-inspectors` dependency** added a `tx_type` field to `CallTrace` without `#[serde(default)]`, breaking state dump backward compatibility. This is the only external dependency issue found.
+1. **`seismic-revm-inspectors` serde defaults** (3 tests): Add `#[serde(default)]` to `CallTrace.tx_type` in the external `seismic-revm-inspectors` repo to unblock state dump deserialization tests.
+
+2. **Otterscan trace test** (1 test): Rewrite `test_call_ots_trace_transaction` to expect shielded trace output (empty `input`/`output` fields where Seismic strips them).
+
+3. **Account proof test** (1 test): Update `test_account_proof` to validate proof structure generically instead of against hardcoded upstream hashes.

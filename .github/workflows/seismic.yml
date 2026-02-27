@@ -105,7 +105,6 @@ jobs:
             & not test(=anvil::test_anvil_recover_signature)
             & not test(=anvil_api::can_set_gas_price)
             & not test(=anvil_api::can_impersonate_gnosis_safe)
-
             & not test(=traces::test_trace_address_fork)
             & not test(=traces::test_trace_address_fork2)
             & not test(=api::can_get_code_by_hash)
@@ -120,7 +119,6 @@ jobs:
             & not test(=state::can_load_existing_state_legacy_stress)
             & not test(=state::test_backward_compatibility_state_dump_deserialization_v1_2)
             & not test(=transaction::can_send_tx_osaka_valid_with_limit_enabled)
-
             & not test(=transaction::test_reject_eip1559_pre_london)
           '
 
