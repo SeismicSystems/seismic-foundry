@@ -113,7 +113,7 @@ jobs:
             & not test(=eip4844::can_mine_blobs_when_exceeds_max_blobs)
             & not test(=eip4844::cannot_exceed_six_blobs)
             & not test(=genesis::chain_id_precedence)
-            & not test(=otterscan::test_call_ots_trace_transaction)
+
             & not test(=state::can_load_existing_state)
             & not test(=state::can_load_existing_state_legacy_stress)
             & not test(=state::test_backward_compatibility_state_dump_deserialization_v1_2)
