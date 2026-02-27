@@ -254,7 +254,8 @@ async fn can_call_on_pending_block() {
             .call()
             .await
             .unwrap();
-        assert_eq!(block.header.timestamp, ret_timestamp.to::<u64>());
+        // Mercury EVM TIMESTAMP opcode returns milliseconds (header timestamp / 1000)
+        assert_eq!(block.header.timestamp / 1000, ret_timestamp.to::<u64>());
 
         let ret_gas_limit = contract
             .getCurrentBlockGasLimit()
@@ -299,14 +300,14 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     assert!(undersized_max_fee_per_gas < latest_block_base_fee_per_gas);
 
     let last_sender_tx = simple_storage_contract.lastSender().into_transaction_request();
-    let last_sender = last_sender_tx.from().unwrap();
     let raw_input = last_sender_tx.input().unwrap();
     let builder = tx_builder()
         .with_from(wallet.address())
         .with_to(*simple_storage_contract.address())
         .with_input(raw_input.clone())
         .into();
-    seismic_provider.seismic_call(SendableTx::Builder(builder.into())).await.unwrap();
+    let result = seismic_provider.seismic_call(SendableTx::Builder(builder.into())).await.unwrap();
+    let last_sender = <Address as alloy_sol_types::SolValue>::abi_decode(&result).unwrap();
     assert_eq!(last_sender, Address::ZERO);
 }
 

@@ -104,10 +104,8 @@ jobs:
             & not test(=anvil::test_shanghai_fields)
             & not test(=anvil::test_anvil_recover_signature)
             & not test(=anvil_api::can_set_gas_price)
-            & not test(=anvil_api::can_get_node_info)
             & not test(=anvil_api::can_impersonate_gnosis_safe)
-            & not test(=api::can_call_on_pending_block)
-            & not test(=api::can_call_with_undersized_max_fee_per_gas)
+
             & not test(=traces::test_trace_address_fork)
             & not test(=traces::test_trace_address_fork2)
             & not test(=api::can_get_code_by_hash)
@@ -118,12 +116,11 @@ jobs:
             & not test(=genesis::chain_id_precedence)
             & not test(=otterscan::test_call_ots_trace_transaction)
             & not test(=proof::test_account_proof)
-            & not test(=revert::test_solc_revert_example)
             & not test(=state::can_load_existing_state)
             & not test(=state::can_load_existing_state_legacy_stress)
             & not test(=state::test_backward_compatibility_state_dump_deserialization_v1_2)
             & not test(=transaction::can_send_tx_osaka_valid_with_limit_enabled)
-            & not test(=transaction::get_blocktimestamp_works)
+
             & not test(=transaction::test_reject_eip1559_pre_london)
           '
 
