@@ -3,7 +3,7 @@ use alloy_dyn_abi::EventExt;
 use alloy_json_abi::{Event, EventParam};
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{
-    B256, Bytes, IntoLogData, TxKind, U256,
+    Address, B256, Bytes, IntoLogData, TxKind, U256,
     aliases::{B96, U96},
     hex::{self, FromHex},
 };
@@ -689,4 +689,76 @@ async fn test_seismic_precompiles_end_to_end() {
         String::from_utf8(result_bytes.to_vec()).expect("invalid utf8 in decrypted bytes");
 
     assert_eq!(final_string, "hello world");
+}
+
+// Seismic fork tests
+//
+// Seismic equivalents of the upstream mainnet fork tests (which are
+// #[ignore]'d because they need Ethereum mainnet RPCs). These fork the
+// Seismic testnet instead, verifying that sanvil can fork a Seismic chain.
+
+/// Seismic testnet RPC endpoint for fork tests.
+const SEISMIC_TESTNET_RPC: &str = "https://gcp-0.seismictest.net/rpc";
+/// Chain ID of the Seismic testnet.
+const SEISMIC_TESTNET_CHAIN_ID: u64 = 5124;
+/// Block number to fork from in fork tests (early block to minimize RPC data).
+const SEISMIC_FORK_BLOCK_NUMBER: u64 = 1000;
+
+fn seismic_fork_config() -> NodeConfig {
+    NodeConfig::test()
+        .with_eth_rpc_url(Some(SEISMIC_TESTNET_RPC.to_string()))
+        .with_fork_block_number(Some(SEISMIC_FORK_BLOCK_NUMBER))
+}
+
+/// Tests that sanvil can fork the Seismic testnet and reports the correct chain ID.
+/// Also verifies that --chain-id overrides the fork chain ID.
+/// Seismic equivalent of: genesis::chain_id_precedence (fork scenarios)
+#[tokio::test(flavor = "multi_thread")]
+async fn test_seismic_fork_chain_id() {
+    let (_api, handle) = spawn(seismic_fork_config()).await;
+    let provider = handle.http_provider();
+    let chain_id = provider.get_chain_id().await.unwrap();
+    assert_eq!(chain_id, SEISMIC_TESTNET_CHAIN_ID);
+
+    let (_api, handle) = spawn(seismic_fork_config().with_chain_id(Some(99999u64))).await;
+    let provider = handle.http_provider();
+    let chain_id = provider.get_chain_id().await.unwrap();
+    assert_eq!(chain_id, 99999u64);
+}
+
+/// Tests that sanvil forks at the correct block number and can read block data.
+/// Seismic equivalent of: traces::test_trace_address_fork (basic fork state)
+#[tokio::test(flavor = "multi_thread")]
+async fn test_seismic_fork_block_number() {
+    let (api, _handle) = spawn(seismic_fork_config()).await;
+    let block_number = api.block_number().unwrap();
+    assert_eq!(block_number, U256::from(SEISMIC_FORK_BLOCK_NUMBER));
+
+    let block = api
+        .block_by_number(alloy_eips::BlockNumberOrTag::Number(SEISMIC_FORK_BLOCK_NUMBER))
+        .await
+        .unwrap();
+    assert!(block.is_some());
+}
+
+/// Tests that sanvil can send transactions on a forked Seismic chain.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_seismic_fork_send_tx() {
+    let (_api, handle) = spawn(seismic_fork_config()).await;
+    let provider = handle.http_provider();
+
+    let from = handle.dev_wallets().next().unwrap().address();
+    let to = Address::from_str("0x1111111111111111111111111111111111111111").unwrap();
+
+    let tx = AlloyTransactionRequest::default()
+        .with_from(from)
+        .with_to(to)
+        .with_value(U256::from(1e18 as u64));
+    let tx = WithOtherFields::new(tx.into());
+
+    let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
+    assert!(receipt.inner.inner.status());
+
+    let balance = provider.get_balance(to).await.unwrap();
+    assert_eq!(balance, U256::from(1e18 as u64));
 }

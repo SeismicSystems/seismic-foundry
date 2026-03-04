@@ -41,6 +41,7 @@ use std::{
 use seismic_prelude::foundry::{EthereumWallet, tx_builder};
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "Mercury has EIP-1559; legacy gas price setting rejected"]
 async fn can_set_gas_price() {
     let (api, handle) =
         spawn(NodeConfig::test().with_hardfork(Some(EthereumHardfork::Berlin.into()))).await;
@@ -203,6 +204,7 @@ async fn can_impersonate_contract() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_impersonate_gnosis_safe() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -417,6 +419,7 @@ async fn test_timestamp_interval() {
 
 // <https://github.com/foundry-rs/foundry/issues/2341>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_can_set_storage_bsc_fork() {
     let (api, handle) =
         spawn(NodeConfig::test().with_eth_rpc_url(Some("https://bsc-dataseed.binance.org/"))).await;
@@ -451,7 +454,7 @@ async fn can_get_node_info() {
 
     let block_number = provider.get_block_number().await.unwrap();
     let block = provider.get_block(BlockId::from(block_number)).await.unwrap().unwrap();
-    let hard_fork: &str = SpecId::PRAGUE.into();
+    let hard_fork: &str = SpecId::MERCURY.into();
 
     let expected_node_info = NodeInfo {
         current_block_number: 0_u64,
@@ -501,6 +504,7 @@ async fn can_get_metadata() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_get_metadata_on_fork() {
     let (api, handle) =
         spawn(NodeConfig::test().with_eth_rpc_url(Some("https://bsc-dataseed.binance.org/"))).await;
@@ -591,6 +595,7 @@ async fn test_set_chain_id() {
 
 // <https://github.com/foundry-rs/foundry/issues/6096>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_revert_next_block_timestamp() {
     let (api, _handle) = spawn(fork_config()).await;
 
@@ -612,6 +617,7 @@ async fn test_fork_revert_next_block_timestamp() {
 // test that after a snapshot revert, the env block is reset
 // to its correct value (block number, etc.)
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_revert_call_latest_block_timestamp() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -1060,6 +1066,7 @@ async fn test_mine_first_block_with_interval() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_anvil_reset_non_fork() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     let provider = handle.http_provider();
@@ -1121,6 +1128,7 @@ async fn test_anvil_reset_non_fork() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_anvil_reset_fork_to_non_fork() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();

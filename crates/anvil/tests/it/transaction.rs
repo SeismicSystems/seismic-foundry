@@ -1239,6 +1239,7 @@ async fn can_call_with_high_gas_limit() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "Mercury accepts EIP-1559 by design"]
 async fn test_reject_eip1559_pre_london() {
     let (api, handle) =
         spawn(NodeConfig::test().with_hardfork(Some(EthereumHardfork::Berlin.into()))).await;
@@ -1320,6 +1321,7 @@ async fn can_estimate_gas_prague() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "Mercury doesn't include Osaka gas limit caps"]
 async fn can_send_tx_osaka_valid_with_limit_enabled() {
     let (_api, handle) = spawn(
         NodeConfig::test()

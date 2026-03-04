@@ -83,11 +83,12 @@ jobs:
         run: cargo nextest run test_seismic_
       - name: private storage tests
         run: cargo nextest run private_storage_
-      # TODO: make these work & run  
-      # - name: sforge tests
-      #   run: cargo test --bin sforge
-      # - name: sanvil tests
-      #   run: cargo test --bin sanvil
+      - name: anvil-core unit tests
+        run: cargo nextest run -p anvil-core
+      - name: foundry-config unit tests
+        run: cargo nextest run -p foundry-config
+      - name: sanvil integration tests
+        run: cargo nextest run -p anvil --test it
 
   viem:
     runs-on: large-github-runner

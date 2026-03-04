@@ -579,6 +579,11 @@ impl MinedTransaction {
                                     );
 
                                 // TODO: for shielding the trace
+                                // NOTE: CallTrace.tx_type defaults to 0 via #[serde(default)]
+                                // for state dumps created before the field existed (pre Oct 2025).
+                                // This is safe because the shielding check below only acts on
+                                // TxSeismic::TX_TYPE (74), so old traces with tx_type=0 are
+                                // correctly left unshielded.
                                 /*
                                 frame.tx_type = self.info.tx_type.unwrap_or_default();
                                 if frame.tx_type ==
