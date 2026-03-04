@@ -3482,8 +3482,8 @@ impl Backend {
             let mut builder = HashBuilder::default()
                 .with_proof_retainer(ProofRetainer::new(vec![Nibbles::unpack(keccak256(address))]));
 
-            for (key, account, is_private) in trie_accounts(db) {
-                builder.add_leaf(key, &account, is_private);
+            for (key, account) in trie_accounts(db) {
+                builder.add_leaf(key, &account);
             }
 
             let _ = builder.root();
@@ -3970,8 +3970,8 @@ pub fn prove_storage(
 
     let mut builder = HashBuilder::default().with_proof_retainer(ProofRetainer::new(keys.clone()));
 
-    for (key, value, is_private) in trie_storage(storage) {
-        builder.add_leaf(key, &value, is_private);
+    for (key, value) in trie_storage(storage) {
+        builder.add_leaf(key, &value);
     }
 
     let _ = builder.root();
