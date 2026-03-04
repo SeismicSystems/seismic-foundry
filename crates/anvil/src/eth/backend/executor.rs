@@ -502,7 +502,7 @@ where
         },
         block: env.evm_env.block_env.clone(),
         cfg: env.evm_env.cfg_env.clone(),
-        tx: SeismicTransaction::new(env.tx.base.clone()),
+        tx: SeismicTransaction::new(env.tx.base.clone()).with_tx_hash(env.tx.tx_hash),
         chain: SeismicChain::default(),
         local: LocalContext::default(),
         error: Ok(()),
