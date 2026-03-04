@@ -299,14 +299,14 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     assert!(undersized_max_fee_per_gas < latest_block_base_fee_per_gas);
 
     let last_sender_tx = simple_storage_contract.lastSender().into_transaction_request();
-    let last_sender = last_sender_tx.from().unwrap();
     let raw_input = last_sender_tx.input().unwrap();
     let builder = tx_builder()
         .with_from(wallet.address())
         .with_to(*simple_storage_contract.address())
         .with_input(raw_input.clone())
         .into();
-    seismic_provider.seismic_call(SendableTx::Builder(builder.into())).await.unwrap();
+    let result = seismic_provider.seismic_call(SendableTx::Builder(builder.into())).await.unwrap();
+    let last_sender = <Address as alloy_sol_types::SolValue>::abi_decode(&result).unwrap();
     assert_eq!(last_sender, Address::ZERO);
 }
 
@@ -461,6 +461,7 @@ async fn can_send_tx_sync() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_get_code_by_hash() {
     let (api, _) =
         spawn(NodeConfig::test().with_eth_rpc_url(Some(rpc::next_http_archive_rpc_url()))).await;

@@ -167,6 +167,7 @@ async fn can_preserve_historical_states_between_dump_and_load() {
 
 // <https://github.com/foundry-rs/foundry/issues/9053>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_load_state() {
     let (api, handle) = spawn(
         NodeConfig::test()
@@ -254,6 +255,7 @@ async fn test_fork_load_state() {
 
 // <https://github.com/foundry-rs/foundry/issues/9539>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_load_state_with_greater_state_block() {
     let (api, _handle) = spawn(
         NodeConfig::test()

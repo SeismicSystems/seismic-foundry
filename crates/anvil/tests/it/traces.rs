@@ -316,6 +316,7 @@ async fn test_debug_trace_call_state_override() {
 
 // <https://github.com/foundry-rs/foundry/issues/2656>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_trace_address_fork() {
     let (api, handle) = spawn(fork_config().with_fork_block_number(Some(15291050u64))).await;
     let provider = handle.http_provider();
@@ -514,6 +515,7 @@ async fn test_trace_address_fork() {
 // <https://github.com/foundry-rs/foundry/issues/2705>
 // <https://etherscan.io/tx/0x2d951c5c95d374263ca99ad9c20c9797fc714330a8037429a3aa4c83d456f845>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_trace_address_fork2() {
     let (api, handle) = spawn(fork_config().with_fork_block_number(Some(15314401u64))).await;
     let provider = handle.http_provider();
