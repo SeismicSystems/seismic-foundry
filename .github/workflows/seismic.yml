@@ -77,7 +77,6 @@ jobs:
           sudo mv solc/solc /usr/local/bin/ssolc
           sudo chmod +x /usr/local/bin/ssolc
           ssolc --version
-      # --- Seismic-specific tests ---
       - name: seismic unit tests
         run: cargo nextest run test_seismic_tx_encoding
       - name: seismic integration tests
@@ -86,18 +85,10 @@ jobs:
         run: cargo nextest run private_storage_
       - name: seismic fork tests
         run: cargo nextest run -p anvil --test it -E 'test(=seismic::test_seismic_fork_)'
-
-      # --- Unit tests for core crates (no external dependencies) ---
       - name: anvil-core unit tests
         run: cargo nextest run -p anvil-core
       - name: foundry-config unit tests
         run: cargo nextest run -p foundry-config
-
-      # --- sanvil integration tests ---
-      # Runs all non-fork, non-optimism anvil integration tests, excluding known
-      # failures due to: hardcoded Mercury SpecId (pre-London tests), external RPC
-      # dependencies, unimplemented anvil_impersonate_signature precompile hook,
-      # and EIP-4844 blob support gap. See docs/test-audit.md for full classification.
       - name: sanvil integration tests
         run: |
           cargo nextest run -p anvil --test it -E '
