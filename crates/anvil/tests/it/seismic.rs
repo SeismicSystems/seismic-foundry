@@ -334,6 +334,220 @@ async fn test_seismic_transaction_rpc() {
     assert!(gas_estimate > U256::ZERO);
 }
 
+/// Tests that the RNG precompile produces different output for different transactions.
+///
+/// This is a regression test for a bug where `SeismicTransaction::new()` defaulted
+/// `tx_hash` to `B256::ZERO`, causing the RNG precompile to use the same seed for
+/// every transaction and produce identical "random" output.
+///
+/// The test deploys a minimal contract that calls the RNG precompile and stores the
+/// result, then sends two separate transactions and verifies they get different values.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_seismic_rng_different_per_transaction() {
+    // Spin up node with auto-mine
+    let (_api, handle) = spawn(NodeConfig::test()).await;
+    let wallet = EthereumWallet::new(handle.dev_wallets().next().unwrap().clone());
+    let provider = SeismicSignedProvider::new(
+        wallet,
+        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
+    )
+    .await
+    .unwrap();
+    let deployer = handle.dev_accounts().next().unwrap();
+
+    // Deploy a minimal contract that:
+    //   - On any call: STATICCALL the RNG precompile (0x64) requesting 32 bytes
+    //   - Stores the result in storage slot 0
+    //   - Increments a call counter in storage slot 1
+    //   - Returns the RNG result
+    //
+    // Solidity equivalent:
+    //   contract RngCaller {
+    //       bytes32 public lastRng;
+    //       uint256 public callCount;
+    //       fallback() external {
+    //           // Prepare input: 0x00000020 (32 bytes)
+    //           bytes memory input = hex"00000020";
+    //           (bool ok, bytes memory result) = address(0x64).staticcall(input);
+    //           require(ok);
+    //           lastRng = bytes32(result);
+    //           callCount++;
+    //           // Return the result
+    //           assembly { return(add(result, 32), mload(result)) }
+    //       }
+    //   }
+    //
+    // Hand-assembled EVM bytecode for the runtime code:
+    //   PUSH4 0x00000020  ; numBytes = 32
+    //   PUSH0             ; memory offset 0
+    //   MSTORE            ; mem[0..32] = 0x00000020 (right-padded)
+    //   PUSH1 0x20        ; retSize = 32
+    //   PUSH1 0x00        ; retOffset = 0
+    //   PUSH1 0x04        ; argSize = 4 (first 4 bytes of memory = 00000020)
+    //   PUSH1 0x1c        ; argOffset = 28 (bytes 28..32 of the word contain 00000020)
+    //   PUSH1 0x64        ; address = 0x64 (RNG precompile)
+    //   GAS               ; forward all gas
+    //   STATICCALL         ; staticcall(gas, 0x64, 28, 4, 0, 32)
+    //   POP               ; discard success flag
+    //   PUSH0             ; offset 0
+    //   MLOAD             ; load result from memory
+    //   DUP1              ; duplicate for storage
+    //   PUSH0             ; slot 0
+    //   SSTORE            ; store lastRng
+    //   PUSH1 0x01        ; slot 1
+    //   SLOAD             ; load callCount
+    //   PUSH1 0x01        ; increment
+    //   ADD
+    //   PUSH1 0x01        ; slot 1
+    //   SSTORE            ; store callCount
+    //   PUSH0             ; memory offset 0
+    //   MSTORE            ; store result in memory for return
+    //   PUSH1 0x20        ; return 32 bytes
+    //   PUSH0             ; from offset 0
+    //   RETURN
+    // Runtime bytecodes concatenated into one hex string.
+    // See comments above for opcode breakdown.
+    // Uses PUSH1 0x00 instead of PUSH0 (0x5f) for compatibility.
+    let runtime_code = hex::decode(concat!(
+        "6300000020", // PUSH4 0x00000020
+        "6000",       // PUSH1 0x00
+        "52",         // MSTORE
+        "6020",       // PUSH1 0x20 (retSize)
+        "6000",       // PUSH1 0x00 (retOffset)
+        "6004",       // PUSH1 0x04 (argSize)
+        "601c",       // PUSH1 0x1c (argOffset = 28)
+        "6064",       // PUSH1 0x64 (RNG precompile address)
+        "5a",         // GAS
+        "fa",         // STATICCALL
+        "50",         // POP (discard success)
+        "6000",       // PUSH1 0x00
+        "51",         // MLOAD (load RNG result)
+        "80",         // DUP1
+        "6000",       // PUSH1 0x00
+        "55",         // SSTORE (slot 0 = result)
+        "6001",       // PUSH1 0x01
+        "54",         // SLOAD (load counter)
+        "6001",       // PUSH1 0x01
+        "01",         // ADD
+        "6001",       // PUSH1 0x01
+        "55",         // SSTORE (slot 1 = counter)
+        "6000",       // PUSH1 0x00
+        "52",         // MSTORE
+        "6020",       // PUSH1 0x20
+        "6000",       // PUSH1 0x00
+        "f3",         // RETURN
+    ))
+    .unwrap();
+
+    // Deploy prefix: CODECOPY runtime to memory, then RETURN it.
+    // The prefix is exactly 12 bytes, so runtime starts at offset 12.
+    // CODECOPY pops (destOffset, offset, size) — push in reverse order.
+    // RETURN pops (offset, size) — push in reverse order.
+    let runtime_len = runtime_code.len() as u8;
+    let mut deploy_code: Vec<u8> = vec![
+        0x60, runtime_len, // PUSH1 <size>
+        0x60, 0x0c,        // PUSH1 0x0c (offset = 12, where runtime starts in deploy code)
+        0x60, 0x00,        // PUSH1 0x00 (destOffset in memory)
+        0x39,              // CODECOPY(destOffset=0, offset=12, size=runtime_len)
+        0x60, runtime_len, // PUSH1 <size>
+        0x60, 0x00,        // PUSH1 0x00 (offset)
+        0xf3,              // RETURN(offset=0, size=runtime_len)
+    ];
+    assert_eq!(deploy_code.len(), 12, "deploy prefix must be exactly 12 bytes");
+    deploy_code.extend_from_slice(&runtime_code);
+
+    let bytecode = Bytes::from(deploy_code);
+    let tx_req =
+        tx_builder().with_from(deployer).with_kind(TxKind::Create).with_input(bytecode).into();
+    let contract_addr = provider
+        .send_transaction(tx_req.into())
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+
+    // Deploy a second instance of the same contract
+    let mut deploy_code_2 = vec![
+        0x60, runtime_len, // PUSH1 size
+        0x60, 0x0c,        // PUSH1 offset (12 = deploy prefix length)
+        0x60, 0x00,        // PUSH1 destOffset
+        0x39,              // CODECOPY
+        0x60, runtime_len, // PUSH1 size
+        0x60, 0x00,        // PUSH1 offset
+        0xf3,              // RETURN
+    ];
+    deploy_code_2.extend_from_slice(&runtime_code);
+    let contract_addr_2 = provider
+        .send_transaction(
+            tx_builder()
+                .with_from(deployer)
+                .with_kind(TxKind::Create)
+                .with_input(Bytes::from(deploy_code_2))
+                .into()
+                .into(),
+        )
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+
+    // Call contract 1 — triggers RNG precompile, stores result in slot 0
+    let receipt_a = provider
+        .send_transaction(
+            tx_builder()
+                .with_from(deployer)
+                .with_to(contract_addr)
+                .with_input(Bytes::new())
+                .into()
+                .into(),
+        )
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap();
+    assert!(receipt_a.inner.inner.status(), "Call A should succeed");
+
+    // Call contract 2 — same code, different transaction
+    let receipt_b = provider
+        .send_transaction(
+            tx_builder()
+                .with_from(deployer)
+                .with_to(contract_addr_2)
+                .with_input(Bytes::new())
+                .into()
+                .into(),
+        )
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap();
+    assert!(receipt_b.inner.inner.status(), "Call B should succeed");
+
+    // Read the stored RNG values from each contract's slot 0
+    let rng_a = provider.get_storage_at(contract_addr, U256::from(0)).await.unwrap();
+    let rng_b = provider.get_storage_at(contract_addr_2, U256::from(0)).await.unwrap();
+
+    // Both should be non-zero
+    assert_ne!(rng_a, U256::ZERO, "RNG output A should not be zero");
+    assert_ne!(rng_b, U256::ZERO, "RNG output B should not be zero");
+
+    // The key assertion: different transactions should produce different RNG output.
+    // Before the fix, both would be identical because tx_hash was always B256::ZERO.
+    assert_ne!(
+        rng_a, rng_b,
+        "RNG precompile should produce different output for different transactions. \
+         If equal, tx_hash is likely not being propagated to the EVM."
+    );
+}
+
 // Actual contract being tested:
 // https://github.com/SeismicSystems/early-builds/blob/main/EIP7702_experiment/end-to-end-mvp/EncryptedLogs.sol
 #[tokio::test(flavor = "multi_thread")]
