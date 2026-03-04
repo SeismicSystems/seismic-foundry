@@ -966,7 +966,6 @@ async fn test_mine_blk_with_prev_timestamp() {
 // increase time by 0 seconds i.e next_block_timestamp = prev_block_timestamp
 // api.evm_increase_time(0).unwrap();
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "Mercury ms timestamp conversion causes 1s drift"]
 async fn test_increase_time_by_zero() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     let provider = handle.http_provider();

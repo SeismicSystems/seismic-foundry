@@ -493,16 +493,15 @@ async fn get_blocktimestamp_works() {
         api.block_by_number(alloy_rpc_types::BlockNumberOrTag::Latest).await.unwrap().unwrap();
 
     let timestamp = contract.getCurrentBlockTimestamp().call().await.unwrap();
-    // Mercury EVM TIMESTAMP opcode returns milliseconds (header timestamp / 1000)
-    assert_eq!(timestamp.to::<u64>(), latest_block.header.timestamp / 1000);
+    assert_eq!(timestamp.to::<u64>(), latest_block.header.timestamp);
 
     // repeat call same result
     let timestamp = contract.getCurrentBlockTimestamp().call().await.unwrap();
-    assert_eq!(timestamp.to::<u64>(), latest_block.header.timestamp / 1000);
+    assert_eq!(timestamp.to::<u64>(), latest_block.header.timestamp);
 
-    // mock timestamp — multiply by 1000 because Mercury divides by 1000 internally
+    // mock timestamp
     let next_timestamp = timestamp.to::<u64>() + 1337;
-    api.evm_set_next_block_timestamp(next_timestamp * 1000).unwrap();
+    api.evm_set_next_block_timestamp(next_timestamp).unwrap();
 
     let timestamp =
         contract.getCurrentBlockTimestamp().block(BlockId::pending()).call().await.unwrap();

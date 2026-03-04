@@ -254,8 +254,7 @@ async fn can_call_on_pending_block() {
             .call()
             .await
             .unwrap();
-        // Mercury EVM TIMESTAMP opcode returns milliseconds (header timestamp / 1000)
-        assert_eq!(block.header.timestamp / 1000, ret_timestamp.to::<u64>());
+        assert_eq!(block.header.timestamp, ret_timestamp.to::<u64>());
 
         let ret_gas_limit = contract
             .getCurrentBlockGasLimit()
