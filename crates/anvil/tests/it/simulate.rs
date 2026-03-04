@@ -12,6 +12,7 @@ use foundry_test_utils::rpc;
 use seismic_prelude::foundry::{SimBlock, SimulatePayload};
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_simulate_v1() {
     crate::init_tracing();
     let (api, _) =

@@ -1239,10 +1239,8 @@ async fn can_call_with_high_gas_limit() {
     assert_eq!("Hello World!", greeting);
 }
 
-// Skipped in Seismic CI: sanvil always runs Mercury (SpecId::MERCURY), which supports
-// EIP-1559. This test requests Berlin (pre-EIP-1559) and expects the tx to be rejected,
-// but the hardfork flag is ignored so the tx succeeds.
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "Mercury accepts EIP-1559 by design"]
 async fn test_reject_eip1559_pre_london() {
     let (api, handle) =
         spawn(NodeConfig::test().with_hardfork(Some(EthereumHardfork::Berlin.into()))).await;
@@ -1324,6 +1322,7 @@ async fn can_estimate_gas_prague() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "Mercury doesn't include Osaka gas limit caps"]
 async fn can_send_tx_osaka_valid_with_limit_enabled() {
     let (_api, handle) = spawn(
         NodeConfig::test()

@@ -477,19 +477,11 @@ async fn test_seismic_precompiles_end_to_end() {
     assert_eq!(final_string, "hello world");
 }
 
-// ---------------------------------------------------------------------------
 // Seismic fork tests
 //
-// These are the Seismic equivalents of the upstream fork tests that are excluded
-// from CI because they depend on Ethereum mainnet RPCs. These tests fork the
+// Seismic equivalents of the upstream mainnet fork tests (which are
+// #[ignore]'d because they need Ethereum mainnet RPCs). These fork the
 // Seismic testnet instead, verifying that sanvil can fork a Seismic chain.
-//
-// Upstream equivalents:
-//   - genesis::chain_id_precedence (fork scenarios)
-//   - traces::test_trace_address_fork[2]
-//   - api::can_get_code_by_hash
-//   - anvil_api::can_impersonate_gnosis_safe (skipped — no Gnosis Safe on Seismic testnet)
-// ---------------------------------------------------------------------------
 
 /// Seismic testnet RPC endpoint for fork tests.
 const SEISMIC_TESTNET_RPC: &str = "https://gcp-0.seismictest.net/rpc";

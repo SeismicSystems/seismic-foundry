@@ -83,30 +83,12 @@ jobs:
         run: cargo nextest run test_seismic_
       - name: private storage tests
         run: cargo nextest run private_storage_
-      - name: seismic fork tests
-        run: cargo nextest run -p anvil --test it -E 'test(=seismic::test_seismic_fork_)'
       - name: anvil-core unit tests
         run: cargo nextest run -p anvil-core
       - name: foundry-config unit tests
         run: cargo nextest run -p foundry-config
       - name: sanvil integration tests
-        run: |
-          cargo nextest run -p anvil --test it -E '
-            not test(/fork|optimism|simulate/)
-            & not test(=anvil::test_shanghai_fields)
-            & not test(=anvil::test_anvil_recover_signature)
-            & not test(=anvil_api::can_set_gas_price)
-            & not test(=anvil_api::can_impersonate_gnosis_safe)
-            & not test(=traces::test_trace_address_fork)
-            & not test(=traces::test_trace_address_fork2)
-            & not test(=eip4844::can_correctly_estimate_blob_gas_with_recommended_fillers_with_signer)
-            & not test(=eip4844::can_get_blobs_by_tx_hash)
-            & not test(=eip4844::can_mine_blobs_when_exceeds_max_blobs)
-            & not test(=eip4844::cannot_exceed_six_blobs)
-            & not test(=genesis::chain_id_precedence)
-            & not test(=transaction::can_send_tx_osaka_valid_with_limit_enabled)
-            & not test(=transaction::test_reject_eip1559_pre_london)
-          '
+        run: cargo nextest run -p anvil --test it
 
   viem:
     runs-on: large-github-runner

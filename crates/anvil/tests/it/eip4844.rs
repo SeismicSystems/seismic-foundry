@@ -89,6 +89,7 @@ async fn can_send_multiple_blobs_in_one_tx() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "EIP-4844 blob support not wired through Seismic type forks"]
 async fn cannot_exceed_six_blobs() {
     let node_config = NodeConfig::test().with_hardfork(Some(EthereumHardfork::Cancun.into()));
     let (_api, handle) = spawn(node_config).await;
@@ -126,6 +127,7 @@ async fn cannot_exceed_six_blobs() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "EIP-4844 blob support not wired through Seismic type forks"]
 async fn can_mine_blobs_when_exceeds_max_blobs() {
     let node_config = NodeConfig::test().with_hardfork(Some(EthereumHardfork::Cancun.into()));
     let (api, handle) = spawn(node_config).await;
@@ -256,6 +258,7 @@ async fn can_correctly_estimate_blob_gas_with_recommended_fillers() {
 
 #[expect(clippy::disallowed_macros)]
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "EIP-4844 blob support not wired through Seismic type forks"]
 async fn can_correctly_estimate_blob_gas_with_recommended_fillers_with_signer() {
     let node_config = NodeConfig::test().with_hardfork(Some(EthereumHardfork::Cancun.into()));
     let (_api, handle) = spawn(node_config).await;
@@ -389,6 +392,7 @@ async fn can_get_blobs_by_versioned_hash() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "EIP-4844 blob support not wired through Seismic type forks"]
 async fn can_get_blobs_by_tx_hash() {
     let node_config = NodeConfig::test().with_hardfork(Some(EthereumHardfork::Prague.into()));
     let (api, handle) = spawn(node_config).await;

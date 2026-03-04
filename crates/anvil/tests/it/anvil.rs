@@ -95,10 +95,8 @@ async fn test_can_handle_large_timestamp() {
     assert_eq!(block.header.timestamp, num);
 }
 
-// Skipped in Seismic CI: sanvil always runs Mercury (SpecId::MERCURY), which is post-Cancun.
-// This test requests Shanghai and asserts blob_gas_used is absent, but Mercury always
-// includes Cancun blob fields.
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "Mercury is post-Cancun; blob fields always present"]
 async fn test_shanghai_fields() {
     let (api, _handle) =
         spawn(NodeConfig::test().with_hardfork(Some(EthereumHardfork::Shanghai.into()))).await;
@@ -144,6 +142,7 @@ async fn test_can_use_default_genesis_block_number() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "CheatEcrecover not wired into SeismicPrecompiles; needs SharedBuffer handling in inspector"]
 async fn test_anvil_recover_signature() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     let provider = handle.http_provider();
