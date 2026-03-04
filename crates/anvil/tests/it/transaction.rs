@@ -486,7 +486,8 @@ async fn get_blocktimestamp_works() {
 
     let timestamp = contract.getCurrentBlockTimestamp().call().await.unwrap();
 
-    assert!(timestamp > U256::from(1));
+    let ts = timestamp.to::<u64>();
+    assert!(ts >= 1_000_000_000 && ts < 10_000_000_000);
 
     let latest_block =
         api.block_by_number(alloy_rpc_types::BlockNumberOrTag::Latest).await.unwrap().unwrap();
