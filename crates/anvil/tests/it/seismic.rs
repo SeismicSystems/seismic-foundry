@@ -491,13 +491,17 @@ async fn test_seismic_precompiles_end_to_end() {
 //   - anvil_api::can_impersonate_gnosis_safe (skipped — no Gnosis Safe on Seismic testnet)
 // ---------------------------------------------------------------------------
 
+/// Seismic testnet RPC endpoint for fork tests.
 const SEISMIC_TESTNET_RPC: &str = "https://gcp-0.seismictest.net/rpc";
+/// Chain ID of the Seismic testnet.
 const SEISMIC_TESTNET_CHAIN_ID: u64 = 5124;
+/// Block number to fork from in fork tests (early block to minimize RPC data).
+const SEISMIC_FORK_BLOCK_NUMBER: u64 = 1000;
 
 fn seismic_fork_config() -> NodeConfig {
     NodeConfig::test()
         .with_eth_rpc_url(Some(SEISMIC_TESTNET_RPC.to_string()))
-        .with_fork_block_number(Some(1000u64))
+        .with_fork_block_number(Some(SEISMIC_FORK_BLOCK_NUMBER))
 }
 
 /// Tests that sanvil can fork the Seismic testnet and reports the correct chain ID.
@@ -505,13 +509,11 @@ fn seismic_fork_config() -> NodeConfig {
 /// Seismic equivalent of: genesis::chain_id_precedence (fork scenarios)
 #[tokio::test(flavor = "multi_thread")]
 async fn test_seismic_fork_chain_id() {
-    // Fork inherits chain ID from the Seismic testnet
     let (_api, handle) = spawn(seismic_fork_config()).await;
     let provider = handle.http_provider();
     let chain_id = provider.get_chain_id().await.unwrap();
     assert_eq!(chain_id, SEISMIC_TESTNET_CHAIN_ID);
 
-    // --chain-id overrides the fork chain ID
     let (_api, handle) = spawn(seismic_fork_config().with_chain_id(Some(99999u64))).await;
     let provider = handle.http_provider();
     let chain_id = provider.get_chain_id().await.unwrap();
@@ -524,11 +526,10 @@ async fn test_seismic_fork_chain_id() {
 async fn test_seismic_fork_block_number() {
     let (api, _handle) = spawn(seismic_fork_config()).await;
     let block_number = api.block_number().unwrap();
-    assert_eq!(block_number, U256::from(1000));
+    assert_eq!(block_number, U256::from(SEISMIC_FORK_BLOCK_NUMBER));
 
-    // Can read the forked block
     let block = api
-        .block_by_number(alloy_eips::BlockNumberOrTag::Number(1000))
+        .block_by_number(alloy_eips::BlockNumberOrTag::Number(SEISMIC_FORK_BLOCK_NUMBER))
         .await
         .unwrap();
     assert!(block.is_some());
