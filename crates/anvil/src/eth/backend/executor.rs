@@ -273,6 +273,11 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
         #[allow(unused_mut)]
         let mut tx_env = tx.to_revm_tx_env();
 
+        // Set the actual tx hash for RNG domain separation.
+        // Without this, tx_hash defaults to B256::ZERO and the RNG
+        // precompile produces identical output for every transaction.
+        tx_env.tx_hash = *tx.hash();
+
         /*
         if self.optimism {
             tx_env.enveloped_tx = Some(alloy_rlp::encode(&tx.transaction.transaction).into());
@@ -497,7 +502,9 @@ where
         },
         block: env.evm_env.block_env.clone(),
         cfg: env.evm_env.cfg_env.clone(),
-        tx: SeismicTransaction::new(env.tx.base.clone()),
+        // Propagate tx_hash so the RNG precompile produces random (non-zero) output.
+        // See: https://github.com/SeismicSystems/seismic-revm/issues/199
+        tx: SeismicTransaction::new(env.tx.base.clone()).with_tx_hash(env.tx.tx_hash),
         chain: SeismicChain::default(),
         local: LocalContext::default(),
         error: Ok(()),

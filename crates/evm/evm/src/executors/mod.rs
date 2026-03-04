@@ -15,7 +15,7 @@ use crate::{
 use alloy_dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
 use alloy_json_abi::Function;
 use alloy_primitives::{
-    Address, Bytes, Log, TxKind, U256, keccak256,
+    Address, B256, Bytes, Log, TxKind, U256, keccak256,
     map::{AddressHashMap, HashMap},
 };
 use alloy_sol_types::{SolCall, sol};
@@ -1181,5 +1181,87 @@ impl FailFast {
     /// Whether a failure has been recorded and test should stop.
     pub fn should_stop(&self) -> bool {
         self.inner.as_ref().map(|flag| flag.load(Ordering::Relaxed)).unwrap_or(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Tests that the RNG precompile produces different output across separate transactions
+    /// when executed through the foundry-evm Executor (no anvil required).
+    ///
+    /// Deploys a minimal contract that calls the RNG precompile (0x64) and stores the
+    /// 32-byte result in storage slot 0. Three separate `transact_raw` calls should each
+    /// produce a different RNG value because each transaction should have a unique tx_hash
+    /// used as the RNG seed.
+    #[test]
+    fn test_rng_precompile_different_per_tx() {
+        let backend = Backend::spawn(None).unwrap();
+        let mut env = Env::default_with_spec_id(SpecId::MERCURY);
+        env.evm_env.cfg_env.disable_nonce_check = true;
+        let mut executor =
+            ExecutorBuilder::new().spec_id(SpecId::MERCURY).gas_limit(u64::MAX).build(env, backend);
+
+        let caller = Address::repeat_byte(0x01);
+        executor.set_balance(caller, U256::MAX).unwrap();
+
+        // Minimal contract that calls the RNG precompile (0x64), requesting 32
+        // random bytes, stores the result in slot 0, and returns it.
+        //
+        // Solidity equivalent:
+        //   fallback() external {
+        //       (bool ok, bytes memory result) = address(0x64).staticcall(hex"00000020");
+        //       assembly { sstore(0, mload(add(result, 32))) }
+        //       assembly { return(0, 32) }
+        //   }
+        //
+        // The deploy prefix (first 12 bytes) CODECOPYs the runtime to memory
+        // and RETURNs it.
+        let deploy_code = alloy_primitives::hex::decode(
+            // deploy prefix (12 bytes) + runtime (32 bytes)
+            "6020600c60003960206000f36300000020600052602060006004601c60645afa5060005160005560206000f3",
+        )
+        .unwrap();
+
+        let deploy_result =
+            executor.deploy(caller, Bytes::from(deploy_code), U256::ZERO, None).unwrap();
+        let contract = deploy_result.address;
+
+        // Call the contract 3 times, each with a unique tx_hash to simulate
+        // distinct transactions. Without setting tx_hash, it defaults to
+        // B256::ZERO and the RNG precompile produces identical output.
+        let mut rng_values = Vec::new();
+        for i in 0..3 {
+            let mut env =
+                executor.build_test_env(caller, TxKind::Call(contract), Bytes::new(), U256::ZERO);
+            env.tx.tx_hash = B256::random();
+            let result = executor.transact_with_env(env).unwrap();
+            assert!(
+                !result.reverted,
+                "RNG call {i} should not revert: exit={:?} result={}",
+                result.exit_reason,
+                alloy_primitives::hex::encode(&result.result)
+            );
+            assert_eq!(result.result.len(), 32, "should return 32 bytes");
+            rng_values.push(result.result.clone());
+        }
+
+        // All three RNG values should be non-zero and distinct
+        for (i, val) in rng_values.iter().enumerate() {
+            assert_ne!(val.as_ref(), &[0u8; 32], "RNG output {i} should not be zero");
+        }
+        assert_ne!(
+            rng_values[0], rng_values[1],
+            "RNG outputs 0 and 1 should differ (tx_hash not propagated?)"
+        );
+        assert_ne!(
+            rng_values[1], rng_values[2],
+            "RNG outputs 1 and 2 should differ (tx_hash not propagated?)"
+        );
+        assert_ne!(
+            rng_values[0], rng_values[2],
+            "RNG outputs 0 and 2 should differ (tx_hash not propagated?)"
+        );
     }
 }
