@@ -1334,6 +1334,7 @@ impl Backend {
     > {
         let mut env = self.next_env();
         env.tx = tx.pending_transaction.to_revm_tx_env();
+        env.tx.tx_hash = *tx.pending_transaction.hash();
 
         /*
         if env.is_optimism {
@@ -3038,7 +3039,8 @@ impl Backend {
 
         let target_tx = block.transactions[index].clone();
         let target_tx = PendingTransaction::from_maybe_impersonated(target_tx)?;
-        let tx_env = target_tx.to_revm_tx_env();
+        let mut tx_env = target_tx.to_revm_tx_env();
+        tx_env.tx_hash = *target_tx.hash();
 
         let config = tracer_config.into_json();
         let mut inspector = revm_inspectors::tracing::js::JsInspector::new(code, config)
