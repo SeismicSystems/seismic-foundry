@@ -84,6 +84,8 @@ jobs:
         run: cargo nextest run test_seismic_
       - name: private storage tests
         run: cargo nextest run private_storage_
+      - name: seismic fork tests
+        run: cargo nextest run -p anvil --test it -E 'test(=seismic::test_seismic_fork_)'
 
       # --- Unit tests for core crates (no external dependencies) ---
       - name: anvil-core unit tests
@@ -94,9 +96,8 @@ jobs:
       # --- sanvil integration tests ---
       # Runs all non-fork, non-optimism anvil integration tests, excluding known
       # failures due to: hardcoded Mercury SpecId (pre-London tests), external RPC
-      # dependencies, Seismic EVM behavior differences (timestamp, traces, blob txs),
-      # and state deserialization needing #[serde(default)] in seismic-revm-inspectors.
-      # See docs/test-audit.md for the full classification.
+      # dependencies, unimplemented anvil_impersonate_signature precompile hook,
+      # and EIP-4844 blob support gap. See docs/test-audit.md for full classification.
       - name: sanvil integration tests
         run: |
           cargo nextest run -p anvil --test it -E '
@@ -107,7 +108,6 @@ jobs:
             & not test(=anvil_api::can_impersonate_gnosis_safe)
             & not test(=traces::test_trace_address_fork)
             & not test(=traces::test_trace_address_fork2)
-            & not test(=api::can_get_code_by_hash)
             & not test(=eip4844::can_correctly_estimate_blob_gas_with_recommended_fillers_with_signer)
             & not test(=eip4844::can_get_blobs_by_tx_hash)
             & not test(=eip4844::can_mine_blobs_when_exceeds_max_blobs)
