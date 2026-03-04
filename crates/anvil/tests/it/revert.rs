@@ -75,10 +75,7 @@ async fn test_solc_revert_example() {
     let contract = VendingMachine::deploy(&provider).await.unwrap();
     let tx = contract.buy(U256::from(100)).into_transaction_request();
     let input = tx.input().unwrap();
-    let builder = tx_builder()
-        .with_to(*contract.address())
-        .with_input(input.clone())
-        .into();
+    let builder = tx_builder().with_to(*contract.address()).with_input(input.clone()).into();
     let err = seismic_provider.seismic_call(SendableTx::Builder(builder.into())).await.unwrap_err();
 
     let s = err.to_string();

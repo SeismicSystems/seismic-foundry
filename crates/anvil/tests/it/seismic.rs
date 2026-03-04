@@ -550,13 +550,7 @@ async fn test_seismic_fork_send_tx() {
         .with_value(U256::from(1e18 as u64));
     let tx = WithOtherFields::new(tx.into());
 
-    let receipt = provider
-        .send_transaction(tx)
-        .await
-        .unwrap()
-        .get_receipt()
-        .await
-        .unwrap();
+    let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
     assert!(receipt.inner.inner.status());
 
     let balance = provider.get_balance(to).await.unwrap();
