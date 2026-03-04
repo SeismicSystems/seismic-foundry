@@ -445,13 +445,18 @@ async fn test_seismic_rng_different_per_transaction() {
     // RETURN pops (offset, size) — push in reverse order.
     let runtime_len = runtime_code.len() as u8;
     let mut deploy_code: Vec<u8> = vec![
-        0x60, runtime_len, // PUSH1 <size>
-        0x60, 0x0c,        // PUSH1 0x0c (offset = 12, where runtime starts in deploy code)
-        0x60, 0x00,        // PUSH1 0x00 (destOffset in memory)
-        0x39,              // CODECOPY(destOffset=0, offset=12, size=runtime_len)
-        0x60, runtime_len, // PUSH1 <size>
-        0x60, 0x00,        // PUSH1 0x00 (offset)
-        0xf3,              // RETURN(offset=0, size=runtime_len)
+        0x60,
+        runtime_len, // PUSH1 <size>
+        0x60,
+        0x0c, // PUSH1 0x0c (offset = 12, where runtime starts in deploy code)
+        0x60,
+        0x00, // PUSH1 0x00 (destOffset in memory)
+        0x39, // CODECOPY(destOffset=0, offset=12, size=runtime_len)
+        0x60,
+        runtime_len, // PUSH1 <size>
+        0x60,
+        0x00, // PUSH1 0x00 (offset)
+        0xf3, // RETURN(offset=0, size=runtime_len)
     ];
     assert_eq!(deploy_code.len(), 12, "deploy prefix must be exactly 12 bytes");
     deploy_code.extend_from_slice(&runtime_code);
@@ -471,13 +476,18 @@ async fn test_seismic_rng_different_per_transaction() {
 
     // Deploy a second instance of the same contract
     let mut deploy_code_2 = vec![
-        0x60, runtime_len, // PUSH1 size
-        0x60, 0x0c,        // PUSH1 offset (12 = deploy prefix length)
-        0x60, 0x00,        // PUSH1 destOffset
-        0x39,              // CODECOPY
-        0x60, runtime_len, // PUSH1 size
-        0x60, 0x00,        // PUSH1 offset
-        0xf3,              // RETURN
+        0x60,
+        runtime_len, // PUSH1 size
+        0x60,
+        0x0c, // PUSH1 offset (12 = deploy prefix length)
+        0x60,
+        0x00, // PUSH1 destOffset
+        0x39, // CODECOPY
+        0x60,
+        runtime_len, // PUSH1 size
+        0x60,
+        0x00, // PUSH1 offset
+        0xf3, // RETURN
     ];
     deploy_code_2.extend_from_slice(&runtime_code);
     let contract_addr_2 = provider
