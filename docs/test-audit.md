@@ -43,12 +43,12 @@ Conducted against the `seismic` branch.
 | anvil | `test_immutable_fork_transaction_hash` | `crates/anvil/tests/it/fork.rs:1347` | `#[ignore]` | C | Immutable zkEVM external chain dependency |
 | cheatcodes/spec | `schema_up_to_date` | `crates/cheatcodes/spec/src/lib.rs:160` | `#[cfg(feature = "schema")]` | C | Requires optional `schema` feature flag |
 
-## CI-Level Excluded Anvil Integration Tests (15)
+## CI-Level Excluded Anvil Integration Tests (10)
 
 These tests are excluded from CI via nextest filter expressions in `.github/workflows/seismic.yml`.
 They were verified locally and fail due to known root causes documented below.
 
-### Permanent — Hardfork Incompatibility (5 tests)
+### Permanent — Hardfork Incompatibility (4 tests)
 
 Mercury is the only supported hardfork. These tests explicitly require pre-London or
 non-Mercury hardfork behavior and are fundamentally incompatible.
@@ -59,7 +59,6 @@ non-Mercury hardfork behavior and are fundamentally incompatible.
 | `anvil_api::can_set_gas_price` | Tests `anvil_set_min_gas_price` on Berlin (pre-EIP-1559) | Mercury always has EIP-1559; legacy gas price setting rejected |
 | `transaction::test_reject_eip1559_pre_london` | Asserts EIP-1559 txs rejected on Berlin | Mercury accepts EIP-1559 by design |
 | `transaction::can_send_tx_osaka_valid_with_limit_enabled` | Tests Osaka-specific TX_GAS_LIMIT_CAP enforcement | Mercury doesn't include Osaka gas limit caps |
-| `anvil::test_anvil_recover_signature` | Tests `ecrecover` precompile via signature impersonation | Mercury modifies `ecrecover` behavior (privacy design) |
 
 ### Permanent — External RPC / Fork Dependency (5 tests)
 
@@ -73,38 +72,19 @@ Require network access to external RPC endpoints that CI doesn't provide.
 | `api::can_get_code_by_hash` | Calls `debug_getCodeByHash` on archive node | Requires `next_http_archive_rpc_url()` |
 | `genesis::chain_id_precedence` | Tests chain_id precedence (CLI > fork > genesis > default) | 3 of 6 scenarios use `fork_config()` requiring mainnet RPC |
 
-### Temporary — Needs Upstream Fix: `seismic-revm-inspectors` serde (3 tests)
-
-`CallTrace.tx_type` in `seismic-revm-inspectors` lacks `#[serde(default)]`. Old state
-dumps without `tx_type` in their trace data fail to deserialize. Fix requires a change
-in the external `seismic-revm-inspectors` repository.
+### Potentially Fixable — `anvil_impersonate_signature` (1 test)
 
 | Test | What it does | Why it fails |
 |------|-------------|-------------|
-| `state::can_load_existing_state` | Loads `state-dump.json`, checks account state | Missing field `tx_type` during deserialization |
-| `state::can_load_existing_state_legacy_stress` | Loads legacy stress state dump | Same serde issue |
-| `state::test_backward_compatibility_state_dump_deserialization_v1_2` | Tests v1.2 state dump backward compat | Same serde issue + older dumps lack `is_private` flags |
+| `anvil::test_anvil_recover_signature` | Tests `anvil_impersonate_signature` + `ecrecover` precompile | The `CheatEcrecover` precompile wrapper is commented out in `executor.rs` because `SeismicPrecompiles` doesn't support replacing existing precompiles. Inspector-based interception is viable (the inspector `call()` hook fires for ecrecover at `0x01`) but requires resolving `SharedBuffer` input from the EVM context. |
 
-### Temporary — Seismic Trace Shielding (1 test)
+**Approach**: Intercept ecrecover calls in `AnvilInspector::call()` by checking `inputs.bytecode_address == 0x01`, extracting the signature from the `SharedBuffer` input via the EVM context, and returning a `CallOutcome` with the faked address. All changes in `crates/anvil/` — no upstream dep changes needed.
 
-Mercury intentionally strips calldata and return data from transaction traces for privacy.
+**Effort**: ~1-2 hours. The inspector hook fires correctly but the EVM passes precompile input as `CallInput::SharedBuffer` (a range into shared memory) rather than `CallInput::Bytes`. The fix requires threading the `&mut CTX` context into the interception logic to resolve the buffer, which means the ecrecover check must happen inline in the `call()` method rather than in a separate helper.
 
-| Test | What it does | Why it fails | Fix |
-|------|-------------|-------------|-----|
-| `otterscan::test_call_ots_trace_transaction` | Checks otterscan trace structure (input/output per call) | Trace shielding zeros out `input` on top-level CALL and `output` on STATICCALL | Rewrite test to expect shielded trace output |
+## Previously Excluded, Now Fixed (10)
 
-### Temporary — Seismic Trie Structure (1 test)
-
-`seismic-trie` adds `is_private` flag per leaf, plus system contracts (AES_LIB, DIRECTORY,
-INTELLIGENCE) are injected at genesis, changing the Merkle proof structure.
-
-| Test | What it does | Why it fails | Fix |
-|------|-------------|-------------|-----|
-| `proof::test_account_proof` | Validates Merkle proofs against hardcoded values | Proof hashes differ due to seismic-trie structure and system contracts | Update hardcoded proofs or validate generically |
-
-## Previously Excluded, Now Fixed (5)
-
-These tests were fixed and re-enabled in CI:
+These tests were fixed and re-enabled in CI on the `ameya/complete-ci-coverage` branch:
 
 | Test | Root cause | Fix applied |
 |------|-----------|-------------|
@@ -113,6 +93,21 @@ These tests were fixed and re-enabled in CI:
 | `revert::test_solc_revert_example` | Unused `sender` variable and `with_from(sender)` incompatible with Seismic tx flow | Removed unused code |
 | `api::can_call_on_pending_block` | Compared block header timestamp (seconds) with Mercury EVM timestamp (milliseconds) directly | Divide header timestamp by 1000 before comparison |
 | `transaction::get_blocktimestamp_works` | Same timestamp mismatch + mock timestamp in wrong units | Divide header by 1000; multiply mock timestamp by 1000 |
+| `proof::test_account_proof` | Hardcoded Merkle proofs didn't account for system contracts in Seismic trie | Regenerated proof bytes from current sanvil |
+| `otterscan::test_call_ots_trace_transaction` | Expected full trace input/output but Seismic trace shielding strips them | Updated expected values to match shielded output (empty `input`/`output`) |
+| `state::can_load_existing_state_legacy_stress` | Fixture had mixed storage format (2 `FlaggedStorage`, 1 plain string) from partial Alloy 1 merge conversion | Regenerated fixture from current sanvil with proper `FlaggedStorage` entries |
+| `state::can_load_existing_state` | `CallTrace.tx_type` in `seismic-revm-inspectors` lacked `#[serde(default)]` — old state dumps without `tx_type` failed to deserialize | Bumped `seismic-revm-inspectors` to `e2a96b7d` which adds the serde default |
+| `state::test_backward_compatibility_state_dump_deserialization_v1_2` | Same `CallTrace.tx_type` serde issue | Same `seismic-revm-inspectors` bump |
+
+### Note on `CallTrace.tx_type` serde default
+
+Old state dumps (pre Oct 2025) lack the `tx_type` field on `CallTrace`. It defaults to `0`
+via `#[serde(default)]`, which corresponds to legacy transaction type. While the actual
+transactions may have been EIP-1559 (type 2), this is safe because nothing reads
+`CallTrace.tx_type` from deserialized state — the trace shielding code that would use it
+(`storage.rs:581-589`) is commented out as a TODO, and it only checks for
+`TxSeismic::TX_TYPE` (74), so old traces with `tx_type=0` would correctly be left unshielded
+even when that code is enabled.
 
 ## Summary
 
@@ -120,31 +115,27 @@ These tests were fixed and re-enabled in CI:
 |--------|--------|-------|
 | Tests with `#[ignore]` in code | 26 | 26 (unchanged — all inherited from upstream) |
 | Feature-gated tests | 1 | 1 (unchanged) |
-| Rust tests run in CI | **8** | **372** |
+| Rust tests run in CI | **8** | **~380** |
 | — Seismic-specific tests | 8 | 8 |
 | — anvil-core unit tests | 0 | 72 |
 | — foundry-config unit tests | 0 | 122 |
-| — sanvil integration tests | 0 | 170 |
-| Tests excluded from CI (known failures) | 0 | 15 (documented above) |
-| Tests fixed and re-enabled | 0 | 5 |
-| CI coverage improvement | — | **~46x increase** |
+| — sanvil integration tests | 0 | ~180 |
+| Tests excluded from CI (known failures) | 0 | 10 (documented above) |
+| Tests fixed and re-enabled | 0 | 10 |
+| CI coverage improvement | — | **~47x increase** |
 
 ### Key Findings
 
 1. **No Class A tests found**: All Seismic-specific tests (`test_seismic_*`, `private_storage_*`) were already running in CI and not ignored.
 
-2. **The real gap was CI-level exclusion**: The CI filter patterns (`test_seismic_`, `private_storage_`) excluded ~99.5% of tests. Now the `test` job also runs anvil-core unit tests (72), foundry-config unit tests (122), and 170 sanvil integration tests.
+2. **The real gap was CI-level exclusion**: The CI filter patterns (`test_seismic_`, `private_storage_`) excluded ~99.5% of tests. Now the `test` job also runs anvil-core unit tests (72), foundry-config unit tests (122), and ~180 sanvil integration tests.
 
-3. **15 anvil integration tests are excluded with documented reasons**: The most common causes are hardcoded Mercury SpecId (5 tests), external RPC dependencies (5 tests), and state deserialization needing upstream serde fixes (3 tests).
+3. **10 anvil integration tests are excluded with documented reasons**: 4 are permanent hardfork incompatibilities, 5 are external RPC dependencies, and 1 is a potentially fixable `anvil_impersonate_signature` interception issue.
 
-4. **5 tests were fixed and re-enabled**: Fixes ranged from correcting expected hardfork values to accounting for Mercury's millisecond timestamps and adapting to the Seismic call flow.
+4. **10 tests were fixed and re-enabled**: Fixes ranged from correcting expected hardfork values, to accounting for Mercury's millisecond timestamps, regenerating Merkle proofs and state dump fixtures, updating trace expectations for shielding, and bumping `seismic-revm-inspectors` for serde compatibility.
 
 5. **All `#[ignore]` tests are inherited from upstream Foundry**: They were already skipped before Seismic forked. No changes were made to these.
 
-### Remaining Fixable Items
+### Remaining Fixable Item
 
-1. **`seismic-revm-inspectors` serde defaults** (3 tests): Add `#[serde(default)]` to `CallTrace.tx_type` in the external `seismic-revm-inspectors` repo to unblock state dump deserialization tests.
-
-2. **Otterscan trace test** (1 test): Rewrite `test_call_ots_trace_transaction` to expect shielded trace output (empty `input`/`output` fields where Seismic strips them).
-
-3. **Account proof test** (1 test): Update `test_account_proof` to validate proof structure generically instead of against hardcoded upstream hashes.
+**`anvil::test_anvil_recover_signature`** (1 test): The `anvil_impersonate_signature` feature's `CheatEcrecover` precompile wrapper is fully implemented in `cheats.rs` but not wired into the EVM due to `SeismicPrecompiles` not supporting precompile replacement. An inspector-based interception approach works (the `call()` hook fires for address `0x01`) but requires handling `CallInput::SharedBuffer` by resolving the input bytes from the EVM context. Estimated effort: ~1-2 hours, all changes in `crates/anvil/`. No upstream dependency changes needed.
