@@ -1334,6 +1334,7 @@ impl Backend {
     > {
         let mut env = self.next_env();
         env.tx = tx.pending_transaction.to_revm_tx_env();
+        // Set tx_hash so the RNG precompile produces random (non-zero) output.
         env.tx.tx_hash = *tx.pending_transaction.hash();
 
         /*
@@ -3040,6 +3041,7 @@ impl Backend {
         let target_tx = block.transactions[index].clone();
         let target_tx = PendingTransaction::from_maybe_impersonated(target_tx)?;
         let mut tx_env = target_tx.to_revm_tx_env();
+        // Set tx_hash so the RNG precompile produces random (non-zero) output.
         tx_env.tx_hash = *target_tx.hash();
 
         let config = tracer_config.into_json();
