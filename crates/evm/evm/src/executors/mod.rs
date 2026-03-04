@@ -1206,55 +1206,23 @@ mod tests {
         let caller = Address::repeat_byte(0x01);
         executor.set_balance(caller, U256::MAX).unwrap();
 
-        // Runtime bytecode: calls RNG precompile (0x64) requesting 32 bytes,
-        // stores result in slot 0, returns it.
+        // Minimal contract that calls the RNG precompile (0x64), requesting 32
+        // random bytes, stores the result in slot 0, and returns it.
         //
-        // Equivalent Solidity:
+        // Solidity equivalent:
         //   fallback() external {
         //       (bool ok, bytes memory result) = address(0x64).staticcall(hex"00000020");
         //       assembly { sstore(0, mload(add(result, 32))) }
         //       assembly { return(0, 32) }
         //   }
-        let runtime_code: Vec<u8> = vec![
-            0x63, 0x00, 0x00, 0x00, 0x20, // PUSH4 0x00000020
-            0x60, 0x00, // PUSH1 0x00
-            0x52, // MSTORE
-            0x60, 0x20, // PUSH1 0x20 (retSize)
-            0x60, 0x00, // PUSH1 0x00 (retOffset)
-            0x60, 0x04, // PUSH1 0x04 (argSize)
-            0x60, 0x1c, // PUSH1 0x1c (argOffset = 28)
-            0x60, 0x64, // PUSH1 0x64 (RNG precompile)
-            0x5a, // GAS
-            0xfa, // STATICCALL
-            0x50, // POP (discard success flag)
-            // mem[0..32] now contains the RNG result
-            0x60, 0x00, // PUSH1 0x00
-            0x51, // MLOAD (load RNG result onto stack)
-            0x60, 0x00, // PUSH1 0x00
-            0x55, // SSTORE (slot 0 = result)
-            // Return the 32 bytes already in memory
-            0x60, 0x20, // PUSH1 0x20
-            0x60, 0x00, // PUSH1 0x00
-            0xf3, // RETURN
-        ];
-
-        // Deploy prefix: CODECOPY runtime to memory, then RETURN it.
-        let runtime_len = runtime_code.len() as u8;
-        let mut deploy_code: Vec<u8> = vec![
-            0x60,
-            runtime_len, // PUSH1 <size>
-            0x60,
-            0x0c, // PUSH1 0x0c (offset = 12)
-            0x60,
-            0x00, // PUSH1 0x00 (destOffset)
-            0x39, // CODECOPY
-            0x60,
-            runtime_len, // PUSH1 <size>
-            0x60,
-            0x00, // PUSH1 0x00
-            0xf3, // RETURN
-        ];
-        deploy_code.extend_from_slice(&runtime_code);
+        //
+        // The deploy prefix (first 12 bytes) CODECOPYs the runtime to memory
+        // and RETURNs it.
+        let deploy_code = alloy_primitives::hex::decode(
+            // deploy prefix (12 bytes) + runtime (32 bytes)
+            "6020600c60003960206000f36300000020600052602060006004601c60645afa5060005160005560206000f3",
+        )
+        .unwrap();
 
         let deploy_result =
             executor.deploy(caller, Bytes::from(deploy_code), U256::ZERO, None).unwrap();
