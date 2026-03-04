@@ -15,7 +15,7 @@ workspace = true
 
 [dependencies]
 seismic-prelude.workspace = true
-alloy-seismic-evm.workspace = true
+alloy-seismic-evm = { workspace = true, features = ["timestamp-in-seconds"] }
 
 foundry-cheatcodes-spec.workspace = true
 foundry-common.workspace = true
