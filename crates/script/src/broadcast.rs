@@ -8,6 +8,7 @@ use alloy_eips::{BlockId, eip2718::Encodable2718};
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{
     Address, TxHash,
+    aliases::U96,
     map::{AddressHashMap, AddressHashSet},
     utils::format_units,
 };
@@ -25,9 +26,83 @@ use foundry_common::{
 use foundry_config::Config;
 use futures::{StreamExt, future::join_all};
 use itertools::Itertools;
+use rand::RngCore;
+use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use std::{cmp::Ordering, sync::Arc};
 
-use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, TransactionRequest};
+use seismic_prelude::foundry::{
+    AnyNetwork, EthereumWallet, SeismicProviderExt, TransactionRequest, TxLegacyFields, TxSeismic,
+    TxSeismicElements, TxSeismicMetadata,
+};
+
+/// Encrypts the calldata of a transaction and converts it to a TxSeismic (type 0x4a).
+///
+/// This is used when a transaction targets a function with shielded type parameters.
+/// The calldata is encrypted using ECDH with the network's TEE public key.
+fn encrypt_transaction_for_seismic(
+    tx: &mut WithOtherFields<TransactionRequest>,
+    network_pubkey: &PublicKey,
+) -> Result<()> {
+    // Generate a random ephemeral encryption keypair
+    let secp = Secp256k1::new();
+    let encryption_sk = {
+        let mut rng = rand::rng();
+        let mut key_bytes = [0u8; 32];
+        rng.fill_bytes(&mut key_bytes);
+        SecretKey::from_slice(&key_bytes)
+            .map_err(|e| eyre::eyre!("Failed to generate encryption key: {}", e))?
+    };
+    let encryption_pk = PublicKey::from_secret_key(&secp, &encryption_sk);
+    let encryption_nonce = U96::random();
+
+    let seismic_elements = TxSeismicElements {
+        encryption_pubkey: encryption_pk,
+        encryption_nonce,
+        message_version: 0,
+        recent_block_hash: alloy_primitives::B256::ZERO,
+        expires_at_block: u64::MAX,
+        signed_read: false,
+    };
+
+    // Get the original calldata
+    let original_input = tx.inner.inner.input.input().cloned().unwrap_or_default();
+
+    // Build metadata for AEAD
+    let from = tx.inner.inner.from.unwrap_or_default();
+    let legacy_fields = TxLegacyFields {
+        chain_id: tx.inner.inner.chain_id.unwrap_or_default(),
+        nonce: tx.inner.inner.nonce.unwrap_or_default(),
+        to: tx.inner.inner.to.unwrap_or_default(),
+        value: tx.inner.inner.value.unwrap_or_default(),
+    };
+    let metadata = TxSeismicMetadata {
+        sender: from,
+        legacy_fields,
+        seismic_elements: seismic_elements.clone(),
+    };
+
+    // Encrypt the calldata
+    let encrypted_input = seismic_elements
+        .client_encrypt(&original_input, network_pubkey, &encryption_sk, &metadata)
+        .map_err(|e| eyre::eyre!("Failed to encrypt calldata for seismic tx: {}", e))?;
+
+    // Set encrypted input
+    tx.inner.inner.input =
+        alloy_rpc_types::TransactionInput { input: Some(encrypted_input), data: None };
+
+    // Set transaction type to TxSeismic (0x4a)
+    tx.inner.inner.transaction_type = Some(TxSeismic::TX_TYPE);
+    tx.inner.seismic_elements = Some(seismic_elements);
+
+    // Convert EIP-1559 gas fields to legacy gas_price (TxSeismic uses legacy format)
+    if let Some(max_fee) = tx.inner.inner.max_fee_per_gas {
+        tx.inner.inner.gas_price = Some(max_fee);
+        tx.inner.inner.max_fee_per_gas = None;
+        tx.inner.inner.max_priority_fee_per_gas = None;
+    }
+
+    Ok(())
+}
 
 pub async fn estimate_gas<P: Provider<AnyNetwork>>(
     tx: &mut WithOtherFields<TransactionRequest>,
@@ -275,6 +350,24 @@ impl BundledState {
             let seq_progress = progress.get_sequence_progress(i, sequence);
 
             if already_broadcasted < sequence.transactions.len() {
+                // Check if any transactions in this sequence need seismic encryption
+                let has_any_shielded = sequence
+                    .transactions
+                    .iter()
+                    .skip(already_broadcasted)
+                    .any(|tx| tx.has_shielded_args);
+
+                // Fetch TEE public key once if any transaction needs encryption
+                let tee_pubkey = if has_any_shielded {
+                    let pk = provider
+                        .get_tee_pubkey()
+                        .await
+                        .wrap_err("Failed to fetch TEE public key for seismic transaction encryption. Is the RPC endpoint a Seismic node?")?;
+                    Some(pk)
+                } else {
+                    None
+                };
+
                 let is_legacy = Chain::from(sequence.chain).is_legacy() || self.args.legacy;
                 // Make a one-time gas price estimation
                 let (gas_price, eip1559_fees) = match (
@@ -314,6 +407,7 @@ impl BundledState {
                     .skip(already_broadcasted)
                     .map(|tx_with_metadata| {
                         let is_fixed_gas_limit = tx_with_metadata.is_fixed_gas_limit;
+                        let needs_encryption = tx_with_metadata.has_shielded_args;
 
                         let kind = match tx_with_metadata.tx().clone() {
                             TransactionMaybeSigned::Signed { tx, .. } => {
@@ -334,7 +428,14 @@ impl BundledState {
                                     tx.set_create();
                                 }
 
-                                if let Some(gas_price) = gas_price {
+                                if needs_encryption {
+                                    // For seismic transactions, use legacy gas pricing
+                                    let legacy_gas_price = gas_price.unwrap_or_else(|| {
+                                        let fees = eip1559_fees.expect("was set above");
+                                        fees.max_fee_per_gas
+                                    });
+                                    tx.set_gas_price(legacy_gas_price);
+                                } else if let Some(gas_price) = gas_price {
                                     tx.set_gas_price(gas_price);
                                 } else {
                                     let eip1559_fees = eip1559_fees.expect("was set above");
@@ -342,6 +443,14 @@ impl BundledState {
                                         eip1559_fees.max_priority_fee_per_gas,
                                     );
                                     tx.set_max_fee_per_gas(eip1559_fees.max_fee_per_gas);
+                                }
+
+                                // Encrypt calldata for transactions with shielded parameters
+                                if needs_encryption {
+                                    let network_pk = tee_pubkey.as_ref().expect(
+                                        "TEE pubkey should be fetched when shielded txs exist",
+                                    );
+                                    encrypt_transaction_for_seismic(&mut tx, network_pk)?;
                                 }
 
                                 send_kind.for_sender(&from, tx)?

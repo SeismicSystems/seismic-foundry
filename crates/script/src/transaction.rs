@@ -1,6 +1,7 @@
 use super::ScriptResult;
 use crate::build::LinkedBuildData;
 use alloy_dyn_abi::JsonAbiExt;
+use alloy_json_abi::Function;
 use alloy_primitives::{Address, B256, TxKind, hex};
 use eyre::Result;
 use forge_script_sequence::TransactionWithMetadata;
@@ -67,6 +68,7 @@ impl ScriptTransactionBuilder {
 
                 if let Some(function) = function {
                     self.transaction.function = Some(function.signature());
+                    self.transaction.has_shielded_args = function_has_shielded_params(function);
 
                     let values = function.abi_decode_input(data).inspect_err(|_| {
                         error!(
@@ -179,4 +181,15 @@ impl From<TransactionWithMetadata> for ScriptTransactionBuilder {
     fn from(transaction: TransactionWithMetadata) -> Self {
         Self { transaction }
     }
+}
+
+/// Returns true if any of the function's input parameters are shielded types
+/// (suint*, sint*, saddress, sbool).
+fn function_has_shielded_params(function: &Function) -> bool {
+    function.inputs.iter().any(|param| param_is_shielded(&param.ty))
+}
+
+/// Returns true if a Solidity type string represents a shielded type.
+fn param_is_shielded(ty: &str) -> bool {
+    ty.starts_with("suint") || ty.starts_with("sint") || ty == "saddress" || ty == "sbool"
 }
