@@ -334,6 +334,139 @@ async fn test_seismic_transaction_rpc() {
     assert!(gas_estimate > U256::ZERO);
 }
 
+/// Tests that the RNG precompile produces different output for different transactions.
+///
+/// This is a regression test for a bug where `SeismicTransaction::new()` defaulted
+/// `tx_hash` to `B256::ZERO`, causing the RNG precompile to use the same seed for
+/// every transaction and produce identical "random" output.
+///
+/// The test deploys a minimal contract that calls the RNG precompile and stores the
+/// result, then sends two separate transactions and verifies they get different values.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_seismic_rng_different_per_transaction() {
+    // Spin up node with auto-mine
+    let (_api, handle) = spawn(NodeConfig::test()).await;
+    let wallet = EthereumWallet::new(handle.dev_wallets().next().unwrap().clone());
+    let provider = SeismicSignedProvider::new(
+        wallet,
+        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
+    )
+    .await
+    .unwrap();
+    let deployer = handle.dev_accounts().next().unwrap();
+
+    // Minimal contract: on any call, STATICCALLs the RNG precompile (0x64)
+    // requesting 32 random bytes, stores the result in slot 0, increments a
+    // call counter in slot 1, and returns the result.
+    //
+    // Solidity equivalent:
+    //   contract RngCaller {
+    //       bytes32 public lastRng;
+    //       uint256 public callCount;
+    //       fallback() external {
+    //           (bool ok, bytes memory result) = address(0x64).staticcall(hex"00000020");
+    //           require(ok);
+    //           lastRng = bytes32(result);
+    //           callCount++;
+    //           assembly { return(add(result, 32), mload(result)) }
+    //       }
+    //   }
+    //
+    // Bytecode: 12-byte deploy prefix + 45-byte runtime.
+    let deploy_code = hex::decode(
+        "602d600c600039602d6000f3\
+         6300000020600052602060006004601c60645afa50600051806000556001546001016001556000526020\
+         6000f3",
+    )
+    .unwrap();
+    let bytecode = Bytes::from(deploy_code);
+    let tx_req =
+        tx_builder().with_from(deployer).with_kind(TxKind::Create).with_input(bytecode).into();
+    let contract_addr = provider
+        .send_transaction(tx_req.into())
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+
+    // Deploy a second instance of the same contract (identical bytecode)
+    let deploy_code_2 = hex::decode(
+        "602d600c600039602d6000f3\
+         6300000020600052602060006004601c60645afa50600051806000556001546001016001556000526020\
+         6000f3",
+    )
+    .unwrap();
+    let contract_addr_2 = provider
+        .send_transaction(
+            tx_builder()
+                .with_from(deployer)
+                .with_kind(TxKind::Create)
+                .with_input(Bytes::from(deploy_code_2))
+                .into()
+                .into(),
+        )
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+
+    // Call contract 1 — triggers RNG precompile, stores result in slot 0
+    let receipt_a = provider
+        .send_transaction(
+            tx_builder()
+                .with_from(deployer)
+                .with_to(contract_addr)
+                .with_input(Bytes::new())
+                .into()
+                .into(),
+        )
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap();
+    assert!(receipt_a.inner.inner.status(), "Call A should succeed");
+
+    // Call contract 2 — same code, different transaction
+    let receipt_b = provider
+        .send_transaction(
+            tx_builder()
+                .with_from(deployer)
+                .with_to(contract_addr_2)
+                .with_input(Bytes::new())
+                .into()
+                .into(),
+        )
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap();
+    assert!(receipt_b.inner.inner.status(), "Call B should succeed");
+
+    // Read the stored RNG values from each contract's slot 0
+    let rng_a = provider.get_storage_at(contract_addr, U256::from(0)).await.unwrap();
+    let rng_b = provider.get_storage_at(contract_addr_2, U256::from(0)).await.unwrap();
+
+    // Both should be non-zero
+    assert_ne!(rng_a, U256::ZERO, "RNG output A should not be zero");
+    assert_ne!(rng_b, U256::ZERO, "RNG output B should not be zero");
+
+    // The key assertion: different transactions should produce different RNG output.
+    // Before the fix, both would be identical because tx_hash was always B256::ZERO.
+    assert_ne!(
+        rng_a, rng_b,
+        "RNG precompile should produce different output for different transactions. \
+         If equal, tx_hash is likely not being propagated to the EVM."
+    );
+}
+
 // Actual contract being tested:
 // https://github.com/SeismicSystems/early-builds/blob/main/EIP7702_experiment/end-to-end-mvp/EncryptedLogs.sol
 #[tokio::test(flavor = "multi_thread")]
