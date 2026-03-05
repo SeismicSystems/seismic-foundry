@@ -42,6 +42,8 @@ use seismic_prelude::foundry::{
 fn encrypt_transaction_for_seismic(
     tx: &mut WithOtherFields<TransactionRequest>,
     network_pubkey: &PublicKey,
+    recent_block_hash: alloy_primitives::B256,
+    recent_block_number: u64,
 ) -> Result<()> {
     // Generate a random ephemeral encryption keypair
     let secp = Secp256k1::new();
@@ -59,8 +61,8 @@ fn encrypt_transaction_for_seismic(
         encryption_pubkey: encryption_pk,
         encryption_nonce,
         message_version: 0,
-        recent_block_hash: alloy_primitives::B256::ZERO,
-        expires_at_block: u64::MAX,
+        recent_block_hash,
+        expires_at_block: recent_block_number + 100,
         signed_read: false,
     };
 
@@ -357,13 +359,23 @@ impl BundledState {
                     .skip(already_broadcasted)
                     .any(|tx| tx.has_shielded_args);
 
-                // Fetch TEE public key once if any transaction needs encryption
-                let tee_pubkey = if has_any_shielded {
+                // Fetch TEE public key and recent block once if any transaction needs encryption
+                let seismic_info = if has_any_shielded {
                     let pk = provider
                         .get_tee_pubkey()
                         .await
                         .wrap_err("Failed to fetch TEE public key for seismic transaction encryption. Is the RPC endpoint a Seismic node?")?;
-                    Some(pk)
+                    let block = provider
+                        .get_block_number()
+                        .await
+                        .wrap_err("Failed to fetch latest block number for seismic transaction")?;
+                    let block_info = provider
+                        .get_block_by_number(block.into())
+                        .await
+                        .wrap_err("Failed to fetch latest block for seismic transaction")?
+                        .ok_or_else(|| eyre::eyre!("Latest block not found"))?;
+                    let block_hash = block_info.header.hash;
+                    Some((pk, block_hash, block))
                 } else {
                     None
                 };
@@ -447,10 +459,16 @@ impl BundledState {
 
                                 // Encrypt calldata for transactions with shielded parameters
                                 if needs_encryption {
-                                    let network_pk = tee_pubkey.as_ref().expect(
-                                        "TEE pubkey should be fetched when shielded txs exist",
-                                    );
-                                    encrypt_transaction_for_seismic(&mut tx, network_pk)?;
+                                    let (network_pk, block_hash, block_number) =
+                                        seismic_info.as_ref().expect(
+                                            "seismic info should be fetched when shielded txs exist",
+                                        );
+                                    encrypt_transaction_for_seismic(
+                                        &mut tx,
+                                        network_pk,
+                                        *block_hash,
+                                        *block_number,
+                                    )?;
                                 }
 
                                 send_kind.for_sender(&from, tx)?
