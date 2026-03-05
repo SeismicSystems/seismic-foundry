@@ -35,6 +35,41 @@ use seismic_prelude::foundry::{
     TxSeismicElements, TxSeismicMetadata,
 };
 
+/// Redacts shielded argument values in the arguments array, replacing them with "<shielded>".
+///
+/// Parses the function signature (e.g. "mint(address,suint256)") to determine which
+/// parameter positions are shielded types, then replaces those values.
+fn redact_shielded_arguments(function_sig: Option<&str>, args: &[String]) -> Vec<String> {
+    let Some(sig) = function_sig else {
+        return args.to_vec();
+    };
+
+    // Parse types from "name(type1,type2,...)"
+    let Some(start) = sig.find('(') else {
+        return args.to_vec();
+    };
+    let Some(end) = sig.rfind(')') else {
+        return args.to_vec();
+    };
+    let types_str = &sig[start + 1..end];
+    if types_str.is_empty() {
+        return args.to_vec();
+    }
+
+    let types: Vec<&str> = types_str.split(',').collect();
+
+    args.iter()
+        .enumerate()
+        .map(|(i, arg)| {
+            if i < types.len() && crate::transaction::param_is_shielded(types[i].trim()) {
+                "<shielded>".to_string()
+            } else {
+                arg.clone()
+            }
+        })
+        .collect()
+}
+
 /// Encrypts the calldata of a transaction and converts it to a TxSeismic (type 0x4a).
 ///
 /// This is used when a transaction targets a function with shielded type parameters.
@@ -482,11 +517,21 @@ impl BundledState {
                 // Encrypt shielded transactions in-place in the sequence so that
                 // checkpoint saves (broadcast/) record encrypted calldata, not plaintext.
                 // Plaintext is preserved in `plaintext_input` for cache/ (--resume).
+                // Arguments are also redacted in broadcast/ with plaintext kept in cache/.
                 if has_any_shielded {
                     let (network_pk, block_hash, block_number) =
                         seismic_info.as_ref().expect("seismic info fetched above");
                     for tx_meta in sequence.transactions.iter_mut().skip(already_broadcasted) {
                         if tx_meta.has_shielded_args {
+                            // Save and redact arguments
+                            if let Some(ref args) = tx_meta.arguments {
+                                tx_meta.plaintext_arguments = Some(args.clone());
+                                tx_meta.arguments = Some(redact_shielded_arguments(
+                                    tx_meta.function.as_deref(),
+                                    args,
+                                ));
+                            }
+
                             if let Some(unsigned_tx) = tx_meta.transaction.as_unsigned_mut() {
                                 // Save plaintext before encrypting
                                 tx_meta.plaintext_input =

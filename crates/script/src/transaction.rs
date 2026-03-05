@@ -190,6 +190,6 @@ fn function_has_shielded_params(function: &Function) -> bool {
 }
 
 /// Returns true if a Solidity type string represents a shielded type.
-fn param_is_shielded(ty: &str) -> bool {
+pub fn param_is_shielded(ty: &str) -> bool {
     ty.starts_with("suint") || ty.starts_with("sint") || ty == "saddress" || ty == "sbool"
 }

@@ -48,6 +48,10 @@ pub struct SensitiveTransactionMetadata {
     /// Stored here so --resume can re-encrypt with fresh SeismicElements.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plaintext_input: Option<Bytes>,
+    /// Plaintext arguments for shielded transactions (before redaction).
+    /// Stored here so --resume and debugging can see original values.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plaintext_arguments: Option<Vec<String>>,
 }
 
 /// Sensitive info from the script sequence which is saved into the cache folder
@@ -65,6 +69,7 @@ impl From<ScriptSequence> for SensitiveScriptSequence {
                 .map(|tx| SensitiveTransactionMetadata {
                     rpc: tx.rpc.clone(),
                     plaintext_input: tx.plaintext_input.clone(),
+                    plaintext_arguments: tx.plaintext_arguments.clone(),
                 })
                 .collect(),
         }
@@ -223,6 +228,7 @@ impl ScriptSequence {
         self.transactions.iter_mut().enumerate().for_each(|(i, tx)| {
             tx.rpc.clone_from(&sensitive.transactions[i].rpc);
             tx.plaintext_input.clone_from(&sensitive.transactions[i].plaintext_input);
+            tx.plaintext_arguments.clone_from(&sensitive.transactions[i].plaintext_arguments);
         });
     }
 }

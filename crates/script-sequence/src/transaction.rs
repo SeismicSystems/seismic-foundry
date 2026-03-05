@@ -41,6 +41,10 @@ pub struct TransactionWithMetadata {
     /// Skipped in broadcast JSON serialization so encrypted calldata is what's recorded.
     #[serde(skip)]
     pub plaintext_input: Option<Bytes>,
+    /// Plaintext arguments stored before redaction, used by cache/ for --resume.
+    /// Skipped in broadcast JSON so shielded values aren't exposed.
+    #[serde(skip)]
+    pub plaintext_arguments: Option<Vec<String>>,
 }
 
 fn default_string() -> Option<String> {
@@ -68,6 +72,7 @@ impl TransactionWithMetadata {
             is_fixed_gas_limit: Default::default(),
             has_shielded_args: Default::default(),
             plaintext_input: Default::default(),
+            plaintext_arguments: Default::default(),
             additional_contracts: Default::default(),
             rpc: Default::default(),
         }
