@@ -37,6 +37,10 @@ pub struct TransactionWithMetadata {
     /// and send as TxSeismic (type 0x4a).
     #[serde(default)]
     pub has_shielded_args: bool,
+    /// Plaintext calldata stored before encryption, used by cache/ for --resume.
+    /// Skipped in broadcast JSON serialization so encrypted calldata is what's recorded.
+    #[serde(skip)]
+    pub plaintext_input: Option<Bytes>,
 }
 
 fn default_string() -> Option<String> {
@@ -63,6 +67,7 @@ impl TransactionWithMetadata {
             arguments: Default::default(),
             is_fixed_gas_limit: Default::default(),
             has_shielded_args: Default::default(),
+            plaintext_input: Default::default(),
             additional_contracts: Default::default(),
             rpc: Default::default(),
         }

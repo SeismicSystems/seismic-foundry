@@ -1,5 +1,5 @@
 use crate::transaction::TransactionWithMetadata;
-use alloy_primitives::{TxHash, hex, map::HashMap};
+use alloy_primitives::{Bytes, TxHash, hex, map::HashMap};
 use eyre::{ContextCompat, Result, WrapErr};
 use foundry_common::{SELECTOR_LEN, TransactionMaybeSigned, fs, shell};
 use foundry_compilers::ArtifactId;
@@ -44,6 +44,10 @@ pub struct ScriptSequence {
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct SensitiveTransactionMetadata {
     pub rpc: String,
+    /// Plaintext calldata for shielded transactions (before encryption).
+    /// Stored here so --resume can re-encrypt with fresh SeismicElements.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plaintext_input: Option<Bytes>,
 }
 
 /// Sensitive info from the script sequence which is saved into the cache folder
@@ -58,7 +62,10 @@ impl From<ScriptSequence> for SensitiveScriptSequence {
             transactions: sequence
                 .transactions
                 .iter()
-                .map(|tx| SensitiveTransactionMetadata { rpc: tx.rpc.clone() })
+                .map(|tx| SensitiveTransactionMetadata {
+                    rpc: tx.rpc.clone(),
+                    plaintext_input: tx.plaintext_input.clone(),
+                })
                 .collect(),
         }
     }
@@ -213,10 +220,10 @@ impl ScriptSequence {
     }
 
     pub fn fill_sensitive(&mut self, sensitive: &SensitiveScriptSequence) {
-        self.transactions
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, tx)| tx.rpc.clone_from(&sensitive.transactions[i].rpc));
+        self.transactions.iter_mut().enumerate().for_each(|(i, tx)| {
+            tx.rpc.clone_from(&sensitive.transactions[i].rpc);
+            tx.plaintext_input.clone_from(&sensitive.transactions[i].plaintext_input);
+        });
     }
 }
 

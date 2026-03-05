@@ -479,6 +479,37 @@ impl BundledState {
                     })
                     .collect::<Result<Vec<_>>>()?;
 
+                // Encrypt shielded transactions in-place in the sequence so that
+                // checkpoint saves (broadcast/) record encrypted calldata, not plaintext.
+                // Plaintext is preserved in `plaintext_input` for cache/ (--resume).
+                if has_any_shielded {
+                    let (network_pk, block_hash, block_number) =
+                        seismic_info.as_ref().expect("seismic info fetched above");
+                    for tx_meta in sequence.transactions.iter_mut().skip(already_broadcasted) {
+                        if tx_meta.has_shielded_args {
+                            if let Some(unsigned_tx) = tx_meta.transaction.as_unsigned_mut() {
+                                // Save plaintext before encrypting
+                                tx_meta.plaintext_input =
+                                    unsigned_tx.inner.inner.input.input().cloned();
+
+                                // Set gas (same logic as the send iteration above)
+                                let legacy_gas_price = gas_price.unwrap_or_else(|| {
+                                    eip1559_fees.expect("was set above").max_fee_per_gas
+                                });
+                                unsigned_tx.set_gas_price(legacy_gas_price);
+                                unsigned_tx.set_chain_id(sequence.chain);
+
+                                encrypt_transaction_for_seismic(
+                                    unsigned_tx,
+                                    network_pk,
+                                    *block_hash,
+                                    *block_number,
+                                )?;
+                            }
+                        }
+                    }
+                }
+
                 let estimate_via_rpc =
                     has_different_gas_calc(sequence.chain) || self.args.skip_simulation;
 
