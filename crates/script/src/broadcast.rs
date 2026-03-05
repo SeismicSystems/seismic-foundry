@@ -38,13 +38,14 @@ use seismic_prelude::foundry::{
 /// Redacts shielded argument values in the arguments array, replacing them with "<shielded>".
 ///
 /// Parses the function signature (e.g. "mint(address,suint256)") to determine which
-/// parameter positions are shielded types, then replaces those values.
+/// parameter positions contain shielded types. For struct/tuple parameters like
+/// "executeOrder((address,suint256,uint256))", recursively checks inside the tuple.
 fn redact_shielded_arguments(function_sig: Option<&str>, args: &[String]) -> Vec<String> {
     let Some(sig) = function_sig else {
         return args.to_vec();
     };
 
-    // Parse types from "name(type1,type2,...)"
+    // Parse top-level types from "name(type1,type2,...)"
     let Some(start) = sig.find('(') else {
         return args.to_vec();
     };
@@ -56,18 +57,55 @@ fn redact_shielded_arguments(function_sig: Option<&str>, args: &[String]) -> Vec
         return args.to_vec();
     }
 
-    let types: Vec<&str> = types_str.split(',').collect();
+    let types = split_top_level_params(types_str);
 
     args.iter()
         .enumerate()
         .map(|(i, arg)| {
-            if i < types.len() && crate::transaction::param_is_shielded(types[i].trim()) {
+            if i < types.len() && type_contains_shielded(types[i].trim()) {
                 "<shielded>".to_string()
             } else {
                 arg.clone()
             }
         })
         .collect()
+}
+
+/// Splits a parameter type string by commas, respecting nested parentheses.
+/// e.g. "(address,suint256),uint256" → ["(address,suint256)", "uint256"]
+fn split_top_level_params(s: &str) -> Vec<&str> {
+    let mut result = Vec::new();
+    let mut depth = 0;
+    let mut start = 0;
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => depth -= 1,
+            ',' if depth == 0 => {
+                result.push(&s[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    if start < s.len() {
+        result.push(&s[start..]);
+    }
+    result
+}
+
+/// Returns true if a type string (from a function signature) contains any shielded type.
+/// Handles tuples like "(address,suint256)" by recursively checking inside.
+fn type_contains_shielded(ty: &str) -> bool {
+    let trimmed = ty.trim();
+    if trimmed.starts_with('(') {
+        // Tuple: strip outer parens (and optional array suffix) and check components
+        let inner_end = trimmed.rfind(')').unwrap_or(trimmed.len());
+        let inner = &trimmed[1..inner_end];
+        split_top_level_params(inner).iter().any(|t| type_contains_shielded(t))
+    } else {
+        crate::transaction::param_is_shielded(trimmed)
+    }
 }
 
 /// Encrypts the calldata of a transaction and converts it to a TxSeismic (type 0x4a).

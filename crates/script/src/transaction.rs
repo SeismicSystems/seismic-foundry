@@ -183,13 +183,26 @@ impl From<TransactionWithMetadata> for ScriptTransactionBuilder {
     }
 }
 
-/// Returns true if any of the function's input parameters are shielded types
-/// (suint*, sint*, saddress, sbool).
+/// Returns true if any of the function's input parameters contain shielded types.
+/// Recursively checks tuple components for struct parameters.
 fn function_has_shielded_params(function: &Function) -> bool {
-    function.inputs.iter().any(|param| param_is_shielded(&param.ty))
+    function.inputs.iter().any(|param| abi_param_has_shielded(param))
+}
+
+/// Recursively checks if an ABI parameter (or any of its struct components) is shielded.
+fn abi_param_has_shielded(param: &alloy_json_abi::Param) -> bool {
+    if param.components.is_empty() {
+        param_is_shielded(&param.ty)
+    } else {
+        // Tuple/struct: check components recursively
+        param.components.iter().any(|c| abi_param_has_shielded(c))
+    }
 }
 
 /// Returns true if a Solidity type string represents a shielded type.
+/// Handles array types like `suint256[]` or `suint256[10]` by stripping the suffix.
 pub fn param_is_shielded(ty: &str) -> bool {
-    ty.starts_with("suint") || ty.starts_with("sint") || ty == "saddress" || ty == "sbool"
+    // Strip array suffixes: "suint256[]" → "suint256", "suint256[10]" → "suint256"
+    let base = ty.split('[').next().unwrap_or(ty);
+    base.starts_with("suint") || base.starts_with("sint") || base == "saddress" || base == "sbool"
 }
