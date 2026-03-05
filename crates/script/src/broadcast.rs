@@ -717,3 +717,145 @@ impl BundledState {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(vals: &[&str]) -> Vec<String> {
+        vals.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn test_redact_simple_shielded() {
+        // mint(address,suint256) — second arg is shielded
+        let result = redact_shielded_arguments(
+            Some("mint(address,suint256)"),
+            &args(&["0x7ff1bAdb", "2000000000000000000000000000"]),
+        );
+        assert_eq!(result, args(&["0x7ff1bAdb", "<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_no_shielded() {
+        // transfer(address,uint256) — no shielded
+        let result =
+            redact_shielded_arguments(Some("transfer(address,uint256)"), &args(&["0xabc", "1000"]));
+        assert_eq!(result, args(&["0xabc", "1000"]));
+    }
+
+    #[test]
+    fn test_redact_all_shielded() {
+        // secretTransfer(saddress,suint256) — both shielded
+        let result = redact_shielded_arguments(
+            Some("secretTransfer(saddress,suint256)"),
+            &args(&["0xabc", "1000"]),
+        );
+        assert_eq!(result, args(&["<shielded>", "<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_struct_with_shielded() {
+        // executeOrder((address,suint256,uint256)) — tuple with shielded component
+        let result = redact_shielded_arguments(
+            Some("executeOrder((address,suint256,uint256))"),
+            &args(&["(0xabc, 1000, 42)"]),
+        );
+        // The whole tuple arg is redacted because it contains a shielded type
+        assert_eq!(result, args(&["<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_struct_without_shielded() {
+        // executeOrder((address,uint256)) — tuple with no shielded
+        let result = redact_shielded_arguments(
+            Some("executeOrder((address,uint256))"),
+            &args(&["(0xabc, 1000)"]),
+        );
+        assert_eq!(result, args(&["(0xabc, 1000)"]));
+    }
+
+    #[test]
+    fn test_redact_mixed_struct_and_plain() {
+        // process((address,suint256),uint256) — first is shielded tuple, second is plain
+        let result = redact_shielded_arguments(
+            Some("process((address,suint256),uint256)"),
+            &args(&["(0xabc, 1000)", "42"]),
+        );
+        assert_eq!(result, args(&["<shielded>", "42"]));
+    }
+
+    #[test]
+    fn test_redact_nested_struct() {
+        // deep(((suint256))) — nested tuple with shielded
+        let result = redact_shielded_arguments(Some("deep(((suint256)))"), &args(&["((1000))"]));
+        assert_eq!(result, args(&["<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_array_shielded() {
+        // batchMint(address,suint256[]) — array of shielded type
+        let result = redact_shielded_arguments(
+            Some("batchMint(address,suint256[])"),
+            &args(&["0xabc", "[1000, 2000]"]),
+        );
+        assert_eq!(result, args(&["0xabc", "<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_no_function_sig() {
+        // No function signature — return args unchanged
+        let result = redact_shielded_arguments(None, &args(&["0xabc", "1000"]));
+        assert_eq!(result, args(&["0xabc", "1000"]));
+    }
+
+    #[test]
+    fn test_redact_empty_args() {
+        let result = redact_shielded_arguments(Some("noArgs()"), &[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_split_top_level_params_simple() {
+        assert_eq!(split_top_level_params("address,uint256"), vec!["address", "uint256"]);
+    }
+
+    #[test]
+    fn test_split_top_level_params_with_tuple() {
+        assert_eq!(
+            split_top_level_params("(address,suint256),uint256"),
+            vec!["(address,suint256)", "uint256"]
+        );
+    }
+
+    #[test]
+    fn test_split_top_level_params_nested_tuple() {
+        assert_eq!(
+            split_top_level_params("((suint256,address),uint256),bool"),
+            vec!["((suint256,address),uint256)", "bool"]
+        );
+    }
+
+    #[test]
+    fn test_type_contains_shielded_plain() {
+        assert!(type_contains_shielded("suint256"));
+        assert!(type_contains_shielded("saddress"));
+        assert!(type_contains_shielded("suint256[]"));
+        assert!(!type_contains_shielded("uint256"));
+        assert!(!type_contains_shielded("address"));
+    }
+
+    #[test]
+    fn test_type_contains_shielded_tuple() {
+        assert!(type_contains_shielded("(address,suint256)"));
+        assert!(type_contains_shielded("(address,suint256,uint256)"));
+        assert!(!type_contains_shielded("(address,uint256)"));
+    }
+
+    #[test]
+    fn test_type_contains_shielded_nested_tuple() {
+        assert!(type_contains_shielded("((suint256))"));
+        assert!(type_contains_shielded("((address,(suint256,uint256)),bool)"));
+        assert!(!type_contains_shielded("((address,uint256),bool)"));
+    }
+}
