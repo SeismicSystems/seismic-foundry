@@ -1,0 +1,112 @@
+# Claude Code PR Review
+#
+# Runs Claude in agent mode to review PRs, then posts the review as a
+# sticky comment (one comment, edited in-place on each push).
+#
+# Agent mode doesn't post comments itself, so a post-step extracts
+# Claude's text output from the execution file and manages the comment.
+#
+# Requires: ANTHROPIC_API_KEY secret.
+
+name: Claude Code PR Review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  claude:
+    if: >
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.draft == false &&
+       github.event.pull_request.user.login != 'dependabot[bot]' &&
+       !contains(github.head_ref, 'gh-readonly-queue/')) ||
+      (github.event_name == 'issue_comment' &&
+       contains(github.event.comment.body, '@claude') &&
+       github.event.issue.pull_request &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read review prompt
+        id: prompt
+        run: |
+          {
+            echo 'REVIEW_PROMPT<<EOF'
+            cat .claude/prompts/claude-pr-review.md
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
+      - uses: anthropics/claude-code-action@v1
+        id: claude
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: |
+            --model claude-sonnet-4-20250514
+            --allowedTools "Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*)"
+          prompt: |
+            Review PR #${{ env.PR_NUMBER }} in ${{ github.repository }}.
+
+            1. Run `gh pr diff ${{ env.PR_NUMBER }}` to get the diff.
+            2. Review ONLY the changed files following the guidelines below.
+            3. Output your review as plain text. Do NOT post comments yourself.
+
+            ${{ env.REVIEW_PROMPT }}
+
+      - name: Post review comment
+        if: always() && steps.claude.outputs.execution_file
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+
+          # Extract the last assistant text block from the execution JSON.
+          # The file is an array of turns. We want only the final assistant
+          # message's text (the review), not earlier conversational turns.
+          REVIEW=$(jq -r '
+            [.[] | select(.type == "assistant")] | last
+            | .message.content[]? | select(.type == "text") | .text
+          ' "$EXECUTION_FILE")
+
+          if [ -z "$REVIEW" ] || [ "$REVIEW" = "null" ]; then
+            echo "No review text found in execution output"
+            exit 0
+          fi
+
+          # Sticky comment: find existing review comment and update it,
+          # or create a new one. We use a hidden marker to identify our comments.
+          MARKER="<!-- claude-pr-review -->"
+          BODY="$(printf '%s\n%s' "$MARKER" "$REVIEW")"
+
+          # Search for existing comment with our marker
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${{ env.PR_NUMBER }}/comments" \
+            --jq "[.[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$MARKER\")) | .id] | first // empty")
+
+          if [ -n "$COMMENT_ID" ]; then
+            echo "Updating existing review comment $COMMENT_ID"
+            gh api "repos/${{ github.repository }}/issues/comments/$COMMENT_ID" \
+              -X PATCH -f body="$BODY"
+          else
+            echo "Creating new review comment"
+            gh api "repos/${{ github.repository }}/issues/${{ env.PR_NUMBER }}/comments" \
+              -f body="$BODY"
+          fi

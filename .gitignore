@@ -9,7 +9,8 @@ out.json
 .idea
 .vscode
 
-.claude
+.claude/settings.json
+.claude/settings.local.json
 .env
 node_modules
 dist
