@@ -805,6 +805,16 @@ mod tests {
     }
 
     #[test]
+    fn test_redact_sbytes_shielded() {
+        // storeSecret(sbytes32,address) — sbytes32 is shielded
+        let result = redact_shielded_arguments(
+            Some("storeSecret(sbytes32,address)"),
+            &args(&["0xdeadbeef", "0xabc"]),
+        );
+        assert_eq!(result, args(&["<shielded>", "0xabc"]));
+    }
+
+    #[test]
     fn test_redact_no_function_sig() {
         // No function signature — return args unchanged
         let result = redact_shielded_arguments(None, &args(&["0xabc", "1000"]));

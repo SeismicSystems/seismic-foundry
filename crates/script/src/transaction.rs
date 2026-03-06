@@ -201,10 +201,15 @@ fn abi_param_has_shielded(param: &alloy_json_abi::Param) -> bool {
 
 /// Returns true if a Solidity type string represents a shielded type.
 /// Handles array types like `suint256[]` or `suint256[10]` by stripping the suffix.
+/// Covers all shielded types: suint*, sint*, saddress, sbool, sbytes*.
 pub fn param_is_shielded(ty: &str) -> bool {
     // Strip array suffixes: "suint256[]" → "suint256", "suint256[10]" → "suint256"
     let base = ty.split('[').next().unwrap_or(ty);
-    base.starts_with("suint") || base.starts_with("sint") || base == "saddress" || base == "sbool"
+    base.starts_with("suint")
+        || base.starts_with("sint")
+        || base.starts_with("sbytes")
+        || base == "saddress"
+        || base == "sbool"
 }
 
 #[cfg(test)]
@@ -219,12 +224,27 @@ mod tests {
         assert!(param_is_shielded("sint128"));
         assert!(param_is_shielded("saddress"));
         assert!(param_is_shielded("sbool"));
+        assert!(param_is_shielded("sbytes32"));
+        assert!(param_is_shielded("sbytes1"));
 
         assert!(!param_is_shielded("uint256"));
         assert!(!param_is_shielded("address"));
         assert!(!param_is_shielded("bool"));
         assert!(!param_is_shielded("bytes32"));
         assert!(!param_is_shielded("string"));
+    }
+
+    #[test]
+    fn test_param_is_shielded_sbytes_arrays() {
+        assert!(param_is_shielded("sbytes32[]"));
+        assert!(param_is_shielded("sbytes1[5]"));
+    }
+
+    #[test]
+    fn test_param_is_shielded_udvt() {
+        // UDVTs unwrap to their underlying type in the ABI.
+        // type ShieldedAmount is suint256 → ABI shows "suint256", not "ShieldedAmount"
+        assert!(param_is_shielded("suint256")); // UDVT unwrapped
     }
 
     #[test]
