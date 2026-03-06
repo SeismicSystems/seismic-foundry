@@ -1,5 +1,5 @@
 use crate::transaction::TransactionWithMetadata;
-use alloy_primitives::{TxHash, hex, map::HashMap};
+use alloy_primitives::{Bytes, TxHash, hex, map::HashMap};
 use eyre::{ContextCompat, Result, WrapErr};
 use foundry_common::{SELECTOR_LEN, TransactionMaybeSigned, fs, shell};
 use foundry_compilers::ArtifactId;
@@ -44,6 +44,14 @@ pub struct ScriptSequence {
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct SensitiveTransactionMetadata {
     pub rpc: String,
+    /// Plaintext calldata for shielded transactions (before encryption).
+    /// Stored here so --resume can re-encrypt with fresh SeismicElements.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plaintext_input: Option<Bytes>,
+    /// Plaintext arguments for shielded transactions (before redaction).
+    /// Stored here so --resume and debugging can see original values.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plaintext_arguments: Option<Vec<String>>,
 }
 
 /// Sensitive info from the script sequence which is saved into the cache folder
@@ -58,7 +66,11 @@ impl From<ScriptSequence> for SensitiveScriptSequence {
             transactions: sequence
                 .transactions
                 .iter()
-                .map(|tx| SensitiveTransactionMetadata { rpc: tx.rpc.clone() })
+                .map(|tx| SensitiveTransactionMetadata {
+                    rpc: tx.rpc.clone(),
+                    plaintext_input: tx.plaintext_input.clone(),
+                    plaintext_arguments: tx.plaintext_arguments.clone(),
+                })
                 .collect(),
         }
     }
@@ -213,10 +225,27 @@ impl ScriptSequence {
     }
 
     pub fn fill_sensitive(&mut self, sensitive: &SensitiveScriptSequence) {
-        self.transactions
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, tx)| tx.rpc.clone_from(&sensitive.transactions[i].rpc));
+        self.transactions.iter_mut().enumerate().for_each(|(i, tx)| {
+            tx.rpc.clone_from(&sensitive.transactions[i].rpc);
+            tx.plaintext_input.clone_from(&sensitive.transactions[i].plaintext_input);
+            tx.plaintext_arguments.clone_from(&sensitive.transactions[i].plaintext_arguments);
+
+            // For shielded transactions on --resume: the broadcast JSON has encrypted
+            // calldata, but we need plaintext so broadcast() can re-encrypt with fresh
+            // SeismicElements (new nonce, block hash, expiry). Restore plaintext input
+            // from cache into the transaction object.
+            if tx.has_shielded_args {
+                if let Some(ref plaintext) = tx.plaintext_input {
+                    if let Some(unsigned) = tx.transaction.as_unsigned_mut() {
+                        unsigned.inner.inner.input.input = Some(plaintext.clone());
+                    }
+                }
+                // Also restore redacted arguments
+                if let Some(ref args) = tx.plaintext_arguments {
+                    tx.arguments = Some(args.clone());
+                }
+            }
+        });
     }
 }
 
@@ -249,6 +278,62 @@ pub fn now() -> Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Simulates the --resume flow: broadcast JSON has encrypted input,
+    /// cache has plaintext. After fill_sensitive, the transaction input
+    /// should be restored to plaintext so re-encryption works correctly.
+    #[test]
+    fn fill_sensitive_restores_plaintext_input_for_shielded_txs() {
+        let encrypted_input = Bytes::from(vec![0xDE, 0xAD]); // simulated encrypted
+        let plaintext_input = Bytes::from(vec![0xBE, 0xEF]); // original plaintext
+
+        // Build a tx with encrypted input (as loaded from broadcast JSON).
+        // Serialize/deserialize round-trip to create it since constructors are awkward.
+        let json = serde_json::json!({
+            "input": format!("0x{}", hex::encode(&encrypted_input)),
+        });
+        let tx_request: seismic_prelude::foundry::TransactionRequest =
+            serde_json::from_value(json).unwrap();
+        let tx =
+            <TransactionMaybeSigned as From<seismic_prelude::foundry::TransactionRequest>>::from(
+                tx_request,
+            );
+        let mut tx_meta = TransactionWithMetadata::from_tx_request(tx);
+        tx_meta.has_shielded_args = true;
+        tx_meta.rpc = String::new();
+
+        let mut sequence =
+            ScriptSequence { transactions: VecDeque::from([tx_meta]), ..Default::default() };
+
+        // Build sensitive data (as loaded from cache JSON)
+        let sensitive = SensitiveScriptSequence {
+            transactions: VecDeque::from([SensitiveTransactionMetadata {
+                rpc: "http://localhost:8545".to_string(),
+                plaintext_input: Some(plaintext_input.clone()),
+                plaintext_arguments: Some(vec!["0xBEEF".to_string(), "1000".to_string()]),
+            }]),
+        };
+
+        // fill_sensitive should restore plaintext input to the transaction
+        sequence.fill_sensitive(&sensitive);
+
+        let restored_tx = &sequence.transactions[0];
+        let input = restored_tx.transaction.input().unwrap();
+        assert_eq!(
+            input, &plaintext_input,
+            "after fill_sensitive, transaction input should be restored to plaintext, not remain encrypted"
+        );
+        assert_eq!(
+            restored_tx.plaintext_input,
+            Some(plaintext_input),
+            "plaintext_input should be populated from sensitive data"
+        );
+        assert_eq!(
+            restored_tx.plaintext_arguments,
+            Some(vec!["0xBEEF".to_string(), "1000".to_string()]),
+            "plaintext_arguments should be populated from sensitive data"
+        );
+    }
 
     #[test]
     fn can_convert_sig() {

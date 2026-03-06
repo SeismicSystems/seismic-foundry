@@ -56,6 +56,8 @@ alloy-dyn-abi.workspace = true
 alloy-primitives.workspace = true
 alloy-eips.workspace = true
 alloy-consensus.workspace = true
+rand.workspace = true
+secp256k1 = "0.30"
 
 [dev-dependencies]
 tempfile.workspace = true

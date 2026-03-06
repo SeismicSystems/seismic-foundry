@@ -8,6 +8,7 @@ use alloy_eips::{BlockId, eip2718::Encodable2718};
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{
     Address, TxHash,
+    aliases::U96,
     map::{AddressHashMap, AddressHashSet},
     utils::format_units,
 };
@@ -25,9 +26,160 @@ use foundry_common::{
 use foundry_config::Config;
 use futures::{StreamExt, future::join_all};
 use itertools::Itertools;
+use rand::RngCore;
+use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use std::{cmp::Ordering, sync::Arc};
 
-use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, TransactionRequest};
+use seismic_prelude::foundry::{
+    AnyNetwork, EthereumWallet, SeismicProviderExt, TransactionRequest, TxLegacyFields, TxSeismic,
+    TxSeismicElements, TxSeismicMetadata,
+};
+
+/// Redacts shielded argument values in the arguments array, replacing them with "<shielded>".
+///
+/// Parses the function signature (e.g. "mint(address,suint256)") to determine which
+/// parameter positions contain shielded types. For struct/tuple parameters like
+/// "executeOrder((address,suint256,uint256))", recursively checks inside the tuple.
+fn redact_shielded_arguments(function_sig: Option<&str>, args: &[String]) -> Vec<String> {
+    let Some(sig) = function_sig else {
+        return args.to_vec();
+    };
+
+    // Parse top-level types from "name(type1,type2,...)"
+    let Some(start) = sig.find('(') else {
+        return args.to_vec();
+    };
+    let Some(end) = sig.rfind(')') else {
+        return args.to_vec();
+    };
+    let types_str = &sig[start + 1..end];
+    if types_str.is_empty() {
+        return args.to_vec();
+    }
+
+    let types = split_top_level_params(types_str);
+
+    args.iter()
+        .enumerate()
+        .map(|(i, arg)| {
+            if i < types.len() && type_contains_shielded(types[i].trim()) {
+                "<shielded>".to_string()
+            } else {
+                arg.clone()
+            }
+        })
+        .collect()
+}
+
+/// Splits a parameter type string by commas, respecting nested parentheses.
+/// e.g. "(address,suint256),uint256" → ["(address,suint256)", "uint256"]
+fn split_top_level_params(s: &str) -> Vec<&str> {
+    let mut result = Vec::new();
+    let mut depth = 0;
+    let mut start = 0;
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => depth -= 1,
+            ',' if depth == 0 => {
+                result.push(&s[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    if start < s.len() {
+        result.push(&s[start..]);
+    }
+    result
+}
+
+/// Returns true if a type string (from a function signature) contains any shielded type.
+/// Handles tuples like "(address,suint256)" by recursively checking inside.
+fn type_contains_shielded(ty: &str) -> bool {
+    let trimmed = ty.trim();
+    if trimmed.starts_with('(') {
+        // Tuple: strip outer parens (and optional array suffix) and check components
+        let inner_end = trimmed.rfind(')').unwrap_or(trimmed.len());
+        let inner = &trimmed[1..inner_end];
+        split_top_level_params(inner).iter().any(|t| type_contains_shielded(t))
+    } else {
+        crate::transaction::param_is_shielded(trimmed)
+    }
+}
+
+/// Encrypts the calldata of a transaction and converts it to a TxSeismic (type 0x4a).
+///
+/// This is used when a transaction targets a function with shielded type parameters.
+/// The calldata is encrypted using ECDH with the network's TEE public key.
+fn encrypt_transaction_for_seismic(
+    tx: &mut WithOtherFields<TransactionRequest>,
+    network_pubkey: &PublicKey,
+    recent_block_hash: alloy_primitives::B256,
+    recent_block_number: u64,
+) -> Result<()> {
+    // Generate a random ephemeral encryption keypair
+    let secp = Secp256k1::new();
+    let encryption_sk = {
+        let mut rng = rand::rng();
+        let mut key_bytes = [0u8; 32];
+        rng.fill_bytes(&mut key_bytes);
+        SecretKey::from_slice(&key_bytes)
+            .map_err(|e| eyre::eyre!("Failed to generate encryption key: {}", e))?
+    };
+    let encryption_pk = PublicKey::from_secret_key(&secp, &encryption_sk);
+    let encryption_nonce = U96::random();
+
+    let seismic_elements = TxSeismicElements {
+        encryption_pubkey: encryption_pk,
+        encryption_nonce,
+        message_version: 0,
+        recent_block_hash,
+        expires_at_block: recent_block_number + 100,
+        signed_read: false,
+    };
+
+    // Get the original calldata
+    let original_input = tx.inner.inner.input.input().cloned().unwrap_or_default();
+
+    // Build metadata for AEAD
+    let from = tx.inner.inner.from.unwrap_or_default();
+    let legacy_fields = TxLegacyFields {
+        chain_id: tx.inner.inner.chain_id.unwrap_or_default(),
+        nonce: tx.inner.inner.nonce.unwrap_or_default(),
+        to: tx.inner.inner.to.unwrap_or_default(),
+        value: tx.inner.inner.value.unwrap_or_default(),
+    };
+    let metadata = TxSeismicMetadata {
+        sender: from,
+        legacy_fields,
+        seismic_elements: seismic_elements.clone(),
+    };
+
+    // Encrypt the calldata
+    let encrypted_input = seismic_elements
+        .client_encrypt(&original_input, network_pubkey, &encryption_sk, &metadata)
+        .map_err(|e| eyre::eyre!("Failed to encrypt calldata for seismic tx: {}", e))?;
+
+    // Set encrypted input
+    tx.inner.inner.input =
+        alloy_rpc_types::TransactionInput { input: Some(encrypted_input), data: None };
+
+    // Set transaction type to TxSeismic (0x4a)
+    tx.inner.inner.transaction_type = Some(TxSeismic::TX_TYPE);
+    tx.inner.seismic_elements = Some(seismic_elements);
+
+    // Convert EIP-1559 gas fields to legacy gas_price. TxSeismic uses legacy gas
+    // format (single gas_price), so max_priority_fee_per_gas is intentionally dropped —
+    // it has no equivalent in legacy transactions.
+    if let Some(max_fee) = tx.inner.inner.max_fee_per_gas {
+        tx.inner.inner.gas_price = Some(max_fee);
+        tx.inner.inner.max_fee_per_gas = None;
+        tx.inner.inner.max_priority_fee_per_gas = None;
+    }
+
+    Ok(())
+}
 
 pub async fn estimate_gas<P: Provider<AnyNetwork>>(
     tx: &mut WithOtherFields<TransactionRequest>,
@@ -275,6 +427,34 @@ impl BundledState {
             let seq_progress = progress.get_sequence_progress(i, sequence);
 
             if already_broadcasted < sequence.transactions.len() {
+                // Check if any transactions in this sequence need seismic encryption
+                let has_any_shielded = sequence
+                    .transactions
+                    .iter()
+                    .skip(already_broadcasted)
+                    .any(|tx| tx.has_shielded_args);
+
+                // Fetch TEE public key and recent block once if any transaction needs encryption
+                let seismic_info = if has_any_shielded {
+                    let pk = provider
+                        .get_tee_pubkey()
+                        .await
+                        .wrap_err("Failed to fetch TEE public key for seismic transaction encryption. Is the RPC endpoint a Seismic node?")?;
+                    let block = provider
+                        .get_block_number()
+                        .await
+                        .wrap_err("Failed to fetch latest block number for seismic transaction")?;
+                    let block_info = provider
+                        .get_block_by_number(block.into())
+                        .await
+                        .wrap_err("Failed to fetch latest block for seismic transaction")?
+                        .ok_or_else(|| eyre::eyre!("Latest block not found"))?;
+                    let block_hash = block_info.header.hash;
+                    Some((pk, block_hash, block))
+                } else {
+                    None
+                };
+
                 let is_legacy = Chain::from(sequence.chain).is_legacy() || self.args.legacy;
                 // Make a one-time gas price estimation
                 let (gas_price, eip1559_fees) = match (
@@ -314,6 +494,7 @@ impl BundledState {
                     .skip(already_broadcasted)
                     .map(|tx_with_metadata| {
                         let is_fixed_gas_limit = tx_with_metadata.is_fixed_gas_limit;
+                        let needs_encryption = tx_with_metadata.has_shielded_args;
 
                         let kind = match tx_with_metadata.tx().clone() {
                             TransactionMaybeSigned::Signed { tx, .. } => {
@@ -334,7 +515,14 @@ impl BundledState {
                                     tx.set_create();
                                 }
 
-                                if let Some(gas_price) = gas_price {
+                                if needs_encryption {
+                                    // For seismic transactions, use legacy gas pricing
+                                    let legacy_gas_price = gas_price.unwrap_or_else(|| {
+                                        let fees = eip1559_fees.expect("was set above");
+                                        fees.max_fee_per_gas
+                                    });
+                                    tx.set_gas_price(legacy_gas_price);
+                                } else if let Some(gas_price) = gas_price {
                                     tx.set_gas_price(gas_price);
                                 } else {
                                     let eip1559_fees = eip1559_fees.expect("was set above");
@@ -344,6 +532,20 @@ impl BundledState {
                                     tx.set_max_fee_per_gas(eip1559_fees.max_fee_per_gas);
                                 }
 
+                                // Encrypt calldata for transactions with shielded parameters
+                                if needs_encryption {
+                                    let (network_pk, block_hash, block_number) =
+                                        seismic_info.as_ref().expect(
+                                            "seismic info should be fetched when shielded txs exist",
+                                        );
+                                    encrypt_transaction_for_seismic(
+                                        &mut tx,
+                                        network_pk,
+                                        *block_hash,
+                                        *block_number,
+                                    )?;
+                                }
+
                                 send_kind.for_sender(&from, tx)?
                             }
                         };
@@ -351,6 +553,47 @@ impl BundledState {
                         Ok((kind, is_fixed_gas_limit))
                     })
                     .collect::<Result<Vec<_>>>()?;
+
+                // Encrypt shielded transactions in-place in the sequence so that
+                // checkpoint saves (broadcast/) record encrypted calldata, not plaintext.
+                // Plaintext is preserved in `plaintext_input` for cache/ (--resume).
+                // Arguments are also redacted in broadcast/ with plaintext kept in cache/.
+                if has_any_shielded {
+                    let (network_pk, block_hash, block_number) =
+                        seismic_info.as_ref().expect("seismic info fetched above");
+                    for tx_meta in sequence.transactions.iter_mut().skip(already_broadcasted) {
+                        if tx_meta.has_shielded_args {
+                            // Save and redact arguments
+                            if let Some(ref args) = tx_meta.arguments {
+                                tx_meta.plaintext_arguments = Some(args.clone());
+                                tx_meta.arguments = Some(redact_shielded_arguments(
+                                    tx_meta.function.as_deref(),
+                                    args,
+                                ));
+                            }
+
+                            if let Some(unsigned_tx) = tx_meta.transaction.as_unsigned_mut() {
+                                // Save plaintext before encrypting
+                                tx_meta.plaintext_input =
+                                    unsigned_tx.inner.inner.input.input().cloned();
+
+                                // Set gas (same logic as the send iteration above)
+                                let legacy_gas_price = gas_price.unwrap_or_else(|| {
+                                    eip1559_fees.expect("was set above").max_fee_per_gas
+                                });
+                                unsigned_tx.set_gas_price(legacy_gas_price);
+                                unsigned_tx.set_chain_id(sequence.chain);
+
+                                encrypt_transaction_for_seismic(
+                                    unsigned_tx,
+                                    network_pk,
+                                    *block_hash,
+                                    *block_number,
+                                )?;
+                            }
+                        }
+                    }
+                }
 
                 let estimate_via_rpc =
                     has_different_gas_calc(sequence.chain) || self.args.skip_simulation;
@@ -474,5 +717,157 @@ impl BundledState {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(vals: &[&str]) -> Vec<String> {
+        vals.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn test_redact_simple_shielded() {
+        // mint(address,suint256) — second arg is shielded
+        let result = redact_shielded_arguments(
+            Some("mint(address,suint256)"),
+            &args(&["0x7ff1bAdb", "2000000000000000000000000000"]),
+        );
+        assert_eq!(result, args(&["0x7ff1bAdb", "<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_no_shielded() {
+        // transfer(address,uint256) — no shielded
+        let result =
+            redact_shielded_arguments(Some("transfer(address,uint256)"), &args(&["0xabc", "1000"]));
+        assert_eq!(result, args(&["0xabc", "1000"]));
+    }
+
+    #[test]
+    fn test_redact_all_shielded() {
+        // secretTransfer(saddress,suint256) — both shielded
+        let result = redact_shielded_arguments(
+            Some("secretTransfer(saddress,suint256)"),
+            &args(&["0xabc", "1000"]),
+        );
+        assert_eq!(result, args(&["<shielded>", "<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_struct_with_shielded() {
+        // executeOrder((address,suint256,uint256)) — tuple with shielded component
+        let result = redact_shielded_arguments(
+            Some("executeOrder((address,suint256,uint256))"),
+            &args(&["(0xabc, 1000, 42)"]),
+        );
+        // The whole tuple arg is redacted because it contains a shielded type
+        assert_eq!(result, args(&["<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_struct_without_shielded() {
+        // executeOrder((address,uint256)) — tuple with no shielded
+        let result = redact_shielded_arguments(
+            Some("executeOrder((address,uint256))"),
+            &args(&["(0xabc, 1000)"]),
+        );
+        assert_eq!(result, args(&["(0xabc, 1000)"]));
+    }
+
+    #[test]
+    fn test_redact_mixed_struct_and_plain() {
+        // process((address,suint256),uint256) — first is shielded tuple, second is plain
+        let result = redact_shielded_arguments(
+            Some("process((address,suint256),uint256)"),
+            &args(&["(0xabc, 1000)", "42"]),
+        );
+        assert_eq!(result, args(&["<shielded>", "42"]));
+    }
+
+    #[test]
+    fn test_redact_nested_struct() {
+        // deep(((suint256))) — nested tuple with shielded
+        let result = redact_shielded_arguments(Some("deep(((suint256)))"), &args(&["((1000))"]));
+        assert_eq!(result, args(&["<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_array_shielded() {
+        // batchMint(address,suint256[]) — array of shielded type
+        let result = redact_shielded_arguments(
+            Some("batchMint(address,suint256[])"),
+            &args(&["0xabc", "[1000, 2000]"]),
+        );
+        assert_eq!(result, args(&["0xabc", "<shielded>"]));
+    }
+
+    #[test]
+    fn test_redact_sbytes_shielded() {
+        // storeSecret(sbytes32,address) — sbytes32 is shielded
+        let result = redact_shielded_arguments(
+            Some("storeSecret(sbytes32,address)"),
+            &args(&["0xdeadbeef", "0xabc"]),
+        );
+        assert_eq!(result, args(&["<shielded>", "0xabc"]));
+    }
+
+    #[test]
+    fn test_redact_no_function_sig() {
+        // No function signature — return args unchanged
+        let result = redact_shielded_arguments(None, &args(&["0xabc", "1000"]));
+        assert_eq!(result, args(&["0xabc", "1000"]));
+    }
+
+    #[test]
+    fn test_redact_empty_args() {
+        let result = redact_shielded_arguments(Some("noArgs()"), &[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_split_top_level_params_simple() {
+        assert_eq!(split_top_level_params("address,uint256"), vec!["address", "uint256"]);
+    }
+
+    #[test]
+    fn test_split_top_level_params_with_tuple() {
+        assert_eq!(
+            split_top_level_params("(address,suint256),uint256"),
+            vec!["(address,suint256)", "uint256"]
+        );
+    }
+
+    #[test]
+    fn test_split_top_level_params_nested_tuple() {
+        assert_eq!(
+            split_top_level_params("((suint256,address),uint256),bool"),
+            vec!["((suint256,address),uint256)", "bool"]
+        );
+    }
+
+    #[test]
+    fn test_type_contains_shielded_plain() {
+        assert!(type_contains_shielded("suint256"));
+        assert!(type_contains_shielded("saddress"));
+        assert!(type_contains_shielded("suint256[]"));
+        assert!(!type_contains_shielded("uint256"));
+        assert!(!type_contains_shielded("address"));
+    }
+
+    #[test]
+    fn test_type_contains_shielded_tuple() {
+        assert!(type_contains_shielded("(address,suint256)"));
+        assert!(type_contains_shielded("(address,suint256,uint256)"));
+        assert!(!type_contains_shielded("(address,uint256)"));
+    }
+
+    #[test]
+    fn test_type_contains_shielded_nested_tuple() {
+        assert!(type_contains_shielded("((suint256))"));
+        assert!(type_contains_shielded("((address,(suint256,uint256)),bool)"));
+        assert!(!type_contains_shielded("((address,uint256),bool)"));
     }
 }
