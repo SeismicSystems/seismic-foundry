@@ -169,7 +169,9 @@ fn encrypt_transaction_for_seismic(
     tx.inner.inner.transaction_type = Some(TxSeismic::TX_TYPE);
     tx.inner.seismic_elements = Some(seismic_elements);
 
-    // Convert EIP-1559 gas fields to legacy gas_price (TxSeismic uses legacy format)
+    // Convert EIP-1559 gas fields to legacy gas_price. TxSeismic uses legacy gas
+    // format (single gas_price), so max_priority_fee_per_gas is intentionally dropped —
+    // it has no equivalent in legacy transactions.
     if let Some(max_fee) = tx.inner.inner.max_fee_per_gas {
         tx.inner.inner.gas_price = Some(max_fee);
         tx.inner.inner.max_fee_per_gas = None;
