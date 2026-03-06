@@ -3251,6 +3251,185 @@ Error: script failed: vm.load: attempted to read private storage slot [..] at ad
 "#]]);
 });
 
+// Test that sforge script --broadcast encrypts calldata for functions with shielded params
+// and redacts arguments in broadcast JSON.
+// Requires: ssolc installed at /usr/local/bin/ssolc, sanvil with --seismic
+forgetest_async!(seismic_broadcast_encrypts_shielded_function_calls, |prj, cmd| {
+    // Skip if ssolc is not installed
+    if !std::path::Path::new("/usr/local/bin/ssolc").exists() {
+        eprintln!("skipping test: ssolc not found at /usr/local/bin/ssolc");
+        return;
+    }
+
+    foundry_test_utils::util::initialize(prj.root());
+
+    // Start sanvil with seismic enabled
+    let (api, handle) = spawn(NodeConfig::test().with_seismic(true)).await;
+    api.anvil_set_auto_mine(true).await.unwrap();
+
+    let rpc_url = handle.http_endpoint();
+    let private_key =
+        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".to_string();
+
+    // Configure project for ssolc
+    prj.update_config(|config| {
+        config.seismic = true;
+    });
+
+    // Write a contract with both shielded and non-shielded functions
+    prj.add_raw_source(
+        "ShieldedToken",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract ShieldedToken {
+    mapping(address => suint256) private _balances;
+    mapping(address => uint256) public nonces;
+
+    function mint(address to, suint256 amount) public {
+        _balances[to] = _balances[to] + amount;
+    }
+
+    function incrementNonce(address user) public {
+        nonces[user] += 1;
+    }
+}
+"#,
+    );
+
+    // Write the deploy/call script
+    let script = prj.add_raw_source(
+        "DeployAndCall",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import "forge-std/Script.sol";
+import "../src/ShieldedToken.sol";
+
+contract DeployAndCall is Script {
+    function run() external {
+        vm.startBroadcast();
+
+        ShieldedToken token = new ShieldedToken();
+
+        // Call with shielded param — should become TxSeismic (type 0x4a)
+        token.mint(address(0xBEEF), suint256(1000));
+
+        // Call without shielded param — should stay EIP-1559 (type 0x2)
+        token.incrementNonce(address(0xBEEF));
+
+        vm.stopBroadcast();
+    }
+}
+"#,
+    );
+
+    let script_path = script.display().to_string() + ":DeployAndCall";
+
+    cmd.set_current_dir(prj.root());
+    cmd.args([
+        "script",
+        &script_path,
+        "--root",
+        prj.root().to_str().unwrap(),
+        "--fork-url",
+        &rpc_url,
+        "--broadcast",
+        "--unsafe-private-storage",
+        "--private-key",
+        &private_key,
+        "--slow",
+        "-vvvvv",
+    ])
+    .assert_success();
+
+    // Read the broadcast JSON
+    let broadcast_json_path = prj.root().join("broadcast/DeployAndCall.sol/31337/run-latest.json");
+    let broadcast_json: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&broadcast_json_path).unwrap()).unwrap();
+
+    let txs = broadcast_json["transactions"].as_array().unwrap();
+
+    // Transaction 0: CREATE (deploy ShieldedToken) — should be type 0x2
+    let deploy_tx = &txs[0];
+    assert_eq!(
+        deploy_tx["transactionType"].as_str().unwrap(),
+        "CREATE",
+        "first tx should be a deployment"
+    );
+    let deploy_tx_type = deploy_tx["transaction"]["type"]
+        .as_str()
+        .or_else(|| deploy_tx["transaction"]["type"].as_u64().map(|_| ""))
+        .unwrap_or("");
+    // CREATE transactions should NOT be type 0x4a
+    assert_ne!(deploy_tx_type, "0x4a", "deploy should not be TxSeismic");
+
+    // Transaction 1: mint(address, suint256) — should be type 0x4a with encrypted input
+    let mint_tx = &txs[1];
+    assert_eq!(
+        mint_tx["function"].as_str().unwrap(),
+        "mint(address,suint256)",
+        "second tx should be mint"
+    );
+    assert!(
+        mint_tx["hasShieldedArgs"].as_bool().unwrap_or(false),
+        "mint should have hasShieldedArgs: true"
+    );
+    // Check that arguments are redacted
+    let mint_args = mint_tx["arguments"].as_array().unwrap();
+    assert_eq!(mint_args.len(), 2);
+    assert_ne!(
+        mint_args[0].as_str().unwrap(),
+        "<shielded>",
+        "address param should NOT be redacted"
+    );
+    assert_eq!(mint_args[1].as_str().unwrap(), "<shielded>", "suint256 param should be redacted");
+
+    // Transaction 2: incrementNonce(address) — should be type 0x2, no redaction
+    let nonce_tx = &txs[2];
+    assert_eq!(
+        nonce_tx["function"].as_str().unwrap(),
+        "incrementNonce(address)",
+        "third tx should be incrementNonce"
+    );
+    assert!(
+        !nonce_tx["hasShieldedArgs"].as_bool().unwrap_or(false),
+        "incrementNonce should not have hasShieldedArgs"
+    );
+    // Arguments should NOT be redacted
+    let nonce_args = nonce_tx["arguments"].as_array().unwrap();
+    assert_ne!(
+        nonce_args[0].as_str().unwrap(),
+        "<shielded>",
+        "address param should not be redacted"
+    );
+
+    // Also verify the cache (sensitive) JSON has plaintext arguments
+    let cache_json_path = prj.root().join("cache/DeployAndCall.sol/31337/run-latest.json");
+    let cache_json: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&cache_json_path).unwrap()).unwrap();
+
+    let sensitive_txs = cache_json["transactions"].as_array().unwrap();
+    // The mint tx (index 1) should have plaintext_arguments in sensitive
+    let sensitive_mint = &sensitive_txs[1];
+    if let Some(plaintext_args) = sensitive_mint["plaintext_arguments"].as_array() {
+        assert_eq!(plaintext_args.len(), 2, "should have 2 plaintext arguments");
+        // The suint256 value should be the actual plaintext, not "<shielded>"
+        assert_ne!(
+            plaintext_args[1].as_str().unwrap_or(""),
+            "<shielded>",
+            "cache should have plaintext, not redacted"
+        );
+    }
+    // The mint tx should also have plaintext_input in sensitive
+    assert!(
+        sensitive_mint.get("plaintext_input").is_some(),
+        "cache should have plaintext_input for shielded tx"
+    );
+});
+
 // Test that reading private storage succeeds with --unsafe-private-storage flag
 forgetest_async!(private_storage_allowed_with_flag, |prj, cmd| {
     foundry_test_utils::util::initialize(prj.root());
