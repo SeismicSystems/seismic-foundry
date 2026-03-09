@@ -129,6 +129,10 @@ impl ScriptTransactionBuilder {
         let constructor_args = &creation_code[bytecode.len()..];
 
         let Some(constructor) = info.abi.constructor() else { return Ok(()) };
+
+        // TODO: also encrypt calldata for CREATE (i.e., support seismic transactions for
+        // CREATE once we support it across all of our repos)
+
         let values = constructor.abi_decode_input(constructor_args).inspect_err(|_| {
                 error!(
                     contract=?self.transaction.contract_name,
