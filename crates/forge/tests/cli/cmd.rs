@@ -1302,6 +1302,249 @@ Compiler run successful!
 "#]]);
 });
 
+// test that ssolc shielded literal warnings (5500–5510) are emitted in src/ and can be suppressed
+forgetest!(shielded_literal_warnings_emitted_in_src, |prj, cmd| {
+    // Skip if ssolc is not installed
+    if !std::path::Path::new("/usr/local/bin/ssolc").exists() {
+        eprintln!("skipping test: ssolc not found at /usr/local/bin/ssolc");
+        return;
+    }
+
+    // Enable seismic (ssolc) and suppress unrelated warnings
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes = vec![
+            SolidityErrorCode::SpdxLicenseNotProvided,
+        ];
+    });
+
+    // Receiver lives in src/ — always compiled, provides the shielded interface
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    // Caller in src/ — all warnings should fire
+    prj.add_raw_source(
+        "src/Caller.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "./Receiver.sol";
+
+contract Caller {
+    Receiver public r;
+    constructor() {
+        // triggers 5501 (shielded-literal-new-int)
+        r = new Receiver(suint256(42));
+    }
+    function callWithLiteral() external {
+        // triggers 5506 (shielded-literal-ext-call-int)
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    // Build: expect all shielded literal warnings from src/
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Warning (5500)"),
+        "expected warning 5500 (shielded-constructor-param) in src/ output:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Warning (5501)"),
+        "expected warning 5501 (shielded-literal-new-int) in src/ output:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Warning (5506)"),
+        "expected warning 5506 (shielded-literal-ext-call-int) in src/ output:\n{stdout}"
+    );
+
+    // Now suppress all shielded warnings and the pre-release warning, then rebuild
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes = vec![
+            SolidityErrorCode::SpdxLicenseNotProvided,
+            SolidityErrorCode::ShieldedConstructorParam,
+            SolidityErrorCode::ShieldedLiteralNewExprInt,
+            SolidityErrorCode::ShieldedLiteralExtCallInt,
+            // 3805 = pre-release compiler warning
+            SolidityErrorCode::Other(3805),
+        ];
+    });
+
+    // With all warnings suppressed, build should report no warnings
+    let output2 = cmd.forge_fuse().args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(
+        stdout2.contains("Compiler run successful!") && !stdout2.contains("with warnings"),
+        "expected clean build with all warnings suppressed, got:\n{stdout2}"
+    );
+});
+
+// test that seismic-compilers suppresses ext-call shielded warnings in test/ files
+// but still emits constructor/new-expr warnings (CREATE always leaks, even in tests)
+forgetest!(shielded_literal_warnings_suppressed_in_test, |prj, cmd| {
+    // Skip if ssolc is not installed
+    if !std::path::Path::new("/usr/local/bin/ssolc").exists() {
+        eprintln!("skipping test: ssolc not found at /usr/local/bin/ssolc");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes = vec![
+            SolidityErrorCode::SpdxLicenseNotProvided,
+            // suppress pre-release warning so it doesn't interfere
+            SolidityErrorCode::Other(3805),
+        ];
+    });
+
+    // Receiver in src/
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    // Same patterns but in test/ — ext-call warnings (5506) should be auto-suppressed
+    // by seismic-compilers, but constructor (5500) and new-expr (5501) should remain
+    prj.add_raw_source(
+        "test/Caller.t.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "../src/Receiver.sol";
+
+contract CallerTest {
+    Receiver public r;
+    constructor() {
+        // 5501 (new-expr) — NOT suppressed, CREATE always leaks
+        r = new Receiver(suint256(42));
+    }
+    function testCallWithLiteral() external {
+        // 5506 (ext-call) — suppressed in test files
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // 5500 (constructor param) and 5501 (new-expr) should still appear
+    assert!(
+        stdout.contains("Warning (5500)"),
+        "expected warning 5500 (shielded-constructor-param) even in test/ file:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Warning (5501)"),
+        "expected warning 5501 (shielded-literal-new-int) even in test/ file:\n{stdout}"
+    );
+
+    // 5506 (ext-call) should be suppressed by seismic-compilers in test/ files
+    assert!(
+        !stdout.contains("Warning (5506)"),
+        "warning 5506 (shielded-literal-ext-call-int) should be suppressed in test/ file:\n{stdout}"
+    );
+});
+
+// test that seismic-compilers suppresses ext-call shielded warnings in script/ files
+forgetest!(shielded_literal_warnings_suppressed_in_script, |prj, cmd| {
+    // Skip if ssolc is not installed
+    if !std::path::Path::new("/usr/local/bin/ssolc").exists() {
+        eprintln!("skipping test: ssolc not found at /usr/local/bin/ssolc");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes = vec![
+            SolidityErrorCode::SpdxLicenseNotProvided,
+            SolidityErrorCode::Other(3805),
+        ];
+    });
+
+    // Receiver in src/
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    // Same patterns in script/ — ext-call warnings should be suppressed
+    prj.add_raw_source(
+        "script/Deploy.s.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "../src/Receiver.sol";
+
+contract DeployScript {
+    Receiver public r;
+    constructor() {
+        // 5501 (new-expr) — NOT suppressed
+        r = new Receiver(suint256(42));
+    }
+    function run() external {
+        // 5506 (ext-call) — suppressed in script files
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // 5500 and 5501 should still appear
+    assert!(
+        stdout.contains("Warning (5500)"),
+        "expected warning 5500 (shielded-constructor-param) even in script/ file:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Warning (5501)"),
+        "expected warning 5501 (shielded-literal-new-int) even in script/ file:\n{stdout}"
+    );
+
+    // 5506 should be suppressed
+    assert!(
+        !stdout.contains("Warning (5506)"),
+        "warning 5506 (shielded-literal-ext-call-int) should be suppressed in script/ file:\n{stdout}"
+    );
+});
+
 // test that a failing `forge build` does not impact followup builds
 forgetest!(can_build_after_failure, |prj, cmd| {
     prj.insert_ds_test();
