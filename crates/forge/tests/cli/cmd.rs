@@ -1313,9 +1313,7 @@ forgetest!(shielded_literal_warnings_emitted_in_src, |prj, cmd| {
     // Enable seismic (ssolc) and suppress unrelated warnings
     prj.update_config(|config| {
         config.seismic = true;
-        config.ignored_error_codes = vec![
-            SolidityErrorCode::SpdxLicenseNotProvided,
-        ];
+        config.ignored_error_codes = vec![SolidityErrorCode::SpdxLicenseNotProvided];
     });
 
     // Receiver lives in src/ — always compiled, provides the shielded interface
@@ -1481,10 +1479,8 @@ forgetest!(shielded_literal_warnings_suppressed_in_script, |prj, cmd| {
 
     prj.update_config(|config| {
         config.seismic = true;
-        config.ignored_error_codes = vec![
-            SolidityErrorCode::SpdxLicenseNotProvided,
-            SolidityErrorCode::Other(3805),
-        ];
+        config.ignored_error_codes =
+            vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
     });
 
     // Receiver in src/
