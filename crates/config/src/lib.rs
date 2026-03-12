@@ -38,6 +38,7 @@ use foundry_compilers::{
     error::SolcError,
     multi::{MultiCompilerParser, MultiCompilerRestrictions},
     solc::{CliSettings, SolcSettings},
+    SeismicConfig,
 };
 use regex::Regex;
 // use revm::primitives::hardfork::SpecId;
@@ -955,7 +956,7 @@ impl Config {
                 );
             }
 
-            // no_seismic_warnings is handled via CliSettings.no_seismic_warnings,
+            // no_seismic_warnings is handled via CliSettings.seismic_cfg,
             // which filters warnings post-compilation in seismic-compilers.
         }
     }
@@ -1679,8 +1680,10 @@ impl Config {
 
         let cli_settings = CliSettings {
             extra_args: self.extra_args.clone(),
-            seismic_warnings_in_tests: self.seismic_warnings_test,
-            no_seismic_warnings: self.no_seismic_warnings,
+            seismic_cfg: SeismicConfig {
+                seismic_warnings_in_tests: self.seismic_warnings_test,
+                no_seismic_warnings: self.no_seismic_warnings,
+            },
             ..Default::default()
         };
 
