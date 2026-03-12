@@ -1302,7 +1302,8 @@ Compiler run successful!
 "#]]);
 });
 
-// test that ssolc shielded literal warnings (5500–5510) are emitted in src/ and can be suppressed
+// test that ssolc shielded literal warnings (10103, 10401–10416) are emitted in src/ and can be
+// suppressed
 forgetest!(shielded_literal_warnings_emitted_in_src, |prj, cmd| {
     // Skip if ssolc is not installed
     if !std::path::Path::new("/usr/local/bin/ssolc").exists() {
@@ -1343,11 +1344,11 @@ import {Receiver} from "./Receiver.sol";
 contract Caller {
     Receiver public r;
     constructor() {
-        // triggers 5501 (shielded-literal-new-int)
+        // triggers 10401 (shielded-literal-new-int)
         r = new Receiver(suint256(42));
     }
     function callWithLiteral() external {
-        // triggers 5506 (shielded-literal-ext-call-int)
+        // triggers 10402 (shielded-literal-ext-call-int)
         r.setVal(suint256(100));
     }
 }
@@ -1358,16 +1359,16 @@ contract Caller {
     let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.contains("Warning (5500)"),
-        "expected warning 5500 (shielded-constructor-param) in src/ output:\n{stdout}"
+        stdout.contains("Warning (10103)"),
+        "expected warning 10103 (shielded-constructor-param) in src/ output:\n{stdout}"
     );
     assert!(
-        stdout.contains("Warning (5501)"),
-        "expected warning 5501 (shielded-literal-new-int) in src/ output:\n{stdout}"
+        stdout.contains("Warning (10401)"),
+        "expected warning 10401 (shielded-literal-new-int) in src/ output:\n{stdout}"
     );
     assert!(
-        stdout.contains("Warning (5506)"),
-        "expected warning 5506 (shielded-literal-ext-call-int) in src/ output:\n{stdout}"
+        stdout.contains("Warning (10402)"),
+        "expected warning 10402 (shielded-literal-ext-call-int) in src/ output:\n{stdout}"
     );
 
     // Now suppress all shielded warnings and the pre-release warning, then rebuild
@@ -1425,8 +1426,8 @@ contract Receiver {
 "#,
     );
 
-    // Same patterns but in test/ — ext-call warnings (5506) should be auto-suppressed
-    // by seismic-compilers, but constructor (5500) and new-expr (5501) should remain
+    // Same patterns but in test/ — ext-call warnings (10402) should be auto-suppressed
+    // by seismic-compilers, but constructor (10103) and new-expr (10401) should remain
     prj.add_raw_source(
         "test/Caller.t.sol",
         r#"
@@ -1438,11 +1439,11 @@ import {Receiver} from "../src/Receiver.sol";
 contract CallerTest {
     Receiver public r;
     constructor() {
-        // 5501 (new-expr) — NOT suppressed, CREATE always leaks
+        // 10401 (new-expr) — NOT suppressed, CREATE always leaks
         r = new Receiver(suint256(42));
     }
     function testCallWithLiteral() external {
-        // 5506 (ext-call) — suppressed in test files
+        // 10402 (ext-call) — suppressed in test files
         r.setVal(suint256(100));
     }
 }
@@ -1452,20 +1453,20 @@ contract CallerTest {
     let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // 5500 (constructor param) and 5501 (new-expr) should still appear
+    // 10103 (constructor param) and 10401 (new-expr) should still appear
     assert!(
-        stdout.contains("Warning (5500)"),
-        "expected warning 5500 (shielded-constructor-param) even in test/ file:\n{stdout}"
+        stdout.contains("Warning (10103)"),
+        "expected warning 10103 (shielded-constructor-param) even in test/ file:\n{stdout}"
     );
     assert!(
-        stdout.contains("Warning (5501)"),
-        "expected warning 5501 (shielded-literal-new-int) even in test/ file:\n{stdout}"
+        stdout.contains("Warning (10401)"),
+        "expected warning 10401 (shielded-literal-new-int) even in test/ file:\n{stdout}"
     );
 
-    // 5506 (ext-call) should be suppressed by seismic-compilers in test/ files
+    // 10402 (ext-call) should be suppressed by seismic-compilers in test/ files
     assert!(
-        !stdout.contains("Warning (5506)"),
-        "warning 5506 (shielded-literal-ext-call-int) should be suppressed in test/ file:\n{stdout}"
+        !stdout.contains("Warning (10402)"),
+        "warning 10402 (shielded-literal-ext-call-int) should be suppressed in test/ file:\n{stdout}"
     );
 });
 
@@ -1510,11 +1511,11 @@ import {Receiver} from "../src/Receiver.sol";
 contract DeployScript {
     Receiver public r;
     constructor() {
-        // 5501 (new-expr) — NOT suppressed
+        // 10401 (new-expr) — NOT suppressed
         r = new Receiver(suint256(42));
     }
     function run() external {
-        // 5506 (ext-call) — suppressed in script files
+        // 10402 (ext-call) — suppressed in script files
         r.setVal(suint256(100));
     }
 }
@@ -1524,20 +1525,20 @@ contract DeployScript {
     let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // 5500 and 5501 should still appear
+    // 10103 and 10401 should still appear
     assert!(
-        stdout.contains("Warning (5500)"),
-        "expected warning 5500 (shielded-constructor-param) even in script/ file:\n{stdout}"
+        stdout.contains("Warning (10103)"),
+        "expected warning 10103 (shielded-constructor-param) even in script/ file:\n{stdout}"
     );
     assert!(
-        stdout.contains("Warning (5501)"),
-        "expected warning 5501 (shielded-literal-new-int) even in script/ file:\n{stdout}"
+        stdout.contains("Warning (10401)"),
+        "expected warning 10401 (shielded-literal-new-int) even in script/ file:\n{stdout}"
     );
 
-    // 5506 should be suppressed
+    // 10402 should be suppressed
     assert!(
-        !stdout.contains("Warning (5506)"),
-        "warning 5506 (shielded-literal-ext-call-int) should be suppressed in script/ file:\n{stdout}"
+        !stdout.contains("Warning (10402)"),
+        "warning 10402 (shielded-literal-ext-call-int) should be suppressed in script/ file:\n{stdout}"
     );
 });
 
