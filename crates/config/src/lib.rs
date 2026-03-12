@@ -548,11 +548,13 @@ pub struct Config {
     /// because it looks like it might also be used to configure execution (tests, anvil, etc).
     pub seismic: bool,
 
-    /// When true and `seismic` is enabled, passes `--no-seismic-warnings` to ssolc.
-    ///
-    /// Defaults to `true` so shielded-literal warnings are suppressed globally.
-    /// Set `no_seismic_warnings = false` in foundry.toml to re-enable them.
+    /// When true and `seismic` is enabled, passes `--no-seismic-warnings` to ssolc,
+    /// suppressing all seismic warnings globally (src, test, and script files).
     pub no_seismic_warnings: bool,
+
+    /// When true, show seismic warnings in test files (`.t.sol`).
+    /// By default (`false`), seismic warnings are suppressed in test files.
+    pub seismic_warnings_test: bool,
 
     /// Warnings gathered when loading the Config. See [`WarningsProvider`] for more information.
     #[serde(rename = "__warnings", default, skip_serializing)]
@@ -953,12 +955,8 @@ impl Config {
                 );
             }
 
-            // Pass --no-seismic-warnings to ssolc unless the user opted out.
-            if self.no_seismic_warnings
-                && !self.extra_args.contains(&"--no-seismic-warnings".to_string())
-            {
-                self.extra_args.push("--no-seismic-warnings".to_string());
-            }
+            // no_seismic_warnings is handled via CliSettings.no_seismic_warnings,
+            // which filters warnings post-compilation in seismic-compilers.
         }
     }
 
@@ -1679,8 +1677,12 @@ impl Config {
             settings = settings.with_ast();
         }
 
-        let cli_settings =
-            CliSettings { extra_args: self.extra_args.clone(), ..Default::default() };
+        let cli_settings = CliSettings {
+            extra_args: self.extra_args.clone(),
+            seismic_warnings_in_tests: self.seismic_warnings_test,
+            no_seismic_warnings: self.no_seismic_warnings,
+            ..Default::default()
+        };
 
         Ok(SolcSettings { settings, cli_settings })
     }
@@ -2548,7 +2550,8 @@ impl Default for Config {
             additional_compiler_profiles: Default::default(),
             compilation_restrictions: Default::default(),
             seismic: true,
-            no_seismic_warnings: true,
+            no_seismic_warnings: false,
+            seismic_warnings_test: false,
             script_execution_protection: true,
             _non_exhaustive: (),
         }

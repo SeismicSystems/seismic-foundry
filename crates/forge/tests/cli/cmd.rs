@@ -1302,7 +1302,7 @@ Compiler run successful!
 "#]]);
 });
 
-// test that ssolc shielded literal warnings (5500–5510) are emitted in src/ and can be suppressed
+// test that ssolc shielded literal warnings (>= 10000) are emitted in src/ and can be suppressed
 forgetest!(shielded_literal_warnings_emitted_in_src, |prj, cmd| {
     // Skip if ssolc is not installed
     if std::process::Command::new("ssolc").arg("--version").output().is_err() {
@@ -1310,11 +1310,9 @@ forgetest!(shielded_literal_warnings_emitted_in_src, |prj, cmd| {
         return;
     }
 
-    // Enable seismic (ssolc), disable --no-seismic-warnings so warnings are visible,
-    // and suppress unrelated warnings
+    // Enable seismic (ssolc) and suppress unrelated warnings
     prj.update_config(|config| {
         config.seismic = true;
-        config.no_seismic_warnings = false;
         config.ignored_error_codes = vec![SolidityErrorCode::SpdxLicenseNotProvided];
     });
 
@@ -1345,11 +1343,11 @@ import {Receiver} from "./Receiver.sol";
 contract Caller {
     Receiver public r;
     constructor() {
-        // triggers 5501 (shielded-literal-new-int)
+        // triggers 10401 (shielded-literal-new-int)
         r = new Receiver(suint256(42));
     }
     function callWithLiteral() external {
-        // triggers 5506 (shielded-literal-ext-call-int)
+        // triggers 10402 (shielded-literal-ext-call-int)
         r.setVal(suint256(100));
     }
 }
@@ -1360,27 +1358,27 @@ contract Caller {
     let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stdout.contains("Warning (5500)"),
-        "expected warning 5500 (shielded-constructor-param) in src/ output:\n{stdout}"
+        stdout.contains("Warning (10103)"),
+        "expected warning 10103 (shielded-constructor-param) in src/ output:\n{stdout}"
     );
     assert!(
-        stdout.contains("Warning (5501)"),
-        "expected warning 5501 (shielded-literal-new-int) in src/ output:\n{stdout}"
+        stdout.contains("Warning (10401)"),
+        "expected warning 10401 (shielded-literal-new-int) in src/ output:\n{stdout}"
     );
     assert!(
-        stdout.contains("Warning (5506)"),
-        "expected warning 5506 (shielded-literal-ext-call-int) in src/ output:\n{stdout}"
+        stdout.contains("Warning (10402)"),
+        "expected warning 10402 (shielded-literal-ext-call-int) in src/ output:\n{stdout}"
     );
 
     // Now suppress all shielded warnings and the pre-release warning, then rebuild
     prj.update_config(|config| {
         config.seismic = true;
-        config.no_seismic_warnings = false;
         config.ignored_error_codes = vec![
             SolidityErrorCode::SpdxLicenseNotProvided,
-            SolidityErrorCode::ShieldedConstructorParam,
-            SolidityErrorCode::ShieldedLiteralNewExprInt,
-            SolidityErrorCode::ShieldedLiteralExtCallInt,
+            // seismic warning codes (>= 10000) — use Other(code)
+            SolidityErrorCode::Other(10103), // shielded constructor param
+            SolidityErrorCode::Other(10401), // shielded literal new-expr int
+            SolidityErrorCode::Other(10402), // shielded literal ext-call int
             // 3805 = pre-release compiler warning
             SolidityErrorCode::Other(3805),
         ];
@@ -1395,8 +1393,7 @@ contract Caller {
     );
 });
 
-// test that seismic-compilers suppresses ext-call shielded warnings in test/ files
-// but still emits constructor/new-expr warnings (CREATE always leaks, even in tests)
+// test that all seismic warnings are suppressed in test/ files by default
 forgetest!(shielded_literal_warnings_suppressed_in_test, |prj, cmd| {
     // Skip if ssolc is not installed
     if std::process::Command::new("ssolc").arg("--version").output().is_err() {
@@ -1406,7 +1403,6 @@ forgetest!(shielded_literal_warnings_suppressed_in_test, |prj, cmd| {
 
     prj.update_config(|config| {
         config.seismic = true;
-        config.no_seismic_warnings = false;
         config.ignored_error_codes = vec![
             SolidityErrorCode::SpdxLicenseNotProvided,
             // suppress pre-release warning so it doesn't interfere
@@ -1429,8 +1425,7 @@ contract Receiver {
 "#,
     );
 
-    // Same patterns but in test/ — ext-call warnings (5506) should be auto-suppressed
-    // by seismic-compilers, but constructor (5500) and new-expr (5501) should remain
+    // Test file — all seismic warnings should be suppressed by default
     prj.add_raw_source(
         "test/Caller.t.sol",
         r#"
@@ -1442,39 +1437,27 @@ import {Receiver} from "../src/Receiver.sol";
 contract CallerTest {
     Receiver public r;
     constructor() {
-        // 5501 (new-expr) — NOT suppressed, CREATE always leaks
         r = new Receiver(suint256(42));
     }
     function testCallWithLiteral() external {
-        // 5506 (ext-call) — suppressed in test files
         r.setVal(suint256(100));
     }
 }
 "#,
     );
 
+    // Build should succeed with no seismic warnings from test files
     let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
     let stdout = String::from_utf8_lossy(&output.stdout);
-
-    // 5500 (constructor param) and 5501 (new-expr) should still appear
     assert!(
-        stdout.contains("Warning (5500)"),
-        "expected warning 5500 (shielded-constructor-param) even in test/ file:\n{stdout}"
-    );
-    assert!(
-        stdout.contains("Warning (5501)"),
-        "expected warning 5501 (shielded-literal-new-int) even in test/ file:\n{stdout}"
-    );
-
-    // 5506 (ext-call) should be suppressed by seismic-compilers in test/ files
-    assert!(
-        !stdout.contains("Warning (5506)"),
-        "warning 5506 (shielded-literal-ext-call-int) should be suppressed in test/ file:\n{stdout}"
+        !stdout.contains("Warning (10103)") && !stdout.contains("Warning (10401)")
+            && !stdout.contains("Warning (10402)"),
+        "seismic warnings from test/ files should be suppressed by default:\n{stdout}"
     );
 });
 
-// test that seismic-compilers suppresses ext-call shielded warnings in script/ files
-forgetest!(shielded_literal_warnings_suppressed_in_script, |prj, cmd| {
+// test that seismic warnings are shown in script/ files (scripts behave like src/)
+forgetest!(shielded_literal_warnings_shown_in_script, |prj, cmd| {
     // Skip if ssolc is not installed
     if std::process::Command::new("ssolc").arg("--version").output().is_err() {
         eprintln!("skipping test: ssolc not found in PATH");
@@ -1483,7 +1466,6 @@ forgetest!(shielded_literal_warnings_suppressed_in_script, |prj, cmd| {
 
     prj.update_config(|config| {
         config.seismic = true;
-        config.no_seismic_warnings = false;
         config.ignored_error_codes =
             vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
     });
@@ -1503,7 +1485,7 @@ contract Receiver {
 "#,
     );
 
-    // Same patterns in script/ — ext-call warnings should be suppressed
+    // Script file — all seismic warnings should be shown (scripts are like src/)
     prj.add_raw_source(
         "script/Deploy.s.sol",
         r#"
@@ -1515,11 +1497,9 @@ import {Receiver} from "../src/Receiver.sol";
 contract DeployScript {
     Receiver public r;
     constructor() {
-        // 5501 (new-expr) — NOT suppressed
         r = new Receiver(suint256(42));
     }
     function run() external {
-        // 5506 (ext-call) — suppressed in script files
         r.setVal(suint256(100));
     }
 }
@@ -1529,20 +1509,18 @@ contract DeployScript {
     let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // 5500 and 5501 should still appear
+    // All seismic warnings should be visible in script/ files
     assert!(
-        stdout.contains("Warning (5500)"),
-        "expected warning 5500 (shielded-constructor-param) even in script/ file:\n{stdout}"
+        stdout.contains("Warning (10103)"),
+        "expected warning 10103 in script/ file:\n{stdout}"
     );
     assert!(
-        stdout.contains("Warning (5501)"),
-        "expected warning 5501 (shielded-literal-new-int) even in script/ file:\n{stdout}"
+        stdout.contains("Warning (10401)"),
+        "expected warning 10401 in script/ file:\n{stdout}"
     );
-
-    // 5506 should be suppressed
     assert!(
-        !stdout.contains("Warning (5506)"),
-        "warning 5506 (shielded-literal-ext-call-int) should be suppressed in script/ file:\n{stdout}"
+        stdout.contains("Warning (10402)"),
+        "expected warning 10402 in script/ file:\n{stdout}"
     );
 });
 

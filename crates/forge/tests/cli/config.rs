@@ -179,7 +179,8 @@ forgetest!(can_extract_config_values, |prj, cmd| {
         script_execution_protection: true,
         _non_exhaustive: (),
         seismic: true,
-        no_seismic_warnings: true,
+        no_seismic_warnings: false,
+        seismic_warnings_test: false,
     };
     prj.write_config(input.clone());
     let config = cmd.config();
