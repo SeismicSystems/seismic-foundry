@@ -1156,10 +1156,17 @@ impl Config {
         if self.seismic {
             if let Some(ref solc_req) = self.solc {
                 match solc_req {
-                    SolcReq::Version(_) => {
+                    SolcReq::Version(v) => {
                         // TODO: support using different ssolc versions
-                        // For now, ignore the version request — use ssolc from PATH
                         let ssolc_path = self.get_default_ssolc_path()?;
+                        eprintln!(
+                            "{}",
+                            yansi::Paint::yellow(&format!(
+                                "Warning: ssolc does not support version selection \
+                                 (requested {v}), using `{}`",
+                                ssolc_path.display()
+                            ))
+                        );
                         return Ok(Some(Solc::new(ssolc_path)?));
                     }
                     SolcReq::Local(local_solc_path) => {
