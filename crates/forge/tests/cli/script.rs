@@ -3253,11 +3253,11 @@ Error: script failed: vm.load: attempted to read private storage slot [..] at ad
 
 // Test that sforge script --broadcast encrypts calldata for functions with shielded params
 // and redacts arguments in broadcast JSON.
-// Requires: ssolc installed at /usr/local/bin/ssolc, sanvil with --seismic
+// Requires: ssolc in PATH, sanvil with --seismic
 forgetest_async!(seismic_broadcast_encrypts_shielded_function_calls, |prj, cmd| {
     // Skip if ssolc is not installed
-    if !std::path::Path::new("/usr/local/bin/ssolc").exists() {
-        eprintln!("skipping test: ssolc not found at /usr/local/bin/ssolc");
+    if std::process::Command::new("ssolc").arg("--version").output().is_err() {
+        eprintln!("skipping test: ssolc not found in PATH");
         return;
     }
 
