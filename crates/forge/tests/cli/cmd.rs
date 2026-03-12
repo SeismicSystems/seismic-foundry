@@ -1456,7 +1456,7 @@ contract CallerTest {
     );
 });
 
-// test that seismic warnings are shown in script/ files (scripts behave like src/)
+// test that seismic warnings in script/ files: constructor/new-expr shown, ext-call suppressed
 forgetest!(shielded_literal_warnings_shown_in_script, |prj, cmd| {
     // Skip if ssolc is not installed
     if std::process::Command::new("ssolc").arg("--version").output().is_err() {
@@ -1485,7 +1485,7 @@ contract Receiver {
 "#,
     );
 
-    // Script file — all seismic warnings should be shown (scripts are like src/)
+    // Script file — constructor/new-expr warnings shown, ext-call suppressed
     prj.add_raw_source(
         "script/Deploy.s.sol",
         r#"
@@ -1509,18 +1509,19 @@ contract DeployScript {
     let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // All seismic warnings should be visible in script/ files
+    // Constructor and new-expr warnings should be visible in script/ files
     assert!(
         stdout.contains("Warning (10103)"),
-        "expected warning 10103 in script/ file:\n{stdout}"
+        "expected warning 10103 (constructor param) in script/ file:\n{stdout}"
     );
     assert!(
         stdout.contains("Warning (10401)"),
-        "expected warning 10401 in script/ file:\n{stdout}"
+        "expected warning 10401 (new-expr) in script/ file:\n{stdout}"
     );
+    // Ext-call warnings should be suppressed in script/ files
     assert!(
-        stdout.contains("Warning (10402)"),
-        "expected warning 10402 in script/ file:\n{stdout}"
+        !stdout.contains("Warning (10402)"),
+        "warning 10402 (ext-call) should be suppressed in script/ file:\n{stdout}"
     );
 });
 
