@@ -1127,21 +1127,23 @@ impl Config {
         Ok(())
     }
 
-    /// Get default ssolc path
+    /// Resolve path to `ssolc` binary by searching the system PATH.
     #[inline]
     pub fn get_default_ssolc_path(&self) -> Result<PathBuf, SolcError> {
-        let default_solc_path = if cfg!(windows) {
-            PathBuf::from("C:\\Program Files\\Seismic\\bin\\ssolc.exe")
-        } else {
-            PathBuf::from("/usr/local/bin/ssolc")
-        };
-        if !default_solc_path.is_file() {
-            return Err(SolcError::msg(format!(
-                "`ssolc` {} does not exist.\nInstructions to install:\nhttps://docs.seismic.systems/getting-started/publish-your-docs#install-the-local-development-suite",
-                default_solc_path.display()
-            )));
-        }
-        Ok(default_solc_path)
+        let path = PathBuf::from("ssolc");
+        // Verify ssolc is reachable (Command::new resolves from PATH).
+        std::process::Command::new(&path)
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map_err(|_| {
+                SolcError::msg(
+                    "`ssolc` not found in PATH.\n\
+                     Install via: https://docs.seismic.systems/getting-started/installation",
+                )
+            })?;
+        Ok(path)
     }
 
     /// Ensures that the configured version is installed if explicitly set
@@ -1154,11 +1156,18 @@ impl Config {
         if self.seismic {
             if let Some(ref solc_req) = self.solc {
                 match solc_req {
-                    SolcReq::Version(_) => {
-                        // Only allow the version they have downloaded
-                        // TODO: support using different versions
-                        let default_solc_path = self.get_default_ssolc_path()?;
-                        return Ok(Some(Solc::new(default_solc_path)?));
+                    SolcReq::Version(v) => {
+                        // TODO: support using different ssolc versions
+                        let ssolc_path = self.get_default_ssolc_path()?;
+                        eprintln!(
+                            "{}",
+                            yansi::Paint::yellow(&format!(
+                                "Warning: ssolc does not support version selection \
+                                 (requested {v}), using `{}`",
+                                ssolc_path.display()
+                            ))
+                        );
+                        return Ok(Some(Solc::new(ssolc_path)?));
                     }
                     SolcReq::Local(local_solc_path) => {
                         if !local_solc_path.is_file() {
@@ -1171,6 +1180,9 @@ impl Config {
                     }
                 }
             }
+            // No solc explicitly configured — find ssolc in PATH
+            let ssolc_path = self.get_default_ssolc_path()?;
+            return Ok(Some(Solc::new(ssolc_path)?));
         }
 
         if let Some(solc) = &self.solc {
@@ -2414,7 +2426,9 @@ impl Default for Config {
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,
-            solc: Some(SolcReq::Version(Version::parse("0.8.31").unwrap())),
+            // TODO: restore version pinning when ssolc supports version selection
+            // (see https://github.com/SeismicSystems/seismic-foundry/issues/186)
+            solc: None,
             vyper: Default::default(),
             auto_detect_solc: true,
             offline: false,

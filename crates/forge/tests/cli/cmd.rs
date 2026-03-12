@@ -1302,12 +1302,22 @@ Compiler run successful!
 "#]]);
 });
 
+/// Returns `true` if `ssolc` is available in PATH.
+fn has_ssolc() -> bool {
+    std::process::Command::new("ssolc")
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok()
+}
+
 // test that ssolc shielded literal warnings (10103, 10401–10416) are emitted in src/ and can be
 // suppressed
 forgetest!(shielded_literal_warnings_emitted_in_src, |prj, cmd| {
     // Skip if ssolc is not installed
-    if !std::path::Path::new("/usr/local/bin/ssolc").exists() {
-        eprintln!("skipping test: ssolc not found at /usr/local/bin/ssolc");
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
         return;
     }
 
@@ -1397,8 +1407,8 @@ contract Caller {
 // but still emits constructor/new-expr warnings (CREATE always leaks, even in tests)
 forgetest!(shielded_literal_warnings_suppressed_in_test, |prj, cmd| {
     // Skip if ssolc is not installed
-    if !std::path::Path::new("/usr/local/bin/ssolc").exists() {
-        eprintln!("skipping test: ssolc not found at /usr/local/bin/ssolc");
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
         return;
     }
 
@@ -1473,8 +1483,8 @@ contract CallerTest {
 // test that seismic-compilers suppresses ext-call shielded warnings in script/ files
 forgetest!(shielded_literal_warnings_suppressed_in_script, |prj, cmd| {
     // Skip if ssolc is not installed
-    if !std::path::Path::new("/usr/local/bin/ssolc").exists() {
-        eprintln!("skipping test: ssolc not found at /usr/local/bin/ssolc");
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
         return;
     }
 
