@@ -285,7 +285,9 @@ pub fn initialize(target: &Path) {
 
             cmd.args(["init", "--force"]).assert_success();
             prj.write_config(Config {
-                solc: Some(foundry_config::SolcReq::Version(SOLC_VERSION.parse().unwrap())),
+                // TODO: set to SolcReq::Version when ssolc supports version selection
+                // (see https://github.com/SeismicSystems/seismic-foundry/issues/186)
+                solc: None,
                 evm_version: foundry_compilers::artifacts::EvmVersion::Mercury,
                 ..Default::default()
             });
