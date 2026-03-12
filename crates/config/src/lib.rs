@@ -932,6 +932,22 @@ impl Config {
         if self.evm_version == EvmVersion::Mercury {
             self.seismic = true;
         }
+
+        if self.seismic {
+            // ssolc requires --unsafe-via-ir alongside via_ir.
+            if self.via_ir && !self.unsafe_via_ir {
+                eprintln!(
+                    "{}",
+                    yansi::Paint::yellow(
+                        "Warning: `via_ir = true` requires `unsafe_via_ir = true` in foundry.toml \
+                         (or --unsafe-via-ir on the CLI) when using ssolc. \
+                         The IR pipeline has incomplete shielded-type support and may produce \
+                         incorrect results."
+                    )
+                );
+            }
+
+        }
     }
 
     /// Cleans up any duplicate `Remapping` and sorts them
