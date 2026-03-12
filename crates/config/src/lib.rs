@@ -2426,7 +2426,9 @@ impl Default for Config {
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,
-            solc: Some(SolcReq::Version(Version::parse("0.8.31").unwrap())),
+            // TODO: restore version pinning when ssolc supports version selection
+            // (see https://github.com/SeismicSystems/seismic-foundry/issues/186)
+            solc: None,
             vyper: Default::default(),
             auto_detect_solc: true,
             offline: false,
