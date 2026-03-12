@@ -162,6 +162,18 @@ pub enum SolidityErrorCode {
     ShieldedLiteralExtCallFixedbytes,
     /// Warning: shielded literal in external call args (enum)
     ShieldedLiteralExtCallEnum,
+    /// Warning: shielded literal in other context (int)
+    ShieldedLiteralOtherInt,
+    /// Warning: shielded literal in other context (bool)
+    ShieldedLiteralOtherBool,
+    /// Warning: shielded literal in other context (address)
+    ShieldedLiteralOtherAddress,
+    /// Warning: shielded literal in other context (fixedbytes)
+    ShieldedLiteralOtherFixedbytes,
+    /// Warning: shielded literal in other context (enum)
+    ShieldedLiteralOtherEnum,
+    /// Warning: shielded number literal
+    ShieldedNumberLiteral,
     /// All other error codes
     Other(u64),
 }
@@ -200,6 +212,12 @@ impl SolidityErrorCode {
             Self::ShieldedLiteralExtCallAddress => "shielded-literal-ext-call-address",
             Self::ShieldedLiteralExtCallFixedbytes => "shielded-literal-ext-call-fixedbytes",
             Self::ShieldedLiteralExtCallEnum => "shielded-literal-ext-call-enum",
+            Self::ShieldedLiteralOtherInt => "shielded-literal-other-int",
+            Self::ShieldedLiteralOtherBool => "shielded-literal-other-bool",
+            Self::ShieldedLiteralOtherAddress => "shielded-literal-other-address",
+            Self::ShieldedLiteralOtherFixedbytes => "shielded-literal-other-fixedbytes",
+            Self::ShieldedLiteralOtherEnum => "shielded-literal-other-enum",
+            Self::ShieldedNumberLiteral => "shielded-number-literal",
             Self::Other(code) => return Err(*code),
         };
         Ok(s)
@@ -226,17 +244,23 @@ impl From<SolidityErrorCode> for u64 {
             SolidityErrorCode::PragmaSolidity => 3420,
             SolidityErrorCode::TransientStorageUsed => 2394,
             SolidityErrorCode::TooManyWarnings => 4591,
-            SolidityErrorCode::ShieldedConstructorParam => 5500,
-            SolidityErrorCode::ShieldedLiteralNewExprInt => 5501,
-            SolidityErrorCode::ShieldedLiteralNewExprBool => 5502,
-            SolidityErrorCode::ShieldedLiteralNewExprAddress => 5503,
-            SolidityErrorCode::ShieldedLiteralNewExprFixedbytes => 5504,
-            SolidityErrorCode::ShieldedLiteralNewExprEnum => 5505,
-            SolidityErrorCode::ShieldedLiteralExtCallInt => 5506,
-            SolidityErrorCode::ShieldedLiteralExtCallBool => 5507,
-            SolidityErrorCode::ShieldedLiteralExtCallAddress => 5508,
-            SolidityErrorCode::ShieldedLiteralExtCallFixedbytes => 5509,
-            SolidityErrorCode::ShieldedLiteralExtCallEnum => 5510,
+            SolidityErrorCode::ShieldedConstructorParam => 10103,
+            SolidityErrorCode::ShieldedLiteralNewExprInt => 10401,
+            SolidityErrorCode::ShieldedLiteralNewExprBool => 10404,
+            SolidityErrorCode::ShieldedLiteralNewExprAddress => 10407,
+            SolidityErrorCode::ShieldedLiteralNewExprFixedbytes => 10410,
+            SolidityErrorCode::ShieldedLiteralNewExprEnum => 10413,
+            SolidityErrorCode::ShieldedLiteralExtCallInt => 10402,
+            SolidityErrorCode::ShieldedLiteralExtCallBool => 10405,
+            SolidityErrorCode::ShieldedLiteralExtCallAddress => 10408,
+            SolidityErrorCode::ShieldedLiteralExtCallFixedbytes => 10411,
+            SolidityErrorCode::ShieldedLiteralExtCallEnum => 10414,
+            SolidityErrorCode::ShieldedLiteralOtherInt => 10403,
+            SolidityErrorCode::ShieldedLiteralOtherBool => 10406,
+            SolidityErrorCode::ShieldedLiteralOtherAddress => 10409,
+            SolidityErrorCode::ShieldedLiteralOtherFixedbytes => 10412,
+            SolidityErrorCode::ShieldedLiteralOtherEnum => 10415,
+            SolidityErrorCode::ShieldedNumberLiteral => 10416,
             SolidityErrorCode::Other(code) => code,
         }
     }
@@ -284,6 +308,12 @@ impl FromStr for SolidityErrorCode {
             "shielded-literal-ext-call-address" => Self::ShieldedLiteralExtCallAddress,
             "shielded-literal-ext-call-fixedbytes" => Self::ShieldedLiteralExtCallFixedbytes,
             "shielded-literal-ext-call-enum" => Self::ShieldedLiteralExtCallEnum,
+            "shielded-literal-other-int" => Self::ShieldedLiteralOtherInt,
+            "shielded-literal-other-bool" => Self::ShieldedLiteralOtherBool,
+            "shielded-literal-other-address" => Self::ShieldedLiteralOtherAddress,
+            "shielded-literal-other-fixedbytes" => Self::ShieldedLiteralOtherFixedbytes,
+            "shielded-literal-other-enum" => Self::ShieldedLiteralOtherEnum,
+            "shielded-number-literal" => Self::ShieldedNumberLiteral,
             _ => return Err(format!("Unknown variant {s}")),
         };
 
@@ -311,17 +341,23 @@ impl From<u64> for SolidityErrorCode {
             3420 => Self::PragmaSolidity,
             2394 => Self::TransientStorageUsed,
             4591 => Self::TooManyWarnings,
-            5500 => Self::ShieldedConstructorParam,
-            5501 => Self::ShieldedLiteralNewExprInt,
-            5502 => Self::ShieldedLiteralNewExprBool,
-            5503 => Self::ShieldedLiteralNewExprAddress,
-            5504 => Self::ShieldedLiteralNewExprFixedbytes,
-            5505 => Self::ShieldedLiteralNewExprEnum,
-            5506 => Self::ShieldedLiteralExtCallInt,
-            5507 => Self::ShieldedLiteralExtCallBool,
-            5508 => Self::ShieldedLiteralExtCallAddress,
-            5509 => Self::ShieldedLiteralExtCallFixedbytes,
-            5510 => Self::ShieldedLiteralExtCallEnum,
+            10103 => Self::ShieldedConstructorParam,
+            10401 => Self::ShieldedLiteralNewExprInt,
+            10404 => Self::ShieldedLiteralNewExprBool,
+            10407 => Self::ShieldedLiteralNewExprAddress,
+            10410 => Self::ShieldedLiteralNewExprFixedbytes,
+            10413 => Self::ShieldedLiteralNewExprEnum,
+            10402 => Self::ShieldedLiteralExtCallInt,
+            10405 => Self::ShieldedLiteralExtCallBool,
+            10408 => Self::ShieldedLiteralExtCallAddress,
+            10411 => Self::ShieldedLiteralExtCallFixedbytes,
+            10414 => Self::ShieldedLiteralExtCallEnum,
+            10403 => Self::ShieldedLiteralOtherInt,
+            10406 => Self::ShieldedLiteralOtherBool,
+            10409 => Self::ShieldedLiteralOtherAddress,
+            10412 => Self::ShieldedLiteralOtherFixedbytes,
+            10415 => Self::ShieldedLiteralOtherEnum,
+            10416 => Self::ShieldedNumberLiteral,
             other => Self::Other(other),
         }
     }
@@ -365,29 +401,39 @@ mod tests {
 
     /// All shielded warning variants with their numeric IDs and string aliases.
     const SHIELDED_VARIANTS: &[(SolidityErrorCode, u64, &str)] = &[
-        (SolidityErrorCode::ShieldedConstructorParam, 5500, "shielded-constructor-param"),
-        (SolidityErrorCode::ShieldedLiteralNewExprInt, 5501, "shielded-literal-new-int"),
-        (SolidityErrorCode::ShieldedLiteralNewExprBool, 5502, "shielded-literal-new-bool"),
-        (SolidityErrorCode::ShieldedLiteralNewExprAddress, 5503, "shielded-literal-new-address"),
+        (SolidityErrorCode::ShieldedConstructorParam, 10103, "shielded-constructor-param"),
+        (SolidityErrorCode::ShieldedLiteralNewExprInt, 10401, "shielded-literal-new-int"),
+        (SolidityErrorCode::ShieldedLiteralNewExprBool, 10404, "shielded-literal-new-bool"),
+        (SolidityErrorCode::ShieldedLiteralNewExprAddress, 10407, "shielded-literal-new-address"),
         (
             SolidityErrorCode::ShieldedLiteralNewExprFixedbytes,
-            5504,
+            10410,
             "shielded-literal-new-fixedbytes",
         ),
-        (SolidityErrorCode::ShieldedLiteralNewExprEnum, 5505, "shielded-literal-new-enum"),
-        (SolidityErrorCode::ShieldedLiteralExtCallInt, 5506, "shielded-literal-ext-call-int"),
-        (SolidityErrorCode::ShieldedLiteralExtCallBool, 5507, "shielded-literal-ext-call-bool"),
+        (SolidityErrorCode::ShieldedLiteralNewExprEnum, 10413, "shielded-literal-new-enum"),
+        (SolidityErrorCode::ShieldedLiteralExtCallInt, 10402, "shielded-literal-ext-call-int"),
+        (SolidityErrorCode::ShieldedLiteralExtCallBool, 10405, "shielded-literal-ext-call-bool"),
         (
             SolidityErrorCode::ShieldedLiteralExtCallAddress,
-            5508,
+            10408,
             "shielded-literal-ext-call-address",
         ),
         (
             SolidityErrorCode::ShieldedLiteralExtCallFixedbytes,
-            5509,
+            10411,
             "shielded-literal-ext-call-fixedbytes",
         ),
-        (SolidityErrorCode::ShieldedLiteralExtCallEnum, 5510, "shielded-literal-ext-call-enum"),
+        (SolidityErrorCode::ShieldedLiteralExtCallEnum, 10414, "shielded-literal-ext-call-enum"),
+        (SolidityErrorCode::ShieldedLiteralOtherInt, 10403, "shielded-literal-other-int"),
+        (SolidityErrorCode::ShieldedLiteralOtherBool, 10406, "shielded-literal-other-bool"),
+        (SolidityErrorCode::ShieldedLiteralOtherAddress, 10409, "shielded-literal-other-address"),
+        (
+            SolidityErrorCode::ShieldedLiteralOtherFixedbytes,
+            10412,
+            "shielded-literal-other-fixedbytes",
+        ),
+        (SolidityErrorCode::ShieldedLiteralOtherEnum, 10415, "shielded-literal-other-enum"),
+        (SolidityErrorCode::ShieldedNumberLiteral, 10416, "shielded-number-literal"),
     ];
 
     #[test]
