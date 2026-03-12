@@ -1310,9 +1310,11 @@ forgetest!(shielded_literal_warnings_emitted_in_src, |prj, cmd| {
         return;
     }
 
-    // Enable seismic (ssolc) and suppress unrelated warnings
+    // Enable seismic (ssolc), disable --no-seismic-warnings so warnings are visible,
+    // and suppress unrelated warnings
     prj.update_config(|config| {
         config.seismic = true;
+        config.no_seismic_warnings = false;
         config.ignored_error_codes = vec![SolidityErrorCode::SpdxLicenseNotProvided];
     });
 
@@ -1373,6 +1375,7 @@ contract Caller {
     // Now suppress all shielded warnings and the pre-release warning, then rebuild
     prj.update_config(|config| {
         config.seismic = true;
+        config.no_seismic_warnings = false;
         config.ignored_error_codes = vec![
             SolidityErrorCode::SpdxLicenseNotProvided,
             SolidityErrorCode::ShieldedConstructorParam,
@@ -1403,6 +1406,7 @@ forgetest!(shielded_literal_warnings_suppressed_in_test, |prj, cmd| {
 
     prj.update_config(|config| {
         config.seismic = true;
+        config.no_seismic_warnings = false;
         config.ignored_error_codes = vec![
             SolidityErrorCode::SpdxLicenseNotProvided,
             // suppress pre-release warning so it doesn't interfere
@@ -1479,6 +1483,7 @@ forgetest!(shielded_literal_warnings_suppressed_in_script, |prj, cmd| {
 
     prj.update_config(|config| {
         config.seismic = true;
+        config.no_seismic_warnings = false;
         config.ignored_error_codes =
             vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
     });

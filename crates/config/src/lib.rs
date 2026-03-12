@@ -548,6 +548,12 @@ pub struct Config {
     /// because it looks like it might also be used to configure execution (tests, anvil, etc).
     pub seismic: bool,
 
+    /// When true and `seismic` is enabled, passes `--no-seismic-warnings` to ssolc.
+    ///
+    /// Defaults to `true` so shielded-literal warnings are suppressed globally.
+    /// Set `no_seismic_warnings = false` in foundry.toml to re-enable them.
+    pub no_seismic_warnings: bool,
+
     /// Warnings gathered when loading the Config. See [`WarningsProvider`] for more information.
     #[serde(rename = "__warnings", default, skip_serializing)]
     pub warnings: Vec<Warning>,
@@ -947,6 +953,12 @@ impl Config {
                 );
             }
 
+            // Pass --no-seismic-warnings to ssolc unless the user opted out.
+            if self.no_seismic_warnings
+                && !self.extra_args.contains(&"--no-seismic-warnings".to_string())
+            {
+                self.extra_args.push("--no-seismic-warnings".to_string());
+            }
         }
     }
 
@@ -1175,7 +1187,8 @@ impl Config {
             if let Some(ref solc_req) = self.solc {
                 match solc_req {
                     SolcReq::Version(_) => {
-                        // Ignore the version request — use ssolc from PATH
+                        // TODO: support using different ssolc versions
+                        // For now, ignore the version request — use ssolc from PATH
                         let ssolc_path = self.get_default_ssolc_path()?;
                         return Ok(Some(Solc::new(ssolc_path)?));
                     }
@@ -2535,6 +2548,7 @@ impl Default for Config {
             additional_compiler_profiles: Default::default(),
             compilation_restrictions: Default::default(),
             seismic: true,
+            no_seismic_warnings: true,
             script_execution_protection: true,
             _non_exhaustive: (),
         }
