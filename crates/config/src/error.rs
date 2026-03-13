@@ -16,6 +16,11 @@ impl ExtractConfigError {
     pub fn new(error: figment::Error) -> Self {
         Self { error }
     }
+
+    /// Creates an ExtractConfigError from a generic error message.
+    pub fn from_msg(msg: impl fmt::Display) -> Self {
+        Self { error: msg.to_string().into() }
+    }
 }
 
 impl fmt::Display for ExtractConfigError {
