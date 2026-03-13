@@ -1553,6 +1553,7 @@ contract DeployScript {
 });
 
 // test that --no-seismic-warnings suppresses ALL seismic warnings (codes >= 10000) even in src/
+// and that the build summary reflects the suppression
 forgetest!(no_seismic_warnings_flag_suppresses_all, |prj, cmd| {
     if !has_ssolc() {
         eprintln!("skipping test: ssolc not found in PATH");
@@ -1599,15 +1600,20 @@ contract Caller {
 "#,
     );
 
-    // Without the flag: warnings should appear
+    // Without the flag: seismic warnings should appear and build should report "with warnings"
     let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains("Warning (10"),
         "expected seismic warnings without --no-seismic-warnings flag:\n{stdout}"
     );
+    assert!(
+        stdout.contains("with warnings"),
+        "build summary should say 'with warnings' when seismic warnings are present:\n{stdout}"
+    );
 
-    // With --no-seismic-warnings: ALL seismic warnings should be suppressed
+    // With --no-seismic-warnings: ALL seismic warnings should be suppressed and build should be
+    // clean
     let output2 = cmd
         .forge_fuse()
         .args(["build", "--force", "--no-seismic-warnings"])
@@ -1619,9 +1625,68 @@ contract Caller {
         !stdout2.contains("Warning (10"),
         "no seismic warnings should appear with --no-seismic-warnings flag:\n{stdout2}"
     );
+    assert!(
+        stdout2.contains("Compiler run successful!")
+            && !stdout2.contains("Compiler run successful with warnings"),
+        "build should report clean success with --no-seismic-warnings:\n{stdout2}"
+    );
+});
+
+// test that --no-seismic-warnings only suppresses seismic warnings (>= 10000), not standard
+// Solidity warnings
+forgetest!(no_seismic_warnings_preserves_standard_warnings, |prj, cmd| {
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        // Only suppress SPDX and pre-release — leave other standard warnings enabled
+        config.ignored_error_codes =
+            vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
+    });
+
+    // Contract with both seismic warnings AND a standard Solidity warning (unused variable)
+    prj.add_raw_source(
+        "src/Mixed.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Mixed {
+    suint256 internal val;
+
+    constructor(suint256 _v) { val = _v; }
+
+    function doSomething() external view returns (uint256) {
+        uint256 unused = 42;
+        return uint256(val);
+    }
+}
+"#,
+    );
+
+    // With --no-seismic-warnings: seismic warnings gone, but standard warnings remain
+    let output = cmd
+        .args(["build", "--force", "--no-seismic-warnings"])
+        .assert_success()
+        .get_output()
+        .clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("Warning (10"),
+        "seismic warnings should be suppressed with --no-seismic-warnings:\n{stdout}"
+    );
+    // Standard Solidity unused-variable warning (2072) should still appear
+    assert!(
+        stdout.contains("Warning"),
+        "standard Solidity warnings should still appear with --no-seismic-warnings:\n{stdout}"
+    );
 });
 
 // test that --seismic-warnings-in-tests shows warnings that are normally suppressed in test files
+// and that the build output changes accordingly
 forgetest!(seismic_warnings_in_tests_flag_shows_suppressed, |prj, cmd| {
     if !has_ssolc() {
         eprintln!("skipping test: ssolc not found in PATH");
@@ -1630,8 +1695,13 @@ forgetest!(seismic_warnings_in_tests_flag_shows_suppressed, |prj, cmd| {
 
     prj.update_config(|config| {
         config.seismic = true;
-        config.ignored_error_codes =
-            vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
+        config.ignored_error_codes = vec![
+            SolidityErrorCode::SpdxLicenseNotProvided,
+            SolidityErrorCode::Other(3805),
+            // Suppress constructor/new-expr warnings so we can isolate 10402 behavior
+            SolidityErrorCode::ShieldedConstructorParam,
+            SolidityErrorCode::ShieldedLiteralNewExprInt,
+        ];
     });
 
     prj.add_raw_source(
@@ -1669,15 +1739,19 @@ contract CallerTest {
 "#,
     );
 
-    // Without the flag: 10402 should be suppressed in test files
+    // Without the flag: 10402 should be suppressed in test files, build should be clean
     let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         !stdout.contains("Warning (10402)"),
         "10402 should be suppressed in test files by default:\n{stdout}"
     );
+    assert!(
+        !stdout.contains("with warnings"),
+        "build should be clean when test-file warnings are suppressed:\n{stdout}"
+    );
 
-    // With --seismic-warnings-in-tests: 10402 should now appear
+    // With --seismic-warnings-in-tests: 10402 should now appear and build should report warnings
     let output2 = cmd
         .forge_fuse()
         .args(["build", "--force", "--seismic-warnings-in-tests"])
@@ -1688,6 +1762,10 @@ contract CallerTest {
     assert!(
         stdout2.contains("Warning (10402)"),
         "10402 should appear with --seismic-warnings-in-tests flag:\n{stdout2}"
+    );
+    assert!(
+        stdout2.contains("with warnings"),
+        "build should report 'with warnings' when test-file warnings are un-suppressed:\n{stdout2}"
     );
 });
 
