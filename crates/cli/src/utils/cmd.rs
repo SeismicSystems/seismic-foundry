@@ -214,7 +214,9 @@ pub trait LoadConfig {
 
     /// Same as [`LoadConfig::load_config`] but does not emit warnings.
     fn load_config_no_warnings(&self) -> Result<Config, ExtractConfigError> {
-        self.load_config_unsanitized_no_warnings().map(Config::sanitized)
+        let config = self.load_config_unsanitized_no_warnings().map(Config::sanitized)?;
+        config.validate_seismic_settings().map_err(|e| ExtractConfigError::from_msg(e))?;
+        Ok(config)
     }
 
     /// Load [`Config`] but do not sanitize. See [`Config::sanitized`] for more information.
@@ -238,6 +240,8 @@ pub trait LoadConfig {
 
         let mut evm_opts = figment.extract::<EvmOpts>().map_err(ExtractConfigError::new)?;
         let config = Config::from_provider(figment)?.sanitized();
+
+        config.validate_seismic_settings()?;
 
         // update the fork url if it was an alias
         if let Some(fork_url) = config.get_rpc_url() {
