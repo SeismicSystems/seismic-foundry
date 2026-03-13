@@ -412,11 +412,10 @@ alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev 
 alloy-seismic-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "039d51496b9b9a0cb4fea6d606e472211b462073" }
 
 # foundry
-# TODO: update to rev pin once seismic-compilers PR #22 is merged
-foundry-compilers = { git = "https://github.com/SeismicSystems/seismic-compilers.git", branch = "cdai__seismic-warning-configs" }
-foundry-compilers-artifacts = { git = "https://github.com/SeismicSystems/seismic-compilers.git", branch = "cdai__seismic-warning-configs" }
-foundry-compilers-artifacts-solc = { git = "https://github.com/SeismicSystems/seismic-compilers.git", branch = "cdai__seismic-warning-configs" }
-foundry-compilers-artifacts-vyper = { git = "https://github.com/SeismicSystems/seismic-compilers.git", branch = "cdai__seismic-warning-configs" }
-foundry-compilers-core = { git = "https://github.com/SeismicSystems/seismic-compilers.git", branch = "cdai__seismic-warning-configs" }
+foundry-compilers = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "97c0bb824a434fae8b2082474e682e5907a8ba20" }
+foundry-compilers-artifacts = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "97c0bb824a434fae8b2082474e682e5907a8ba20" }
+foundry-compilers-artifacts-solc = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "97c0bb824a434fae8b2082474e682e5907a8ba20" }
+foundry-compilers-artifacts-vyper = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "97c0bb824a434fae8b2082474e682e5907a8ba20" }
+foundry-compilers-core = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "97c0bb824a434fae8b2082474e682e5907a8ba20" }
 
 foundry-fork-db = { git = "https://github.com/SeismicSystems/seismic-foundry-fork-db.git", rev = "e5fb1f8838b517dbaaccc08a8af6767fe2e70c4e" }
