@@ -412,6 +412,7 @@ alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev 
 alloy-seismic-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "039d51496b9b9a0cb4fea6d606e472211b462073" }
 
 # foundry
+# TODO: update to rev pin once seismic-compilers PR #22 is merged
 foundry-compilers = { git = "https://github.com/SeismicSystems/seismic-compilers.git", branch = "cdai__seismic-warning-configs" }
 foundry-compilers-artifacts = { git = "https://github.com/SeismicSystems/seismic-compilers.git", branch = "cdai__seismic-warning-configs" }
 foundry-compilers-artifacts-solc = { git = "https://github.com/SeismicSystems/seismic-compilers.git", branch = "cdai__seismic-warning-configs" }
