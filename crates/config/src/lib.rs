@@ -947,6 +947,22 @@ impl Config {
         }
     }
 
+    /// Validates seismic-specific config invariants. Call this at CLI entry points
+    /// (not during internal config loading like nested remappings).
+    pub fn validate_seismic_settings(&self) -> eyre::Result<()> {
+        // ssolc requires `--unsafe-via-ir` alongside `--via-ir`.
+        // The via-ir pipeline is unstable in ssolc — require explicit opt-in.
+        if self.seismic && self.via_ir && !self.unsafe_via_ir {
+            eyre::bail!(
+                "`via_ir = true` requires `unsafe_via_ir = true` when using ssolc.\n\
+                 The via-ir pipeline is an unstable/experimental feature in ssolc.\n\
+                 To opt in, add `unsafe_via_ir = true` to your foundry.toml or pass \
+                 `--unsafe-via-ir` on the command line."
+            );
+        }
+        Ok(())
+    }
+
     /// Cleans up any duplicate `Remapping` and sorts them
     ///
     /// On windows this will convert any `\` in the remapping path into a `/`
@@ -6305,5 +6321,33 @@ mod tests {
 
             Ok(())
         });
+    }
+
+    #[test]
+    fn test_validate_seismic_via_ir_with_unsafe_via_ir_ok() {
+        let config = Config { via_ir: true, unsafe_via_ir: true, ..Default::default() };
+        config.validate_seismic_settings().unwrap();
+    }
+
+    #[test]
+    fn test_validate_seismic_via_ir_without_unsafe_via_ir_errors() {
+        let config = Config { via_ir: true, unsafe_via_ir: false, ..Default::default() };
+        let err = config.validate_seismic_settings().unwrap_err();
+        assert!(
+            err.to_string().contains("unsafe_via_ir"),
+            "error should mention unsafe_via_ir: {err}"
+        );
+    }
+
+    #[test]
+    fn test_validate_non_seismic_via_ir_without_unsafe_via_ir_ok() {
+        let config = Config {
+            seismic: false,
+            evm_version: EvmVersion::Paris,
+            via_ir: true,
+            unsafe_via_ir: false,
+            ..Default::default()
+        };
+        config.validate_seismic_settings().unwrap();
     }
 }
