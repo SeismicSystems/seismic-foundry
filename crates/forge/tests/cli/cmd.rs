@@ -1612,8 +1612,7 @@ contract Caller {
         "build summary should say 'with warnings' when seismic warnings are present:\n{stdout}"
     );
 
-    // With --no-seismic-warnings: ALL seismic warnings should be suppressed and build should be
-    // clean
+    // With --no-seismic-warnings: all seismic warnings suppressed, build should be clean
     let output2 = cmd
         .forge_fuse()
         .args(["build", "--force", "--no-seismic-warnings"])
