@@ -1552,6 +1552,145 @@ contract DeployScript {
     );
 });
 
+// test that --no-seismic-warnings suppresses ALL seismic warnings (codes >= 10000) even in src/
+forgetest!(no_seismic_warnings_flag_suppresses_all, |prj, cmd| {
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes =
+            vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
+    });
+
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    prj.add_raw_source(
+        "src/Caller.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "./Receiver.sol";
+
+contract Caller {
+    Receiver public r;
+    constructor() {
+        r = new Receiver(suint256(42));
+    }
+    function callWithLiteral() external {
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    // Without the flag: warnings should appear
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Warning (10"),
+        "expected seismic warnings without --no-seismic-warnings flag:\n{stdout}"
+    );
+
+    // With --no-seismic-warnings: ALL seismic warnings should be suppressed
+    let output2 = cmd
+        .forge_fuse()
+        .args(["build", "--force", "--no-seismic-warnings"])
+        .assert_success()
+        .get_output()
+        .clone();
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(
+        !stdout2.contains("Warning (10"),
+        "no seismic warnings should appear with --no-seismic-warnings flag:\n{stdout2}"
+    );
+});
+
+// test that --seismic-warnings-in-tests shows warnings that are normally suppressed in test files
+forgetest!(seismic_warnings_in_tests_flag_shows_suppressed, |prj, cmd| {
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes =
+            vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
+    });
+
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    prj.add_raw_source(
+        "test/Caller.t.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "../src/Receiver.sol";
+
+contract CallerTest {
+    Receiver public r;
+    constructor() {
+        r = new Receiver(suint256(42));
+    }
+    function testCallWithLiteral() external {
+        // 10402 (ext-call) — normally suppressed in test files
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    // Without the flag: 10402 should be suppressed in test files
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("Warning (10402)"),
+        "10402 should be suppressed in test files by default:\n{stdout}"
+    );
+
+    // With --seismic-warnings-in-tests: 10402 should now appear
+    let output2 = cmd
+        .forge_fuse()
+        .args(["build", "--force", "--seismic-warnings-in-tests"])
+        .assert_success()
+        .get_output()
+        .clone();
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(
+        stdout2.contains("Warning (10402)"),
+        "10402 should appear with --seismic-warnings-in-tests flag:\n{stdout2}"
+    );
+});
+
 // test that a failing `forge build` does not impact followup builds
 forgetest!(can_build_after_failure, |prj, cmd| {
     prj.insert_ds_test();
