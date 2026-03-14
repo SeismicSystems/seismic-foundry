@@ -134,6 +134,18 @@ pub struct BuildOpts {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build_info_path: Option<PathBuf>,
 
+    /// Suppress all seismic/ssolc warnings (codes >= 10000).
+    #[arg(long, help_heading = "Compiler options")]
+    #[serde(skip)]
+    pub no_seismic_warnings: bool,
+
+    /// Show seismic warnings even in test files (*.t.sol).
+    ///
+    /// By default, seismic warnings are suppressed in test files.
+    #[arg(long, help_heading = "Compiler options")]
+    #[serde(skip)]
+    pub seismic_warnings_in_tests: bool,
+
     /// Skip building files whose names contain the given filter.
     ///
     /// `test` and `script` are aliases for `.t.sol` and `.s.sol`.
@@ -260,6 +272,14 @@ impl Provider for BuildOpts {
 
         if self.build_info {
             dict.insert("build_info".to_string(), self.build_info.into());
+        }
+
+        if self.no_seismic_warnings {
+            dict.insert("no_seismic_warnings".to_string(), true.into());
+        }
+
+        if self.seismic_warnings_in_tests {
+            dict.insert("seismic_warnings_in_tests".to_string(), true.into());
         }
 
         if self.compiler.ast {

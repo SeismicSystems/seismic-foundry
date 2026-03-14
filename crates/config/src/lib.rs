@@ -19,7 +19,7 @@ use figment::{
 use filter::GlobMatcher;
 use foundry_compilers::{
     ArtifactOutput, ConfigurableArtifacts, Graph, Project, ProjectPathsConfig,
-    RestrictionsWithVersion, VyperLanguage,
+    RestrictionsWithVersion, SeismicConfig, VyperLanguage,
     artifacts::{
         BytecodeHash, DebuggingSettings, EvmVersion, Libraries, ModelCheckerSettings,
         ModelCheckerTarget, Optimizer, OptimizerDetails, RevertStrings, Settings, SettingsMetadata,
@@ -547,6 +547,19 @@ pub struct Config {
     /// Also should we just rename this to `use_ssolc` instead of seismic, which is a bit confusing
     /// because it looks like it might also be used to configure execution (tests, anvil, etc).
     pub seismic: bool,
+
+    /// Suppress ALL seismic/ssolc warnings (codes >= 10000) globally.
+    ///
+    /// When set to true, no seismic-specific warnings will be emitted.
+    #[serde(default)]
+    pub no_seismic_warnings: bool,
+
+    /// Show seismic warnings even in test files.
+    ///
+    /// By default, seismic warnings (codes >= 10000) are suppressed in test files (*.t.sol).
+    /// Set this to true to see them.
+    #[serde(default)]
+    pub seismic_warnings_in_tests: bool,
 
     /// Warnings gathered when loading the Config. See [`WarningsProvider`] for more information.
     #[serde(rename = "__warnings", default, skip_serializing)]
@@ -1100,7 +1113,11 @@ impl Config {
             .set_offline(self.offline)
             .set_cached(cached)
             .set_build_info(!no_artifacts && self.build_info)
-            .set_no_artifacts(no_artifacts);
+            .set_no_artifacts(no_artifacts)
+            .set_seismic_config(SeismicConfig {
+                no_seismic_warnings: self.no_seismic_warnings,
+                seismic_warnings_in_tests: self.seismic_warnings_in_tests,
+            });
 
         if !self.skip.is_empty() {
             let filter = SkipBuildFilters::new(self.skip.clone(), self.root.clone());
@@ -1672,8 +1689,14 @@ impl Config {
             settings = settings.with_ast();
         }
 
-        let cli_settings =
-            CliSettings { extra_args: self.extra_args.clone(), ..Default::default() };
+        let cli_settings = CliSettings {
+            extra_args: self.extra_args.clone(),
+            seismic_cfg: SeismicConfig {
+                no_seismic_warnings: self.no_seismic_warnings,
+                seismic_warnings_in_tests: self.seismic_warnings_in_tests,
+            },
+            ..Default::default()
+        };
 
         Ok(SolcSettings { settings, cli_settings })
     }
@@ -2543,6 +2566,8 @@ impl Default for Config {
             additional_compiler_profiles: Default::default(),
             compilation_restrictions: Default::default(),
             seismic: true,
+            no_seismic_warnings: false,
+            seismic_warnings_in_tests: false,
             script_execution_protection: true,
             _non_exhaustive: (),
         }
