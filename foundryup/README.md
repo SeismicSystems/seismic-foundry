@@ -8,7 +8,7 @@ Run the following command to install `sfoundryup`:
 
 ```bash
 curl -L -H "Accept: application/vnd.github.v3.raw" \
-     "https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/sfoundryup/install" | bash
+     "https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/foundryup/install" | bash
 ```
 
 Now, either open a new terminal or reload your shell configuration to start using sfoundryup:

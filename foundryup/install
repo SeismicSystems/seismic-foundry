@@ -12,7 +12,7 @@ BIN_PATH="$SEISMIC_BIN_DIR/sfoundryup"
 
 
 # GitHub raw URL to sfoundryup
-RAW_API_URL="https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/sfoundryup/sfoundryup"
+RAW_API_URL="https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/foundryup/foundryup"
 
 # Create necessary directories
 mkdir -p "$SEISMIC_BIN_DIR"
