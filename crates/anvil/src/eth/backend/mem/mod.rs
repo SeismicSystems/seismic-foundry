@@ -109,7 +109,7 @@ use revm::{
     context::{Block as RevmBlock, BlockEnv, Cfg, TxEnv},
     context_interface::{
         block::BlobExcessGasAndPrice,
-        result::{ExecutionResult, Output, ResultAndState},
+        result::{ExecutionResult, HaltReason as OpHaltReason, Output, ResultAndState},
     },
     database::{CacheDB, WrapDatabaseRef},
     interpreter::InstructionResult,
@@ -138,8 +138,8 @@ use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
 use seismic_prelude::{
     foundry::{
         AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, InputDecryptionElements,
-        OpHaltReason, OpTransaction, SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload,
-        SpecId, TransactionReceipt, TransactionRequest, TxEnvelope,
+        OpTransaction, SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload, SpecId,
+        TransactionReceipt, TransactionRequest, TxEnvelope,
     },
     reth::{SEISMIC_TX_TYPE_ID, TxSeismicMetadata},
 };
@@ -4002,14 +4002,7 @@ pub fn is_arbitrum(chain_id: u64) -> bool {
 }
 
 pub fn op_haltreason_to_instruction_result(op_reason: OpHaltReason) -> InstructionResult {
-    match op_reason {
-        OpHaltReason::Base(eth_h) => eth_h.into(),
-        /*
-        OpHaltReason::FailedDeposit => InstructionResult::Stop,
-        */
-        OpHaltReason::InvalidPrivateStorageAccess => InstructionResult::Stop,
-        OpHaltReason::InvalidPublicStorageAccess => InstructionResult::Stop,
-    }
+    op_reason.into()
 }
 
 #[cfg(test)]

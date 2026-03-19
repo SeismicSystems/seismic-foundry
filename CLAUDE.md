@@ -57,7 +57,6 @@ This means upstream PRs that reference `TxEnvelope`, `AnyNetwork`, `SpecId`, etc
 | `SeismicEvm` | `RevmEvm` |
 | `SeismicContext` | `EthEvmContext` |
 | `SeismicInstructions` | `EthInstructions` |
-| `SeismicHaltReason` | `OpHaltReason` |
 | `SeismicTransaction` (revm) | `OpTransaction` |
 | `SeismicWallet<AnyNetwork>` | `EthereumWallet` |
 | `SeismicTransaction<RevmTxEnv>` | `TxEnv` |

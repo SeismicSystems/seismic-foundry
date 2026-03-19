@@ -7,12 +7,13 @@ use revm::{
         BlockEnv, TxEnv,
         result::{EVMError, ExecResultAndState, ExecutionResult, ResultAndState},
     },
+    context_interface::result::HaltReason,
     handler::PrecompileProvider,
     interpreter::InterpreterResult,
 };
 
 use crate::SeismicEvm;
-use seismic_prelude::foundry::{OpHaltReason, OpTransaction, SeismicContext, SpecId};
+use seismic_prelude::foundry::{OpTransaction, SeismicContext, SpecId};
 
 /// Alias for result type returned by [`Evm::transact`] methods.
 type EitherEvmResult<DBError, HaltReason, TxError> =
@@ -64,12 +65,9 @@ where
     fn map_eth_result(
         &self,
         result: Result<ExecResultAndState<ExecutionResult>, EVMError<DB::Error>>,
-    ) -> EitherEvmResult<DB::Error, OpHaltReason, OpTransactionError> {
+    ) -> EitherEvmResult<DB::Error, HaltReason, OpTransactionError> {
         match result {
-            Ok(result) => Ok(ResultAndState {
-                result: result.result.map_haltreason(OpHaltReason::Base),
-                state: result.state,
-            }),
+            Ok(result) => Ok(ResultAndState { result: result.result, state: result.state }),
             Err(e) => Err(self.map_eth_err(e)),
         }
     }
@@ -79,11 +77,11 @@ where
     fn map_exec_result(
         &self,
         result: Result<ExecutionResult, EVMError<DB::Error>>,
-    ) -> EitherExecResult<DB::Error, OpHaltReason, OpTransactionError> {
+    ) -> EitherExecResult<DB::Error, HaltReason, OpTransactionError> {
         match result {
             Ok(result) => {
                 // Map the halt reason
-                Ok(result.map_haltreason(OpHaltReason::Base))
+                Ok(result)
             }
             Err(e) => Err(self.map_eth_err(e)),
         }
@@ -115,7 +113,7 @@ where
 {
     type DB = DB;
     type Error = EVMError<DB::Error, revm::context::result::InvalidTransaction>;
-    type HaltReason = OpHaltReason;
+    type HaltReason = HaltReason;
     type Tx = OpTransaction<TxEnv>;
     type Inspector = I;
     type Precompiles = P;
