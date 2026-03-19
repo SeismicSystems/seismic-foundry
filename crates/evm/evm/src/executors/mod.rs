@@ -1186,6 +1186,7 @@ impl FailFast {
 
 #[cfg(test)]
 mod tests {
+    use alloy_primitives::B256;
     use super::*;
 
     /// Tests that the RNG precompile produces different output across separate transactions
