@@ -1186,8 +1186,8 @@ impl FailFast {
 
 #[cfg(test)]
 mod tests {
-    use alloy_primitives::B256;
     use super::*;
+    use alloy_primitives::B256;
 
     /// Tests that the RNG precompile produces different output across separate transactions
     /// when executed through the foundry-evm Executor (no anvil required).
