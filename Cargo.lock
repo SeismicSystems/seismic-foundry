@@ -4680,7 +4680,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?branch=cdai__seismic-warning-configs#1e6c5ede37d327f03ff945c09ee35778646f92d9"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=97c0bb824a434fae8b2082474e682e5907a8ba20#97c0bb824a434fae8b2082474e682e5907a8ba20"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4713,7 +4713,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?branch=cdai__seismic-warning-configs#1e6c5ede37d327f03ff945c09ee35778646f92d9"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=97c0bb824a434fae8b2082474e682e5907a8ba20#97c0bb824a434fae8b2082474e682e5907a8ba20"
 dependencies = [
  "foundry-compilers-artifacts-solc",
  "foundry-compilers-artifacts-vyper",
@@ -4722,7 +4722,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts-solc"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?branch=cdai__seismic-warning-configs#1e6c5ede37d327f03ff945c09ee35778646f92d9"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=97c0bb824a434fae8b2082474e682e5907a8ba20#97c0bb824a434fae8b2082474e682e5907a8ba20"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4744,7 +4744,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-artifacts-vyper"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?branch=cdai__seismic-warning-configs#1e6c5ede37d327f03ff945c09ee35778646f92d9"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=97c0bb824a434fae8b2082474e682e5907a8ba20#97c0bb824a434fae8b2082474e682e5907a8ba20"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -4758,7 +4758,7 @@ dependencies = [
 [[package]]
 name = "foundry-compilers-core"
 version = "0.19.1"
-source = "git+https://github.com/SeismicSystems/seismic-compilers.git?branch=cdai__seismic-warning-configs#1e6c5ede37d327f03ff945c09ee35778646f92d9"
+source = "git+https://github.com/SeismicSystems/seismic-compilers.git?rev=97c0bb824a434fae8b2082474e682e5907a8ba20#97c0bb824a434fae8b2082474e682e5907a8ba20"
 dependencies = [
  "alloy-primitives",
  "cfg-if",
