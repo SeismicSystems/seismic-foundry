@@ -16,7 +16,7 @@ FOUNDRY_BIN_PATH="$FOUNDRY_BIN_DIR/sfoundryup"
 FOUNDRYUP_JOBS=""
 FOUNDRYUP_IGNORE_VERIFICATION=false
 
-BINS=(sforge scast sanvil schisel)
+BINS=(sforge scast sanvil)
 HASH_NAMES=()
 HASH_VALUES=()
 
@@ -154,7 +154,7 @@ main() {
       else
         ARCHITECTURE="amd64" # Intel.
       fi
-    elif [ "${ARCHITECTURE}" = "arm64" ] ||[ "${ARCHITECTURE}" = "aarch64" ] ; then
+    elif [ "${ARCHITECTURE}" = "arm64" ] || [ "${ARCHITECTURE}" = "aarch64" ] ; then
       ARCHITECTURE="arm64" # Arm.
     else
       ARCHITECTURE="amd64" # Amd.
@@ -171,7 +171,7 @@ main() {
     # If `--force` is set, skip the SHA verification.
     if [ "$FOUNDRYUP_IGNORE_VERIFICATION" = false ]; then
       # Check if the version is already installed by downloading the attestation file.
-      say "checking if sforge, scast, sanvil, and schisel for $FOUNDRYUP_TAG version are already installed"
+      say "checking if sforge, scast, and sanvil for $FOUNDRYUP_TAG version are already installed"
 
       # Create a temporary directory to store the attestation link and artifact.
       tmp_dir="$(mktemp -d 2>/dev/null || echo ".")"
@@ -262,13 +262,13 @@ main() {
     fi
 
     # Download and extract the binaries archive
-    say "downloading sforge, scast, sanvil, and schisel for $FOUNDRYUP_TAG version"
+    say "downloading sforge, scast, and sanvil for $FOUNDRYUP_TAG version"
     tmp="$(mktemp -d 2>/dev/null || echo ".")/sfoundry.tar.gz"
     ensure download "$BIN_ARCHIVE_URL" "$tmp"
     # Make sure it's a valid tar archive.
-    ensure tar tf $tmp 1> /dev/null
+    ensure tar tf "$tmp" 1> /dev/null
     ensure mkdir -p "$FOUNDRY_VERSIONS_DIR/$FOUNDRYUP_TAG"
-    ensure tar -C "$FOUNDRY_VERSIONS_DIR/$FOUNDRYUP_TAG" -xvf $tmp
+    ensure tar -C "$FOUNDRY_VERSIONS_DIR/$FOUNDRYUP_TAG" -xvf "$tmp"
     rm -f "$tmp"
 
     # Optionally download the manuals
@@ -419,7 +419,7 @@ install_ssolc() {
       INSTALL_DIR="/usr/local/bin"
       ;;
     *)
-      echo "Unsupported OS: $OS"
+      echo "Unsupported OS: $OS (only Linux and macOS are supported)"
       exit 1
       ;;
   esac
