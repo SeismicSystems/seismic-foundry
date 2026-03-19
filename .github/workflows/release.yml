@@ -1,22 +1,19 @@
 name: release
 
 on:
-  # TODO(samlaf): we need to figure out how to do (and semver) our seismic releases once we become more stable.
-  # push:
-  #   tags:
-  #     - "stable"
-  #     - "rc"
-  #     - "rc-*"
-  #     - "v*.*.*"
+  push:
+    tags:
+      - "v*.*.*"
   schedule:
-    - cron: "0 6 * * 1"
+    # Weekly on Mondays at 11:00am UTC (6:00am EST)
+    - cron: "0 11 * * 1"
+  # manual trigger behaves like the cron job and creates a nightly pre-release.
   workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
   IS_NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
   PROFILE: maxperf
-  STABLE_VERSION: "v1.2.3"
 
 jobs:
   prepare:
@@ -57,12 +54,23 @@ jobs:
             const createTag = require('./.github/scripts/create-tag.js')
             await createTag({ github, context }, process.env.TAG_NAME)
 
+      # For versioned releases (v*.*.*), find the previous semver tag to compute changelog from.
+      # Unlike upstream which uses a hardcoded STABLE_VERSION env var, we resolve it dynamically
+      # so we don't have to remember to update it after each release.
+      - name: Find previous semver tag
+        if: ${{ env.IS_NIGHTLY != 'true' }}
+        id: prev_stable
+        run: |
+          # List all v*.*.* tags sorted by version, exclude the current one
+          PREV_TAG=$(git tag -l 'v*.*.*' --sort=-v:refname | grep -v "^${GITHUB_REF_NAME}$" | head -1)
+          echo "tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+
       - name: Build changelog
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v4
         with:
           configuration: "./.github/changelog.json"
-          fromTag: ${{ env.IS_NIGHTLY == 'true' && 'nightly' || env.STABLE_VERSION }}
+          fromTag: ${{ env.IS_NIGHTLY == 'true' && 'nightly' || steps.prev_stable.outputs.tag }}
           toTag: ${{ steps.release_info.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -181,7 +189,7 @@ jobs:
             cargo build "${flags[@]}"
           fi
 
-          bins=(sanvil scast schisel sforge)
+          bins=(sanvil scast sforge)
           for name in "${bins[@]}"; do
             bin=$OUT_DIR/$name$ext
             echo ""
@@ -202,18 +210,13 @@ jobs:
         shell: bash
         run: |
           if [[ "$PLATFORM_NAME" == "linux" || "$PLATFORM_NAME" == "alpine" ]]; then
-            tar -czvf "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR sforge scast sanvil schisel
+            tar -czvf "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR sforge scast sanvil
             echo "file_name=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
           elif [ "$PLATFORM_NAME" == "darwin" ]; then
             # We need to use gtar here otherwise the archive is corrupt.
             # See: https://github.com/actions/virtual-environments/issues/2619
-            gtar -czvf "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR sforge scast sanvil schisel
+            gtar -czvf "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR sforge scast sanvil
             echo "file_name=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
-          else
-            cd $OUT_DIR
-            7z a -tzip "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" sforge.exe scast.exe sanvil.exe schisel.exe
-            mv "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
-            echo "file_name=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" >> $GITHUB_OUTPUT
           fi
           echo "sfoundry_attestation=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.attestation.txt" >> $GITHUB_OUTPUT
 
@@ -236,12 +239,10 @@ jobs:
           help2man -N $OUT_DIR/sforge > sforge.1
           help2man -N $OUT_DIR/scast > scast.1
           help2man -N $OUT_DIR/sanvil > sanvil.1
-          help2man -N $OUT_DIR/schisel > schisel.1
           gzip sforge.1
           gzip scast.1
           gzip sanvil.1
-          gzip schisel.1
-          tar -czvf "sfoundry_man_${VERSION_NAME}.tar.gz" sforge.1.gz scast.1.gz sanvil.1.gz schisel.1.gz
+          tar -czvf "sfoundry_man_${VERSION_NAME}.tar.gz" sforge.1.gz scast.1.gz sanvil.1.gz
           echo "sfoundry_man=sfoundry_man_${VERSION_NAME}.tar.gz" >> $GITHUB_OUTPUT
 
       - name: Binaries attestation
@@ -251,7 +252,6 @@ jobs:
           subject-path: |
             ${{ env.sanvil_bin_path }}
             ${{ env.scast_bin_path }}
-            ${{ env.schisel_bin_path }}
             ${{ env.sforge_bin_path }}
 
       - name: Record attestation URL
@@ -287,6 +287,10 @@ jobs:
             ${{ steps.man.outputs.sfoundry_man }}
 
   cleanup:
+    # contents:write is needed for move-tag.js to update the nightly tag
+    # and for prune-prereleases.js to delete old nightly releases/tags.
+    permissions:
+      contents: write
     name: Release cleanup
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -315,7 +319,7 @@ jobs:
   issue:
     name: Open an issue
     runs-on: ubuntu-latest
-    # TODO(samlaf): add back release-docker step if we ever uncomment it.
+    # TODO(samlaf): add back release-docker step if we ever uncomment it above.
     needs: [prepare, release, cleanup]
     if: failure()
     steps:
