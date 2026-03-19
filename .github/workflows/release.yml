@@ -55,6 +55,8 @@ jobs:
             await createTag({ github, context }, process.env.TAG_NAME)
 
       # For versioned releases (v*.*.*), find the previous semver tag to compute changelog from.
+      # Unlike upstream which uses a hardcoded STABLE_VERSION env var, we resolve it dynamically
+      # so we don't have to remember to update it after each release.
       - name: Find previous semver tag
         if: ${{ env.IS_NIGHTLY != 'true' }}
         id: prev_stable
