@@ -309,7 +309,7 @@ All core Foundry dependencies are replaced with Seismic forks pinned to specific
 |---|---|
 | `packages/client-tests/` | Viem integration tests against sanvil (TypeScript/Bun) |
 | `packages/sforge-tests/` | Contract compilation/test validation with sforge (TypeScript/Bun) |
-| `sfoundryup/` | Installer script — installs `ssolc`, builds and installs `sforge`/`sanvil`/`scast` |
+| `foundryup/` | Installer script — installs `ssolc`, builds and installs `sforge`/`sanvil`/`scast` |
 | `docs/seismic/` | Seismic-specific technical documentation |
 | `.github/workflows/seismic.yml` | Seismic CI workflow (the only active one) |
 | `crates/anvil/tests/it/seismic.rs` | Anvil integration tests for SeismicTx and precompiles |
