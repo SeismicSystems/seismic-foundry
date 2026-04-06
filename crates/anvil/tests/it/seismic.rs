@@ -20,8 +20,8 @@ use seismic_enclave::aes_decrypt;
 use std::{fs, str::FromStr};
 
 use seismic_prelude::foundry::{
-    AnyNetwork, AnyTxEnvelope, EthereumWallet, SeismicCallRequest, SeismicProviderExt,
-    SeismicSignedProvider, SeismicUnsignedProvider, TransactionRequest, TxLegacyFields, TxSeismic,
+    AnyNetwork, AnyTxEnvelope, EthereumWallet, SeismicCallRequest, SeismicProviderBuilder,
+    SeismicProviderExt, SignedProviderExt, TransactionRequest, TxLegacyFields, TxSeismic,
     TxSeismicElements, TxSeismicMetadata, TypedDataRequest, test_utils, tx_builder,
 };
 
@@ -195,14 +195,14 @@ async fn test_seismic_transaction_rpc() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     api.anvil_set_auto_mine(true).await.unwrap();
     let signer = handle.dev_wallets().next().unwrap();
-    let provider = SeismicSignedProvider::new(
-        EthereumWallet::new(signer.clone()),
-        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
-    )
-    .await
-    .unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(EthereumWallet::new(signer.clone()))
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
     let url = handle.http_endpoint().as_str().parse().unwrap();
-    let unsigned_provider = SeismicUnsignedProvider::<AnyNetwork>::new_http(url);
+    let unsigned_provider = SeismicProviderBuilder::new().foundry().connect_http(url);
     let deployer = handle.dev_accounts().next().unwrap();
     let network_pubkey = provider.get_tee_pubkey().await.unwrap();
 
@@ -234,18 +234,18 @@ async fn test_seismic_transaction_rpc() {
     call_req.transaction_type = Some(TxEip1559::tx_type().into());
     println!("Call req: {:?}", call_req);
     // send a call bytes
-    let res = provider.seismic_call(SendableTx::Builder(call_req.into())).await.unwrap();
+    let res = provider.seismic_call_raw(SendableTx::Builder(call_req.into())).await.unwrap();
     assert_eq!(res, test_utils::ContractTestContext::get_code());
 
     // send a unsigned call
     let res = unsigned_provider
-        .seismic_call(SendableTx::Builder(
+        .call(
             tx_builder()
                 .with_kind(TxKind::Create)
                 .with_input(plaintext_bytecode.clone())
                 .into()
                 .into(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(res, test_utils::ContractTestContext::get_code());
@@ -347,12 +347,12 @@ async fn test_seismic_rng_different_per_transaction() {
     // Spin up node with auto-mine
     let (_api, handle) = spawn(NodeConfig::test()).await;
     let wallet = EthereumWallet::new(handle.dev_wallets().next().unwrap().clone());
-    let provider = SeismicSignedProvider::new(
-        wallet,
-        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
-    )
-    .await
-    .unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet)
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
     let deployer = handle.dev_accounts().next().unwrap();
 
     // Minimal contract: on any call, STATICCALLs the RNG precompile (0x64)
@@ -475,12 +475,12 @@ async fn test_seismic_precompiles_end_to_end() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     api.anvil_set_auto_mine(true).await.unwrap();
     let wallet = EthereumWallet::new(handle.dev_wallets().next().unwrap().clone());
-    let provider = SeismicSignedProvider::new(
-        wallet,
-        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
-    )
-    .await
-    .unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet)
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
     let deployer = handle.dev_accounts().next().unwrap();
 
     // 1. Deploy test contract
@@ -588,11 +588,9 @@ async fn test_seismic_precompiles_end_to_end() {
         .into()
         .seismic();
 
-    let output = provider.seismic_call(SendableTx::Builder(tx_req.into())).await.unwrap();
+    let output = provider.seismic_call_raw(SendableTx::Builder(tx_req.into())).await.unwrap();
 
-    //
     // 5. Locally decrypt to cross-check
-    //
     // 5a. AES decryption with your local private key
     let secp_private = secp256k1::SecretKey::from_slice(private_key.as_ref()).unwrap();
     let aes_key: &[u8; 32] = &secp_private.secret_bytes()[0..32].try_into().unwrap();

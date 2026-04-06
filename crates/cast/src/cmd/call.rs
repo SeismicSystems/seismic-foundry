@@ -5,9 +5,9 @@ use crate::{
     tx::{CastTxBuilder, SenderKind},
 };
 use alloy_ens::NameOrAddress;
-use alloy_network::TransactionBuilder;
+use alloy_network::{TransactionBuilder, eip2718::Encodable2718};
 use alloy_primitives::{Address, B256, Bytes, TxKind, U256, map::HashMap};
-use alloy_provider::{Provider, SendableTx};
+use alloy_provider::Provider;
 use alloy_rpc_types::{
     BlockId, BlockNumberOrTag, BlockOverrides,
     state::{StateOverride, StateOverridesBuilder},
@@ -459,8 +459,10 @@ impl CallArgs {
             let signed_envelope = encrypted_tx.build(&ethereum_wallet).await?;
 
             // Make the seismic call using signed raw transaction
-            let encrypted_response = provider
-                .seismic_call(SendableTx::Envelope(signed_envelope))
+            let encoded_tx = signed_envelope.encoded_2718();
+            let encrypted_response: Bytes = provider
+                .client()
+                .request("eth_call", (encoded_tx,))
                 .await
                 .map_err(|e| eyre::eyre!("Seismic call failed: {}", e))?;
 

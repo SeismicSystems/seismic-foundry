@@ -20,7 +20,7 @@ use std::time::Duration;
 use url::Url;
 
 use seismic_prelude::foundry::{
-    EthereumWallet, SeismicProviderExt, sfoundry_signed_provider, tx_builder,
+    EthereumWallet, SeismicProviderBuilder, SignedProviderExt, tx_builder,
 };
 
 #[tokio::test(flavor = "multi_thread")]
@@ -283,7 +283,12 @@ async fn can_call_with_undersized_max_fee_per_gas() {
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
     let provider = http_provider_with_signer(&handle.http_endpoint(), signer.clone());
-    let seismic_provider = sfoundry_signed_provider(signer.clone(), node_url).await.unwrap();
+    let seismic_provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(signer.clone())
+        .connect_http(node_url)
+        .await
+        .unwrap();
 
     api.anvil_set_auto_mine(true).await.unwrap();
 
@@ -305,7 +310,8 @@ async fn can_call_with_undersized_max_fee_per_gas() {
         .with_to(*simple_storage_contract.address())
         .with_input(raw_input.clone())
         .into();
-    let result = seismic_provider.seismic_call(SendableTx::Builder(builder.into())).await.unwrap();
+    let result =
+        seismic_provider.seismic_call_raw(SendableTx::Builder(builder.into())).await.unwrap();
     let last_sender = <Address as alloy_sol_types::SolValue>::abi_decode(&result).unwrap();
     assert_eq!(last_sender, Address::ZERO);
 }
