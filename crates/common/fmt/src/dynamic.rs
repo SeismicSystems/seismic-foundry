@@ -79,7 +79,9 @@ impl DynValueFormatter {
             &DynSolValue::Sint(SInt(inner), _) => write!(f, "{inner}"),
             &DynSolValue::Suint(SUInt(inner), _) => write!(f, "{inner}"),
             &DynSolValue::Sbytes(SBytes(ref bytes)) => f.write_str(&hex::encode_prefixed(bytes)),
-            &DynSolValue::FixedSbytes(word, size) => f.write_str(&hex::encode_prefixed(&word.0[..size])),
+            &DynSolValue::FixedSbytes(word, size) => {
+                f.write_str(&hex::encode_prefixed(&word.0[..size]))
+            }
         }
     }
 
@@ -168,7 +170,9 @@ pub fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
             Ok(Value::Number(suint))
         }
         DynSolValue::Sbytes(SBytes(b)) => Ok(Value::String(hex::encode_prefixed(&b))),
-        DynSolValue::FixedSbytes(word, size) => Ok(Value::String(hex::encode_prefixed(&word.0[..size]))),
+        DynSolValue::FixedSbytes(word, size) => {
+            Ok(Value::String(hex::encode_prefixed(&word.0[..size])))
+        }
         DynSolValue::Bool(b) => Ok(Value::Bool(b)),
         DynSolValue::String(s) => {
             // Strings are allowed to contain stringified JSON objects, so we try to parse it like
