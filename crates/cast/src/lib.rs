@@ -1918,7 +1918,8 @@ impl SimpleCast {
             | DynSolType::Saddress
             | DynSolType::Sint(_)
             | DynSolType::Suint(_)
-            | DynSolType::Sbytes(..) => hasher.update(k.as_word().unwrap()),
+            | DynSolType::FixedSbytes(_)
+            | DynSolType::Sbytes => hasher.update(k.as_word().unwrap()),
         }
 
         let p = DynSolType::Uint(256)
