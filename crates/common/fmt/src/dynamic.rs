@@ -5,8 +5,7 @@ use eyre::Result;
 use serde_json::Value;
 use std::fmt;
 
-use alloy_primitives::aliases::{SAddress, SInt, SUInt};
-use alloy_sol_types::sol_data::Sbool;
+use alloy_primitives::aliases::{SAddress, SBool, SBytes, SInt, SUInt};
 
 /// [`DynSolValue`] formatter.
 struct DynValueFormatter {
@@ -75,11 +74,12 @@ impl DynValueFormatter {
                     self.tuple(tuple, f)
                 }
             }
-            &DynSolValue::Sbool(Sbool(inner)) => write!(f, "{inner}"),
+            &DynSolValue::Sbool(SBool(inner)) => write!(f, "{inner}"),
             &DynSolValue::Saddress(SAddress(inner)) => write!(f, "{inner}"),
             &DynSolValue::Sint(SInt(inner), _) => write!(f, "{inner}"),
             &DynSolValue::Suint(SUInt(inner), _) => write!(f, "{inner}"),
-            &DynSolValue::Sbytes(word, size) => f.write_str(&hex::encode_prefixed(&word[..size])),
+            &DynSolValue::Sbytes(SBytes(ref bytes)) => f.write_str(&hex::encode_prefixed(bytes)),
+            &DynSolValue::FixedSbytes(word, size) => f.write_str(&hex::encode_prefixed(&word.0[..size])),
         }
     }
 
@@ -157,7 +157,7 @@ pub fn format_token_raw(value: &DynSolValue) -> String {
 /// Serializes given [DynSolValue] into a [serde_json::Value].
 pub fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
     match value {
-        DynSolValue::Sbool(Sbool(b)) => Ok(Value::Bool(b)),
+        DynSolValue::Sbool(SBool(b)) => Ok(Value::Bool(b)),
         DynSolValue::Saddress(SAddress(a)) => Ok(Value::String(a.to_string())),
         DynSolValue::Sint(SInt(i), _) => {
             let suint = serde_json::from_str(&i.to_string())?;
@@ -167,7 +167,8 @@ pub fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
             let suint = serde_json::from_str(&u.to_string())?;
             Ok(Value::Number(suint))
         }
-        DynSolValue::Sbytes(b, size) => Ok(Value::String(hex::encode_prefixed(&b[..size]))),
+        DynSolValue::Sbytes(SBytes(b)) => Ok(Value::String(hex::encode_prefixed(&b))),
+        DynSolValue::FixedSbytes(word, size) => Ok(Value::String(hex::encode_prefixed(&word.0[..size]))),
         DynSolValue::Bool(b) => Ok(Value::Bool(b)),
         DynSolValue::String(s) => {
             // Strings are allowed to contain stringified JSON objects, so we try to parse it like
