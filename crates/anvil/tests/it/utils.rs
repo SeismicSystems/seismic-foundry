@@ -39,7 +39,10 @@ type PubsubSigner = FillProvider<
     JoinFill<
         JoinFill<
             Identity,
-            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+            JoinFill<
+                GasFiller<AnyNetwork>,
+                JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
+            >,
         >,
         WalletFiller<EthereumWallet>,
     >,

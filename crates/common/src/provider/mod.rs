@@ -40,7 +40,7 @@ pub type RetryProviderWithSigner<N = AnyNetwork> = FillProvider<
         JoinFill<
             Identity,
             JoinFill<
-                GasFiller,
+                GasFiller<N>,
                 JoinFill<
                     alloy_provider::fillers::BlobGasFiller,
                     JoinFill<NonceFiller, ChainIdFiller>,
