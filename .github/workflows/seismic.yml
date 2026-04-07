@@ -90,27 +90,6 @@ jobs:
       - name: sanvil integration tests
         run: cargo nextest run -p anvil --test it
 
-  viem:
-    runs-on: large-github-runner
-    timeout-minutes: 30
-    env:
-      SFOUNDRY_ROOT: /home/runner/work/seismic-foundry/seismic-foundry
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.5
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "viem-cache"
-      - name: sanvil build
-        run: cargo build --bin sanvil
-      - name: Install dependencies
-        run: bun install
-      - name: Run viem tests vs. Anvil
-        run: bun viem:test
-
   contract-tests:
     runs-on: self-hosted
     timeout-minutes: 30

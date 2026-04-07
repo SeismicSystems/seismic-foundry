@@ -15,7 +15,7 @@ use crate::{
 use alloy_dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
 use alloy_json_abi::Function;
 use alloy_primitives::{
-    Address, B256, Bytes, Log, TxKind, U256, keccak256,
+    Address, Bytes, Log, TxKind, U256, keccak256,
     map::{AddressHashMap, HashMap},
 };
 use alloy_sol_types::{SolCall, sol};
@@ -1187,6 +1187,7 @@ impl FailFast {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_primitives::B256;
 
     /// Tests that the RNG precompile produces different output across separate transactions
     /// when executed through the foundry-evm Executor (no anvil required).

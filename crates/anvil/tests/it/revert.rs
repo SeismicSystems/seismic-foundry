@@ -1,13 +1,15 @@
 use crate::abi::VendingMachine;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{U256, bytes};
-use alloy_provider::{Provider, SendableTx};
+use alloy_provider::Provider;
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{NodeConfig, spawn};
 
 use reqwest::Url;
-use seismic_prelude::foundry::{SeismicProviderExt, sfoundry_signed_provider, tx_builder};
+use seismic_prelude::foundry::{
+    SeismicCallExt, SeismicProviderBuilder, ShieldedCallExt, tx_builder,
+};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deploy_reverting() {
@@ -70,13 +72,16 @@ async fn test_solc_revert_example() {
     let provider = handle.http_provider();
     let node_url = Url::parse(&handle.http_endpoint()).unwrap();
 
-    let seismic_provider = sfoundry_signed_provider(wallet.clone(), node_url).await.unwrap();
+    let seismic_provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet.clone())
+        .connect_http(node_url)
+        .await
+        .unwrap();
 
     let contract = VendingMachine::deploy(&provider).await.unwrap();
-    let tx = contract.buy(U256::from(100)).into_transaction_request();
-    let input = tx.input().unwrap();
-    let builder = tx_builder().with_to(*contract.address()).with_input(input.clone()).into();
-    let err = seismic_provider.seismic_call(SendableTx::Builder(builder.into())).await.unwrap_err();
+    let seismic_contract = VendingMachine::new(*contract.address(), &seismic_provider);
+    let err = seismic_contract.buy(U256::from(100)).seismic().call().await.unwrap_err();
 
     let s = err.to_string();
     assert!(s.contains("Not enough Ether provided."), "{s:?}");

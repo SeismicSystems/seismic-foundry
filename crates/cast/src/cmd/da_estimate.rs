@@ -38,18 +38,16 @@ impl DAEstimateArgs {
         for tx in block.into_transactions_iter() {
             // try to convert into opstack transaction
             let tx: seismic_prelude::foundry::AnyTxEnvelope = tx.into();
-            let tx: seismic_prelude::foundry::TxEnvelope = tx.into();
+            let tx: alloy_consensus::TxEnvelope =
+                tx.try_into_envelope().expect("unsupported transaction type for DA estimate");
             let tx = match tx {
-                seismic_prelude::foundry::TxEnvelope::Legacy(tx) => OpTxEnvelope::Legacy(tx),
-                seismic_prelude::foundry::TxEnvelope::Eip2930(tx) => OpTxEnvelope::Eip2930(tx),
-                seismic_prelude::foundry::TxEnvelope::Eip1559(tx) => OpTxEnvelope::Eip1559(tx),
-                seismic_prelude::foundry::TxEnvelope::Eip4844(_) => {
+                alloy_consensus::TxEnvelope::Legacy(tx) => OpTxEnvelope::Legacy(tx),
+                alloy_consensus::TxEnvelope::Eip2930(tx) => OpTxEnvelope::Eip2930(tx),
+                alloy_consensus::TxEnvelope::Eip1559(tx) => OpTxEnvelope::Eip1559(tx),
+                alloy_consensus::TxEnvelope::Eip4844(_) => {
                     panic!("EIP-4844 transactions are not supported for DA estimates")
                 }
-                seismic_prelude::foundry::TxEnvelope::Eip7702(tx) => OpTxEnvelope::Eip7702(tx),
-                seismic_prelude::foundry::TxEnvelope::Seismic(_) => {
-                    panic!("Seismic transactions are not supported for DA estimates")
-                }
+                alloy_consensus::TxEnvelope::Eip7702(tx) => OpTxEnvelope::Eip7702(tx),
             };
             // let tx = OpTxEnvelope::try_from(tx)?;
             da_estimate += op_alloy_flz::tx_estimated_size_fjord(&tx.encoded_2718());
