@@ -13,16 +13,17 @@ use alloy_rpc_types::{
 };
 use alloy_serde::WithOtherFields;
 use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::{SolCall, SolValue, sol};
+use alloy_sol_types::{SolValue, sol};
 use anvil::{NodeConfig, spawn};
 use secp256k1::{PublicKey, SecretKey};
 use seismic_enclave::aes_decrypt;
 use std::{fs, str::FromStr};
 
 use seismic_prelude::foundry::{
-    AnyNetwork, AnyTxEnvelope, EthereumWallet, SeismicCallRequest, SeismicProviderBuilder,
-    SeismicProviderExt, SignedProviderExt, TransactionRequest, TxLegacyFields, TxSeismic,
-    TxSeismicElements, TxSeismicMetadata, TypedDataRequest, test_utils, tx_builder,
+    AnyNetwork, AnyTxEnvelope, EthereumWallet, SeismicCallExt, SeismicCallRequest,
+    SeismicProviderBuilder, SeismicProviderExt, ShieldedCallExt, SignedProviderExt,
+    TransactionRequest, TxLegacyFields, TxSeismic, TxSeismicElements, TxSeismicMetadata,
+    TypedDataRequest, test_utils, tx_builder,
 };
 
 // common utils
@@ -562,6 +563,7 @@ async fn test_seismic_precompiles_end_to_end() {
     let decoded = event.decode_log(&log_data.into_log_data()).unwrap();
 
     sol! {
+        #[sol(rpc)]
         #[derive(Debug, PartialEq)]
         interface Encryption {
             function decrypt(uint96 nonce, bytes calldata ciphertext)
@@ -577,18 +579,10 @@ async fn test_seismic_precompiles_end_to_end() {
         U96::from_be_bytes(B96::from_slice(&decoded.indexed[0].abi_encode_packed()).into());
     let ciphertext = Bytes::from(decoded.body[0].abi_encode_packed());
 
-    let call = Encryption::decryptCall { nonce, ciphertext: ciphertext.clone() };
-    let unencrypted_decrypt_call = Bytes::from(call.abi_encode());
+    let encryption = Encryption::new(contract_addr, &provider);
 
-    // Create a seismic read call - provider will handle seismic_elements and metadata
-    let tx_req = tx_builder()
-        .with_from(from)
-        .with_to(contract_addr)
-        .with_input(unencrypted_decrypt_call)
-        .into()
-        .seismic();
-
-    let output = provider.seismic_call_raw(SendableTx::Builder(tx_req.into())).await.unwrap();
+    // .seismic().call() encrypts calldata, signs, decrypts response, and ABI-decodes
+    let plaintext = encryption.decrypt(nonce, ciphertext.clone()).seismic().call().await.unwrap();
 
     // 5. Locally decrypt to cross-check
     // 5a. AES decryption with your local private key
@@ -599,11 +593,9 @@ async fn test_seismic_precompiles_end_to_end() {
         aes_decrypt(aes_key.into(), &ciphertext, nonce).expect("AES decryption failed");
     assert_eq!(decrypted_locally, message);
 
-    // 5b. Decrypt the "output" from the read call
-    let result_bytes =
-        PlaintextType::abi_decode(&Bytes::from(output)).expect("failed to decode the bytes");
+    // 5b. Verify the seismic_call result matches
     let final_string =
-        String::from_utf8(result_bytes.to_vec()).expect("invalid utf8 in decrypted bytes");
+        String::from_utf8(plaintext.to_vec()).expect("invalid utf8 in decrypted bytes");
 
     assert_eq!(final_string, "hello world");
 }

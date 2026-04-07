@@ -10,7 +10,7 @@ use alloy_primitives::{
     Address, B256, ChainId, U256, b256, bytes,
     map::{AddressHashMap, B256HashMap, HashMap},
 };
-use alloy_provider::{Provider, SendableTx};
+use alloy_provider::Provider;
 use alloy_rpc_types::{BlockId, BlockNumberOrTag, BlockTransactions, state::AccountOverride};
 use alloy_serde::WithOtherFields;
 use anvil::{CHAIN_ID, EthereumHardfork, NodeConfig, eth::api::CLIENT_VERSION, spawn};
@@ -20,7 +20,7 @@ use std::time::Duration;
 use url::Url;
 
 use seismic_prelude::foundry::{
-    EthereumWallet, SeismicProviderBuilder, SignedProviderExt, tx_builder,
+    EthereumWallet, SeismicCallExt, SeismicProviderBuilder, ShieldedCallExt, tx_builder,
 };
 
 #[tokio::test(flavor = "multi_thread")]
@@ -303,16 +303,8 @@ async fn can_call_with_undersized_max_fee_per_gas() {
 
     assert!(undersized_max_fee_per_gas < latest_block_base_fee_per_gas);
 
-    let last_sender_tx = simple_storage_contract.lastSender().into_transaction_request();
-    let raw_input = last_sender_tx.input().unwrap();
-    let builder = tx_builder()
-        .with_from(wallet.address())
-        .with_to(*simple_storage_contract.address())
-        .with_input(raw_input.clone())
-        .into();
-    let result =
-        seismic_provider.seismic_call_raw(SendableTx::Builder(builder.into())).await.unwrap();
-    let last_sender = <Address as alloy_sol_types::SolValue>::abi_decode(&result).unwrap();
+    let contract = SimpleStorage::new(*simple_storage_contract.address(), &seismic_provider);
+    let last_sender = contract.lastSender().seismic().call().await.unwrap();
     assert_eq!(last_sender, Address::ZERO);
 }
 
