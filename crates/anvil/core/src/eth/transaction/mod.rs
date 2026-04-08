@@ -1978,10 +1978,10 @@ mod tests {
 
         // Signature comes from seismic-viem-tests/testSeismicTxEncoding
         let r =
-            U256::from_str("0xfea7db32f4e44d75eb13f84d2cf04c2808a5c8dba8dac629476fe27e04c7629f")
+            U256::from_str("0xea4deb5d93eb2566b7d0ea5209f8bc9fd810ad1eff29bf59424de14c5910ab23")
                 .unwrap();
         let s =
-            U256::from_str("0x01f17d58cf879dc2c787d526b90a17b6d7bcbf4fbd581215ae3f6099e43c84c5")
+            U256::from_str("0x1daa9ada5f7448d737dee3096add2cd9447c2f55c13b7f8ca6ec37105548bf0c")
                 .unwrap();
 
         let signature = Signature::new(r, s, false);
