@@ -670,7 +670,7 @@ impl PendingTransaction {
                     chain_id,
                     input,
                     seismic_elements,
-                    authorization_list: _,
+                    authorization_list,
                 } = &tx.tx();
 
                 let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
@@ -692,6 +692,10 @@ impl PendingTransaction {
                     gas_limit: *gas_limit,
                     access_list: vec![].into(),
                     tx_type: TxSeismic::TX_TYPE,
+                    authorization_list: authorization_list
+                        .iter()
+                        .map(|auth| revm::context::either::Either::Left(auth.clone()))
+                        .collect(),
                     ..Default::default()
                 })
             }
