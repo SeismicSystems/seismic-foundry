@@ -109,6 +109,7 @@ pub fn transaction_request_to_typed(
                     chain_id: chain_id.unwrap_or_default(),
                     input: input.input.unwrap_or_default(),
                     seismic_elements,
+                    authorization_list: authorization_list.unwrap_or_default(),
                 };
                 return Some(TypedTransactionRequest::Seismic(tx));
             }
@@ -669,6 +670,7 @@ impl PendingTransaction {
                     chain_id,
                     input,
                     seismic_elements,
+                    authorization_list: _,
                 } = &tx.tx();
 
                 let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
@@ -1971,6 +1973,7 @@ mod tests {
                 signed_read: false,
             },
             input: encrypted_input.clone(),
+            authorization_list: vec![],
         };
 
         // Signature comes from seismic-viem-tests/testSeismicTxEncoding
