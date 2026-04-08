@@ -1,12 +1,10 @@
-use alloy_provider::{
-    Identity, RootProvider,
-    fillers::{BlobGasFiller, ChainIdFiller, FillProvider, JoinFill, NonceFiller, WalletFiller},
-};
+use alloy_provider::{RootProvider, fillers::FillProvider};
 use foundry_common::provider::{
-    ProviderBuilder, RetryProvider, RetryProviderWithSigner, get_http_provider,
+    ProviderBuilder, RetryProvider, RetryProviderWithSigner, SignedFillerChain, get_http_provider,
+    signed_filler_chain,
 };
 
-use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, GasFiller};
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet};
 
 pub fn http_provider(http_endpoint: &str) -> RetryProvider {
     get_http_provider(http_endpoint)
@@ -35,24 +33,18 @@ pub async fn connect_pubsub(conn_str: &str) -> RootProvider {
     alloy_provider::ProviderBuilder::default().connect(conn_str).await.unwrap()
 }
 
-type PubsubSigner = FillProvider<
-    JoinFill<
-        JoinFill<
-            Identity,
-            JoinFill<
-                GasFiller<AnyNetwork>,
-                JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
-            >,
-        >,
-        WalletFiller<EthereumWallet>,
-    >,
-    RootProvider<AnyNetwork>,
-    AnyNetwork,
->;
+type PubsubSigner = FillProvider<SignedFillerChain, RootProvider<AnyNetwork>, AnyNetwork>;
 
 pub async fn connect_pubsub_with_wallet(conn_str: &str, wallet: EthereumWallet) -> PubsubSigner {
-    alloy_provider::ProviderBuilder::new_with_network()
-        .wallet(wallet)
+    let mut rpc_url: reqwest::Url = conn_str.parse().unwrap();
+    match rpc_url.scheme() {
+        "ws" => rpc_url.set_scheme("http").unwrap(),
+        "wss" => rpc_url.set_scheme("https").unwrap(),
+        _ => {}
+    }
+
+    alloy_provider::ProviderBuilder::<_, _, AnyNetwork>::default()
+        .layer(signed_filler_chain(wallet, rpc_url))
         .connect(conn_str)
         .await
         .unwrap()

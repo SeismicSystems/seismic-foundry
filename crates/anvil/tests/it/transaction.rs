@@ -1139,31 +1139,27 @@ async fn test_estimate_gas() {
         .to(sender)
         .value(U256::from(1e10))
         .input(Bytes::from(vec![0x42]).into());
-    // Expect the gas estimation to fail due to insufficient funds.
-    let error_result = api
+    // External unsigned `eth_estimateGas` requests are sanitized, so the
+    // spoofed `from` balance must not affect the estimate.
+    let gas_estimate = api
         .estimate_gas(
             WithOtherFields::<SeismicTransactionRequest>::new(tx.clone().into()).into(),
             None,
             EvmOverrides::default(),
         )
-        .await;
+        .await
+        .expect("Failed to estimate gas for unsigned request");
 
-    assert!(error_result.is_err(), "Expected an error due to insufficient funds");
-    let error_message = error_result.unwrap_err().to_string();
-    assert!(
-        error_message.contains("Insufficient funds for gas * price + value"),
-        "Error message did not match expected: {error_message}"
-    );
-
-    // Setup state override to simulate sufficient funds for the recipient.
+    // Setup state override to simulate sufficient funds for the spoofed sender.
     let addr = recipient;
     let account_override =
         AccountOverride { balance: Some(alloy_primitives::U256::from(1e18)), ..Default::default() };
     let mut state_override = StateOverride::default();
     state_override.insert(addr, account_override);
 
-    // Estimate gas with state override implying sufficient funds.
-    let gas_estimate = api
+    // The estimate should be unchanged because unsigned requests no longer
+    // trust the caller-supplied `from`.
+    let gas_estimate_with_override = api
         .estimate_gas(
             WithOtherFields::<SeismicTransactionRequest>::new(tx.into()).into(),
             None,
@@ -1171,6 +1167,8 @@ async fn test_estimate_gas() {
         )
         .await
         .expect("Failed to estimate gas with state override");
+
+    assert_eq!(gas_estimate, gas_estimate_with_override);
 
     // Assert the gas estimate meets the expected minimum.
     assert!(gas_estimate >= U256::from(21000), "Gas estimate is lower than expected minimum");
