@@ -9426,7 +9426,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-consensus"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=2ad2e5893ba8a6af45806ea09df58e5c00bdf16d#2ad2e5893ba8a6af45806ea09df58e5c00bdf16d"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=006fc90bb9918996a236a40685298b23d9727c03#006fc90bb9918996a236a40685298b23d9727c03"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -9449,7 +9449,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-network"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=2ad2e5893ba8a6af45806ea09df58e5c00bdf16d#2ad2e5893ba8a6af45806ea09df58e5c00bdf16d"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=006fc90bb9918996a236a40685298b23d9727c03#006fc90bb9918996a236a40685298b23d9727c03"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
@@ -9476,7 +9476,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-provider"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=2ad2e5893ba8a6af45806ea09df58e5c00bdf16d#2ad2e5893ba8a6af45806ea09df58e5c00bdf16d"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=006fc90bb9918996a236a40685298b23d9727c03#006fc90bb9918996a236a40685298b23d9727c03"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -9497,7 +9497,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-rpc-types"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=2ad2e5893ba8a6af45806ea09df58e5c00bdf16d#2ad2e5893ba8a6af45806ea09df58e5c00bdf16d"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=006fc90bb9918996a236a40685298b23d9727c03#006fc90bb9918996a236a40685298b23d9727c03"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -9532,7 +9532,7 @@ dependencies = [
 [[package]]
 name = "seismic-prelude"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=2ad2e5893ba8a6af45806ea09df58e5c00bdf16d#2ad2e5893ba8a6af45806ea09df58e5c00bdf16d"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=006fc90bb9918996a236a40685298b23d9727c03#006fc90bb9918996a236a40685298b23d9727c03"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",

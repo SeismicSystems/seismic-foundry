@@ -1,7 +1,7 @@
 use alloy_consensus::TxEip1559;
 use alloy_dyn_abi::EventExt;
 use alloy_json_abi::{Event, EventParam};
-use alloy_network::TransactionBuilder;
+use alloy_network::{TransactionBuilder, eip2718::Encodable2718};
 use alloy_primitives::{
     Address, B256, Bytes, IntoLogData, TxKind, U256,
     aliases::{B96, U96},
@@ -312,7 +312,8 @@ async fn test_seismic_transaction_rpc() {
 
     let chain_id = provider.get_chain_id().await.unwrap();
 
-    // estiamte gas
+    // unsigned seismic estimate_gas should fail after sanitization because the
+    // request no longer carries authenticated caller metadata.
     let gas_estimate = api
         .estimate_gas(
             WithOtherFields::new(
@@ -326,13 +327,44 @@ async fn test_seismic_transaction_rpc() {
                     true,
                 )
                 .await,
-            ),
+            )
+            .into(),
+            None,
+            EvmOverrides::default(),
+        )
+        .await
+        .unwrap_err();
+    // Sanitization cleared `from`, so the request should fail because the
+    // sender is missing — confirming the attacker-supplied `from` was not used.
+    let err_str = gas_estimate.to_string();
+    assert!(
+        err_str.contains("sender") || err_str.contains("from"),
+        "expected sender-related error after sanitization, got: {err_str}"
+    );
+
+    let signed_call = sign_tx(
+        signer.clone(),
+        get_unsigned_seismic_tx_request(
+            &signer,
+            &network_pubkey,
+            provider.get_transaction_count(deployer).await.unwrap(),
+            TxKind::Call(contract_address),
+            chain_id,
+            test_utils::ContractTestContext::get_is_odd_input_plaintext(),
+            true,
+        )
+        .await,
+    )
+    .await;
+    let signed_gas_estimate = api
+        .estimate_gas(
+            SeismicCallRequest::Bytes(Bytes::from(signed_call.encoded_2718())),
             None,
             EvmOverrides::default(),
         )
         .await
         .unwrap();
-    assert!(gas_estimate > U256::ZERO);
+    assert!(signed_gas_estimate > U256::ZERO);
 }
 
 /// Tests that the RNG precompile produces different output for different transactions.

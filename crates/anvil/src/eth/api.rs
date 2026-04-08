@@ -103,12 +103,9 @@ use tokio::{
 };
 use yansi::Paint;
 
-use seismic_prelude::{
-    foundry::{
-        AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
-        SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest, tx_builder,
-    },
-    reth::InputDecryptionElements,
+use seismic_prelude::foundry::{
+    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
+    SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest, tx_builder,
 };
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -1076,9 +1073,10 @@ impl EthApi {
 
         if request.inner.inner.gas.is_none() {
             // estimate if not provided
-            if let Ok(gas) = self.estimate_gas(request.clone(), None, EvmOverrides::default()).await
+            if let Ok(gas) =
+                self.do_estimate_gas(request.clone(), None, EvmOverrides::default()).await
             {
-                request.inner.inner.gas = Some(gas.to());
+                request.inner.inner.gas = Some(gas as u64);
             }
         }
 
@@ -1104,9 +1102,10 @@ impl EthApi {
 
         if request.gas.is_none() {
             // estimate if not provided
-            if let Ok(gas) = self.estimate_gas(request.clone(), None, EvmOverrides::default()).await
+            if let Ok(gas) =
+                self.do_estimate_gas(request.clone(), None, EvmOverrides::default()).await
             {
-                request.gas = Some(gas.to());
+                request.gas = Some(gas as u64);
             }
         }
 
@@ -1355,54 +1354,8 @@ impl EthApi {
                     }
                 }
             }
-            SeismicCallRequest::TypedData(td) => {
-                let typed_tx = TypedTransaction::decode_712(&td).map_err(|e| {
-                    BlockchainError::Message(format!(
-                        "Failed to decode typed data into seismic tx: {:?}",
-                        e
-                    ))
-                })?;
-                let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
-                    BlockchainError::Message(
-                        "Failed to decode bytes to transaction request".to_string(),
-                    )
-                })?;
-
-                let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
-                    "Can only make signedCall with Seismic Transactions".to_string(),
-                ))?;
-                // unlike above, this can be either recover_signer or recover_caller,
-                // since message_version = 0 for these
-                let sender = signed_seismic_tx.recover_signer().map_err(|e| {
-                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
-                })?;
-                if let Err(e) = signed_seismic_tx.tx().metadata(sender) {
-                    return Err(BlockchainError::FailedToDecryptCalldata(e));
-                };
-                let mut request = WithOtherFields::new(tx);
-                request.inner.inner.from = Some(sender);
-
-                self.seismic_call(request, block_number, overrides).await
-            }
-            SeismicCallRequest::Bytes(bytes) => {
-                let typed_tx = TypedTransaction::decode_2718(&mut bytes.as_ref())
-                    .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?;
-                let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
-                    BlockchainError::Message(
-                        "Failed to decode bytes to transaction request".to_string(),
-                    )
-                })?;
-
-                let signed_seismic_tx = typed_tx.seismic().ok_or(BlockchainError::Message(
-                    "Can only make signedCall with Seismic Transactions".to_string(),
-                ))?;
-                // unlike above, this can be either recover_signer or recover_caller,
-                // since message_version = 0 for these
-                let sender = signed_seismic_tx.recover_signer().map_err(|e| {
-                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
-                })?;
-                let mut request = WithOtherFields::new(tx);
-                request.inner.inner.from = Some(sender);
+            other => {
+                let request = Self::recover_signed_request(other)?;
                 self.seismic_call(request, block_number, overrides).await
             }
         }
@@ -1496,13 +1449,31 @@ impl EthApi {
     /// If no block parameter is given, it will use the pending block by default
     ///
     /// Handler for ETH RPC call: `eth_estimateGas`
+    ///
+    /// Same sanitization as `eth_call`: unsigned requests have `from` and gas/value
+    /// fields cleared to prevent caller spoofing that could leak private state.
+    /// Signed requests (TypedData/Bytes) authenticate the sender cryptographically.
     pub async fn estimate_gas(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        request: SeismicCallRequest,
         block_number: Option<BlockId>,
         overrides: EvmOverrides,
     ) -> Result<U256> {
         node_info!("eth_estimateGas");
+
+        let request = match request {
+            SeismicCallRequest::TransactionRequest(mut tx) => {
+                tx.inner.from = None;
+                tx.inner.gas_price = None;
+                tx.inner.max_fee_per_gas = None;
+                tx.inner.max_priority_fee_per_gas = None;
+                tx.inner.max_fee_per_blob_gas = None;
+                tx.inner.value = None;
+                WithOtherFields::new(tx)
+            }
+            other => Self::recover_signed_request(other)?,
+        };
+
         self.do_estimate_gas(
             request,
             block_number.or_else(|| Some(BlockNumber::Pending.into())),
@@ -2596,10 +2567,10 @@ impl EthApi {
                         // Estimate gas
                         if tx_req.gas.is_none()
                             && let Ok(gas) = self
-                                .estimate_gas(tx_req.clone(), None, EvmOverrides::default())
+                                .do_estimate_gas(tx_req.clone(), None, EvmOverrides::default())
                                 .await
                         {
-                            tx_req.gas = Some(gas.to());
+                            tx_req.gas = Some(gas as u64);
                         }
 
                         // Build typed transaction request
@@ -3069,7 +3040,7 @@ impl EthApi {
 
         seismic_request.set_from(from);
 
-        let gas_limit_fut = self.estimate_gas(
+        let gas_limit_fut = self.do_estimate_gas(
             seismic_request.clone(),
             Some(BlockId::latest()),
             EvmOverrides::default(),
@@ -3086,7 +3057,7 @@ impl EthApi {
         let gas_limit = gas_limit?;
         let fees = fees?;
 
-        seismic_request.inner.inner.gas = Some(gas_limit.to());
+        seismic_request.inner.inner.gas = Some(gas_limit as u64);
 
         let base_fee = fees.latest_block_base_fee().unwrap_or_default();
 
@@ -3170,6 +3141,54 @@ impl EthApi {
         .await?;
 
         Ok(blocks_to_mine)
+    }
+
+    /// Decode a signed SeismicCallRequest (TypedData or Bytes) into a
+    /// WithOtherFields<TransactionRequest> with the authenticated sender set as `from`.
+    fn recover_signed_request(
+        request: SeismicCallRequest,
+    ) -> Result<WithOtherFields<TransactionRequest>> {
+        let typed_tx = match request {
+            SeismicCallRequest::TypedData(td) => {
+                TypedTransaction::decode_712(&td).map_err(|e| {
+                    BlockchainError::Message(format!(
+                        "Failed to decode typed data into seismic tx: {:?}",
+                        e
+                    ))
+                })?
+            }
+            SeismicCallRequest::Bytes(bytes) => TypedTransaction::decode_2718(&mut bytes.as_ref())
+                .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?,
+            SeismicCallRequest::TransactionRequest(_) => {
+                return Err(BlockchainError::Message(
+                    "Expected signed request (TypedData or Bytes)".to_string(),
+                ));
+            }
+        };
+
+        // Recover the sender — seismic txs use seismic-specific recovery,
+        // non-seismic txs use PendingTransaction for standard recovery.
+        let (tx, sender) = if let Some(signed_seismic_tx) = typed_tx.clone().seismic() {
+            let sender = signed_seismic_tx.recover_signer().map_err(|e| {
+                BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+            })?;
+            let tx: TransactionRequest = signed_seismic_tx.tx().clone().into();
+            (tx, sender)
+        } else {
+            let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
+                BlockchainError::Message(
+                    "Failed to convert typed transaction to request".to_string(),
+                )
+            })?;
+            let pending = PendingTransaction::new(typed_tx).map_err(|e| {
+                BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+            })?;
+            (tx, *pending.sender())
+        };
+
+        let mut request = WithOtherFields::new(tx);
+        request.inner.inner.from = Some(sender);
+        Ok(request)
     }
 
     async fn do_estimate_gas(
