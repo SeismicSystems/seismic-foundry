@@ -87,6 +87,9 @@ pub mod error;
 use error::ExtractConfigError;
 pub use error::SolidityErrorCode;
 
+pub mod seismic_error;
+pub use seismic_error::SeismicError;
+
 pub mod doc;
 pub use doc::DocConfig;
 

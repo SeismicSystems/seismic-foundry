@@ -3,7 +3,8 @@
 use crate::constants::*;
 use foundry_compilers::artifacts::{ConfigurableContractArtifact, Metadata, remappings::Remapping};
 use foundry_config::{
-    BasicConfig, Chain, Config, FuzzConfig, InvariantConfig, SolidityErrorCode, parse_with_profile,
+    BasicConfig, Chain, Config, FuzzConfig, InvariantConfig, SeismicError, SolidityErrorCode,
+    parse_with_profile,
 };
 use foundry_test_utils::{
     foundry_compilers::PathStyle,
@@ -1386,9 +1387,9 @@ contract Caller {
         config.seismic = true;
         config.ignored_error_codes = vec![
             SolidityErrorCode::SpdxLicenseNotProvided,
-            SolidityErrorCode::ShieldedConstructorParam,
-            SolidityErrorCode::ShieldedLiteralNewExprInt,
-            SolidityErrorCode::ShieldedLiteralExtCallInt,
+            SolidityErrorCode::Seismic(SeismicError::ShieldedConstructorParam),
+            SolidityErrorCode::Seismic(SeismicError::ShieldedLiteralNewExprInt),
+            SolidityErrorCode::Seismic(SeismicError::ShieldedLiteralExtCallInt),
             // 3805 = pre-release compiler warning
             SolidityErrorCode::Other(3805),
         ];
@@ -1698,8 +1699,8 @@ forgetest!(seismic_warnings_in_tests_flag_shows_suppressed, |prj, cmd| {
             SolidityErrorCode::SpdxLicenseNotProvided,
             SolidityErrorCode::Other(3805),
             // Suppress constructor/new-expr warnings so we can isolate 10402 behavior
-            SolidityErrorCode::ShieldedConstructorParam,
-            SolidityErrorCode::ShieldedLiteralNewExprInt,
+            SolidityErrorCode::Seismic(SeismicError::ShieldedConstructorParam),
+            SolidityErrorCode::Seismic(SeismicError::ShieldedLiteralNewExprInt),
         ];
     });
 

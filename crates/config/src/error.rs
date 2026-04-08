@@ -4,6 +4,8 @@ use figment::providers::{Format, Toml};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{error::Error, fmt, str::FromStr};
 
+use crate::seismic_error::SeismicError;
+
 /// Represents a failed attempt to extract `Config` from a `Figment`
 #[derive(Clone, PartialEq)]
 pub struct ExtractConfigError {
@@ -145,31 +147,9 @@ pub enum SolidityErrorCode {
     TransientStorageUsed,
     /// There are more than 256 warnings. Ignoring the rest.
     TooManyWarnings,
-    /// Warning: constructor has shielded parameter types (CREATE doesn't encrypt calldata)
-    ShieldedConstructorParam,
-    /// Warning: shielded literal in `new(...)` expression args (int)
-    ShieldedLiteralNewExprInt,
-    /// Warning: shielded literal in `new(...)` expression args (bool)
-    ShieldedLiteralNewExprBool,
-    /// Warning: shielded literal in `new(...)` expression args (address)
-    ShieldedLiteralNewExprAddress,
-    /// Warning: shielded literal in `new(...)` expression args (fixedbytes)
-    ShieldedLiteralNewExprFixedbytes,
-    /// Warning: shielded literal in `new(...)` expression args (enum)
-    ShieldedLiteralNewExprEnum,
-    /// Warning: shielded literal in external call args (int)
-    ShieldedLiteralExtCallInt,
-    /// Warning: shielded literal in external call args (bool)
-    ShieldedLiteralExtCallBool,
-    /// Warning: shielded literal in external call args (address)
-    ShieldedLiteralExtCallAddress,
-    /// Warning: shielded literal in external call args (fixedbytes)
-    ShieldedLiteralExtCallFixedbytes,
-    /// Warning: shielded literal in external call args (enum)
-    ShieldedLiteralExtCallEnum,
+    /// Seismic/ssolc warning (code >= 10000) with a named variant.
+    Seismic(SeismicError),
     /// All other error codes
-    /// Note: Seismic/ssolc warning codes (>= 10000) not listed above (e.g. "other context"
-    /// 10403-10415, s-literal 10416) are handled via `Other(code)`.
     Other(u64),
 }
 
@@ -196,17 +176,7 @@ impl SolidityErrorCode {
             Self::PragmaSolidity => "pragma-solidity",
             Self::TransientStorageUsed => "transient-storage",
             Self::TooManyWarnings => "too-many-warnings",
-            Self::ShieldedConstructorParam => "shielded-constructor-param",
-            Self::ShieldedLiteralNewExprInt => "shielded-literal-new-int",
-            Self::ShieldedLiteralNewExprBool => "shielded-literal-new-bool",
-            Self::ShieldedLiteralNewExprAddress => "shielded-literal-new-address",
-            Self::ShieldedLiteralNewExprFixedbytes => "shielded-literal-new-fixedbytes",
-            Self::ShieldedLiteralNewExprEnum => "shielded-literal-new-enum",
-            Self::ShieldedLiteralExtCallInt => "shielded-literal-ext-call-int",
-            Self::ShieldedLiteralExtCallBool => "shielded-literal-ext-call-bool",
-            Self::ShieldedLiteralExtCallAddress => "shielded-literal-ext-call-address",
-            Self::ShieldedLiteralExtCallFixedbytes => "shielded-literal-ext-call-fixedbytes",
-            Self::ShieldedLiteralExtCallEnum => "shielded-literal-ext-call-enum",
+            Self::Seismic(s) => return Ok(s.as_str()),
             Self::Other(code) => return Err(*code),
         };
         Ok(s)
@@ -233,17 +203,7 @@ impl From<SolidityErrorCode> for u64 {
             SolidityErrorCode::PragmaSolidity => 3420,
             SolidityErrorCode::TransientStorageUsed => 2394,
             SolidityErrorCode::TooManyWarnings => 4591,
-            SolidityErrorCode::ShieldedConstructorParam => 10103,
-            SolidityErrorCode::ShieldedLiteralNewExprInt => 10401,
-            SolidityErrorCode::ShieldedLiteralNewExprBool => 10404,
-            SolidityErrorCode::ShieldedLiteralNewExprAddress => 10407,
-            SolidityErrorCode::ShieldedLiteralNewExprFixedbytes => 10410,
-            SolidityErrorCode::ShieldedLiteralNewExprEnum => 10413,
-            SolidityErrorCode::ShieldedLiteralExtCallInt => 10402,
-            SolidityErrorCode::ShieldedLiteralExtCallBool => 10405,
-            SolidityErrorCode::ShieldedLiteralExtCallAddress => 10408,
-            SolidityErrorCode::ShieldedLiteralExtCallFixedbytes => 10411,
-            SolidityErrorCode::ShieldedLiteralExtCallEnum => 10414,
+            SolidityErrorCode::Seismic(s) => s.code(),
             SolidityErrorCode::Other(code) => code,
         }
     }
@@ -280,18 +240,12 @@ impl FromStr for SolidityErrorCode {
             "pragma-solidity" => Self::PragmaSolidity,
             "transient-storage" => Self::TransientStorageUsed,
             "too-many-warnings" => Self::TooManyWarnings,
-            "shielded-constructor-param" => Self::ShieldedConstructorParam,
-            "shielded-literal-new-int" => Self::ShieldedLiteralNewExprInt,
-            "shielded-literal-new-bool" => Self::ShieldedLiteralNewExprBool,
-            "shielded-literal-new-address" => Self::ShieldedLiteralNewExprAddress,
-            "shielded-literal-new-fixedbytes" => Self::ShieldedLiteralNewExprFixedbytes,
-            "shielded-literal-new-enum" => Self::ShieldedLiteralNewExprEnum,
-            "shielded-literal-ext-call-int" => Self::ShieldedLiteralExtCallInt,
-            "shielded-literal-ext-call-bool" => Self::ShieldedLiteralExtCallBool,
-            "shielded-literal-ext-call-address" => Self::ShieldedLiteralExtCallAddress,
-            "shielded-literal-ext-call-fixedbytes" => Self::ShieldedLiteralExtCallFixedbytes,
-            "shielded-literal-ext-call-enum" => Self::ShieldedLiteralExtCallEnum,
-            _ => return Err(format!("Unknown variant {s}")),
+            s => {
+                if let Some(seismic) = SeismicError::from_alias(s) {
+                    return Ok(Self::Seismic(seismic));
+                }
+                return Err(format!("Unknown variant {s}"));
+            }
         };
 
         Ok(code)
@@ -318,18 +272,13 @@ impl From<u64> for SolidityErrorCode {
             3420 => Self::PragmaSolidity,
             2394 => Self::TransientStorageUsed,
             4591 => Self::TooManyWarnings,
-            10103 => Self::ShieldedConstructorParam,
-            10401 => Self::ShieldedLiteralNewExprInt,
-            10404 => Self::ShieldedLiteralNewExprBool,
-            10407 => Self::ShieldedLiteralNewExprAddress,
-            10410 => Self::ShieldedLiteralNewExprFixedbytes,
-            10413 => Self::ShieldedLiteralNewExprEnum,
-            10402 => Self::ShieldedLiteralExtCallInt,
-            10405 => Self::ShieldedLiteralExtCallBool,
-            10408 => Self::ShieldedLiteralExtCallAddress,
-            10411 => Self::ShieldedLiteralExtCallFixedbytes,
-            10414 => Self::ShieldedLiteralExtCallEnum,
-            other => Self::Other(other),
+            other => {
+                if let Some(seismic) = SeismicError::from_code(other) {
+                    Self::Seismic(seismic)
+                } else {
+                    Self::Other(other)
+                }
+            }
         }
     }
 }
@@ -369,90 +318,70 @@ impl<'de> Deserialize<'de> for SolidityErrorCode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::seismic_error::SeismicError;
 
-    /// All shielded warning variants with their numeric IDs and string aliases.
-    const SHIELDED_VARIANTS: &[(SolidityErrorCode, u64, &str)] = &[
-        (SolidityErrorCode::ShieldedConstructorParam, 10103, "shielded-constructor-param"),
-        (SolidityErrorCode::ShieldedLiteralNewExprInt, 10401, "shielded-literal-new-int"),
-        (SolidityErrorCode::ShieldedLiteralNewExprBool, 10404, "shielded-literal-new-bool"),
-        (SolidityErrorCode::ShieldedLiteralNewExprAddress, 10407, "shielded-literal-new-address"),
-        (
-            SolidityErrorCode::ShieldedLiteralNewExprFixedbytes,
-            10410,
-            "shielded-literal-new-fixedbytes",
-        ),
-        (SolidityErrorCode::ShieldedLiteralNewExprEnum, 10413, "shielded-literal-new-enum"),
-        (SolidityErrorCode::ShieldedLiteralExtCallInt, 10402, "shielded-literal-ext-call-int"),
-        (SolidityErrorCode::ShieldedLiteralExtCallBool, 10405, "shielded-literal-ext-call-bool"),
-        (
-            SolidityErrorCode::ShieldedLiteralExtCallAddress,
-            10408,
-            "shielded-literal-ext-call-address",
-        ),
-        (
-            SolidityErrorCode::ShieldedLiteralExtCallFixedbytes,
-            10411,
-            "shielded-literal-ext-call-fixedbytes",
-        ),
-        (SolidityErrorCode::ShieldedLiteralExtCallEnum, 10414, "shielded-literal-ext-call-enum"),
-    ];
+    /// Helper to wrap a SeismicError in SolidityErrorCode.
+    fn seismic(s: SeismicError) -> SolidityErrorCode {
+        SolidityErrorCode::Seismic(s)
+    }
 
     #[test]
-    fn shielded_variant_from_u64() {
-        for &(expected_variant, id, _) in SHIELDED_VARIANTS {
-            let variant: SolidityErrorCode = id.into();
-            assert_eq!(variant, expected_variant, "From<u64> for {id} should yield named variant");
-            // Must NOT be Other(id)
-            assert_ne!(
-                variant,
-                SolidityErrorCode::Other(id),
-                "{id} should not fall through to Other"
-            );
+    fn all_seismic_variants_roundtrip_u64() {
+        for variant in SeismicError::ALL {
+            let code = variant.code();
+            let sol: SolidityErrorCode = code.into();
+            assert_eq!(sol, seismic(*variant), "From<u64> for {code} should yield Seismic variant");
+            assert_ne!(sol, SolidityErrorCode::Other(code), "{code} should not fall through to Other");
+            let back: u64 = sol.into();
+            assert_eq!(back, code, "u64 round-trip failed for {code}");
         }
     }
 
     #[test]
-    fn shielded_variant_to_u64() {
-        for &(variant, expected_id, _) in SHIELDED_VARIANTS {
-            let id: u64 = variant.into();
-            assert_eq!(id, expected_id, "u64 from {variant:?} should be {expected_id}");
+    fn all_seismic_variants_roundtrip_str() {
+        for variant in SeismicError::ALL {
+            let sol = seismic(*variant);
+            let s = sol.as_str().unwrap();
+            assert_eq!(s, variant.as_str(), "as_str() mismatch for {variant:?}");
+            let parsed: SolidityErrorCode = s.parse().unwrap();
+            assert_eq!(parsed, sol, "FromStr round-trip failed for {s}");
         }
     }
 
     #[test]
-    fn shielded_variant_u64_roundtrip() {
-        for &(variant, id, _) in SHIELDED_VARIANTS {
-            let converted: u64 = variant.into();
-            let back: SolidityErrorCode = converted.into();
-            assert_eq!(back, variant, "u64 round-trip failed for {id}");
-        }
+    fn legacy_variant_names_still_parse() {
+        // Ensure the string aliases from #181 still work
+        assert_eq!(
+            "shielded-constructor-param".parse::<SolidityErrorCode>().unwrap(),
+            seismic(SeismicError::ShieldedConstructorParam),
+        );
+        assert_eq!(
+            "shielded-literal-new-int".parse::<SolidityErrorCode>().unwrap(),
+            seismic(SeismicError::ShieldedLiteralNewExprInt),
+        );
+        assert_eq!(
+            "shielded-literal-ext-call-int".parse::<SolidityErrorCode>().unwrap(),
+            seismic(SeismicError::ShieldedLiteralExtCallInt),
+        );
     }
 
     #[test]
-    fn shielded_variant_as_str() {
-        for &(variant, _, expected_str) in SHIELDED_VARIANTS {
-            assert_eq!(
-                variant.as_str().unwrap(),
-                expected_str,
-                "as_str() mismatch for {variant:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn shielded_variant_from_str() {
-        for &(expected_variant, _, alias) in SHIELDED_VARIANTS {
-            let parsed: SolidityErrorCode = alias.parse().unwrap();
-            assert_eq!(parsed, expected_variant, "FromStr mismatch for {alias:?}");
-        }
-    }
-
-    #[test]
-    fn shielded_variant_str_roundtrip() {
-        for &(variant, _, _) in SHIELDED_VARIANTS {
-            let s = variant.as_str().unwrap();
-            let back: SolidityErrorCode = s.parse().unwrap();
-            assert_eq!(back, variant, "str round-trip failed for {s}");
-        }
+    fn new_variant_names_parse() {
+        assert_eq!(
+            "shielded-literal-other-int".parse::<SolidityErrorCode>().unwrap(),
+            seismic(SeismicError::ShieldedLiteralOtherInt),
+        );
+        assert_eq!(
+            "shielded-number-literal".parse::<SolidityErrorCode>().unwrap(),
+            seismic(SeismicError::ShieldedNumberLiteral),
+        );
+        assert_eq!(
+            "shielded-arith-add".parse::<SolidityErrorCode>().unwrap(),
+            seismic(SeismicError::ShieldedArithAdd),
+        );
+        assert_eq!(
+            "shielded-cond-if".parse::<SolidityErrorCode>().unwrap(),
+            seismic(SeismicError::ShieldedCondIf),
+        );
     }
 }
