@@ -13,6 +13,7 @@ use revm::{
 };
 
 use crate::SeismicEvm;
+use revm::context::result::HaltReason;
 use seismic_prelude::foundry::{OpTransaction, SeismicContext, SpecId};
 
 /// Alias for result type returned by [`Evm::transact`] methods.
@@ -79,10 +80,7 @@ where
         result: Result<ExecutionResult, EVMError<DB::Error>>,
     ) -> EitherExecResult<DB::Error, HaltReason, OpTransactionError> {
         match result {
-            Ok(result) => {
-                // Map the halt reason
-                Ok(result)
-            }
+            Ok(result) => Ok(result),
             Err(e) => Err(self.map_eth_err(e)),
         }
     }

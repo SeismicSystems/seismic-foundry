@@ -30,7 +30,7 @@ pub fn trie_storage(storage: &HashMap<U256, FlaggedStorage>) -> Vec<(Nibbles, Ve
     let mut storage = storage
         .iter()
         .map(|(key, value)| {
-            let value_u256: U256 = value.into();
+            let value_u256: U256 = value.value;
             let data = alloy_rlp::encode(value_u256);
             (Nibbles::unpack(keccak256(key.to_be_bytes::<32>())), data, value.is_private)
         })

@@ -3175,17 +3175,17 @@ Error: script failed: call to non-contract address [..]
 use alloy_network::TransactionBuilder;
 use alloy_primitives::TxKind;
 use alloy_provider::Provider;
-use seismic_prelude::foundry::{EthereumWallet, SeismicSignedProvider, test_utils, tx_builder};
+use seismic_prelude::foundry::{EthereumWallet, SeismicProviderBuilder, test_utils, tx_builder};
 
 /// Helper to deploy a contract via a Seismic transaction, which creates private storage
 async fn deploy_contract_with_private_storage(handle: &anvil::NodeHandle) -> (Address, String) {
     let signer = handle.dev_wallets().next().unwrap();
-    let provider = SeismicSignedProvider::new(
-        EthereumWallet::new(signer.clone()),
-        reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap(),
-    )
-    .await
-    .unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(EthereumWallet::new(signer.clone()))
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
     let deployer = handle.dev_accounts().next().unwrap();
 
     let plaintext_bytecode = test_utils::ContractTestContext::get_deploy_input_plaintext();

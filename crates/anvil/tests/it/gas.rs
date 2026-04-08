@@ -229,7 +229,7 @@ async fn test_estimate_gas_empty_data() {
     let tx_without_data = tx_builder().with_from(from).with_to(to).with_value(U256::from(1)).into();
 
     let gas_without_data = api
-        .estimate_gas(WithOtherFields::new(tx_without_data), None, Default::default())
+        .estimate_gas(WithOtherFields::new(tx_without_data).into(), None, Default::default())
         .await
         .unwrap();
 
@@ -241,7 +241,7 @@ async fn test_estimate_gas_empty_data() {
         .into();
 
     let gas_with_empty_data = api
-        .estimate_gas(WithOtherFields::new(tx_with_empty_data), None, Default::default())
+        .estimate_gas(WithOtherFields::new(tx_with_empty_data).into(), None, Default::default())
         .await
         .unwrap();
 
@@ -253,7 +253,7 @@ async fn test_estimate_gas_empty_data() {
         .into();
 
     let gas_with_data = api
-        .estimate_gas(WithOtherFields::new(tx_with_data), None, Default::default())
+        .estimate_gas(WithOtherFields::new(tx_with_data).into(), None, Default::default())
         .await
         .unwrap();
 

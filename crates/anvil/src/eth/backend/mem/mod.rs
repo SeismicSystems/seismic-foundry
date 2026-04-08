@@ -2768,7 +2768,7 @@ impl Backend {
         self.with_database_at(block_request, |db, _| {
             trace!(target: "backend", "get storage for {:?} at {:?}", address, index);
             let val = db.storage_ref(address, index)?;
-            Ok(val.into())
+            Ok(B256::from(val.value))
         })
         .await?
     }
@@ -3513,7 +3513,7 @@ impl Backend {
                     .map(|(key, proof)| {
                         let storage_key: U256 = key.into();
                         let value = account.storage.get(&storage_key).copied().unwrap_or_default();
-                        StorageProof { key: JsonStorageKey::Hash(key), value: value.into(), proof }
+                        StorageProof { key: JsonStorageKey::Hash(key), value: value.value, proof }
                     })
                     .collect(),
             };
@@ -4001,8 +4001,8 @@ pub fn is_arbitrum(chain_id: u64) -> bool {
     false
 }
 
-pub fn op_haltreason_to_instruction_result(op_reason: OpHaltReason) -> InstructionResult {
-    op_reason.into()
+pub fn op_haltreason_to_instruction_result(reason: HaltReason) -> InstructionResult {
+    reason.into()
 }
 
 #[cfg(test)]

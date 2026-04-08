@@ -1363,7 +1363,7 @@ fn genesis_account(account: &Account) -> GenesisAccount {
             account
                 .storage
                 .iter()
-                .map(|(k, v)| (B256::from(*k), B256::from(v.present_value())))
+                .map(|(k, v)| (B256::from(*k), B256::from(v.present_value().value)))
                 .collect(),
         ),
         private_key: None,

@@ -321,7 +321,11 @@ async fn rejects_different_chain_id() {
     let tx = WithOtherFields::new(tx.into());
     let res = provider.send_transaction(tx).await;
     let err = res.unwrap_err();
-    assert!(err.to_string().contains("does not match the signer's"), "{}", err.to_string());
+    let err = err.to_string();
+    assert!(
+        err.contains("does not match the signer's") || err.contains("TransactionChainIdMismatch"),
+        "{err}"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]

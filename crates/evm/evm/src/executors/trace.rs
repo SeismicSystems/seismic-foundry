@@ -57,13 +57,19 @@ impl TracingExecutor {
                 if let Some(state) = overrides.state {
                     let state: HashMap<U256, FlaggedStorage> = state
                         .into_iter()
-                        .map(|(slot, value)| (slot.into(), value.into()))
+                        .map(|(slot, value)| {
+                            (slot.into(), FlaggedStorage::from(U256::from_be_bytes(value.0)))
+                        })
                         .collect();
                     executor.set_storage(address, state)?;
                 }
                 if let Some(state_diff) = overrides.state_diff {
                     for (slot, value) in state_diff {
-                        executor.set_storage_slot(address, slot.into(), value.into())?;
+                        executor.set_storage_slot(
+                            address,
+                            slot.into(),
+                            FlaggedStorage::from(U256::from_be_bytes(value.0)),
+                        )?;
                     }
                 }
             }

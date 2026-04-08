@@ -20,7 +20,9 @@ use revm::primitives::eip7825::TX_GAS_LIMIT_CAP;
 use std::{str::FromStr, time::Duration};
 use tokio::time::timeout;
 
-use seismic_prelude::foundry::{EthereumWallet, tx_builder};
+use seismic_prelude::foundry::{
+    EthereumWallet, TransactionRequest as SeismicTransactionRequest, tx_builder,
+};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn can_transfer_eth() {
@@ -1115,7 +1117,13 @@ async fn estimates_gas_on_pending_by_default() {
         .to(sender)
         .value(U256::from(1e10))
         .input(Bytes::from(vec![0x42]).into());
-    api.estimate_gas(WithOtherFields::new(tx.into()), None, EvmOverrides::default()).await.unwrap();
+    api.estimate_gas(
+        WithOtherFields::<SeismicTransactionRequest>::new(tx.into()).into(),
+        None,
+        EvmOverrides::default(),
+    )
+    .await
+    .unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -1131,34 +1139,36 @@ async fn test_estimate_gas() {
         .to(sender)
         .value(U256::from(1e10))
         .input(Bytes::from(vec![0x42]).into());
-    // Expect the gas estimation to fail due to insufficient funds.
-    let error_result = api
-        .estimate_gas(WithOtherFields::new(tx.clone().into()), None, EvmOverrides::default())
-        .await;
+    // External unsigned `eth_estimateGas` requests are sanitized, so the
+    // spoofed `from` balance must not affect the estimate.
+    let gas_estimate = api
+        .estimate_gas(
+            WithOtherFields::<SeismicTransactionRequest>::new(tx.clone().into()).into(),
+            None,
+            EvmOverrides::default(),
+        )
+        .await
+        .expect("Failed to estimate gas for unsigned request");
 
-    assert!(error_result.is_err(), "Expected an error due to insufficient funds");
-    let error_message = error_result.unwrap_err().to_string();
-    assert!(
-        error_message.contains("Insufficient funds for gas * price + value"),
-        "Error message did not match expected: {error_message}"
-    );
-
-    // Setup state override to simulate sufficient funds for the recipient.
+    // Setup state override to simulate sufficient funds for the spoofed sender.
     let addr = recipient;
     let account_override =
         AccountOverride { balance: Some(alloy_primitives::U256::from(1e18)), ..Default::default() };
     let mut state_override = StateOverride::default();
     state_override.insert(addr, account_override);
 
-    // Estimate gas with state override implying sufficient funds.
-    let gas_estimate = api
+    // The estimate should be unchanged because unsigned requests no longer
+    // trust the caller-supplied `from`.
+    let gas_estimate_with_override = api
         .estimate_gas(
-            WithOtherFields::new(tx.into()),
+            WithOtherFields::<SeismicTransactionRequest>::new(tx.into()).into(),
             None,
             EvmOverrides::new(Some(state_override), None),
         )
         .await
         .expect("Failed to estimate gas with state override");
+
+    assert_eq!(gas_estimate, gas_estimate_with_override);
 
     // Assert the gas estimate meets the expected minimum.
     assert!(gas_estimate >= U256::from(21000), "Gas estimate is lower than expected minimum");
@@ -1315,9 +1325,13 @@ async fn can_estimate_gas_prague() {
         .with_input(hex!("0xcafebabe"))
         .with_from(address!("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"))
         .with_to(address!("0x70997970c51812dc3a010c7d01b50e0d17dc79c8"));
-    api.estimate_gas(WithOtherFields::new(req.into()), None, EvmOverrides::default())
-        .await
-        .unwrap();
+    api.estimate_gas(
+        WithOtherFields::<SeismicTransactionRequest>::new(req.into()).into(),
+        None,
+        EvmOverrides::default(),
+    )
+    .await
+    .unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]

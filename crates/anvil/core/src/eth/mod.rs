@@ -177,7 +177,7 @@ pub enum EthRequest {
 
     #[serde(rename = "eth_estimateGas")]
     EthEstimateGas(
-        WithOtherFields<TransactionRequest>,
+        SeismicCallRequest,
         #[serde(default)] Option<BlockId>,
         #[serde(default)] Option<StateOverride>,
         #[serde(default)] Option<Box<BlockOverrides>>,
