@@ -25,7 +25,8 @@ members = [
     "crates/macros/",
     "crates/test-utils/",
     "crates/lint/",
-] resolver = "2"
+]
+resolver = "2"
 
 [workspace.package]
 version = "1.3.5"
