@@ -2226,10 +2226,12 @@ impl Backend {
                             drop(evm);
                             let tracing_inspector = inspector.tracer.expect("tracer disappeared");
 
-                            Ok(tracing_inspector
-                                .into_geth_builder()
-                                .geth_call_traces(call_config, result.gas_used())
-                                .into())
+                            Ok(revm_inspectors::tracing::trace_sanitizer::sanitize_geth_trace(
+                                tracing_inspector
+                                    .into_geth_builder()
+                                    .geth_call_traces(call_config, result.gas_used())
+                                    .into(),
+                            ))
                         }
                         GethDebugBuiltInTracerType::NoopTracer => Ok(NoopFrame::default().into()),
                         GethDebugBuiltInTracerType::FourByteTracer
@@ -2299,10 +2301,12 @@ impl Backend {
 
             trace!(target: "backend", ?exit_reason, ?out, %gas_used, %block_number, "trace call");
 
-            let res = tracing_inspector
-                .into_geth_builder()
-                .geth_traces(gas_used, return_value, config)
-                .into();
+            let res = revm_inspectors::tracing::trace_sanitizer::sanitize_geth_trace(
+                tracing_inspector
+                    .into_geth_builder()
+                    .geth_traces(gas_used, return_value, config)
+                    .into(),
+            );
 
             Ok(res)
         })
