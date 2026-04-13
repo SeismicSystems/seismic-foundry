@@ -41,6 +41,9 @@ use foundry_evm::{
 };
 use parking_lot::RwLock;
 use revm::{context::Block as RevmBlock, primitives::hardfork::SpecId};
+use revm_inspectors::tracing::trace_sanitizer::{
+    sanitize_geth_trace, sanitize_localized_transaction_trace,
+};
 use std::{collections::VecDeque, fmt, path::PathBuf, sync::Arc, time::Duration};
 // use yansi::Paint;
 
@@ -520,8 +523,6 @@ pub struct MinedTransaction {
 impl MinedTransaction {
     /// Returns the traces of the transaction for `trace_transaction`
     pub fn parity_traces(&self) -> Vec<LocalizedTransactionTrace> {
-        use revm_inspectors::tracing::trace_sanitizer::sanitize_localized_transaction_trace;
-
         ParityTraceBuilder::new(
             self.info.traces.clone(),
             None,
@@ -565,8 +566,6 @@ impl MinedTransaction {
     }
 
     pub fn geth_trace(&self, opts: GethDebugTracingOptions) -> Result<GethTrace, BlockchainError> {
-        use revm_inspectors::tracing::trace_sanitizer::sanitize_geth_trace;
-
         let GethDebugTracingOptions { config, tracer, tracer_config, .. } = opts;
 
         if let Some(tracer) = tracer {
