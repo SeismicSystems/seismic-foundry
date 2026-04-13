@@ -520,6 +520,8 @@ pub struct MinedTransaction {
 impl MinedTransaction {
     /// Returns the traces of the transaction for `trace_transaction`
     pub fn parity_traces(&self) -> Vec<LocalizedTransactionTrace> {
+        use revm_inspectors::tracing::trace_sanitizer::sanitize_localized_transaction_trace;
+
         ParityTraceBuilder::new(
             self.info.traces.clone(),
             None,
@@ -532,6 +534,9 @@ impl MinedTransaction {
             block_number: Some(self.block_number),
             base_fee: None,
         })
+        .into_iter()
+        .map(sanitize_localized_transaction_trace)
+        .collect()
     }
 
     pub fn ots_internal_operations(&self) -> Vec<InternalOperation> {
@@ -560,6 +565,8 @@ impl MinedTransaction {
     }
 
     pub fn geth_trace(&self, opts: GethDebugTracingOptions) -> Result<GethTrace, BlockchainError> {
+        use revm_inspectors::tracing::trace_sanitizer::sanitize_geth_trace;
+
         let GethDebugTracingOptions { config, tracer, tracer_config, .. } = opts;
 
         if let Some(tracer) = tracer {
@@ -578,21 +585,7 @@ impl MinedTransaction {
                                         self.receipt.cumulative_gas_used(),
                                     );
 
-                                // TODO: for shielding the trace
-                                // NOTE: CallTrace.tx_type defaults to 0 via #[serde(default)]
-                                // for state dumps created before the field existed (pre Oct 2025).
-                                // This is safe because the shielding check below only acts on
-                                // TxSeismic::TX_TYPE (74), so old traces with tx_type=0 are
-                                // correctly left unshielded.
-                                /*
-                                frame.tx_type = self.info.tx_type.unwrap_or_default();
-                                if frame.tx_type ==
-                                    TxSeismic::TX_TYPE as isize
-                                {
-                                    frame = frame.shield_inputs();
-                                }
-                                */
-                                Ok(frame.into())
+                                Ok(sanitize_geth_trace(frame.into()))
                             }
                             Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
                         };
@@ -609,13 +602,15 @@ impl MinedTransaction {
         }
 
         // default structlog tracer
-        Ok(GethTraceBuilder::new(self.info.traces.clone())
-            .geth_traces(
-                self.receipt.cumulative_gas_used(),
-                self.info.out.clone().unwrap_or_default(),
-                config,
-            )
-            .into())
+        Ok(sanitize_geth_trace(
+            GethTraceBuilder::new(self.info.traces.clone())
+                .geth_traces(
+                    self.receipt.cumulative_gas_used(),
+                    self.info.out.clone().unwrap_or_default(),
+                    config,
+                )
+                .into(),
+        ))
     }
 }
 
