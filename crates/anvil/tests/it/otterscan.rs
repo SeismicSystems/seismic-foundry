@@ -228,8 +228,8 @@ async fn test_call_ots_trace_transaction() {
         contract.run().value(U256::from(1337)).send().await.unwrap().get_receipt().await.unwrap();
 
     let res = api.ots_trace_transaction(receipt.transaction_hash).await.unwrap();
-    // NOTE: Seismic trace shielding strips calldata from the top-level CALL and
-    // return data from STATICCALL for privacy.
+    // NOTE: Seismic trace sanitizer (seismic-revm-inspectors#40) strips calldata
+    // and return data from ALL frames for privacy.
     let expected = vec![
         TraceEntry {
             r#type: "CALL".to_string(),
@@ -246,7 +246,7 @@ async fn test_call_ots_trace_transaction() {
             from: contract_address,
             to: contract_address,
             value: Some(U256::ZERO),
-            input: Contract::do_staticcallCall::SELECTOR.into(),
+            input: Bytes::new(),
             output: Bytes::new(),
         },
         TraceEntry {
@@ -255,7 +255,7 @@ async fn test_call_ots_trace_transaction() {
             from: contract_address,
             to: contract_address,
             value: Some(U256::ZERO),
-            input: Contract::do_callCall::SELECTOR.into(),
+            input: Bytes::new(),
             output: Bytes::new(),
         },
         TraceEntry {
@@ -273,7 +273,7 @@ async fn test_call_ots_trace_transaction() {
             from: contract_address,
             to: contract_address,
             value: Some(U256::ZERO),
-            input: Contract::do_delegatecallCall::SELECTOR.into(),
+            input: Bytes::new(),
             output: Bytes::new(),
         },
     ];
