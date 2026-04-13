@@ -53,7 +53,7 @@ pub fn new_evm_with_inspector<'i, 'db, I: InspectorExt + Sized>(
         block: env.evm_env.block_env,
         cfg: env.evm_env.cfg_env,
         tx: env.tx,
-        chain: SeismicChain::default(),
+        chain: SeismicChain::with_random_rng_key(),
         local: LocalContext::default(),
         error: Ok(()),
     };
@@ -190,15 +190,19 @@ impl<'db, I: InspectorExt> Evm for FoundryEvm<'db, I> {
     type Tx = TxEnv;
 
     fn block(&self) -> &BlockEnv {
-        &self.inner.0.block
+        &self.inner.ctx_ref().block
     }
 
     fn chain_id(&self) -> u64 {
-        self.inner.ctx.cfg.chain_id
+        self.inner.ctx_ref().cfg.chain_id
     }
 
     fn components(&self) -> (&Self::DB, &Self::Inspector, &Self::Precompiles) {
-        (&self.inner.ctx.journaled_state.database, &self.inner.inspector, &self.inner.precompiles)
+        (
+            &self.inner.ctx_ref().journaled_state.database,
+            &self.inner.0.inspector,
+            &self.inner.0.precompiles,
+        )
     }
 
     fn components_mut(&mut self) -> (&mut Self::DB, &mut Self::Inspector, &mut Self::Precompiles) {
@@ -210,7 +214,7 @@ impl<'db, I: InspectorExt> Evm for FoundryEvm<'db, I> {
     }
 
     fn db_mut(&mut self) -> &mut Self::DB {
-        &mut self.inner.ctx.journaled_state.database
+        &mut self.inner.ctx().journaled_state.database
     }
 
     fn precompiles(&self) -> &Self::Precompiles {
@@ -237,12 +241,12 @@ impl<'db, I: InspectorExt> Evm for FoundryEvm<'db, I> {
         &mut self,
         tx: Self::Tx,
     ) -> Result<ResultAndState<Self::HaltReason>, Self::Error> {
-        self.inner.ctx.tx = tx;
+        self.inner.ctx().tx = tx;
 
         let mut handler = FoundryHandler::<I>::default();
         let result = handler.inspect_run(&mut self.inner)?;
 
-        Ok(ResultAndState::new(result, self.inner.ctx.journaled_state.inner.state.clone()))
+        Ok(ResultAndState::new(result, self.inner.ctx().journaled_state.inner.state.clone()))
     }
 
     fn transact_system_call(
@@ -333,10 +337,11 @@ impl<'db, I: InspectorExt> FoundryHandler<'db, I> {
                 let call_inputs = get_create2_factory_call_inputs(salt, inputs, create2_deployer);
 
                 // Push data about current override to the stack.
-                self.create2_overrides.push((evm.journal().depth(), call_inputs.clone()));
+                self.create2_overrides.push((evm.ctx().journal().depth(), call_inputs.clone()));
 
                 // Sanity check that CREATE2 deployer exists.
-                let code_hash = evm.journal_mut().load_account(create2_deployer)?.info.code_hash;
+                let code_hash =
+                    evm.ctx().journal_mut().load_account(create2_deployer)?.info.code_hash;
                 if code_hash == KECCAK_EMPTY {
                     return Ok(Some(FrameResult::Call(CallOutcome {
                         result: InterpreterResult {
@@ -373,7 +378,11 @@ impl<'db, I: InspectorExt> FoundryHandler<'db, I> {
         evm: &mut <Self as Handler>::Evm,
         result: FrameResult,
     ) -> FrameResult {
-        if self.create2_overrides.last().is_some_and(|(depth, _)| *depth == evm.journal().depth()) {
+        if self
+            .create2_overrides
+            .last()
+            .is_some_and(|(depth, _)| *depth == evm.ctx().journal().depth())
+        {
             let (_, call_inputs) = self.create2_overrides.pop().unwrap();
             let FrameResult::Call(mut call) = result else {
                 unreachable!("create2 override should be a call frame");

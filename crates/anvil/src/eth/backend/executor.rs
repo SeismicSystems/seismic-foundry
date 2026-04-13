@@ -505,7 +505,7 @@ where
         // Propagate tx_hash so the RNG precompile produces random (non-zero) output.
         // See: https://github.com/SeismicSystems/seismic-revm/issues/199
         tx: SeismicTransaction::new(env.tx.base.clone()).with_tx_hash(env.tx.tx_hash),
-        chain: SeismicChain::default(),
+        chain: SeismicChain::with_random_rng_key(),
         local: LocalContext::default(),
         error: Ok(()),
     };

@@ -230,7 +230,7 @@ mod tests {
             block: seismic_env.evm_env.block_env.clone(),
             cfg: seismic_cfg.clone(),
             tx: SeismicTransaction::new(seismic_env.tx.clone().base),
-            chain: SeismicChain::default(),
+            chain: SeismicChain::with_random_rng_key(),
             local: LocalContext::default(),
             error: Ok(()),
         };
