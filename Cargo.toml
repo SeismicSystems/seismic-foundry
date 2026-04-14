@@ -397,7 +397,7 @@ revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", 
 op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "dc05eece19f14516ab9f996611fa7c63e1d1a8ae" }
 seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "dc05eece19f14516ab9f996611fa7c63e1d1a8ae" }
 
-revm-inspectors = { git = "https://github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "24652f3b9ef6a8057bc46203b26d1d9857f7ae30" }
+revm-inspectors = { git = "https://github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "025bdf5924af5aa966c5b349f1f11a6d3e547fa4" }
 
 # seismic-alloy
 seismic-alloy-consensus = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "c8fad0b93da53f2b423d2f6720abdb4a6cbb9082" }
