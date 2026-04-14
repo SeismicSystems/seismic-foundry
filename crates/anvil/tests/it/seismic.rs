@@ -394,8 +394,7 @@ async fn test_payable_call_and_estimate_gas_require_signed_request() {
     //
     // Init code copies the runtime and returns it.
     let payable_gate_bytecode = Bytes::from(
-        hex::decode("6015600c60003960156000f3670de0b6b3a76400003410600f57005b60006000fd")
-            .unwrap(),
+        hex::decode("6015600c60003960156000f3670de0b6b3a76400003410600f57005b60006000fd").unwrap(),
     );
     let deploy_hash = provider
         .send_transaction(
@@ -434,22 +433,14 @@ async fn test_payable_call_and_estimate_gas_require_signed_request() {
     };
 
     let unsigned_call_err = api
-        .call(
-            WithOtherFields::new(unsigned_request.clone()),
-            None,
-            EvmOverrides::default(),
-        )
+        .call(WithOtherFields::new(unsigned_request.clone()), None, EvmOverrides::default())
         .await
         .unwrap_err();
     let unsigned_call_err_str = unsigned_call_err.to_string();
     assert!(!unsigned_call_err_str.is_empty(), "expected unsigned eth_call to fail");
 
     let unsigned_err = api
-        .estimate_gas(
-            WithOtherFields::new(unsigned_request).into(),
-            None,
-            EvmOverrides::default(),
-        )
+        .estimate_gas(WithOtherFields::new(unsigned_request).into(), None, EvmOverrides::default())
         .await
         .unwrap_err();
     let err_str = unsigned_err.to_string();
