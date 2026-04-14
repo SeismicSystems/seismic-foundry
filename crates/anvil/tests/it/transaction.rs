@@ -1174,6 +1174,8 @@ async fn test_estimate_gas() {
     assert!(gas_estimate >= U256::from(21000), "Gas estimate is lower than expected minimum");
 }
 
+/*
+// Disabled: seismic-evm#45 disallows code overrides in state overrides
 #[tokio::test(flavor = "multi_thread")]
 async fn test_block_override() {
     let (api, handle) = spawn(NodeConfig::test()).await;
@@ -1214,6 +1216,7 @@ async fn test_block_override() {
 
     assert_eq!(output, U256::from(99).abi_encode());
 }
+*/
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_reject_gas_too_low() {

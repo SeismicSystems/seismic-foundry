@@ -197,6 +197,9 @@ where
                 "state and state_diff can't be used together for account {addr}",
             )),
             StateOverrideError::Database(err) => err.into(),
+            StateOverrideError::CodeOverrideNotPermitted(addr) => {
+                Self::StateOverrideError(format!("code override not permitted for account {addr}"))
+            }
         }
     }
 }
