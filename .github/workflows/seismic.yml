@@ -37,6 +37,8 @@ jobs:
       - name: Build Seismic binaries
         # TODO: Add schisel coverage once chisel is updated to support Seismic types.
         run: cargo build --bin sforge --bin scast --bin sanvil
+        env:
+          RUSTFLAGS: -Dwarnings
 
   clippy:
     runs-on: ubuntu-latest
