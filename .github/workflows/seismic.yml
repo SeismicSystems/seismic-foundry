@@ -36,8 +36,11 @@ jobs:
           shared-key: "build-cache"
       - name: sforge build
         run: cargo build --bin sforge
+      - name: scast build
+        run: cargo build --bin scast
       - name: sanvil build
         run: cargo build --bin sanvil
+      # TODO: Add schisel coverage once chisel is updated to support Seismic types.
 
   clippy:
     runs-on: ubuntu-latest
