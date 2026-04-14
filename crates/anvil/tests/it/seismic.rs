@@ -367,6 +367,131 @@ async fn test_seismic_transaction_rpc() {
     assert!(signed_gas_estimate > U256::ZERO);
 }
 
+/// Regression test for privacy-preserving unsigned call sanitization.
+///
+/// A transparent payable call depends on authenticated `from`/`value`
+/// semantics. Unsigned `eth_call` and `eth_estimateGas` requests are sanitized
+/// on Seismic, so they should fail against a contract that gates on `msg.value`.
+/// The same request should succeed when submitted as signed raw transaction
+/// bytes, because the node can recover the real sender and preserve the
+/// original call context.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_payable_call_and_estimate_gas_require_signed_request() {
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    api.anvil_set_auto_mine(true).await.unwrap();
+    let signer = handle.dev_wallets().next().unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(EthereumWallet::new(signer.clone()))
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
+    let deployer = handle.dev_accounts().next().unwrap();
+
+    // Minimal payable contract:
+    // - any call with msg.value >= 1 ether succeeds
+    // - any call with msg.value < 1 ether reverts
+    //
+    // Init code copies the runtime and returns it.
+    let payable_gate_bytecode = Bytes::from(
+        hex::decode("6015600c60003960156000f3670de0b6b3a76400003410600f57005b60006000fd")
+            .unwrap(),
+    );
+    let deploy_hash = provider
+        .send_transaction(
+            tx_builder()
+                .with_from(deployer)
+                .with_kind(TxKind::Create)
+                .with_input(payable_gate_bytecode)
+                .into()
+                .into(),
+        )
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .transaction_hash;
+    let receipt = provider.get_transaction_receipt(deploy_hash).await.unwrap().unwrap();
+    let contract_address = receipt.contract_address.unwrap();
+    let calldata = Bytes::default();
+
+    let chain_id = provider.get_chain_id().await.unwrap();
+    let deposit_value = U256::from(32_000_000_000_000_000_000u128);
+    let mut unsigned_request = TransactionRequest {
+        inner: AlloyTransactionRequest {
+            from: Some(signer.address()),
+            nonce: Some(0),
+            value: Some(deposit_value),
+            to: Some(TxKind::Call(contract_address)),
+            gas: Some(6_000_000),
+            gas_price: Some(20e9 as u128),
+            chain_id: Some(chain_id),
+            input: TransactionInput { input: Some(calldata.clone()), data: None },
+            ..Default::default()
+        },
+        seismic_elements: None,
+    };
+
+    let unsigned_call_err = api
+        .call(
+            WithOtherFields::new(unsigned_request.clone()),
+            None,
+            EvmOverrides::default(),
+        )
+        .await
+        .unwrap_err();
+    let unsigned_call_err_str = unsigned_call_err.to_string();
+    assert!(!unsigned_call_err_str.is_empty(), "expected unsigned eth_call to fail");
+
+    let unsigned_err = api
+        .estimate_gas(
+            WithOtherFields::new(unsigned_request).into(),
+            None,
+            EvmOverrides::default(),
+        )
+        .await
+        .unwrap_err();
+    let err_str = unsigned_err.to_string();
+    assert!(!err_str.is_empty(), "expected unsigned estimate_gas to fail");
+
+    let signed_request = TransactionRequest {
+        inner: AlloyTransactionRequest {
+            from: Some(signer.address()),
+            nonce: Some(provider.get_transaction_count(deployer).await.unwrap()),
+            value: Some(deposit_value),
+            to: Some(TxKind::Call(contract_address)),
+            gas: Some(6_000_000),
+            gas_price: Some(20e9 as u128),
+            chain_id: Some(chain_id),
+            input: TransactionInput { input: Some(calldata), data: None },
+            ..Default::default()
+        },
+        seismic_elements: None,
+    };
+
+    let signed_call = sign_tx(signer.clone(), signed_request).await;
+    let signed_call_result = api
+        .call(
+            SeismicCallRequest::Bytes(Bytes::from(signed_call.encoded_2718())),
+            None,
+            EvmOverrides::default(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(signed_call_result, Bytes::default());
+
+    let signed_gas_estimate = api
+        .estimate_gas(
+            SeismicCallRequest::Bytes(Bytes::from(signed_call.encoded_2718())),
+            None,
+            EvmOverrides::default(),
+        )
+        .await
+        .unwrap();
+    assert!(signed_gas_estimate > U256::ZERO);
+}
+
 /// Tests that the RNG precompile produces different output for different transactions.
 ///
 /// This is a regression test for a bug where `SeismicTransaction::new()` defaulted
