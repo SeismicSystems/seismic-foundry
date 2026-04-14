@@ -34,13 +34,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-cache"
-      - name: sforge build
-        run: cargo build --bin sforge
-      - name: scast build
-        run: cargo build --bin scast
-      - name: sanvil build
-        run: cargo build --bin sanvil
-      # TODO: Add schisel coverage once chisel is updated to support Seismic types.
+      - name: Build Seismic binaries
+        # TODO: Add schisel coverage once chisel is updated to support Seismic types.
+        run: cargo build --bin sforge --bin scast --bin sanvil
 
   clippy:
     runs-on: ubuntu-latest
