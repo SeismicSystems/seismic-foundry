@@ -78,6 +78,7 @@ pub fn prepare_seismic_fields(
 }
 
 /// Encrypt the tx input using the same metadata() the server uses for decryption.
+/// Skips encryption if the input is empty (e.g. plain ETH transfers).
 pub fn encrypt_tx_input(
     tx: &mut WithOtherFields<TransactionRequest>,
     original_input: &Bytes,
@@ -85,6 +86,10 @@ pub fn encrypt_tx_input(
     encryption_sk: &SecretKey,
     sender: alloy_primitives::Address,
 ) -> Result<()> {
+    if original_input.is_empty() {
+        return Ok(());
+    }
+
     let metadata = tx
         .metadata(sender)
         .map_err(|e| eyre::eyre!("Failed to create encryption metadata: {e}"))?;
