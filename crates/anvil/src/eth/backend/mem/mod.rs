@@ -2239,35 +2239,35 @@ impl Backend {
                             Err(RpcError::invalid_params("unsupported tracer type").into())
                         }
                     },
+                    #[cfg(not(feature = "js-tracer"))]
                     GethDebugTracerType::JsTracer(_) => {
                         Err(RpcError::invalid_params("unsupported tracer type").into())
-                    } /*
-                      #[cfg(feature = "js-tracer")]
-                      GethDebugTracerType::JsTracer(code) => {
-                          use alloy_evm::IntoTxEnv;
-                          let config = tracer_config.into_json();
-                          let mut inspector =
-                              revm_inspectors::tracing::js::JsInspector::new(code, config)
-                                  .map_err(|err| BlockchainError::Message(err.to_string()))?;
+                    }
+                    #[cfg(feature = "js-tracer")]
+                    GethDebugTracerType::JsTracer(code) => {
+                        use alloy_evm::IntoTxEnv;
+                        let config = tracer_config.into_json();
+                        let mut inspector =
+                            revm_inspectors::tracing::js::JsInspector::new(code, config)
+                                .map_err(|err| BlockchainError::Message(err.to_string()))?;
 
-                          Self::check_calldata_decryption(&request)?;
-                          let env = self.build_call_env(request, fee_details, block.clone());
-                          let mut evm =
-                              self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
-                          let result = evm.transact(env.tx.clone())?;
-                          let res = evm
-                              .inspector_mut()
-                              .json_result(
-                                  result,
-                                  &IntoTxEnv::<TxEnv>::into_tx_env(env.tx),
-                                  &block,
-                                  &cache_db,
-                              )
-                              .map_err(|err| BlockchainError::Message(err.to_string()))?;
+                        Self::check_calldata_decryption(&request)?;
+                        let env = self.build_call_env(request, fee_details, block.clone());
+                        let mut evm =
+                            self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
+                        let result = evm.transact(env.tx.clone())?;
+                        let res = evm
+                            .inspector_mut()
+                            .json_result(
+                                result,
+                                &IntoTxEnv::<TxEnv>::into_tx_env(env.tx),
+                                &block,
+                                &cache_db,
+                            )
+                            .map_err(|err| BlockchainError::Message(err.to_string()))?;
 
-                          Ok(GethTrace::JS(res))
-                      }
-                      */
+                        Ok(GethTrace::JS(res))
+                    }
                 };
             }
 
@@ -2935,7 +2935,6 @@ impl Backend {
         hash: B256,
         opts: GethDebugTracingOptions,
     ) -> Result<GethTrace, BlockchainError> {
-        /*
         #[cfg(feature = "js-tracer")]
         if let Some(tracer_type) = opts.tracer.as_ref()
             && tracer_type.is_js()
@@ -2944,7 +2943,6 @@ impl Backend {
                 .trace_tx_with_js_tracer(hash, tracer_type.as_str().to_string(), opts.clone())
                 .await;
         }
-        */
 
         if let Some(trace) = self.mined_geth_trace_transaction(hash, opts.clone()) {
             return trace;
@@ -2957,7 +2955,6 @@ impl Backend {
         Ok(GethTrace::Default(Default::default()))
     }
 
-    /*
     /// Traces the transaction with the js tracer
     #[cfg(feature = "js-tracer")]
     pub async fn trace_tx_with_js_tracer(
@@ -3066,7 +3063,6 @@ impl Backend {
             .map_err(|e| BlockchainError::Message(e.to_string()))?;
         Ok(GethTrace::JS(trace))
     }
-    */
 
     /// Returns code by its hash
     pub async fn debug_code_by_hash(
