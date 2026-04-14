@@ -41,9 +41,6 @@ use foundry_evm::{
 };
 use parking_lot::RwLock;
 use revm::{context::Block as RevmBlock, primitives::hardfork::SpecId};
-use revm_inspectors::tracing::trace_sanitizer::{
-    sanitize_geth_trace, sanitize_localized_transaction_trace,
-};
 use std::{collections::VecDeque, fmt, path::PathBuf, sync::Arc, time::Duration};
 // use yansi::Paint;
 
@@ -535,9 +532,6 @@ impl MinedTransaction {
             block_number: Some(self.block_number),
             base_fee: None,
         })
-        .into_iter()
-        .map(sanitize_localized_transaction_trace)
-        .collect()
     }
 
     pub fn ots_internal_operations(&self) -> Vec<InternalOperation> {
@@ -584,7 +578,7 @@ impl MinedTransaction {
                                         self.receipt.cumulative_gas_used(),
                                     );
 
-                                Ok(sanitize_geth_trace(frame.into()))
+                                Ok(frame.into())
                             }
                             Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
                         };
@@ -601,15 +595,13 @@ impl MinedTransaction {
         }
 
         // default structlog tracer
-        Ok(sanitize_geth_trace(
-            GethTraceBuilder::new(self.info.traces.clone())
-                .geth_traces(
-                    self.receipt.cumulative_gas_used(),
-                    self.info.out.clone().unwrap_or_default(),
-                    config,
-                )
-                .into(),
-        ))
+        Ok(GethTraceBuilder::new(self.info.traces.clone())
+            .geth_traces(
+                self.receipt.cumulative_gas_used(),
+                self.info.out.clone().unwrap_or_default(),
+                config,
+            )
+            .into())
     }
 }
 
