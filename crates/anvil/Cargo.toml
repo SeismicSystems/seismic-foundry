@@ -143,4 +143,6 @@ cmd = [
     "anvil-server/clap",
     "tokio/signal",
 ]
-js-tracer = ["revm-inspectors/js-tracer"]
+## js-tracer disabled: seismic-revm-inspectors#40 emptied the feature and commented out the module.
+## Keep the cfg(feature = "js-tracer") blocks in source to minimize diff with upstream.
+# js-tracer = ["revm-inspectors/js-tracer"]

@@ -10,7 +10,7 @@ use alloy_rpc_types::{
     trace::otterscan::{InternalOperation, OperationType, TraceEntry},
 };
 use alloy_serde::WithOtherFields;
-use alloy_sol_types::{SolCall, SolError, sol};
+use alloy_sol_types::{SolCall, SolError, SolValue, sol};
 use anvil::{NodeConfig, spawn};
 use std::collections::VecDeque;
 
@@ -228,8 +228,8 @@ async fn test_call_ots_trace_transaction() {
         contract.run().value(U256::from(1337)).send().await.unwrap().get_receipt().await.unwrap();
 
     let res = api.ots_trace_transaction(receipt.transaction_hash).await.unwrap();
-    // NOTE: Seismic trace shielding strips calldata from the top-level CALL and
-    // return data from STATICCALL for privacy.
+    // NOTE: Foundry does not sanitize traces (unlike seismic-reth) so developers
+    // can see full calldata and return data for debugging.
     let expected = vec![
         TraceEntry {
             r#type: "CALL".to_string(),
@@ -237,7 +237,7 @@ async fn test_call_ots_trace_transaction() {
             from: sender,
             to: contract_address,
             value: Some(U256::from(1337)),
-            input: Bytes::new(),
+            input: Contract::runCall::SELECTOR.into(),
             output: Bytes::new(),
         },
         TraceEntry {
@@ -247,7 +247,7 @@ async fn test_call_ots_trace_transaction() {
             to: contract_address,
             value: Some(U256::ZERO),
             input: Contract::do_staticcallCall::SELECTOR.into(),
-            output: Bytes::new(),
+            output: U256::from(1).abi_encode().into(),
         },
         TraceEntry {
             r#type: "CALL".to_string(),

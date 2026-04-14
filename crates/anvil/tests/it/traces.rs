@@ -270,6 +270,8 @@ async fn test_call_tracer_debug_trace_call() {
     }
 }
 
+/*
+// Disabled: seismic-evm#45 disallows code overrides in state overrides
 #[tokio::test(flavor = "multi_thread")]
 async fn test_debug_trace_call_state_override() {
     let (_api, handle) = spawn(NodeConfig::test()).await;
@@ -313,6 +315,7 @@ async fn test_debug_trace_call_state_override() {
         }
     }
 }
+*/
 
 // <https://github.com/foundry-rs/foundry/issues/2656>
 #[tokio::test(flavor = "multi_thread")]

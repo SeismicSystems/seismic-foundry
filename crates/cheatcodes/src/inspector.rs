@@ -55,7 +55,7 @@ use revm::{
     bytecode::opcode as op,
     context::{BlockEnv, JournalTr, LocalContext, TransactionType, result::EVMError},
     context_interface::{CreateScheme, transaction::SignedAuthorization},
-    handler::FrameResult,
+    handler::{EvmTr, FrameResult},
     interpreter::{
         CallInputs, CallOutcome, CallScheme, CreateInputs, CreateOutcome, FrameInput, Gas, Host,
         InstructionResult, Interpreter, InterpreterAction, InterpreterResult,
@@ -97,7 +97,7 @@ pub trait CheatcodesExecutor {
         ccx: &mut CheatsCtxt,
     ) -> Result<CreateOutcome, EVMError<DatabaseError>> {
         with_evm(self, ccx, |evm| {
-            evm.inner.ctx.journaled_state.depth += 1;
+            evm.inner.ctx().journaled_state.depth += 1;
 
             let frame = FrameInput::Create(Box::new(inputs));
 
@@ -106,7 +106,7 @@ pub trait CheatcodesExecutor {
                 FrameResult::Create(create) => create,
             };
 
-            evm.inner.ctx.journaled_state.depth -= 1;
+            evm.inner.ctx().journaled_state.depth -= 1;
 
             Ok(outcome)
         })
@@ -146,7 +146,7 @@ where
             database: &mut *ccx.ecx.journaled_state.database as &mut dyn DatabaseExt,
         },
         local: LocalContext::default(),
-        chain: SeismicChain::default(),
+        chain: SeismicChain::with_random_rng_key(),
         error,
     };
 
