@@ -103,7 +103,7 @@ clap = { version = "4", features = [
     "env",
     "wrap_help",
 ], optional = true }
-clap_complete = { workspace = true, optional = true}
+clap_complete = { workspace = true, optional = true }
 chrono.workspace = true
 ctrlc = { version = "3", optional = true }
 fdlimit = { version = "0.3", optional = true }
@@ -143,6 +143,7 @@ cmd = [
     "anvil-server/clap",
     "tokio/signal",
 ]
-## js-tracer disabled: seismic-revm-inspectors#40 emptied the feature and commented out the module.
-## Keep the cfg(feature = "js-tracer") blocks in source to minimize diff with upstream.
-# js-tracer = ["revm-inspectors/js-tracer"]
+## js-tracer feature was disabled in https://github.com/SeismicSystems/seismic-revm-inspectors/pull/40,
+## such that even enabling it doesn't do anything. The intent was that we don't want js-tracer to be enabled by mistake
+## on reth and cause privacy leakages. We might want to re-enable it for foundry though at one point if we think it's useful.
+js-tracer = ["revm-inspectors/js-tracer"]
