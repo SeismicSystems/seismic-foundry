@@ -1326,12 +1326,20 @@ impl EthApi {
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 let user_provided_from = tx.inner.from;
 
+                // Zero `from` to prevent caller spoofing on unsigned calls (for privacy).
+                // The remaining fields are zeroed because the zero-address caller has
+                // nonce 0 and balance 0, so any user-supplied nonce/fees/value would
+                // fail revm's pre-execution validation (NonceTooHigh / InsufficientFunds).
+                // When these are None, build_call_env sets disable_nonce_check and
+                // disable_balance_check, bypassing those checks.
+                // TODO(samlaf): maybe move this into a sanitize_from() or so in seismic-alloy.
                 tx.inner.from = None;
-                tx.inner.gas_price = None; // preventing InsufficientFunds error
-                tx.inner.max_fee_per_gas = None; // preventing InsufficientFunds error
-                tx.inner.max_priority_fee_per_gas = None; // preventing InsufficientFunds error
-                tx.inner.max_fee_per_blob_gas = None; // preventing InsufficientFunds error
-                tx.inner.value = None; // preventing InsufficientFunds error
+                tx.inner.nonce = None;
+                tx.inner.value = None;
+                tx.inner.gas_price = None;
+                tx.inner.max_fee_per_gas = None;
+                tx.inner.max_priority_fee_per_gas = None;
+                tx.inner.max_fee_per_blob_gas = None;
 
                 match self.seismic_call(WithOtherFields::new(tx), block_number, overrides).await {
                     Ok(bytes) => Ok(bytes),
@@ -1463,12 +1471,14 @@ impl EthApi {
 
         let request = match request {
             SeismicCallRequest::TransactionRequest(mut tx) => {
+                // See comment in eth_call above — same rationale.
                 tx.inner.from = None;
+                tx.inner.nonce = None;
+                tx.inner.value = None;
                 tx.inner.gas_price = None;
                 tx.inner.max_fee_per_gas = None;
                 tx.inner.max_priority_fee_per_gas = None;
                 tx.inner.max_fee_per_blob_gas = None;
-                tx.inner.value = None;
                 WithOtherFields::new(tx)
             }
             other => Self::recover_signed_request(other)?,
