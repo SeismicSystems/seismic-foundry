@@ -98,6 +98,9 @@ pub use warning::*;
 
 pub mod fix;
 
+mod seismic_error;
+pub use seismic_error::SeismicError;
+
 // reexport so cli types can implement `figment::Provider` to easily merge compiler arguments
 pub use alloy_chains::{Chain, NamedChain};
 pub use figment;
@@ -4992,7 +4995,7 @@ mod tests {
                 "foundry.toml",
                 r#"
                 [default]
-                ignored_error_codes = ["license", "unreachable", 1337]
+                ignored_error_codes = ["license", "unreachable", "shielded-literal-other-int", "shielded-number-literal", "shielded-arithmetic-addition", 1337]
             "#,
             )?;
 
@@ -5002,6 +5005,9 @@ mod tests {
                 vec![
                     SolidityErrorCode::SpdxLicenseNotProvided,
                     SolidityErrorCode::Unreachable,
+                    SolidityErrorCode::Seismic(SeismicError::ShieldedLiteralOtherInt),
+                    SolidityErrorCode::Seismic(SeismicError::ShieldedNumberLiteral),
+                    SolidityErrorCode::Seismic(SeismicError::ShieldedArithmeticAddition),
                     SolidityErrorCode::Other(1337)
                 ]
             );

@@ -1,4 +1,5 @@
 //! error handling and solc error codes
+use crate::SeismicError;
 use alloy_primitives::map::HashSet;
 use figment::providers::{Format, Toml};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -167,9 +168,10 @@ pub enum SolidityErrorCode {
     ShieldedLiteralExtCallFixedbytes,
     /// Warning: shielded literal in external call args (enum)
     ShieldedLiteralExtCallEnum,
+    /// Named seismic/ssolc warning codes not represented as dedicated top-level variants.
+    Seismic(SeismicError),
     /// All other error codes
-    /// Note: Seismic/ssolc warning codes (>= 10000) not listed above (e.g. "other context"
-    /// 10403-10415, s-literal 10416) are handled via `Other(code)`.
+    /// Note: Unknown future seismic/ssolc warning codes still fall back to `Other(code)`.
     Other(u64),
 }
 
@@ -207,6 +209,7 @@ impl SolidityErrorCode {
             Self::ShieldedLiteralExtCallAddress => "shielded-literal-ext-call-address",
             Self::ShieldedLiteralExtCallFixedbytes => "shielded-literal-ext-call-fixedbytes",
             Self::ShieldedLiteralExtCallEnum => "shielded-literal-ext-call-enum",
+            Self::Seismic(error) => error.as_str(),
             Self::Other(code) => return Err(*code),
         };
         Ok(s)
@@ -244,6 +247,7 @@ impl From<SolidityErrorCode> for u64 {
             SolidityErrorCode::ShieldedLiteralExtCallAddress => 10408,
             SolidityErrorCode::ShieldedLiteralExtCallFixedbytes => 10411,
             SolidityErrorCode::ShieldedLiteralExtCallEnum => 10414,
+            SolidityErrorCode::Seismic(error) => error.into(),
             SolidityErrorCode::Other(code) => code,
         }
     }
@@ -291,7 +295,11 @@ impl FromStr for SolidityErrorCode {
             "shielded-literal-ext-call-address" => Self::ShieldedLiteralExtCallAddress,
             "shielded-literal-ext-call-fixedbytes" => Self::ShieldedLiteralExtCallFixedbytes,
             "shielded-literal-ext-call-enum" => Self::ShieldedLiteralExtCallEnum,
-            _ => return Err(format!("Unknown variant {s}")),
+            _ => {
+                return SeismicError::from_str(s)
+                    .map(Self::Seismic)
+                    .map_err(|_| format!("Unknown variant {s}"))
+            }
         };
 
         Ok(code)
@@ -329,7 +337,9 @@ impl From<u64> for SolidityErrorCode {
             10408 => Self::ShieldedLiteralExtCallAddress,
             10411 => Self::ShieldedLiteralExtCallFixedbytes,
             10414 => Self::ShieldedLiteralExtCallEnum,
-            other => Self::Other(other),
+            other => {
+                SeismicError::from_code(other).map(Self::Seismic).unwrap_or(Self::Other(other))
+            }
         }
     }
 }
@@ -395,6 +405,91 @@ mod tests {
             "shielded-literal-ext-call-fixedbytes",
         ),
         (SolidityErrorCode::ShieldedLiteralExtCallEnum, 10414, "shielded-literal-ext-call-enum"),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedLiteralOtherInt),
+            10403,
+            "shielded-literal-other-int",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedLiteralOtherBool),
+            10406,
+            "shielded-literal-other-bool",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedLiteralOtherAddress),
+            10409,
+            "shielded-literal-other-address",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedLiteralOtherFixedbytes),
+            10412,
+            "shielded-literal-other-fixedbytes",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedLiteralOtherEnum),
+            10415,
+            "shielded-literal-other-enum",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedNumberLiteral),
+            10416,
+            "shielded-number-literal",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedArithmeticAddition),
+            10301,
+            "shielded-arithmetic-addition",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedArithmeticSubtraction),
+            10302,
+            "shielded-arithmetic-subtraction",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedArithmeticMultiplication),
+            10303,
+            "shielded-arithmetic-multiplication",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedArithmeticDivision),
+            10304,
+            "shielded-arithmetic-division",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedArithmeticModulo),
+            10305,
+            "shielded-arithmetic-modulo",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedArithmeticExponentiation),
+            10306,
+            "shielded-arithmetic-exponentiation",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedArithmeticShiftLeft),
+            10307,
+            "shielded-arithmetic-shift-left",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedArithmeticShiftRight),
+            10308,
+            "shielded-arithmetic-shift-right",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedBranchingIfCondition),
+            10309,
+            "shielded-branching-if-condition",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedBranchingTernaryCondition),
+            10310,
+            "shielded-branching-ternary-condition",
+        ),
+        (
+            SolidityErrorCode::Seismic(SeismicError::ShieldedBranchingWhileForCondition),
+            10311,
+            "shielded-branching-while-for-condition",
+        ),
     ];
 
     #[test]
