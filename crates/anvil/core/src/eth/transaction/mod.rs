@@ -1196,16 +1196,20 @@ impl alloy_eips::eip2718::Encodable2718 for TypedTransaction {
     }
 }
 
-impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
-    fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
+impl TypedTransaction {
+    /// Shared EIP-2718 typed-decode body. When `reject_signed_reads` is `true`, a seismic tx
+    /// carrying `signed_read = true` is rejected at decode time: signed reads are an RPC
+    /// `eth_call`-only construct, and admitting one as a state transition (call or create) would
+    /// let an attacker replay an intercepted signed `eth_call` payload as a real write. Mirrors
+    /// reth's consensus `SeismicTransactionSigned::typed_decode` for dev/prod parity.
+    fn typed_decode_inner(
+        ty: u8,
+        buf: &mut &[u8],
+        reject_signed_reads: bool,
+    ) -> Result<Self, Eip2718Error> {
         if ty == SEISMIC_TX_TYPE_ID {
             let tx = Signed::<TxSeismic>::rlp_decode(buf)?;
-            // Reject every signed-read seismic tx at decode time. Signed reads are an RPC
-            // `eth_call`-only construct; admitting one as a state transition (call or create) would
-            // let an attacker replay an intercepted signed `eth_call` payload as a real write. This
-            // is sanvil's (dev-tool) decoder, gated for dev/prod parity with the same guard in
-            // reth's consensus `SeismicTransactionSigned::typed_decode`.
-            if tx.tx().seismic_elements.signed_read {
+            if reject_signed_reads && tx.tx().seismic_elements.signed_read {
                 return Err(alloy_rlp::Error::Custom(
                     "signed-read seismic transactions cannot appear in blocks or the mempool",
                 )
@@ -1223,6 +1227,25 @@ impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
             TxEnvelope::Eip7702(tx) => Ok(Self::EIP7702(tx)),
             _ => Err(Eip2718Error::RlpError(alloy_rlp::Error::Custom("unexpected tx type"))),
         }
+    }
+
+    /// Permissive EIP-2718 decode for the RPC `eth_call` / `eth_estimateGas` bytes path, which
+    /// legitimately accepts signed-read seismic txs. Block / mempool / `eth_sendRawTransaction`
+    /// ingress must use the strict [`Decodable2718::decode_2718`], which rejects them.
+    pub fn decode_2718_permit_seismic_calls(buf: &mut &[u8]) -> Result<Self, Eip2718Error> {
+        match Self::extract_type_byte(buf) {
+            Some(ty) => {
+                *buf = &buf[1..];
+                Self::typed_decode_inner(ty, buf, false)
+            }
+            None => Self::fallback_decode(buf),
+        }
+    }
+}
+
+impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
+    fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
+        Self::typed_decode_inner(ty, buf, true)
     }
 
     fn fallback_decode(buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
@@ -2076,5 +2099,14 @@ mod tests {
         let encoded = encoded_seismic_tx(false, TxKind::Call(Address::with_last_byte(1)));
         TypedTransaction::decode_2718(&mut &encoded[..])
             .expect("non-signed-read seismic write must decode");
+    }
+
+    /// The permissive decoder (eth_call / estimateGas bytes path) must accept a signed read —
+    /// the strict `decode_2718` rejects it; this is the legitimate counterpart.
+    #[test]
+    fn permissive_decode_accepts_signed_read() {
+        let encoded = encoded_seismic_tx(true, TxKind::Call(Address::with_last_byte(1)));
+        TypedTransaction::decode_2718_permit_seismic_calls(&mut &encoded[..])
+            .expect("permissive decode must accept signed-read seismic tx");
     }
 }
