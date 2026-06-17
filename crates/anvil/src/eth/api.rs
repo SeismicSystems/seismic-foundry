@@ -3167,8 +3167,13 @@ impl EthApi {
                     ))
                 })?
             }
-            SeismicCallRequest::Bytes(bytes) => TypedTransaction::decode_2718(&mut bytes.as_ref())
-                .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?,
+            SeismicCallRequest::Bytes(bytes) => {
+                // eth_call / estimateGas legitimately accept signed-read seismic txs, so decode
+                // permissively here. Tx/block ingress uses the strict `decode_2718`, which rejects
+                // signed reads to prevent replay-as-write.
+                TypedTransaction::decode_2718_permit_seismic_calls(&mut bytes.as_ref())
+                    .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?
+            }
             SeismicCallRequest::TransactionRequest(_) => {
                 return Err(BlockchainError::Message(
                     "Expected signed request (TypedData or Bytes)".to_string(),

@@ -755,7 +755,7 @@ async fn test_seismic_precompiles_end_to_end() {
 // Seismic testnet instead, verifying that sanvil can fork a Seismic chain.
 
 /// Seismic testnet RPC endpoint for fork tests.
-const SEISMIC_TESTNET_RPC: &str = "https://gcp-0.seismictest.net/rpc";
+const SEISMIC_TESTNET_RPC: &str = "https://testnet-1.seismictest.net/rpc";
 /// Chain ID of the Seismic testnet.
 const SEISMIC_TESTNET_CHAIN_ID: u64 = 5124;
 /// Block number to fork from in fork tests (early block to minimize RPC data).
