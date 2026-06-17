@@ -1199,7 +1199,19 @@ impl alloy_eips::eip2718::Encodable2718 for TypedTransaction {
 impl alloy_eips::eip2718::Decodable2718 for TypedTransaction {
     fn typed_decode(ty: u8, buf: &mut &[u8]) -> Result<Self, alloy_eips::eip2718::Eip2718Error> {
         if ty == SEISMIC_TX_TYPE_ID {
-            return Ok(Self::Seismic(Signed::<TxSeismic>::rlp_decode(buf)?));
+            let tx = Signed::<TxSeismic>::rlp_decode(buf)?;
+            // Reject every signed-read seismic tx at decode time. Signed reads are an RPC
+            // `eth_call`-only construct; admitting one as a state transition (call or create) would
+            // let an attacker replay an intercepted signed `eth_call` payload as a real write. This
+            // is sanvil's (dev-tool) decoder, gated for dev/prod parity with the same guard in
+            // reth's consensus `SeismicTransactionSigned::typed_decode`.
+            if tx.tx().seismic_elements.signed_read {
+                return Err(alloy_rlp::Error::Custom(
+                    "signed-read seismic transactions cannot appear in blocks or the mempool",
+                )
+                .into());
+            }
+            return Ok(Self::Seismic(tx));
         }
         if ty == 0x7E {
             return Ok(Self::Deposit(TxDeposit::decode(buf)?));
@@ -2005,5 +2017,64 @@ mod tests {
         let decoded_tx = TypedTransaction::decode(&mut buf).unwrap();
 
         assert_eq!(decoded_tx, signed_tt);
+    }
+
+    /// Build the EIP-2718 bytes of a signed seismic tx with the given `signed_read`/`to`.
+    /// The signature is arbitrary: the decoder gates on `signed_read` before any recovery,
+    /// so a dummy signature exercises the path we care about.
+    fn encoded_seismic_tx(signed_read: bool, to: TxKind) -> Vec<u8> {
+        let tx = TxSeismic {
+            chain_id: 31337u64,
+            nonce: 0,
+            gas_price: 1,
+            gas_limit: 21_000,
+            to,
+            value: U256::ZERO,
+            input: Bytes::new(),
+            seismic_elements: TxSeismicElements {
+                encryption_pubkey: get_unsecure_sample_secp256k1_pk(),
+                encryption_nonce: U96::ZERO,
+                message_version: 0,
+                recent_block_hash: B256::ZERO,
+                expires_at_block: 1,
+                signed_read,
+            },
+            authorization_list: vec![],
+        };
+        let signature = Signature::new(U256::from(1u64), U256::from(1u64), false);
+        let signed_tt = TypedTransaction::Seismic(tx.into_signed(signature));
+        let mut buf = Vec::new();
+        signed_tt.encode_2718(&mut buf);
+        buf
+    }
+
+    /// The sanvil decoder must reject a signed-read seismic call tx, matching reth's
+    /// consensus-decoder gate, so a replayed signed `eth_call` can't enter a block/mempool.
+    #[test]
+    fn decode_2718_rejects_signed_read_write() {
+        let encoded = encoded_seismic_tx(true, TxKind::Call(Address::with_last_byte(1)));
+        assert!(
+            TypedTransaction::decode_2718(&mut &encoded[..]).is_err(),
+            "sanvil decoder must reject signed-read seismic call tx"
+        );
+    }
+
+    /// A signed-read create is rejected too: a create is also a state transition, so there's no
+    /// legitimate signed-read create on a block/mempool ingress path.
+    #[test]
+    fn decode_2718_rejects_signed_read_create() {
+        let encoded = encoded_seismic_tx(true, TxKind::Create);
+        assert!(
+            TypedTransaction::decode_2718(&mut &encoded[..]).is_err(),
+            "sanvil decoder must reject signed-read seismic create tx"
+        );
+    }
+
+    /// Ordinary (non-signed-read) seismic writes must still decode unaffected.
+    #[test]
+    fn decode_2718_accepts_non_signed_read_write() {
+        let encoded = encoded_seismic_tx(false, TxKind::Call(Address::with_last_byte(1)));
+        TypedTransaction::decode_2718(&mut &encoded[..])
+            .expect("non-signed-read seismic write must decode");
     }
 }
