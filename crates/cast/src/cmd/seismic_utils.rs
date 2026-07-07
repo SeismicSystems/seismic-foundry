@@ -102,6 +102,25 @@ pub fn encrypt_tx_input(
     Ok(())
 }
 
+/// Sign the tx and send raw bytes to eth_estimateGas, returning the estimate.
+/// The tx's gas limit should already be set (signed reads require a fully
+/// formed tx, so estimation itself needs a gas limit to sign with).
+pub async fn request_signed_gas_estimate<P: Provider<AnyNetwork>>(
+    provider: &P,
+    tx: &WithOtherFields<TransactionRequest>,
+    wallet: &EthereumWallet,
+) -> Result<u64> {
+    let signed = tx
+        .clone()
+        .build(wallet)
+        .await
+        .map_err(|e| eyre::eyre!("Failed to sign tx for gas estimation: {e:?}"))?;
+    let encoded = Bytes::from(signed.encoded_2718());
+
+    let gas = provider.client().request::<_, U256>("eth_estimateGas", (encoded,)).await?;
+    gas.try_into().map_err(|_| eyre::eyre!("Gas estimate exceeds u64::MAX"))
+}
+
 /// Sign the tx and send raw bytes to eth_estimateGas.
 /// Falls back to `block_gas_limit` if estimation fails.
 pub async fn estimate_gas_signed<P: Provider<AnyNetwork>>(
@@ -113,18 +132,8 @@ pub async fn estimate_gas_signed<P: Provider<AnyNetwork>>(
     let mut tx_for_estimate = tx.clone();
     tx_for_estimate.set_gas_limit(block_gas_limit);
 
-    let signed = tx_for_estimate
-        .build(wallet)
-        .await
-        .map_err(|e| eyre::eyre!("Failed to sign tx for gas estimation: {e:?}"))?;
-    let encoded = Bytes::from(signed.encoded_2718());
-
-    match provider.client().request::<_, U256>("eth_estimateGas", (encoded,)).await {
-        Ok(gas) => {
-            let gas_limit: u64 =
-                gas.try_into().map_err(|_| eyre::eyre!("Gas estimate exceeds u64::MAX"))?;
-            tx.set_gas_limit(gas_limit);
-        }
+    match request_signed_gas_estimate(provider, &tx_for_estimate, wallet).await {
+        Ok(gas_limit) => tx.set_gas_limit(gas_limit),
         Err(e) => {
             sh_warn!(
                 "Signed gas estimation failed ({e}), using block gas limit ({block_gas_limit}). \
