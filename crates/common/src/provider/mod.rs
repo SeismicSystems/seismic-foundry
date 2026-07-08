@@ -1,9 +1,11 @@
 //! Provider-related instantiation and usage utilities.
 
+pub mod json_rpc_logging;
 pub mod runtime_transport;
 
 use crate::{
-    ALCHEMY_FREE_TIER_CUPS, REQUEST_TIMEOUT, provider::runtime_transport::RuntimeTransportBuilder,
+    ALCHEMY_FREE_TIER_CUPS, REQUEST_TIMEOUT,
+    provider::{json_rpc_logging::JsonRpcLoggingLayer, runtime_transport::RuntimeTransportBuilder},
 };
 use alloy_provider::{
     ProviderBuilder as AlloyProviderBuilder, RootProvider,
@@ -296,7 +298,10 @@ impl ProviderBuilder {
             .with_jwt(jwt)
             .accept_invalid_certs(accept_invalid_certs)
             .build();
-        let client = ClientBuilder::default().layer(retry_layer).transport(transport, is_local);
+        let client = ClientBuilder::default()
+            .layer(retry_layer)
+            .layer(JsonRpcLoggingLayer)
+            .transport(transport, is_local);
 
         if !is_local {
             client.set_poll_interval(
@@ -342,7 +347,10 @@ impl ProviderBuilder {
             .accept_invalid_certs(accept_invalid_certs)
             .build();
 
-        let client = ClientBuilder::default().layer(retry_layer).transport(transport, is_local);
+        let client = ClientBuilder::default()
+            .layer(retry_layer)
+            .layer(JsonRpcLoggingLayer)
+            .transport(transport, is_local);
 
         if !is_local {
             client.set_poll_interval(
