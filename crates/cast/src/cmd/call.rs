@@ -411,11 +411,17 @@ impl CallArgs {
                 .await
                 .map_err(|e| eyre::eyre!("Seismic call failed: {e}"))?;
 
-            let decrypted_response = seismic_elements
-                .client_decrypt(&encrypted_response, &network_pubkey, &encryption_sk, &metadata)
-                .map_err(|e| eyre::eyre!("Failed to decrypt response: {e}"))?;
+            if encrypted_response.is_empty() {
+                // The node returns empty output unencrypted (server-side encrypt
+                // short-circuits empty plaintext), so there is nothing to decrypt.
+                String::from("0x")
+            } else {
+                let decrypted_response = seismic_elements
+                    .client_decrypt(&encrypted_response, &network_pubkey, &encryption_sk, &metadata)
+                    .map_err(|e| eyre::eyre!("Failed to decrypt response: {e}"))?;
 
-            alloy_primitives::hex::encode_prefixed(&decrypted_response)
+                alloy_primitives::hex::encode_prefixed(&decrypted_response)
+            }
         } else {
             Cast::new(&provider)
                 .call(&tx, func.as_ref(), block, state_overrides, block_overrides)
