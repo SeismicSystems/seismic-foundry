@@ -5,6 +5,7 @@ use alloy_json_abi::{Constructor, JsonAbi};
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{Address, Bytes, hex};
 use alloy_provider::{PendingTransactionError, Provider, ProviderBuilder};
+use alloy_rpc_types::BlockNumberOrTag;
 use alloy_serde::WithOtherFields;
 use alloy_signer::Signer;
 use alloy_transport::TransportError;
@@ -182,15 +183,22 @@ impl CreateArgs {
                 config.transaction_timeout,
                 id,
                 dry_run,
+                // The node holds the key, so we cannot sign a gas-estimation tx locally.
+                None,
             )
             .await
         } else {
             // Deploy with signer
             let signer = self.eth.wallet.signer().await?;
             let deployer = signer.address();
+            let wallet = EthereumWallet::new(signer);
             let provider = ProviderBuilder::<_, _, AnyNetwork>::default()
-                .wallet(EthereumWallet::new(signer))
+                .wallet(wallet.clone())
                 .connect_provider(provider);
+            // On seismic chains, gas estimation must go through raw signed bytes
+            // (the node sanitizes `from` on unsigned eth_estimateGas), so deploy()
+            // needs the wallet before send time.
+            let estimation_wallet = config.seismic.then_some(wallet);
             self.deploy(
                 abi,
                 bin,
@@ -201,6 +209,7 @@ impl CreateArgs {
                 config.transaction_timeout,
                 id,
                 dry_run,
+                estimation_wallet,
             )
             .await
         }
@@ -279,6 +288,7 @@ impl CreateArgs {
         timeout: u64,
         id: ArtifactId,
         dry_run: bool,
+        estimation_wallet: Option<EthereumWallet>,
     ) -> Result<()> {
         let bin = bin.into_bytes().unwrap_or_default();
         if bin.is_empty() {
@@ -316,12 +326,8 @@ impl CreateArgs {
             deployer.tx.set_value(value);
         }
 
-        deployer.tx.set_gas_limit(if let Some(gas_limit) = self.tx.gas_limit {
-            Ok(gas_limit.to())
-        } else {
-            provider.estimate_gas(deployer.tx.clone()).await
-        }?);
-
+        // Fees are set before the gas limit: the signed gas estimate below signs the
+        // tx, which requires a fully formed request.
         if is_legacy {
             let gas_price = if let Some(gas_price) = self.tx.gas_price {
                 gas_price.to()
@@ -345,6 +351,29 @@ impl CreateArgs {
             deployer.tx.set_max_fee_per_gas(max_fee);
             deployer.tx.set_max_priority_fee_per_gas(priority_fee);
         }
+
+        deployer.tx.set_gas_limit(if let Some(gas_limit) = self.tx.gas_limit {
+            gas_limit.to()
+        } else if let Some(wallet) = &estimation_wallet {
+            // The node clears `from` on unsigned eth_estimateGas (privacy
+            // sanitization), underpricing any tx whose gas depends on msg.sender
+            // (e.g. Ownable constructors storing the deployer) — sent with such an
+            // estimate, the deploy runs out of gas. Estimate via raw signed bytes
+            // instead: the signature authenticates the real sender.
+            match signed_gas_estimate(&*provider, &deployer.tx, wallet).await {
+                Ok(gas) => gas,
+                Err(err) => {
+                    sh_warn!(
+                        "Signed gas estimation failed ({err}); falling back to unsigned \
+                         estimation, which may underestimate msg.sender-dependent gas. \
+                         Use --gas-limit for precise control."
+                    )?;
+                    provider.estimate_gas(deployer.tx.clone()).await?
+                }
+            }
+        } else {
+            provider.estimate_gas(deployer.tx.clone()).await?
+        });
 
         // Before we actually deploy the contract we try check if the verify settings are valid
         let mut constructor_args = None;
@@ -511,6 +540,26 @@ impl<P, C> From<Deployer<P>> for ContractDeploymentTx<P, C> {
     fn from(deployer: Deployer<P>) -> Self {
         Self { deployer, _contract: PhantomData }
     }
+}
+
+/// Estimate gas by signing the tx and submitting the raw bytes to
+/// `eth_estimateGas`, so the node estimates with the real sender instead of the
+/// sanitized zero address. The tx is signed with the block gas limit as a
+/// placeholder (a signed tx requires a gas limit); it is never broadcast.
+async fn signed_gas_estimate<P: Provider<AnyNetwork>>(
+    provider: &P,
+    tx: &WithOtherFields<TransactionRequest>,
+    wallet: &EthereumWallet,
+) -> Result<u64> {
+    let block = provider
+        .get_block_by_number(BlockNumberOrTag::Latest)
+        .await?
+        .ok_or_else(|| eyre::eyre!("failed to fetch latest block"))?;
+
+    let mut estimate_tx = tx.clone();
+    estimate_tx.set_gas_limit(block.header.gas_limit);
+
+    foundry_common::seismic::request_signed_gas_estimate(provider, &estimate_tx, wallet).await
 }
 
 /// Helper which manages the deployment transaction of a smart contract

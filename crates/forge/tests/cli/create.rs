@@ -494,3 +494,54 @@ Error: no bytecode found in bin object for AbstractCounter
 
 "#]]);
 });
+
+// Deploying a contract whose constructor stores msg.sender must succeed without
+// an explicit --gas-limit. Unsigned eth_estimateGas is sanitized node-side
+// (`from` cleared), so the owner SSTORE is priced as a zero-store and the
+// estimate lands ~20k gas short — a deploy sent with it runs out of gas.
+// forge create estimates via raw signed bytes instead, which keep the real
+// sender (see foundry_common::seismic::request_signed_gas_estimate).
+forgetest_async!(test_seismic_create_signed_gas_estimate, |prj, cmd| {
+    foundry_test_utils::util::initialize(prj.root());
+
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    let rpc = handle.http_endpoint();
+    let wallet = handle.dev_wallets().next().unwrap();
+    let deployer = wallet.address();
+    let pk = hex::encode(wallet.credential().to_bytes());
+
+    prj.add_source(
+        "Owned",
+        r#"
+pragma solidity >=0.8.0;
+
+contract Owned {
+    address public owner;
+    constructor() {
+        owner = msg.sender;
+    }
+}
+"#,
+    );
+
+    cmd.forge_fuse()
+        .args([
+            "create",
+            "./src/Owned.sol:Owned",
+            "--rpc-url",
+            rpc.as_str(),
+            "--private-key",
+            pk.as_str(),
+            "--broadcast",
+        ])
+        .assert_success();
+
+    // "Deployed to:" prints even when the deploy reverts out of gas, so assert
+    // the constructor actually ran: code at the address and the owner in slot 0.
+    let address = Address::from_str("0x5FbDB2315678afecb367f032d93F642f64180aa3").unwrap();
+    let code = api.get_code(address, None).await.unwrap();
+    assert!(!code.is_empty(), "no code at deploy address — deploy reverted (out of gas?)");
+
+    let owner = api.storage_at(address, alloy_primitives::U256::ZERO, None).await.unwrap();
+    assert_eq!(Address::from_word(owner), deployer, "owner slot not set to deployer");
+});
