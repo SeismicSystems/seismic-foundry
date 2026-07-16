@@ -1,8 +1,8 @@
 //! Shared utilities for seismic transaction encryption in scast commands.
 
 use alloy_consensus::BlockHeader;
-use alloy_network::{TransactionBuilder, eip2718::Encodable2718};
-use alloy_primitives::{Bytes, U256, aliases::U96};
+use alloy_network::TransactionBuilder;
+use alloy_primitives::{Bytes, aliases::U96};
 use alloy_provider::Provider;
 use alloy_rpc_types::BlockNumberOrTag;
 use alloy_serde::WithOtherFields;
@@ -102,24 +102,7 @@ pub fn encrypt_tx_input(
     Ok(())
 }
 
-/// Sign the tx and send raw bytes to eth_estimateGas, returning the estimate.
-/// The tx's gas limit should already be set (signed reads require a fully
-/// formed tx, so estimation itself needs a gas limit to sign with).
-pub async fn request_signed_gas_estimate<P: Provider<AnyNetwork>>(
-    provider: &P,
-    tx: &WithOtherFields<TransactionRequest>,
-    wallet: &EthereumWallet,
-) -> Result<u64> {
-    let signed = tx
-        .clone()
-        .build(wallet)
-        .await
-        .map_err(|e| eyre::eyre!("Failed to sign tx for gas estimation: {e:?}"))?;
-    let encoded = Bytes::from(signed.encoded_2718());
-
-    let gas = provider.client().request::<_, U256>("eth_estimateGas", (encoded,)).await?;
-    gas.try_into().map_err(|_| eyre::eyre!("Gas estimate exceeds u64::MAX"))
-}
+pub use foundry_common::seismic::request_signed_gas_estimate;
 
 /// Sign the tx and send raw bytes to eth_estimateGas.
 /// Falls back to `block_gas_limit` if estimation fails.
