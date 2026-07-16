@@ -57,6 +57,10 @@ literal-string-with-formatting-args = "allow"
 result_large_err = "allow"
 
 [workspace.lints.rust]
+# eyre 0.6's bail!/ensure! expand with a trailing semicolon, which newer rustc
+# denies in expression position (rust-lang/rust#79813). Remove this allow once
+# eyre ships a fix or the lint becomes a hard error (then call sites need braces).
+semicolon_in_expressions_from_macros = "allow"
 redundant_imports = "warn"
 redundant-lifetimes = "warn"
 rust-2018-idioms = "warn"
