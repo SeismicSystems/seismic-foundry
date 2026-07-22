@@ -1705,7 +1705,12 @@ impl Backend {
         fee_details: FeeDetails,
         block_env: BlockEnv,
     ) -> Env {
-        let tx_type = request.minimal_tx_type() as u8;
+        // Signed reads (eth_call carrying seismic_elements) execute as the Seismic tx type.
+        let tx_type = if request.inner.seismic_elements.is_some() {
+            SEISMIC_TX_TYPE_ID
+        } else {
+            request.minimal_tx_type() as u8
+        };
         let cloned_inner = request.inner.clone();
 
         let WithOtherFields::<TransactionRequest> {
