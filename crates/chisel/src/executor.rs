@@ -857,9 +857,11 @@ impl Type {
                 // Because tuple types cannot be passed to `abi.encode`, we will only be
                 // receiving functions that have 0 or 1 return parameters here.
                 if func.returns.is_empty() {
-                    eyre::bail!(
-                        "This call expression does not return any values to inspect. Insert as statement."
-                    )
+                    {
+                        eyre::bail!(
+                            "This call expression does not return any values to inspect. Insert as statement."
+                        );
+                    }
                 }
 
                 // Empty return types check is done above
@@ -884,10 +886,14 @@ impl Type {
                     .find(|attr| matches!(attr, pt::FunctionAttribute::Mutability(_)))
                 {
                     if let pt::Mutability::Payable(_) = _mut {
-                        eyre::bail!("This function mutates state. Insert as a statement.")
+                        {
+                            eyre::bail!("This function mutates state. Insert as a statement.");
+                        }
                     }
                 } else {
-                    eyre::bail!("This function mutates state. Insert as a statement.")
+                    {
+                        eyre::bail!("This function mutates state. Insert as a statement.");
+                    }
                 }
 
                 Ok(Self::ethabi(return_ty, Some(intermediate)))
@@ -904,9 +910,11 @@ impl Type {
                     .collect::<Result<Vec<_>>>()?;
                 Ok(Some(DynSolType::Tuple(inner_types)))
             } else {
-                eyre::bail!(
-                    "Could not find any definition in contract \"{contract_name}\" for type: {custom_type:?}"
-                )
+                {
+                    eyre::bail!(
+                        "Could not find any definition in contract \"{contract_name}\" for type: {custom_type:?}"
+                    );
+                }
             }
         } else {
             // Check if the custom type is a variable or function within the REPL contract before
@@ -1249,7 +1257,9 @@ fn unit_multiplier(unit: &Option<pt::Identifier>) -> Result<U256> {
             "wei" => 1,
             "gwei" => 10_usize.pow(9),
             "ether" => 10_usize.pow(18),
-            other => eyre::bail!("unknown unit: {other}"),
+            other => {
+                eyre::bail!("unknown unit: {other}");
+            }
         };
         Ok(U256::from(mul))
     } else {

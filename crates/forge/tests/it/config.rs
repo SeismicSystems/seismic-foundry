@@ -88,14 +88,16 @@ impl TestConfig {
                     .await
                     .into_iter()
                     .collect::<Vec<String>>();
-                    eyre::bail!(
-                        "Test {} did not {} as expected.\nReason: {:?}\nLogs:\n{}\n\nTraces:\n{}",
-                        test_name,
-                        outcome,
-                        result.reason,
-                        logs.join("\n"),
-                        decoded_traces.into_iter().format("\n"),
-                    )
+                    {
+                        eyre::bail!(
+                            "Test {} did not {} as expected.\nReason: {:?}\nLogs:\n{}\n\nTraces:\n{}",
+                            test_name,
+                            outcome,
+                            result.reason,
+                            logs.join("\n"),
+                            decoded_traces.into_iter().format("\n"),
+                        );
+                    }
                 }
             }
         }

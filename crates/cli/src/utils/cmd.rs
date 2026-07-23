@@ -58,7 +58,9 @@ pub fn remove_contract(
         Did you mean `{suggestion}`?"#
             );
         }
-        eyre::bail!(err)
+        {
+            eyre::bail!(err);
+        }
     };
 
     let abi = contract
@@ -88,10 +90,12 @@ pub fn get_cached_entry_by_name(
         for artifact_name in entry.artifacts.keys() {
             if artifact_name == name {
                 if cached_entry.is_some() {
-                    eyre::bail!(
-                        "contract with duplicate name `{}`. please pass the path instead",
-                        name
-                    )
+                    {
+                        eyre::bail!(
+                            "contract with duplicate name `{}`. please pass the path instead",
+                            name
+                        );
+                    }
                 }
                 cached_entry = Some((abs_path.to_owned(), entry.to_owned()));
             } else {
@@ -112,7 +116,9 @@ pub fn get_cached_entry_by_name(
         Did you mean `{suggestion}`?"#
         );
     }
-    eyre::bail!(err)
+    {
+        eyre::bail!(err);
+    }
 }
 
 /// Returns error if constructor has arguments.

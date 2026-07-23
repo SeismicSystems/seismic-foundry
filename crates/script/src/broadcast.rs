@@ -229,13 +229,15 @@ pub async fn send_transaction(
                     Ordering::Greater => {
                         bail!(
                             "EOA nonce changed unexpectedly while sending transactions. Expected {tx_nonce} got {nonce} from provider."
-                        )
+                        );
                     }
                     Ordering::Less => {
                         if attempt == 4 {
-                            bail!(
-                                "After 5 attempts, provider nonce ({nonce}) is still behind expected nonce ({tx_nonce})."
-                            )
+                            {
+                                bail!(
+                                    "After 5 attempts, provider nonce ({nonce}) is still behind expected nonce ({tx_nonce})."
+                                );
+                            }
                         }
                         warn!(
                             "Expected nonce ({tx_nonce}) is ahead of provider nonce ({nonce}). Retrying in 1 second..."
@@ -308,7 +310,9 @@ impl SendTransactionsKind {
         match self {
             Self::Unlocked(unlocked) => {
                 if !unlocked.contains(addr) {
-                    bail!("Sender address {:?} is not unlocked", addr)
+                    {
+                        bail!("Sender address {:?} is not unlocked", addr);
+                    }
                 }
                 Ok(SendTransactionKind::Unlocked(tx))
             }
@@ -316,7 +320,9 @@ impl SendTransactionsKind {
                 if let Some(wallet) = wallets.get(addr) {
                     Ok(SendTransactionKind::Raw(tx, wallet))
                 } else {
-                    bail!("No matching signer for {:?} found", addr)
+                    {
+                        bail!("No matching signer for {:?} found", addr);
+                    }
                 }
             }
         }

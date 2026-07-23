@@ -888,7 +888,9 @@ impl<'a, W: Write> Formatter<'a, W> {
             single_line = match fun(fmt) {
                 Ok(()) => true,
                 Err(FormatterError::Fmt(_)) => false,
-                Err(err) => bail!(err),
+                Err(err) => {
+                    bail!(err);
+                }
             };
             Ok(())
         })?;
@@ -905,7 +907,9 @@ impl<'a, W: Write> Formatter<'a, W> {
             single_line = match fun(fmt) {
                 Ok(()) => true,
                 Err(FormatterError::Fmt(_)) => false,
-                Err(err) => bail!(err),
+                Err(err) => {
+                    bail!(err);
+                }
             };
             Ok(())
         })?;
@@ -1754,7 +1758,9 @@ impl<'a, W: Write> Formatter<'a, W> {
             || !self.try_on_single_line(|fmt| {
                 write_attributes(fmt, false)?;
                 if !fmt.will_it_fit(if func.body.is_some() { " {" } else { ";" }) {
-                    bail!(FormatterError::fmt())
+                    {
+                        bail!(FormatterError::fmt());
+                    }
                 }
                 Ok(())
             })?;
@@ -1792,7 +1798,9 @@ impl<'a, W: Write> Formatter<'a, W> {
             && self.should_attempt_block_single_line(if_branch.as_mut(), cond_close_paren_loc);
         let if_branch_is_single_line = self.visit_stmt_as_block(if_branch, attempt_single_line)?;
         if single_line_stmt_wide && !if_branch_is_single_line {
-            bail!(FormatterError::fmt())
+            {
+                bail!(FormatterError::fmt());
+            }
         }
 
         if let Some(else_branch) = else_branch {
@@ -1807,7 +1815,9 @@ impl<'a, W: Write> Formatter<'a, W> {
                 let else_branch_is_single_line =
                     self.visit_stmt_as_block(else_branch, attempt_single_line)?;
                 if single_line_stmt_wide && !else_branch_is_single_line {
-                    bail!(FormatterError::fmt())
+                    {
+                        bail!(FormatterError::fmt());
+                    }
                 }
             }
         }
@@ -3061,7 +3071,9 @@ impl<W: Write> Visitor for Formatter<'_, W> {
             stmt_fits_on_single = match fmt.write_if_stmt(loc, cond, if_branch, else_branch) {
                 Ok(()) => true,
                 Err(FormatterError::Fmt(_)) => false,
-                Err(err) => bail!(err),
+                Err(err) => {
+                    bail!(err);
+                }
             };
             Ok(())
         })?;

@@ -109,7 +109,9 @@ pub fn build_using_cache(
         let version = etherscan_settings.compiler_version.to_owned();
         // Ignores vyper
         if version.starts_with("vyper:") {
-            eyre::bail!("Vyper contracts are not supported")
+            {
+                eyre::bail!("Vyper contracts are not supported");
+            }
         }
         // Parse etherscan version string
         let version = version.split('+').next().unwrap_or("").trim_start_matches('v').to_string();
@@ -137,7 +139,9 @@ pub fn build_using_cache(
         }
     }
 
-    eyre::bail!("couldn't find cached artifact for contract {}", args.contract.name)
+    {
+        eyre::bail!("couldn't find cached artifact for contract {}", args.contract.name);
+    }
 }
 
 pub fn print_result(
@@ -258,7 +262,9 @@ pub fn maybe_predeploy_contract(
             maybe_predeploy = true;
             Ok((None, maybe_predeploy))
         }
-        Err(e) => eyre::bail!("Error fetching creation data from verifier-url: {:?}", e),
+        Err(e) => {
+            eyre::bail!("Error fetching creation data from verifier-url: {:?}", e);
+        }
     }
 }
 

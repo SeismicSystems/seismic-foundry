@@ -178,7 +178,9 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
                                 .await
                                 && code.is_empty()
                             {
-                                eyre::bail!("contract {addr:?} does not have any code")
+                                {
+                                    eyre::bail!("contract {addr:?} does not have any code");
+                                }
                             }
                         } else if Some(TxKind::Create) == req.inner.inner.to {
                             eyre::bail!("tx req is a contract deployment");
@@ -367,7 +369,9 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
             && field == "transactions"
             && !full
         {
-            eyre::bail!("use --full to view transactions")
+            {
+                eyre::bail!("use --full to view transactions");
+            }
         }
 
         let block = self
@@ -796,7 +800,9 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
                     eyre::eyre!("tx not found for sender {from} and nonce {:?}", nonce.to::<u64>())
                 })?
         } else {
-            eyre::bail!("tx hash or from address is required")
+            {
+                eyre::bail!("tx hash or from address is required");
+            }
         };
 
         Ok(if raw {
@@ -850,7 +856,9 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
                     // if the async flag is provided, immediately exit if no tx is found, otherwise
                     // try to poll for it
                     if cast_async {
-                        eyre::bail!("tx not found: {:?}", tx_hash)
+                        {
+                            eyre::bail!("tx not found: {:?}", tx_hash);
+                        }
                     } else {
                         PendingTransactionBuilder::new(self.provider.root().clone(), tx_hash)
                             .with_required_confirmations(confs)
@@ -1805,7 +1813,9 @@ impl SimpleCast {
         let func = get_func(sig)?;
         match encode_function_args(&func, args) {
             Ok(res) => Ok(hex::encode_prefixed(&res[4..])),
-            Err(e) => eyre::bail!("Could not ABI encode the function and arguments: {e}"),
+            Err(e) => {
+                eyre::bail!("Could not ABI encode the function and arguments: {e}");
+            }
         }
     }
 
@@ -1835,7 +1845,9 @@ impl SimpleCast {
         let func = get_func(sig.as_str())?;
         let encoded = match encode_function_args_packed(&func, args) {
             Ok(res) => hex::encode(res),
-            Err(e) => eyre::bail!("Could not ABI encode the function and arguments: {e}"),
+            Err(e) => {
+                eyre::bail!("Could not ABI encode the function and arguments: {e}");
+            }
         };
         Ok(format!("0x{encoded}"))
     }
@@ -1912,7 +1924,7 @@ impl SimpleCast {
             | DynSolType::FixedArray(..)
             | DynSolType::Tuple(..)
             | DynSolType::CustomStruct { .. } => {
-                eyre::bail!("Type `{k_ty}` is not supported as a mapping key")
+                eyre::bail!("Type `{k_ty}` is not supported as a mapping key");
             }
             DynSolType::Sbool
             | DynSolType::Saddress
@@ -2106,7 +2118,9 @@ impl SimpleCast {
         let client = explorer_client(chain, etherscan_api_key, explorer_api_url, explorer_url)?;
         let metadata = client.contract_source_code(contract_address.parse()?).await?;
         let Some(metadata) = metadata.items.first() else {
-            eyre::bail!("Empty contract source code")
+            {
+                eyre::bail!("Empty contract source code");
+            }
         };
 
         let tmp = tempfile::tempdir()?;
@@ -2212,7 +2226,9 @@ impl SimpleCast {
 
         match result {
             Some((_nonce, selector, signature)) => Ok((selector, signature)),
-            None => eyre::bail!("No selector found"),
+            None => {
+                eyre::bail!("No selector found");
+            }
         }
     }
 

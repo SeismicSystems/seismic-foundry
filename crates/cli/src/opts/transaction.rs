@@ -25,7 +25,9 @@ impl FromStr for CliAuthorizationList {
         } else if let Ok(auth) = SignedAuthorization::decode(&mut hex::decode(s)?.as_ref()) {
             Ok(Self::Signed(auth))
         } else {
-            eyre::bail!("Failed to decode authorization")
+            {
+                eyre::bail!("Failed to decode authorization");
+            }
         }
     }
 }
