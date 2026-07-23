@@ -2158,7 +2158,7 @@ impl Backend {
         let tx_io_sk = seismic_crypto::get_unsecure_sample_secp256k1_sk();
         if let Some(metadata) = &tx_metadata {
             let encrypted_input = request.inner.input.clone().input.unwrap_or(Bytes::new()).clone();
-            if let Err(e) = metadata.decrypt(&tx_io_sk, &encrypted_input) {
+            if let Err(e) = metadata.decrypt_request(&tx_io_sk, &encrypted_input) {
                 return Err(BlockchainError::Message(format!("Invalid AEAD metadata: {e}")));
             }
         }
@@ -2168,7 +2168,7 @@ impl Backend {
             .map(|plaintext_output| match tx_metadata {
                 Some(tx_metadata) => tx_metadata
                     .seismic_elements
-                    .encrypt(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
+                    .encrypt_response(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
                     .map_err(|e| {
                         BlockchainError::Message(format!("Failed to encrypt output: {}", e))
                     })
@@ -3808,7 +3808,7 @@ impl TransactionValidator for Backend {
             let tx_io_sk = seismic_crypto::get_unsecure_sample_secp256k1_sk();
             let _decrypted_data = inner
                 .seismic_elements
-                .decrypt(&tx_io_sk, &inner.input, &tx_metadata)
+                .decrypt_request(&tx_io_sk, &inner.input, &tx_metadata)
                 .map_err(|_e| {
                     InvalidTransactionError::SeismicDecryptionFailed(format!(
                         "Failed to decrypt seismic calldata"

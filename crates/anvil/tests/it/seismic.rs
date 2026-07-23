@@ -16,7 +16,7 @@ use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{SolValue, sol};
 use anvil::{NodeConfig, spawn};
 use secp256k1::{PublicKey, SecretKey};
-use seismic_crypto::aes_decrypt;
+use seismic_crypto::{AesKeyDomain, aes_decrypt, ecdh_decrypt_aead};
 use std::{fs, str::FromStr};
 
 use seismic_prelude::foundry::{
@@ -309,6 +309,18 @@ async fn test_seismic_transaction_rpc() {
         .client_decrypt(&res, &network_pubkey, &get_encryption_private_key(), &metadata)
         .unwrap();
     assert_eq!(Bytes::from(decrypted), test_utils::ContractTestContext::get_code());
+    assert!(
+        ecdh_decrypt_aead(
+            &network_pubkey,
+            &get_encryption_private_key(),
+            AesKeyDomain::TxRequest,
+            &res,
+            seismic_elements.get_enclave_nonce(),
+            &metadata.encode_as_aad(),
+        )
+        .is_err(),
+        "signed-read response must not decrypt with the request traffic key"
+    );
 
     let chain_id = provider.get_chain_id().await.unwrap();
 
