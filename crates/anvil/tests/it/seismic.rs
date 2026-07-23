@@ -16,7 +16,7 @@ use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_types::{SolValue, sol};
 use anvil::{NodeConfig, spawn};
 use secp256k1::{PublicKey, SecretKey};
-use seismic_enclave::aes_decrypt;
+use seismic_crypto::aes_decrypt;
 use std::{fs, str::FromStr};
 
 use seismic_prelude::foundry::{

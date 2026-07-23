@@ -182,8 +182,8 @@ impl EthApi {
         let response = match request.clone() {
             EthRequest::SeismicGetTeePublicKey(()) => {
                 // Use the unsecure sample public key for mock/testing
-                let result: Result<seismic_enclave::secp256k1::PublicKey> =
-                    Ok(seismic_enclave::get_unsecure_sample_secp256k1_pk());
+                let result: Result<seismic_crypto::secp256k1::PublicKey> =
+                    Ok(seismic_crypto::get_unsecure_sample_secp256k1_pk());
                 result.to_rpc_result()
             }
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),

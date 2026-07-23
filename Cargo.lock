@@ -251,7 +251,7 @@ dependencies = [
 [[package]]
 name = "alloy-evm"
 version = "0.20.1"
-source = "git+https://github.com/SeismicSystems/seismic-evm.git?rev=c33f3076495d153eefbde07dd81c3a575f3d19b8#c33f3076495d153eefbde07dd81c3a575f3d19b8"
+source = "git+https://github.com/SeismicSystems/seismic-evm.git?rev=cfd769955988712649d96a749a5d82f65c540778#cfd769955988712649d96a749a5d82f65c540778"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -376,7 +376,7 @@ dependencies = [
 [[package]]
 name = "alloy-op-evm"
 version = "0.20.1"
-source = "git+https://github.com/SeismicSystems/seismic-evm.git?rev=c33f3076495d153eefbde07dd81c3a575f3d19b8#c33f3076495d153eefbde07dd81c3a575f3d19b8"
+source = "git+https://github.com/SeismicSystems/seismic-evm.git?rev=cfd769955988712649d96a749a5d82f65c540778#cfd769955988712649d96a749a5d82f65c540778"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -664,7 +664,7 @@ dependencies = [
 [[package]]
 name = "alloy-seismic-evm"
 version = "0.20.1"
-source = "git+https://github.com/SeismicSystems/seismic-evm.git?rev=c33f3076495d153eefbde07dd81c3a575f3d19b8#c33f3076495d153eefbde07dd81c3a575f3d19b8"
+source = "git+https://github.com/SeismicSystems/seismic-evm.git?rev=cfd769955988712649d96a749a5d82f65c540778#cfd769955988712649d96a749a5d82f65c540778"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -673,8 +673,8 @@ dependencies = [
  "alloy-primitives",
  "auto_impl",
  "revm",
+ "secp256k1 0.30.0",
  "seismic-alloy-consensus",
- "seismic-enclave",
  "seismic-revm",
 ]
 
@@ -1149,7 +1149,7 @@ dependencies = [
  "revm",
  "revm-inspectors",
  "secp256k1 0.30.0",
- "seismic-enclave",
+ "seismic-crypto",
  "seismic-prelude",
  "serde",
  "serde_json",
@@ -1180,7 +1180,7 @@ dependencies = [
  "op-revm",
  "rand 0.9.2",
  "revm",
- "seismic-enclave",
+ "seismic-crypto",
  "seismic-prelude",
  "serde",
  "serde_json",
@@ -6308,31 +6308,13 @@ version = "0.24.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e281ae70cc3b98dac15fced3366a880949e65fc66e345ce857a5682d152f3e62"
 dependencies = [
- "jsonrpsee-client-transport 0.24.10",
- "jsonrpsee-core 0.24.10",
- "jsonrpsee-http-client 0.24.10",
- "jsonrpsee-proc-macros 0.24.10",
- "jsonrpsee-types 0.24.10",
- "jsonrpsee-wasm-client 0.24.10",
- "jsonrpsee-ws-client 0.24.10",
- "tracing",
-]
-
-[[package]]
-name = "jsonrpsee"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f3f48dc3e6b8bd21e15436c1ddd0bc22a6a54e8ec46fedd6adf3425f396ec6a"
-dependencies = [
- "jsonrpsee-client-transport 0.26.0",
- "jsonrpsee-core 0.26.0",
- "jsonrpsee-http-client 0.26.0",
- "jsonrpsee-proc-macros 0.26.0",
- "jsonrpsee-server",
- "jsonrpsee-types 0.26.0",
- "jsonrpsee-wasm-client 0.26.0",
- "jsonrpsee-ws-client 0.26.0",
- "tokio",
+ "jsonrpsee-client-transport",
+ "jsonrpsee-core",
+ "jsonrpsee-http-client",
+ "jsonrpsee-proc-macros",
+ "jsonrpsee-types",
+ "jsonrpsee-wasm-client",
+ "jsonrpsee-ws-client",
  "tracing",
 ]
 
@@ -6347,38 +6329,13 @@ dependencies = [
  "futures-util",
  "gloo-net",
  "http 1.4.0",
- "jsonrpsee-core 0.24.10",
+ "jsonrpsee-core",
  "pin-project 1.1.10",
  "rustls",
  "rustls-pki-types",
  "rustls-platform-verifier",
  "soketto",
  "thiserror 1.0.69",
- "tokio",
- "tokio-rustls",
- "tokio-util",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "jsonrpsee-client-transport"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf36eb27f8e13fa93dcb50ccb44c417e25b818cfa1a481b5470cd07b19c60b98"
-dependencies = [
- "base64 0.22.1",
- "futures-channel",
- "futures-util",
- "gloo-net",
- "http 1.4.0",
- "jsonrpsee-core 0.26.0",
- "pin-project 1.1.10",
- "rustls",
- "rustls-pki-types",
- "rustls-platform-verifier",
- "soketto",
- "thiserror 2.0.17",
  "tokio",
  "tokio-rustls",
  "tokio-util",
@@ -6399,7 +6356,7 @@ dependencies = [
  "http 1.4.0",
  "http-body 1.0.1",
  "http-body-util",
- "jsonrpsee-types 0.24.10",
+ "jsonrpsee-types",
  "parking_lot",
  "pin-project 1.1.10",
  "rand 0.8.5",
@@ -6409,34 +6366,6 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tokio-stream",
- "tracing",
- "wasm-bindgen-futures",
-]
-
-[[package]]
-name = "jsonrpsee-core"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "316c96719901f05d1137f19ba598b5fe9c9bc39f4335f67f6be8613921946480"
-dependencies = [
- "async-trait",
- "bytes",
- "futures-timer",
- "futures-util",
- "http 1.4.0",
- "http-body 1.0.1",
- "http-body-util",
- "jsonrpsee-types 0.26.0",
- "parking_lot",
- "pin-project 1.1.10",
- "rand 0.9.2",
- "rustc-hash",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tokio",
- "tokio-stream",
- "tower 0.5.2",
  "tracing",
  "wasm-bindgen-futures",
 ]
@@ -6453,8 +6382,8 @@ dependencies = [
  "hyper",
  "hyper-rustls",
  "hyper-util",
- "jsonrpsee-core 0.24.10",
- "jsonrpsee-types 0.24.10",
+ "jsonrpsee-core",
+ "jsonrpsee-types",
  "rustls",
  "rustls-platform-verifier",
  "serde",
@@ -6463,29 +6392,6 @@ dependencies = [
  "tokio",
  "tower 0.4.13",
  "tracing",
- "url",
-]
-
-[[package]]
-name = "jsonrpsee-http-client"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "790bedefcec85321e007ff3af84b4e417540d5c87b3c9779b9e247d1bcc3dab8"
-dependencies = [
- "base64 0.22.1",
- "http-body 1.0.1",
- "hyper",
- "hyper-rustls",
- "hyper-util",
- "jsonrpsee-core 0.26.0",
- "jsonrpsee-types 0.26.0",
- "rustls",
- "rustls-platform-verifier",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "tokio",
- "tower 0.5.2",
  "url",
 ]
 
@@ -6503,46 +6409,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jsonrpsee-proc-macros"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2da3f8ab5ce1bb124b6d082e62dffe997578ceaf0aeb9f3174a214589dc00f07"
-dependencies = [
- "heck",
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn 2.0.114",
-]
-
-[[package]]
-name = "jsonrpsee-server"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c51b7c290bb68ce3af2d029648148403863b982f138484a73f02a9dd52dbd7f"
-dependencies = [
- "futures-util",
- "http 1.4.0",
- "http-body 1.0.1",
- "http-body-util",
- "hyper",
- "hyper-util",
- "jsonrpsee-core 0.26.0",
- "jsonrpsee-types 0.26.0",
- "pin-project 1.1.10",
- "route-recognizer",
- "serde",
- "serde_json",
- "soketto",
- "thiserror 2.0.17",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tower 0.5.2",
- "tracing",
-]
-
-[[package]]
 name = "jsonrpsee-types"
 version = "0.24.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6555,38 +6421,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "jsonrpsee-types"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc88ff4688e43cc3fa9883a8a95c6fa27aa2e76c96e610b737b6554d650d7fd5"
-dependencies = [
- "http 1.4.0",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
-]
-
-[[package]]
 name = "jsonrpsee-wasm-client"
 version = "0.24.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9d745e4f543fc10fc0e2b11aa1f3be506b1e475d412167e7191a65ecd239f1c"
 dependencies = [
- "jsonrpsee-client-transport 0.24.10",
- "jsonrpsee-core 0.24.10",
- "jsonrpsee-types 0.24.10",
-]
-
-[[package]]
-name = "jsonrpsee-wasm-client"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7902885de4779f711a95d82c8da2d7e5f9f3a7c7cfa44d51c067fd1c29d72a3c"
-dependencies = [
- "jsonrpsee-client-transport 0.26.0",
- "jsonrpsee-core 0.26.0",
- "jsonrpsee-types 0.26.0",
- "tower 0.5.2",
+ "jsonrpsee-client-transport",
+ "jsonrpsee-core",
+ "jsonrpsee-types",
 ]
 
 [[package]]
@@ -6596,23 +6438,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78fc744f17e7926d57f478cf9ca6e1ee5d8332bf0514860b1a3cdf1742e614cc"
 dependencies = [
  "http 1.4.0",
- "jsonrpsee-client-transport 0.24.10",
- "jsonrpsee-core 0.24.10",
- "jsonrpsee-types 0.24.10",
- "url",
-]
-
-[[package]]
-name = "jsonrpsee-ws-client"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b6fceceeb05301cc4c065ab3bd2fa990d41ff4eb44e4ca1b30fa99c057c3e79"
-dependencies = [
- "http 1.4.0",
- "jsonrpsee-client-transport 0.26.0",
- "jsonrpsee-core 0.26.0",
- "jsonrpsee-types 0.26.0",
- "tower 0.5.2",
+ "jsonrpsee-client-transport",
+ "jsonrpsee-core",
+ "jsonrpsee-types",
  "url",
 ]
 
@@ -7481,7 +7309,7 @@ checksum = "a79f352fc3893dcd670172e615afef993a41798a1d3fc0db88a3e60ef2e70ecc"
 [[package]]
 name = "op-revm"
 version = "10.0.0"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "auto_impl",
  "revm",
@@ -8646,7 +8474,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "29.0.0"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "revm-bytecode",
  "revm-context",
@@ -8664,7 +8492,7 @@ dependencies = [
 [[package]]
 name = "revm-bytecode"
 version = "6.2.2"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "bitvec",
  "phf 0.13.1",
@@ -8675,7 +8503,7 @@ dependencies = [
 [[package]]
 name = "revm-context"
 version = "9.0.2"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "bitvec",
  "cfg-if",
@@ -8691,7 +8519,7 @@ dependencies = [
 [[package]]
 name = "revm-context-interface"
 version = "10.1.0"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
@@ -8706,7 +8534,7 @@ dependencies = [
 [[package]]
 name = "revm-database"
 version = "7.0.5"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "alloy-eips",
  "revm-bytecode",
@@ -8719,7 +8547,7 @@ dependencies = [
 [[package]]
 name = "revm-database-interface"
 version = "7.0.5"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "auto_impl",
  "either",
@@ -8731,7 +8559,7 @@ dependencies = [
 [[package]]
 name = "revm-handler"
 version = "10.0.0"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "auto_impl",
  "derive-where",
@@ -8749,7 +8577,7 @@ dependencies = [
 [[package]]
 name = "revm-inspector"
 version = "10.0.0"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "auto_impl",
  "either",
@@ -8791,7 +8619,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "25.0.2"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "revm-bytecode",
  "revm-context-interface",
@@ -8803,7 +8631,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "27.0.0"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "ark-bls12-381",
  "ark-bn254",
@@ -8827,7 +8655,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "20.2.1"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "alloy-primitives",
  "num_enum",
@@ -8838,7 +8666,7 @@ dependencies = [
 [[package]]
 name = "revm-state"
 version = "7.0.5"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "bitflags 2.10.0",
  "revm-bytecode",
@@ -8909,12 +8737,6 @@ dependencies = [
  "bytes",
  "rustc-hex",
 ]
-
-[[package]]
-name = "route-recognizer"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 
 [[package]]
 name = "rpassword"
@@ -9426,7 +9248,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-consensus"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7545c3bfebb3520d8af5280cd5644c23def663ac#7545c3bfebb3520d8af5280cd5644c23def663ac"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=92d2c0a17808eca1a3b0123d02f8aad003ee1b55#92d2c0a17808eca1a3b0123d02f8aad003ee1b55"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -9436,11 +9258,11 @@ dependencies = [
  "alloy-serde",
  "anyhow",
  "derive_more 1.0.0",
- "jsonrpsee 0.24.10",
+ "jsonrpsee",
  "k256",
  "rand 0.8.5",
  "secp256k1 0.30.0",
- "seismic-enclave",
+ "seismic-crypto",
  "serde",
  "serde_json",
  "thiserror 2.0.17",
@@ -9449,7 +9271,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-network"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7545c3bfebb3520d8af5280cd5644c23def663ac#7545c3bfebb3520d8af5280cd5644c23def663ac"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=92d2c0a17808eca1a3b0123d02f8aad003ee1b55#92d2c0a17808eca1a3b0123d02f8aad003ee1b55"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
@@ -9469,7 +9291,7 @@ dependencies = [
  "reqwest",
  "seismic-alloy-consensus",
  "seismic-alloy-rpc-types",
- "seismic-enclave",
+ "seismic-crypto",
  "serde",
  "tokio",
 ]
@@ -9477,7 +9299,7 @@ dependencies = [
 [[package]]
 name = "seismic-alloy-provider"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7545c3bfebb3520d8af5280cd5644c23def663ac#7545c3bfebb3520d8af5280cd5644c23def663ac"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=92d2c0a17808eca1a3b0123d02f8aad003ee1b55#92d2c0a17808eca1a3b0123d02f8aad003ee1b55"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -9491,14 +9313,14 @@ dependencies = [
  "seismic-alloy-consensus",
  "seismic-alloy-network",
  "seismic-alloy-rpc-types",
- "seismic-enclave",
+ "seismic-crypto",
  "thiserror 2.0.17",
 ]
 
 [[package]]
 name = "seismic-alloy-rpc-types"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7545c3bfebb3520d8af5280cd5644c23def663ac#7545c3bfebb3520d8af5280cd5644c23def663ac"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=92d2c0a17808eca1a3b0123d02f8aad003ee1b55#92d2c0a17808eca1a3b0123d02f8aad003ee1b55"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -9508,32 +9330,30 @@ dependencies = [
  "alloy-serde",
  "derive_more 1.0.0",
  "seismic-alloy-consensus",
- "seismic-enclave",
+ "seismic-crypto",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "seismic-enclave"
+name = "seismic-crypto"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=f90b02f38a6190e8b2ff2d051d9043f3480cd3ac#f90b02f38a6190e8b2ff2d051d9043f3480cd3ac"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=8274f14cbbad76daadad3aaa1d6d0418b3eeffc0#8274f14cbbad76daadad3aaa1d6d0418b3eeffc0"
 dependencies = [
  "aes-gcm",
  "anyhow",
  "hkdf",
- "jsonrpsee 0.26.0",
  "rand 0.9.2",
  "schnorrkel",
  "secp256k1 0.30.0",
  "serde",
  "sha2",
- "tracing",
 ]
 
 [[package]]
 name = "seismic-prelude"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=7545c3bfebb3520d8af5280cd5644c23def663ac#7545c3bfebb3520d8af5280cd5644c23def663ac"
+source = "git+https://github.com/SeismicSystems/seismic-alloy.git?rev=92d2c0a17808eca1a3b0123d02f8aad003ee1b55#92d2c0a17808eca1a3b0123d02f8aad003ee1b55"
 dependencies = [
  "alloy-consensus",
  "alloy-eip7702",
@@ -9558,15 +9378,15 @@ dependencies = [
 [[package]]
 name = "seismic-revm"
 version = "1.0.0"
-source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=dc05eece19f14516ab9f996611fa7c63e1d1a8ae#dc05eece19f14516ab9f996611fa7c63e1d1a8ae"
+source = "git+https://github.com/SeismicSystems/seismic-revm.git?rev=daa7785558bc2f4522d667ff5021ef955145aca4#daa7785558bc2f4522d667ff5021ef955145aca4"
 dependencies = [
  "auto_impl",
  "hkdf",
  "once_cell",
+ "rand 0.9.2",
  "revm",
- "schnorrkel",
  "secp256k1 0.31.1",
- "seismic-enclave",
+ "seismic-crypto",
  "serde",
  "sha2",
 ]
@@ -9991,7 +9811,6 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "futures",
- "http 1.4.0",
  "httparse",
  "log",
  "rand 0.8.5",

@@ -13,7 +13,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-seismic-enclave.workspace = true
+seismic-crypto.workspace = true
 seismic-prelude.workspace = true
 
 foundry-common.workspace = true

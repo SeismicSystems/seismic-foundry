@@ -20,7 +20,7 @@ required-features = ["cli"]
 
 [dependencies]
 # Seismic's added dependencies
-seismic-enclave.workspace = true
+seismic-crypto.workspace = true
 seismic-prelude.workspace = true
 
 # foundry internal
