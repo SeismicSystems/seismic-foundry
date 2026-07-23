@@ -8,7 +8,7 @@ use alloy_consensus::{SignableTransaction, Transaction, TxEip1559};
 use alloy_network::{TransactionBuilder, TxSignerSync};
 use alloy_primitives::{
     Address, B256, ChainId, U256, b256, bytes,
-    map::{AddressHashMap, B256HashMap, HashMap},
+    map::{AddressHashMap, B256HashMap},
 };
 use alloy_provider::Provider;
 use alloy_rpc_types::{BlockId, BlockNumberOrTag, BlockTransactions, state::AccountOverride};
@@ -309,7 +309,7 @@ async fn can_call_with_undersized_max_fee_per_gas() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn can_call_with_state_override() {
+async fn enforces_state_override_policy() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     let wallet = handle.dev_wallets().next().unwrap();
     let signer: EthereumWallet = wallet.clone().into();
@@ -323,8 +323,9 @@ async fn can_call_with_state_override() {
 
     let init_value = "toto".to_string();
 
+    let simple_storage_contract = SimpleStorage::deploy(&provider, init_value).await.unwrap();
     let simple_storage_contract =
-        SimpleStorage::deploy(&provider, init_value.clone()).await.unwrap();
+        SimpleStorage::new(*simple_storage_contract.address(), handle.http_provider());
 
     // Test the `balance` account override
     let balance = U256::from(42u64);
@@ -333,7 +334,8 @@ async fn can_call_with_state_override() {
     let result = multicall_contract.getEthBalance(account).state(overrides).call().await.unwrap();
     assert_eq!(result, balance);
 
-    // Test the `state_diff` account override
+    // Storage overrides are forbidden because they could be used to disclose shielded storage.
+    // Test the `state_diff` account override.
     let mut state_diff = B256HashMap::default();
     state_diff.insert(B256::ZERO, account.into_word());
     let mut overrides = AddressHashMap::default();
@@ -346,21 +348,16 @@ async fn can_call_with_state_override() {
         },
     );
 
-    let last_sender =
-        simple_storage_contract.lastSender().state(HashMap::default()).call().await.unwrap();
-    // No `sender` set without override
+    let last_sender = simple_storage_contract.lastSender().call().await.unwrap();
     assert_eq!(last_sender, Address::ZERO);
 
-    let last_sender =
-        simple_storage_contract.lastSender().state(overrides.clone()).call().await.unwrap();
-    // `sender` *is* set with override
-    assert_eq!(last_sender, account);
+    let err = simple_storage_contract.lastSender().state(overrides).call().await.unwrap_err();
+    assert!(
+        err.to_string().contains("storage override not permitted"),
+        "unexpected state_diff override error: {err}"
+    );
 
-    let value = simple_storage_contract.getValue().state(overrides).call().await.unwrap();
-    // `value` *is not* changed with state-diff
-    assert_eq!(value, init_value);
-
-    // Test the `state` account override
+    // Test the `state` account override.
     let mut state = B256HashMap::default();
     state.insert(B256::ZERO, account.into_word());
     let mut overrides = AddressHashMap::default();
@@ -373,14 +370,11 @@ async fn can_call_with_state_override() {
         },
     );
 
-    let last_sender =
-        simple_storage_contract.lastSender().state(overrides.clone()).call().await.unwrap();
-    // `sender` *is* set with override
-    assert_eq!(last_sender, account);
-
-    let value = simple_storage_contract.getValue().state(overrides).call().await.unwrap();
-    // `value` *is* changed with state
-    assert_eq!(value, "");
+    let err = simple_storage_contract.lastSender().state(overrides).call().await.unwrap_err();
+    assert!(
+        err.to_string().contains("storage override not permitted"),
+        "unexpected state override error: {err}"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]
