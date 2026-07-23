@@ -303,9 +303,11 @@ impl ExecutedState {
         if rpc_data.is_multi_chain() {
             sh_warn!("Multi chain deployment is still under development. Use with caution.")?;
             if !self.build_data.libraries.is_empty() {
-                eyre::bail!(
-                    "Multi chain deployment does not support library linking at the moment."
-                )
+                {
+                    eyre::bail!(
+                        "Multi chain deployment does not support library linking at the moment."
+                    );
+                }
             }
         }
         rpc_data.check_shanghai_support().await?;

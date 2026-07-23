@@ -82,7 +82,9 @@ impl EtherscanIdentifier {
                 let output = project.compile()?;
 
                 if output.has_compiler_errors() {
-                    eyre::bail!("{output}")
+                    {
+                        eyre::bail!("{output}");
+                    }
                 }
 
                 Ok((project, output, root))
