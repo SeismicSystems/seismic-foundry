@@ -4604,6 +4604,7 @@ dependencies = [
  "alloy-eips",
  "alloy-json-abi",
  "alloy-json-rpc",
+ "alloy-network",
  "alloy-primitives",
  "alloy-provider",
  "alloy-pubsub",
