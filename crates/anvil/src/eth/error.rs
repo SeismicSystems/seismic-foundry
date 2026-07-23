@@ -200,6 +200,9 @@ where
             StateOverrideError::CodeOverrideNotPermitted(addr) => {
                 Self::StateOverrideError(format!("code override not permitted for account {addr}"))
             }
+            StateOverrideError::StorageOverrideNotPermitted(addr) => Self::StateOverrideError(
+                format!("storage override not permitted for account {addr}"),
+            ),
         }
     }
 }

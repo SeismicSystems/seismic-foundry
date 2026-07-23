@@ -673,7 +673,7 @@ impl PendingTransaction {
                     authorization_list,
                 } = &tx.tx();
 
-                let tx_io_sk = seismic_enclave::get_unsecure_sample_secp256k1_sk();
+                let tx_io_sk = seismic_crypto::get_unsecure_sample_secp256k1_sk();
                 let tx_metadata = tx.tx().tx_metadata(caller);
                 OpTransaction::new(TxEnv {
                     caller,
@@ -1744,7 +1744,7 @@ mod tests {
         b256,
         hex::{self, FromHex},
     };
-    use seismic_enclave::get_unsecure_sample_secp256k1_pk;
+    use seismic_crypto::get_unsecure_sample_secp256k1_pk;
     use std::str::FromStr;
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
