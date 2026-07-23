@@ -21,9 +21,9 @@ use std::{fs, str::FromStr};
 
 use seismic_prelude::foundry::{
     AnyNetwork, AnyTxEnvelope, EthereumWallet, SeismicCallExt, SeismicCallRequest,
-    SeismicProviderBuilder, SeismicProviderExt, ShieldedCallExt, SignedProviderExt,
-    TransactionRequest, TxLegacyFields, TxSeismic, TxSeismicElements, TxSeismicMetadata,
-    TypedDataRequest, test_utils, tx_builder,
+    SeismicProviderBuilder, SeismicProviderExt, ShieldedCallExt, SignedProviderExt, SimBlock,
+    SimulatePayload, TransactionRequest, TxLegacyFields, TxSeismic, TxSeismicElements,
+    TxSeismicMetadata, TypedDataRequest, test_utils, tx_builder,
 };
 
 // common utils
@@ -830,4 +830,77 @@ async fn test_seismic_fork_send_tx() {
 
     let balance = provider.get_balance(to).await.unwrap();
     assert_eq!(balance, U256::from(1e18 as u64));
+}
+
+// Deploy bytecode for a probe exposing isSeismic() (returns txtype() == 0x4A).
+const TXTYPE_PROBE_DEPLOY: &str = "6080604052348015600e575f5ffd5b5060d580601a5f395ff3fe6080604052348015600e575f5ffd5b5060043610603a575f3560e01c806302ce808814603e578063266cf1091460545780639f9a32b014605d575b5f5ffd5b604051604ab21481526020015b60405180910390f35b605bb25f55565b005b60636070565b604051908152602001604b565b5f548156fea26469706673582212200b97d0c18f63a3181d9a4506b939f164fbf13afe1d1ba0d19c89e782713cd1c764736f6c63782c302e382e33312d646576656c6f702e323032362e372e32302b636f6d6d69742e66643566333839632e6d6f64005d";
+
+/// An unauthenticated eth_simulateV1 call carrying valid seismic ciphertext + elements but no
+/// signature must NOT be classified as a Seismic tx. Otherwise txtype()/isSeismicTx() would
+/// report an encrypted channel for a forged, unauthenticated read.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_txtype_unauthenticated_simulate_cannot_forge_seismic() {
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    api.anvil_set_auto_mine(true).await.unwrap();
+    let signer = handle.dev_wallets().next().unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(EthereumWallet::new(signer.clone()))
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
+    let deployer = handle.dev_accounts().next().unwrap();
+    let network_pubkey = provider.get_tee_pubkey().await.unwrap();
+    let chain_id = provider.get_chain_id().await.unwrap();
+
+    // Deploy the probe.
+    let deploy_code = Bytes::from_hex(TXTYPE_PROBE_DEPLOY).unwrap();
+    let deploy_req =
+        tx_builder().with_from(deployer).with_kind(TxKind::Create).with_input(deploy_code).into();
+    let contract = provider
+        .send_transaction(deploy_req.into())
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+
+    // isSeismic() selector, encrypted into a valid-but-UNSIGNED seismic request (attacker uses the
+    // public TEE key + arbitrary metadata; decryptable != authenticated).
+    let is_seismic = Bytes::from_hex("02ce8088").unwrap();
+    let forged = get_unsigned_seismic_tx_request(
+        &signer,
+        &network_pubkey,
+        provider.get_transaction_count(deployer).await.unwrap(),
+        TxKind::Call(contract),
+        chain_id,
+        is_seismic,
+        true,
+    )
+    .await;
+
+    let payload = SimulatePayload {
+        block_state_calls: vec![SimBlock {
+            block_overrides: None,
+            state_overrides: None,
+            calls: vec![forged.into()],
+        }],
+        trace_transfers: false,
+        validation: false,
+        return_full_transactions: false,
+    };
+    let blocks = api.simulate_v1(payload, None).await.unwrap();
+    let call = &blocks[0].calls[0];
+
+    // The call must actually execute (so we're testing isSeismic()'s result, not a silent
+    // failure that would also decode to zero) and return the 32-byte bool `false`.
+    assert!(call.status, "forged simulate call did not execute: {:?}", call.error);
+    assert_eq!(call.return_data.len(), 32, "expected a 32-byte bool return");
+    assert_eq!(
+        U256::from_be_slice(call.return_data.as_ref()),
+        U256::ZERO,
+        "unauthenticated eth_simulateV1 forged txtype() == 74 (confidentiality bypass)"
+    );
 }

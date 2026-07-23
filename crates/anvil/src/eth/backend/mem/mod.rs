@@ -1642,7 +1642,7 @@ impl Backend {
                 if let Some(block_overrides) = overrides.block {
                     cache_db.apply_block_overrides(*block_overrides, &mut block);
                 }
-                self.call_with_state(&cache_db, request, fee_details, block)
+                self.call_with_state(&cache_db, request, fee_details, block, false)
             }?;
             trace!(target: "backend", "call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
             Ok((exit, out, gas, state))
@@ -1704,13 +1704,13 @@ impl Backend {
         request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
+        trusted_seismic: bool,
     ) -> Env {
-        // Signed reads (eth_call carrying seismic_elements) execute as the Seismic tx type.
-        let tx_type = if request.inner.seismic_elements.is_some() {
-            SEISMIC_TX_TYPE_ID
-        } else {
-            request.minimal_tx_type() as u8
-        };
+        // Only the authenticated signed-read path (after validate_seismic_call_tx_metadata) may
+        // classify a call as Seismic. Never infer it from user-supplied fields, or an
+        // unauthenticated eth_call/simulateV1/trace could forge txtype() == 74.
+        let tx_type =
+            if trusted_seismic { SEISMIC_TX_TYPE_ID } else { request.minimal_tx_type() as u8 };
         let cloned_inner = request.inner.clone();
 
         let WithOtherFields::<TransactionRequest> {
@@ -1902,6 +1902,7 @@ impl Backend {
                         WithOtherFields::new(seismic_request.clone()),
                         fee_details,
                         block_env.clone(),
+                        false,
                     );
 
                     // Always disable EIP-3607
@@ -2075,10 +2076,11 @@ impl Backend {
         request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
+        trusted_seismic: bool,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let mut inspector = self.build_inspector();
         Self::check_calldata_decryption(&request)?;
-        let env = self.build_call_env(request, fee_details, block_env);
+        let env = self.build_call_env(request, fee_details, block_env, trusted_seismic);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state } = evm.transact(env.tx)?;
         let (exit_reason, gas_used, out) = match result {
@@ -2168,7 +2170,7 @@ impl Backend {
             }
         }
         let (exit_reason, out, gas_used, state) =
-            self.call_with_state(state, request, fee_details, block_env)?;
+            self.call_with_state(state, request, fee_details, block_env, tx_metadata.is_some())?;
         let output_data = out
             .map(|plaintext_output| match tx_metadata {
                 Some(tx_metadata) => tx_metadata
@@ -2223,7 +2225,7 @@ impl Backend {
                                 TracingInspectorConfig::from_geth_call_config(&call_config),
                             );
                             Self::check_calldata_decryption(&request)?;
-                            let env = self.build_call_env(request, fee_details, block);
+                            let env = self.build_call_env(request, fee_details, block, false);
                             let mut evm =
                                 self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
                             let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
@@ -2257,7 +2259,7 @@ impl Backend {
                                 .map_err(|err| BlockchainError::Message(err.to_string()))?;
 
                         Self::check_calldata_decryption(&request)?;
-                        let env = self.build_call_env(request, fee_details, block.clone());
+                        let env = self.build_call_env(request, fee_details, block.clone(), false);
                         let mut evm =
                             self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
                         let result = evm.transact(env.tx.clone())?;
@@ -2282,7 +2284,7 @@ impl Backend {
                 .with_tracing_config(TracingInspectorConfig::from_geth_config(&config));
 
             Self::check_calldata_decryption(&request)?;
-            let env = self.build_call_env(request, fee_details, block);
+            let env = self.build_call_env(request, fee_details, block, false);
             let mut evm = self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
             let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
 
@@ -2325,7 +2327,7 @@ impl Backend {
             AccessListInspector::new(request.inner.inner.access_list.clone().unwrap_or_default());
 
         Self::check_calldata_decryption(&request)?;
-        let env = self.build_call_env(request, fee_details, block_env);
+        let env = self.build_call_env(request, fee_details, block_env, false);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
         let (exit_reason, gas_used, out) = match result {
