@@ -555,6 +555,14 @@ impl Cheatcode for txGasPriceCall {
     }
 }
 
+impl Cheatcode for txTypeCall {
+    fn apply_stateful(&self, ccx: &mut CheatsCtxt) -> Result {
+        let Self { newTxType } = self;
+        ccx.ecx.tx.tx_type = *newTxType;
+        Ok(Default::default())
+    }
+}
+
 impl Cheatcode for warpCall {
     fn apply_stateful(&self, ccx: &mut CheatsCtxt) -> Result {
         let Self { newTimestamp } = self;
