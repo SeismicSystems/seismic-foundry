@@ -117,7 +117,9 @@ impl FromStr for SeismicHardfork {
         let hardfork = match s.as_str() {
             "mercury" => Self::Mercury,
             "latest" => Self::Latest,
-            _ => eyre::bail!("Unknown hardfork {s}"),
+            _ => {
+                eyre::bail!("Unknown hardfork {s}");
+            }
         };
         Ok(hardfork)
     }

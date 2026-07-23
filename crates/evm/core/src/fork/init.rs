@@ -48,7 +48,9 @@ pub async fn environment<N: Network, P: Provider<N>>(
                  latest block number: {latest_block}"
             );
         }
-        eyre::bail!("failed to get block for block number: {block_number}")
+        {
+            eyre::bail!("failed to get block for block number: {block_number}");
+        }
     };
 
     let cfg = configure_env(

@@ -219,7 +219,9 @@ pub fn serialize_value_as_json(value: DynSolValue) -> Result<Value> {
         DynSolValue::Tuple(values) => Ok(Value::Array(
             values.into_iter().map(serialize_value_as_json).collect::<Result<_>>()?,
         )),
-        DynSolValue::Function(_) => eyre::bail!("cannot serialize function pointer"),
+        DynSolValue::Function(_) => {
+            eyre::bail!("cannot serialize function pointer");
+        }
     }
 }
 

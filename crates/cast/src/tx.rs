@@ -99,13 +99,13 @@ pub fn validate_from_address(
     if let Some(specified_from) = specified_from
         && specified_from != signer_address
     {
-        eyre::bail!(
-                "\
-The specified sender via CLI/env vars does not match the sender configured via
-the hardware wallet's HD Path.
-Please use the `--hd-path <PATH>` parameter to specify the BIP32 Path which
-corresponds to the sender, or let foundry automatically detect it by not specifying any sender address."
-            )
+        {
+            eyre::bail!("\
+        The specified sender via CLI/env vars does not match the sender configured via
+        the hardware wallet's HD Path.
+        Please use the `--hd-path <PATH>` parameter to specify the BIP32 Path which
+        corresponds to the sender, or let foundry automatically detect it by not specifying any sender address.");
+        }
     }
     Ok(())
 }
@@ -298,7 +298,9 @@ impl<P: Provider<AnyNetwork>> CastTxBuilder<P, InputState> {
         let tx = tx.build_unsigned()?;
         match tx {
             AnyTypedTransaction::Ethereum(t) => Ok(hex::encode_prefixed(t.encoded_for_signing())),
-            _ => eyre::bail!("Cannot generate unsigned transaction for non-Ethereum transactions"),
+            _ => {
+                eyre::bail!("Cannot generate unsigned transaction for non-Ethereum transactions");
+            }
         }
     }
 
@@ -335,9 +337,11 @@ impl<P: Provider<AnyNetwork>> CastTxBuilder<P, InputState> {
             self.resolve_auth(sender, tx_nonce).await?;
         } else if self.auth.is_some() {
             let Some(CliAuthorizationList::Signed(signed_auth)) = self.auth.take() else {
-                eyre::bail!(
-                    "SignedAuthorization needs to be provided for generating unsigned 7702 txs"
-                )
+                {
+                    eyre::bail!(
+                        "SignedAuthorization needs to be provided for generating unsigned 7702 txs"
+                    );
+                }
             };
 
             self.tx.set_authorization_list(vec![signed_auth]);
@@ -405,10 +409,14 @@ impl<P: Provider<AnyNetwork>> CastTxBuilder<P, InputState> {
                         && let Some(data) = &payload.data
                         && let Ok(Some(decoded_error)) = decode_execution_revert(data).await
                     {
-                        eyre::bail!("Failed to estimate gas: {}: {}", err, decoded_error)
+                        {
+                            eyre::bail!("Failed to estimate gas: {}: {}", err, decoded_error);
+                        }
                     }
                 }
-                eyre::bail!("Failed to estimate gas: {}", err)
+                {
+                    eyre::bail!("Failed to estimate gas: {}", err);
+                }
             }
         }
     }
