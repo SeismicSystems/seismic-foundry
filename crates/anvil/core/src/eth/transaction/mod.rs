@@ -681,7 +681,7 @@ impl PendingTransaction {
                     // these two have already been validated in TransactionValidator,
                     // so we simply unwrap here
                     data: seismic_elements
-                        .decrypt(&tx_io_sk, &input, &tx_metadata)
+                        .decrypt_request(&tx_io_sk, &input, &tx_metadata)
                         .expect("failed to decrypt ciphertext")
                         .into(),
                     chain_id: Some(*chain_id),
