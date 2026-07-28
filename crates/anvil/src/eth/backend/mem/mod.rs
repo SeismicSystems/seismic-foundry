@@ -264,6 +264,20 @@ pub struct Backend {
     disable_pool_balance_checks: bool,
 }
 
+/// Whether a call/estimate may be classified as a Seismic transaction (`txtype() == 74`).
+///
+/// Only an authenticated signed-read path may pass `TrustedSeismic`; every other caller must pass
+/// `Untrusted`, so `txtype()` is derived from standard EIP-2718 fields and cannot be forged by an
+/// unauthenticated request. This is a typed marker rather than a bare `bool` so each caller must
+/// state its trust level explicitly.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SeismicClassification {
+    /// Authenticated signed Seismic read/tx — classify as Seismic (`0x4A`).
+    TrustedSeismic,
+    /// Not an authenticated Seismic call — classify from standard fields only.
+    Untrusted,
+}
+
 impl Backend {
     /// Initialises the balance of the given accounts
     #[expect(clippy::too_many_arguments)]
@@ -1642,7 +1656,13 @@ impl Backend {
                 if let Some(block_overrides) = overrides.block {
                     cache_db.apply_block_overrides(*block_overrides, &mut block);
                 }
-                self.call_with_state(&cache_db, request, fee_details, block, false)
+                self.call_with_state(
+                    &cache_db,
+                    request,
+                    fee_details,
+                    block,
+                    SeismicClassification::Untrusted,
+                )
             }?;
             trace!(target: "backend", "call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
             Ok((exit, out, gas, state))
@@ -1704,13 +1724,15 @@ impl Backend {
         request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
-        trusted_seismic: bool,
+        classification: SeismicClassification,
     ) -> Env {
-        // Only the authenticated signed-read path (after validate_seismic_call_tx_metadata) may
-        // classify a call as Seismic. Never infer it from user-supplied fields, or an
-        // unauthenticated eth_call/simulateV1/trace could forge txtype() == 74.
-        let tx_type =
-            if trusted_seismic { SEISMIC_TX_TYPE_ID } else { request.minimal_tx_type() as u8 };
+        // Only the authenticated signed-read path may classify a call as Seismic. Never infer it
+        // from user-supplied fields, or an unauthenticated eth_call/simulateV1/trace could forge
+        // txtype() == 74.
+        let tx_type = match classification {
+            SeismicClassification::TrustedSeismic => SEISMIC_TX_TYPE_ID,
+            SeismicClassification::Untrusted => request.minimal_tx_type() as u8,
+        };
         let cloned_inner = request.inner.clone();
 
         let WithOtherFields::<TransactionRequest> {
@@ -1902,7 +1924,7 @@ impl Backend {
                         WithOtherFields::new(seismic_request.clone()),
                         fee_details,
                         block_env.clone(),
-                        false,
+                        SeismicClassification::Untrusted,
                     );
 
                     // Always disable EIP-3607
@@ -2076,11 +2098,11 @@ impl Backend {
         request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
-        trusted_seismic: bool,
+        classification: SeismicClassification,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let mut inspector = self.build_inspector();
         Self::check_calldata_decryption(&request)?;
-        let env = self.build_call_env(request, fee_details, block_env, trusted_seismic);
+        let env = self.build_call_env(request, fee_details, block_env, classification);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state } = evm.transact(env.tx)?;
         let (exit_reason, gas_used, out) = match result {
@@ -2169,8 +2191,17 @@ impl Backend {
                 return Err(BlockchainError::Message(format!("Invalid AEAD metadata: {e}")));
             }
         }
-        let (exit_reason, out, gas_used, state) =
-            self.call_with_state(state, request, fee_details, block_env, tx_metadata.is_some())?;
+        let (exit_reason, out, gas_used, state) = self.call_with_state(
+            state,
+            request,
+            fee_details,
+            block_env,
+            if tx_metadata.is_some() {
+                SeismicClassification::TrustedSeismic
+            } else {
+                SeismicClassification::Untrusted
+            },
+        )?;
         let output_data = out
             .map(|plaintext_output| match tx_metadata {
                 Some(tx_metadata) => tx_metadata
@@ -2225,7 +2256,12 @@ impl Backend {
                                 TracingInspectorConfig::from_geth_call_config(&call_config),
                             );
                             Self::check_calldata_decryption(&request)?;
-                            let env = self.build_call_env(request, fee_details, block, false);
+                            let env = self.build_call_env(
+                                request,
+                                fee_details,
+                                block,
+                                SeismicClassification::Untrusted,
+                            );
                             let mut evm =
                                 self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
                             let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
@@ -2259,7 +2295,12 @@ impl Backend {
                                 .map_err(|err| BlockchainError::Message(err.to_string()))?;
 
                         Self::check_calldata_decryption(&request)?;
-                        let env = self.build_call_env(request, fee_details, block.clone(), false);
+                        let env = self.build_call_env(
+                            request,
+                            fee_details,
+                            block.clone(),
+                            SeismicClassification::Untrusted,
+                        );
                         let mut evm =
                             self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
                         let result = evm.transact(env.tx.clone())?;
@@ -2284,7 +2325,8 @@ impl Backend {
                 .with_tracing_config(TracingInspectorConfig::from_geth_config(&config));
 
             Self::check_calldata_decryption(&request)?;
-            let env = self.build_call_env(request, fee_details, block, false);
+            let env =
+                self.build_call_env(request, fee_details, block, SeismicClassification::Untrusted);
             let mut evm = self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
             let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
 
@@ -2327,7 +2369,8 @@ impl Backend {
             AccessListInspector::new(request.inner.inner.access_list.clone().unwrap_or_default());
 
         Self::check_calldata_decryption(&request)?;
-        let env = self.build_call_env(request, fee_details, block_env, false);
+        let env =
+            self.build_call_env(request, fee_details, block_env, SeismicClassification::Untrusted);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
         let (exit_reason, gas_used, out) = match result {

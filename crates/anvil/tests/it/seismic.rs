@@ -904,3 +904,83 @@ async fn test_txtype_unauthenticated_simulate_cannot_forge_seismic() {
         "unauthenticated eth_simulateV1 forged txtype() == 74 (confidentiality bypass)"
     );
 }
+
+/// A signed (authenticated) eth_estimateGas must execute as a Seismic tx (`txtype() == 74`), so an
+/// `isSeismicTx()`-dependent path is estimated for what will actually be sent. The probe's
+/// `record()` stores `txtype()` into slot 0, so a signed estimate pays the 0 -> nonzero SSTORE
+/// (`txtype()` == 74) while an unsigned estimate stores 0 -> 0; the signed estimate is therefore
+/// materially higher. Regression test for the P2 estimator defect (it previously ran every
+/// estimate as a non-Seismic tx, so `scast send --seismic` / `forge create` could revert during
+/// automatic estimation).
+#[tokio::test(flavor = "multi_thread")]
+async fn test_txtype_signed_estimate_executes_as_seismic() {
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    api.anvil_set_auto_mine(true).await.unwrap();
+    let signer = handle.dev_wallets().next().unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(EthereumWallet::new(signer.clone()))
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
+    let deployer = handle.dev_accounts().next().unwrap();
+    let network_pubkey = provider.get_tee_pubkey().await.unwrap();
+    let chain_id = provider.get_chain_id().await.unwrap();
+
+    // Deploy the probe.
+    let deploy_code = Bytes::from_hex(TXTYPE_PROBE_DEPLOY).unwrap();
+    let deploy_req =
+        tx_builder().with_from(deployer).with_kind(TxKind::Create).with_input(deploy_code).into();
+    let contract = provider
+        .send_transaction(deploy_req.into())
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+
+    // record() — stores txtype() into slot 0.
+    let record = Bytes::from_hex("266cf109").unwrap();
+    let nonce = provider.get_transaction_count(deployer).await.unwrap();
+
+    // Signed seismic read: the estimator must run it as txtype 74 (SSTORE 0 -> 74).
+    let signed = get_signed_seismic_tx_typed_data(
+        &signer,
+        &network_pubkey,
+        nonce,
+        TxKind::Call(contract),
+        chain_id,
+        record.clone(),
+        true,
+    )
+    .await;
+    let signed_gas = api
+        .estimate_gas(SeismicCallRequest::TypedData(signed), None, EvmOverrides::default())
+        .await
+        .unwrap();
+
+    // Unsigned request to the same function: the estimator runs it as a standard tx (txtype 0),
+    // so record() does SSTORE 0 -> 0.
+    let unsigned = TransactionRequest {
+        inner: AlloyTransactionRequest {
+            to: Some(TxKind::Call(contract)),
+            input: TransactionInput { input: Some(record), data: None },
+            ..Default::default()
+        },
+        seismic_elements: None,
+    };
+    let unsigned_gas = api
+        .estimate_gas(WithOtherFields::new(unsigned).into(), None, EvmOverrides::default())
+        .await
+        .unwrap();
+
+    // The 0 -> nonzero SSTORE costs ~20k more gas. If the signed estimate had run as a standard tx
+    // (the P2 bug), txtype() would be 0 and the two estimates would match.
+    assert!(
+        signed_gas > unsigned_gas + U256::from(15_000),
+        "signed estimate ({signed_gas}) should exceed unsigned ({unsigned_gas}) by the txtype-74 SSTORE cost; \
+         if they match, the signed estimate ran as a non-Seismic tx"
+    );
+}
