@@ -264,12 +264,9 @@ pub struct Backend {
     disable_pool_balance_checks: bool,
 }
 
-/// Whether a call/estimate may be classified as a Seismic transaction (`txtype() == 74`).
-///
-/// Only an authenticated signed-read path may pass `TrustedSeismic`; every other caller must pass
-/// `Untrusted`, so `txtype()` is derived from standard EIP-2718 fields and cannot be forged by an
-/// unauthenticated request. This is a typed marker rather than a bare `bool` so each caller must
-/// state its trust level explicitly.
+/// Whether a call may be classified as Seismic (`txtype() == 74`). Only an authenticated
+/// signed-read path passes `TrustedSeismic`; all others pass `Untrusted` so `txtype()` can't be
+/// forged from user-supplied fields.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SeismicClassification {
     /// Authenticated signed Seismic read/tx — classify as Seismic (`0x4A`).
@@ -1726,9 +1723,6 @@ impl Backend {
         block_env: BlockEnv,
         classification: SeismicClassification,
     ) -> Env {
-        // Only the authenticated signed-read path may classify a call as Seismic. Never infer it
-        // from user-supplied fields, or an unauthenticated eth_call/simulateV1/trace could forge
-        // txtype() == 74.
         let tx_type = match classification {
             SeismicClassification::TrustedSeismic => SEISMIC_TX_TYPE_ID,
             SeismicClassification::Untrusted => request.minimal_tx_type() as u8,

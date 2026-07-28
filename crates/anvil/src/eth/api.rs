@@ -1375,9 +1375,7 @@ impl EthApi {
                 }
             }
             other => {
-                // `seismic_call` re-derives the classification via
-                // validate_seismic_call_tx_metadata on this authenticated request,
-                // so the marker isn't needed here.
+                // seismic_call re-derives the classification, so the marker is unused here.
                 let (request, _) = Self::recover_signed_request(other)?;
                 self.seismic_call(request, block_number, overrides).await
             }
@@ -1485,9 +1483,6 @@ impl EthApi {
     ) -> Result<U256> {
         node_info!("eth_estimateGas");
 
-        // An unsigned request is unauthenticated, so its estimate must run as a standard tx; only a
-        // signed (authenticated) seismic request estimates as Seismic, matching what will actually
-        // be sent. Otherwise an `isSeismicTx()`-gated function reverts during estimation.
         let (request, classification) = match request {
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 // See comment in eth_call above — same rationale.
@@ -3207,10 +3202,8 @@ impl EthApi {
             }
         };
 
-        // Recover the sender — seismic txs use seismic-specific recovery,
-        // non-seismic txs use PendingTransaction for standard recovery. The signature is what
-        // authenticates the request, so only a signed *seismic* tx may be classified as Seismic;
-        // a signed standard tx recovers a real sender but is not a Seismic call.
+        // Recover the sender — seismic txs use seismic-specific recovery, non-seismic use
+        // PendingTransaction for standard recovery.
         let (tx, sender, classification) =
             if let Some(signed_seismic_tx) = typed_tx.clone().seismic() {
                 let sender = signed_seismic_tx.recover_signer().map_err(|e| {
@@ -3251,6 +3244,14 @@ impl EthApi {
             if overrides.has_state() || overrides.has_block() {
                 return Err(BlockchainError::EvmOverrideError(
                     "not available on past forked blocks".to_string(),
+                ));
+            }
+            // The fork RPC gets only the recovered request, so it can't reproduce txtype 74 — fail
+            // explicitly rather than silently estimating a signed read as standard.
+            if matches!(classification, SeismicClassification::TrustedSeismic) {
+                return Err(BlockchainError::Message(
+                    "signed Seismic gas estimation is not supported for blocks predating the fork"
+                        .to_string(),
                 ));
             }
             return Ok(fork.estimate_gas(&request, Some(number.into())).await?);

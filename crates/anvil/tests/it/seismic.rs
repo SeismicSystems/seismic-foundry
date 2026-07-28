@@ -835,6 +835,10 @@ async fn test_seismic_fork_send_tx() {
 // Deploy bytecode for a probe exposing isSeismic() (returns txtype() == 0x4A).
 const TXTYPE_PROBE_DEPLOY: &str = "6080604052348015600e575f5ffd5b5060d580601a5f395ff3fe6080604052348015600e575f5ffd5b5060043610603a575f3560e01c806302ce808814603e578063266cf1091460545780639f9a32b014605d575b5f5ffd5b604051604ab21481526020015b60405180910390f35b605bb25f55565b005b60636070565b604051908152602001604b565b5f548156fea26469706673582212200b97d0c18f63a3181d9a4506b939f164fbf13afe1d1ba0d19c89e782713cd1c764736f6c63782c302e382e33312d646576656c6f702e323032362e372e32302b636f6d6d69742e66643566333839632e6d6f64005d";
 
+// Deploy bytecode for a probe whose requireSeismic() [c6d819f6] reverts unless txtype() == 0x4A.
+// Success vs revert is a 74-specific signal (no other tx type passes) needing no decryption.
+const TXTYPE_GATED_PROBE_DEPLOY: &str = "6080604052348015600e575f5ffd5b50609f80601a5f395ff3fe6080604052348015600e575f5ffd5b50600436106026575f3560e01c8063c6d819f614602a575b5f5ffd5b60306032565b005b604ab214603d575f5ffd5b56fea26469706673582212208b35e1118a8dc0dc3236014d69bd3f0d2b56b74698c4f84649930d9e14726b3664736f6c63782c302e382e33312d646576656c6f702e323032362e372e32302b636f6d6d69742e66643566333839632e6d6f64005d";
+
 /// An unauthenticated eth_simulateV1 call carrying valid seismic ciphertext + elements but no
 /// signature must NOT be classified as a Seismic tx. Otherwise txtype()/isSeismicTx() would
 /// report an encrypted channel for a forged, unauthenticated read.
@@ -853,7 +857,6 @@ async fn test_txtype_unauthenticated_simulate_cannot_forge_seismic() {
     let network_pubkey = provider.get_tee_pubkey().await.unwrap();
     let chain_id = provider.get_chain_id().await.unwrap();
 
-    // Deploy the probe.
     let deploy_code = Bytes::from_hex(TXTYPE_PROBE_DEPLOY).unwrap();
     let deploy_req =
         tx_builder().with_from(deployer).with_kind(TxKind::Create).with_input(deploy_code).into();
@@ -867,8 +870,7 @@ async fn test_txtype_unauthenticated_simulate_cannot_forge_seismic() {
         .contract_address
         .unwrap();
 
-    // isSeismic() selector, encrypted into a valid-but-UNSIGNED seismic request (attacker uses the
-    // public TEE key + arbitrary metadata; decryptable != authenticated).
+    // isSeismic() selector in a valid-but-unsigned seismic request (decryptable != authenticated).
     let is_seismic = Bytes::from_hex("02ce8088").unwrap();
     let forged = get_unsigned_seismic_tx_request(
         &signer,
@@ -894,8 +896,7 @@ async fn test_txtype_unauthenticated_simulate_cannot_forge_seismic() {
     let blocks = api.simulate_v1(payload, None).await.unwrap();
     let call = &blocks[0].calls[0];
 
-    // The call must actually execute (so we're testing isSeismic()'s result, not a silent
-    // failure that would also decode to zero) and return the 32-byte bool `false`.
+    // Must actually execute (not a silent failure that would also decode to zero).
     assert!(call.status, "forged simulate call did not execute: {:?}", call.error);
     assert_eq!(call.return_data.len(), 32, "expected a 32-byte bool return");
     assert_eq!(
@@ -905,15 +906,10 @@ async fn test_txtype_unauthenticated_simulate_cannot_forge_seismic() {
     );
 }
 
-/// A signed (authenticated) eth_estimateGas must execute as a Seismic tx (`txtype() == 74`), so an
-/// `isSeismicTx()`-dependent path is estimated for what will actually be sent. The probe's
-/// `record()` stores `txtype()` into slot 0, so a signed estimate pays the 0 -> nonzero SSTORE
-/// (`txtype()` == 74) while an unsigned estimate stores 0 -> 0; the signed estimate is therefore
-/// materially higher. Regression test for the P2 estimator defect (it previously ran every
-/// estimate as a non-Seismic tx, so `scast send --seismic` / `forge create` could revert during
-/// automatic estimation).
+/// A signed estimate must run as a Seismic tx (`txtype() == 74`): `requireSeismic()` succeeds for
+/// the signed read and reverts for the plain call. Regression test for the P2 estimator defect.
 #[tokio::test(flavor = "multi_thread")]
-async fn test_txtype_signed_estimate_executes_as_seismic() {
+async fn test_txtype_signed_estimate_classifies_seismic() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     api.anvil_set_auto_mine(true).await.unwrap();
     let signer = handle.dev_wallets().next().unwrap();
@@ -927,8 +923,7 @@ async fn test_txtype_signed_estimate_executes_as_seismic() {
     let network_pubkey = provider.get_tee_pubkey().await.unwrap();
     let chain_id = provider.get_chain_id().await.unwrap();
 
-    // Deploy the probe.
-    let deploy_code = Bytes::from_hex(TXTYPE_PROBE_DEPLOY).unwrap();
+    let deploy_code = Bytes::from_hex(TXTYPE_GATED_PROBE_DEPLOY).unwrap();
     let deploy_req =
         tx_builder().with_from(deployer).with_kind(TxKind::Create).with_input(deploy_code).into();
     let contract = provider
@@ -941,46 +936,39 @@ async fn test_txtype_signed_estimate_executes_as_seismic() {
         .contract_address
         .unwrap();
 
-    // record() — stores txtype() into slot 0.
-    let record = Bytes::from_hex("266cf109").unwrap();
+    let require_seismic = Bytes::from_hex("c6d819f6").unwrap();
     let nonce = provider.get_transaction_count(deployer).await.unwrap();
 
-    // Signed seismic read: the estimator must run it as txtype 74 (SSTORE 0 -> 74).
     let signed = get_signed_seismic_tx_typed_data(
         &signer,
         &network_pubkey,
         nonce,
         TxKind::Call(contract),
         chain_id,
-        record.clone(),
+        require_seismic.clone(),
         true,
     )
     .await;
-    let signed_gas = api
+    let signed_res = api
         .estimate_gas(SeismicCallRequest::TypedData(signed), None, EvmOverrides::default())
-        .await
-        .unwrap();
+        .await;
+    assert!(
+        signed_res.is_ok(),
+        "signed estimate of requireSeismic() should succeed (txtype()==74), got {signed_res:?}"
+    );
 
-    // Unsigned request to the same function: the estimator runs it as a standard tx (txtype 0),
-    // so record() does SSTORE 0 -> 0.
-    let unsigned = TransactionRequest {
+    let plain = TransactionRequest {
         inner: AlloyTransactionRequest {
             to: Some(TxKind::Call(contract)),
-            input: TransactionInput { input: Some(record), data: None },
+            input: TransactionInput { input: Some(require_seismic), data: None },
             ..Default::default()
         },
         seismic_elements: None,
     };
-    let unsigned_gas = api
-        .estimate_gas(WithOtherFields::new(unsigned).into(), None, EvmOverrides::default())
-        .await
-        .unwrap();
-
-    // The 0 -> nonzero SSTORE costs ~20k more gas. If the signed estimate had run as a standard tx
-    // (the P2 bug), txtype() would be 0 and the two estimates would match.
+    let plain_res =
+        api.estimate_gas(WithOtherFields::new(plain).into(), None, EvmOverrides::default()).await;
     assert!(
-        signed_gas > unsigned_gas + U256::from(15_000),
-        "signed estimate ({signed_gas}) should exceed unsigned ({unsigned_gas}) by the txtype-74 SSTORE cost; \
-         if they match, the signed estimate ran as a non-Seismic tx"
+        plain_res.is_err(),
+        "plain estimate of requireSeismic() should revert (txtype()!=74), but it succeeded"
     );
 }
