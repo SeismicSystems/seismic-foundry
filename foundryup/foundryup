@@ -25,7 +25,6 @@ export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
 main() {
   need_cmd git
   need_cmd curl
-  need_cmd jq
 
   while [[ -n $1 ]]; do
     case $1 in
@@ -440,22 +439,18 @@ install_ssolc() {
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf "$TEMP_DIR"' EXIT
 
-  # Download the release
-  echo "Fetching latest release information..."
-  GITHUB_API_URL="https://api.github.com/repos/SeismicSystems/seismic-solidity/releases/latest"
-  ASSET_ID=$(curl -s "$GITHUB_API_URL" | \
-      jq -r --arg name "$TARGET_NAME" '.assets[] | select(.name == $name) | .id')
-
-  if [[ -z "$ASSET_ID" ]]; then
-    echo "Error: Asset $TARGET_NAME not found in the latest release."
-    exit 1
-  fi
-
+  # Download the release. The releases/latest/download/<asset> redirect
+  # resolves the latest release without the GitHub REST API, whose
+  # unauthenticated per-IP rate limit is routinely exhausted on shared CI
+  # runners (the API's JSON error body has no .assets, which used to
+  # surface here as "jq: Cannot iterate over null").
   echo "Downloading $TARGET_NAME..."
   DOWNLOAD_PATH="$TEMP_DIR/$TARGET_NAME"
-  curl -L -H "Accept: application/octet-stream" \
-       -o "$DOWNLOAD_PATH" \
-       "https://api.github.com/repos/SeismicSystems/seismic-solidity/releases/assets/$ASSET_ID"
+  DOWNLOAD_URL="https://github.com/SeismicSystems/seismic-solidity/releases/latest/download/$TARGET_NAME"
+  if ! curl -fL -o "$DOWNLOAD_PATH" "$DOWNLOAD_URL"; then
+    echo "Error: failed to download $TARGET_NAME from the latest seismic-solidity release."
+    exit 1
+  fi
 
   # Extract and install
   echo "Extracting archive..."
