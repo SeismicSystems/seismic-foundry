@@ -66,13 +66,11 @@ jobs:
           shared-key: "test-cache"
       - name: Install ssolc
         run: |
-          # Fetch the latest release asset ID
-          ASSET_ID=$(curl -s https://api.github.com/repos/SeismicSystems/seismic-solidity/releases/latest | \
-            jq -r '.assets[] | select(.name == "ssolc-linux-x86_64.tar.gz") | .id')
-          # Download the asset
-          curl -L -H "Accept: application/octet-stream" \
-            -o ssolc.tar.gz \
-            "https://api.github.com/repos/SeismicSystems/seismic-solidity/releases/assets/$ASSET_ID"
+          # The releases/latest/download/<asset> redirect avoids the GitHub
+          # REST API, whose unauthenticated per-IP rate limit is routinely
+          # exhausted on shared CI runners (same fix as foundryup/foundryup)
+          curl -fL -o ssolc.tar.gz \
+            "https://github.com/SeismicSystems/seismic-solidity/releases/latest/download/ssolc-linux-x86_64.tar.gz"
           # Extract - the binary is at solc/solc inside the archive
           tar -xzf ssolc.tar.gz
           sudo mv solc/solc /usr/local/bin/ssolc
