@@ -832,7 +832,14 @@ async fn test_seismic_fork_send_tx() {
     assert_eq!(balance, U256::from(1e18 as u64));
 }
 
-// Deploy bytecode (stock solc) for a probe that staticcalls the 0x6A tx-info precompile:
+// The probe bytecode below is stock-Solidity *source* (no ssolc builtin — only `staticcall(0x6A)`),
+// compiled with the Seismic `solc` build. Sources live in this repo's test fixtures.
+
+// record() [266cf109] staticcalls 0x6A and stores the returned tx type into slot 0 (public
+// `lastType`), so a mined transaction records the type it actually executed as.
+const TXTYPE_WRITE_PROBE_DEPLOY: &str = "6080604052348015600e575f5ffd5b506102da8061001c5f395ff3fe608060405234801561000f575f5ffd5b5060043610610034575f3560e01c8063266cf109146100385780639f9a32b014610042575b5f5ffd5b610040610060565b005b61004a610132565b604051610057919061014f565b60405180910390f35b5f5f606a73ffffffffffffffffffffffffffffffffffffffff1660405161008690610195565b5f60405180830381855afa9150503d805f81146100be576040519150601f19603f3d011682016040523d82523d5f602084013e6100c3565b606091505b50915091508180156100d6575060208151145b610115576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161010c90610203565b60405180910390fd5b80806020019051810190610129919061024f565b5f819055505050565b5f5481565b5f819050919050565b61014981610137565b82525050565b5f6020820190506101625f830184610140565b92915050565b5f81905092915050565b50565b5f6101805f83610168565b915061018b82610172565b5f82019050919050565b5f61019f82610175565b9150819050919050565b5f82825260208201905092915050565b7f54585f494e464f000000000000000000000000000000000000000000000000005f82015250565b5f6101ed6007836101a9565b91506101f8826101b9565b602082019050919050565b5f6020820190508181035f83015261021a816101e1565b9050919050565b5f5ffd5b61022e81610137565b8114610238575f5ffd5b50565b5f8151905061024981610225565b92915050565b5f6020828403121561026457610263610221565b5b5f6102718482850161023b565b9150509291505056fea26469706673582212206e8df44b04233b7c69b57234ad9f2d6fa3f240f6512547ba3e690e90dec3bd4364736f6c63782c302e382e33312d646576656c6f702e323032362e372e32302b636f6d6d69742e66643566333839632e6d6f64005d";
+
+// A probe that staticcalls the 0x6A tx-type precompile:
 //   isSeismic() [02ce8088]     -> txtype() == 0x4A
 //   requireSeismic() [c6d819f6] -> reverts unless txtype() == 0x4A (74-specific, no decryption)
 const TXTYPE_PROBE_DEPLOY: &str = "6080604052348015600e575f5ffd5b506103058061001c5f395ff3fe608060405234801561000f575f5ffd5b5060043610610034575f3560e01c806302ce808814610038578063c6d819f614610056575b5f5ffd5b610040610060565b60405161004d9190610171565b60405180910390f35b61005e610071565b005b5f604a61006b610086565b14905090565b604a61007b610086565b14610084575f5ffd5b565b5f5f5f606a73ffffffffffffffffffffffffffffffffffffffff166040516100ad906101b7565b5f60405180830381855afa9150503d805f81146100e5576040519150601f19603f3d011682016040523d82523d5f602084013e6100ea565b606091505b50915091508180156100fd575060208151145b61013c576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161013390610225565b60405180910390fd5b80806020019051810190610150919061027a565b9250505090565b5f8115159050919050565b61016b81610157565b82525050565b5f6020820190506101845f830184610162565b92915050565b5f81905092915050565b50565b5f6101a25f8361018a565b91506101ad82610194565b5f82019050919050565b5f6101c182610197565b9150819050919050565b5f82825260208201905092915050565b7f54585f494e464f000000000000000000000000000000000000000000000000005f82015250565b5f61020f6007836101cb565b915061021a826101db565b602082019050919050565b5f6020820190508181035f83015261023c81610203565b9050919050565b5f5ffd5b5f819050919050565b61025981610247565b8114610263575f5ffd5b50565b5f8151905061027481610250565b92915050565b5f6020828403121561028f5761028e610243565b5b5f61029c84828501610266565b9150509291505056fea26469706673582212204924f4189084c792361d86e18baf71dcadcfd5b6f8088b4caf833e2180d75aff64736f6c63782c302e382e33312d646576656c6f702e323032362e372e32302b636f6d6d69742e66643566333839632e6d6f64005d";
@@ -968,5 +975,93 @@ async fn test_txtype_signed_estimate_classifies_seismic() {
     assert!(
         plain_res.is_err(),
         "plain estimate of requireSeismic() should revert (txtype()!=74), but it succeeded"
+    );
+}
+
+/// End-to-end through the real state-changing path (not eth_call/estimate): a mined type-74
+/// transaction that executes a contract calling the 0x6A precompile records `txtype() == 74` into
+/// storage; a mined standard (EIP-1559) transaction records its own type instead.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_txtype_precompile_via_mined_write() {
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    api.anvil_set_auto_mine(true).await.unwrap();
+    let signer = handle.dev_wallets().next().unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(EthereumWallet::new(signer.clone()))
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
+    let deployer = handle.dev_accounts().next().unwrap();
+    let network_pubkey = provider.get_tee_pubkey().await.unwrap();
+    let chain_id = provider.get_chain_id().await.unwrap();
+
+    // Deploy the write probe.
+    let deploy_code = Bytes::from_hex(TXTYPE_WRITE_PROBE_DEPLOY).unwrap();
+    let deploy_req =
+        tx_builder().with_from(deployer).with_kind(TxKind::Create).with_input(deploy_code).into();
+    let contract = provider
+        .send_transaction(deploy_req.into())
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+
+    let record = Bytes::from_hex("266cf109").unwrap();
+
+    // A real mined type-74 seismic WRITE calling record() (signed_read = false).
+    let write = get_signed_seismic_tx_typed_data(
+        &signer,
+        &network_pubkey,
+        provider.get_transaction_count(deployer).await.unwrap(),
+        TxKind::Call(contract),
+        chain_id,
+        record.clone(),
+        false,
+    )
+    .await;
+    let tx_hash = api.send_signed_typed_data_tx(write).await.unwrap();
+    api.mine_one().await;
+    assert!(
+        provider.get_transaction_receipt(tx_hash).await.unwrap().unwrap().inner.inner.status(),
+        "seismic write reverted"
+    );
+    let recorded_seismic = provider.get_storage_at(contract, U256::from(0)).await.unwrap();
+    assert_eq!(
+        recorded_seismic,
+        U256::from(74),
+        "a mined type-74 tx must record txtype() == 74, got {recorded_seismic}"
+    );
+
+    // A mined non-seismic WRITE calling record(): the node runs it as a legacy (type 0) tx, so the
+    // precompile records 0 — the point is it is NOT classified as Seismic (74).
+    let mut std_req = tx_builder()
+        .with_from(deployer)
+        .with_kind(TxKind::Call(contract))
+        .with_input(record)
+        .into();
+    std_req.transaction_type = Some(TxEip1559::tx_type().into());
+    assert!(
+        provider
+            .send_transaction(std_req.into())
+            .await
+            .unwrap()
+            .get_receipt()
+            .await
+            .unwrap()
+            .inner
+            .inner
+            .status(),
+        "standard write reverted"
+    );
+    let recorded_standard = provider.get_storage_at(contract, U256::from(0)).await.unwrap();
+    assert_ne!(recorded_standard, U256::from(74), "a non-seismic tx must not record 74");
+    assert_eq!(
+        recorded_standard,
+        U256::from(0),
+        "a mined non-seismic tx records its executed (legacy) type 0, got {recorded_standard}"
     );
 }
