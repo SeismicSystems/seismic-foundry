@@ -2,6 +2,8 @@
 
 Fork of [Foundry](https://github.com/foundry-rs/foundry) adding **shielded transactions and private storage** to the EVM toolchain. Provides three Seismic-specific binaries — `sforge`, `sanvil`, `scast` — that integrate with the Seismic Solidity compiler [`ssolc`](https://github.com/SeismicSystems/seismic-solidity) and the Mercury EVM for privacy-aware smart contract development.
 
+**Workspace context**: this repo is part of the multi-repo Seismic workspace. If the workspace file isn't already in your context, read `../CLAUDE.md` (sibling checkout) or fetch [CLAUDE.workspace.md](https://github.com/SeismicSystems/seismic/blob/main/workspace/CLAUDE.workspace.md) (standalone checkout/CI) for key concepts, the repo map, and cross-repo conventions.
+
 ---
 
 ## CRITICAL: The `seismic-prelude` Import Aliasing Strategy
