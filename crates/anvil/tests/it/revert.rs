@@ -83,8 +83,14 @@ async fn test_solc_revert_example() {
     let seismic_contract = VendingMachine::new(*contract.address(), &seismic_provider);
     let err = seismic_contract.buy(U256::from(100)).seismic().call().await.unwrap_err();
 
+    // The revert surfaces during signed gas estimation in the fill pipeline. Signed-read
+    // revert output is encrypted under the caller's key (it can embed private state just
+    // like a successful return value), so the plaintext reason must NOT appear on the
+    // wire; only a generic revert error does. Recovering the reason requires client-side
+    // decryption of the error data, which seismic-alloy does not implement yet.
     let s = err.to_string();
-    assert!(s.contains("Not enough Ether provided."), "{s:?}");
+    assert!(s.contains("execution reverted"), "{s:?}");
+    assert!(!s.contains("Not enough Ether provided."), "revert reason leaked in cleartext: {s:?}");
 }
 
 // <https://github.com/foundry-rs/foundry/issues/1871>

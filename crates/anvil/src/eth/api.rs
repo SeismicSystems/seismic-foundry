@@ -3310,9 +3310,17 @@ impl EthApi {
         let mut call_to_estimate = seismic_request.clone();
         call_to_estimate.gas = Some(highest_gas_limit as u64);
 
-        // execute the call without writing to db
-        let ethres =
-            self.backend.call_with_state(&state, call_to_estimate, fees.clone(), block_env.clone());
+        // Execute the call without writing to db. Route through the seismic-aware
+        // wrapper (like `eth_call`) so a seismic request's output, including revert
+        // output (which can embed private state just like a successful return value),
+        // is encrypted under the caller's key before it can reach the error path.
+        // Non-seismic requests pass through unencrypted.
+        let ethres = self.backend.seismic_call_with_state(
+            &state,
+            call_to_estimate,
+            fees.clone(),
+            block_env.clone(),
+        );
 
         let gas_used = match ethres.try_into()? {
             GasEstimationCallResult::Success(gas) => Ok(gas),
@@ -3344,7 +3352,9 @@ impl EthApi {
         while (highest_gas_limit - lowest_gas_limit) > 1 {
             seismic_request.set_gas_limit(mid_gas_limit as u64);
             let request = seismic_request.clone().inner;
-            let ethres = self.backend.call_with_state(
+            // Seismic-aware for the same reason as the initial estimate call above:
+            // revert output must not leave the node in cleartext.
+            let ethres = self.backend.seismic_call_with_state(
                 &state,
                 WithOtherFields::new(request.clone()),
                 fees.clone(),
