@@ -10172,6 +10172,26 @@
     },
     {
       "func": {
+        "id": "signedRead",
+        "description": "Sets whether the current transaction executes as an authenticated Seismic signed read.\nA signed read and a mined Seismic write are both `tx_type == 74`; this is the finer\ndistinction, readable from a contract via the `0x6A` tx-context precompile with input\n`0x01`.",
+        "declaration": "function signedRead(bool newSignedRead) external;",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "signedRead(bool)",
+        "selector": "0x9c258d6c",
+        "selectorBytes": [
+          156,
+          37,
+          141,
+          108
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
         "id": "skip_0",
         "description": "Marks a test as skipped. Must be called at the top level of a test.",
         "declaration": "function skip(bool skipTest) external;",

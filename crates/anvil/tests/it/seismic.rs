@@ -1067,3 +1067,114 @@ async fn test_txtype_precompile_via_mined_write() {
         "a mined non-seismic tx records its executed (legacy) type 0, got {recorded_standard}"
     );
 }
+
+// A probe that staticcalls the 0x6A tx-context precompile with the 1-byte input `0x01`, which
+// selects the `signed_read` flag rather than the tx type (source: fixtures/SignedReadProbe.sol):
+//   requireSignedRead() [6cac1460] -> reverts unless signed_read == 1
+//   flag()              [890eba68] -> returns signed_read
+//   record()            [266cf109] -> stores signed_read into slot 0 (public `lastFlag`)
+//   lastFlag()          [30b93e8a] -> getter for slot 0
+const SIGNED_READ_PROBE_DEPLOY: &str = "6080604052348015600e575f5ffd5b506103708061001c5f395ff3fe608060405234801561000f575f5ffd5b506004361061004a575f3560e01c8063266cf1091461004e57806330b93e8a146100585780636cac146014610076578063890eba6814610080575b5f5ffd5b61005661009e565b005b6100606100ad565b60405161006d91906101be565b60405180910390f35b61007e6100b2565b005b6100886100c7565b60405161009591906101be565b60405180910390f35b6100a66100d5565b5f81905550565b5f5481565b60016100bc6100d5565b146100c5575f5ffd5b565b5f6100d06100d5565b905090565b5f5f5f606a73ffffffffffffffffffffffffffffffffffffffff166040516100fc9061022b565b5f60405180830381855afa9150503d805f8114610134576040519150601f19603f3d011682016040523d82523d5f602084013e610139565b606091505b509150915081801561014c575060208151145b61018b576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161018290610299565b60405180910390fd5b8080602001905181019061019f91906102e5565b9250505090565b5f819050919050565b6101b8816101a6565b82525050565b5f6020820190506101d15f8301846101af565b92915050565b5f81905092915050565b7f01000000000000000000000000000000000000000000000000000000000000005f82015250565b5f6102156001836101d7565b9150610220826101e1565b600182019050919050565b5f61023582610209565b9150819050919050565b5f82825260208201905092915050565b7f54585f434f4e54455854000000000000000000000000000000000000000000005f82015250565b5f610283600a8361023f565b915061028e8261024f565b602082019050919050565b5f6020820190508181035f8301526102b081610277565b9050919050565b5f5ffd5b6102c4816101a6565b81146102ce575f5ffd5b50565b5f815190506102df816102bb565b92915050565b5f602082840312156102fa576102f96102b7565b5b5f610307848285016102d1565b9150509291505056fea2646970667358221220101bd25bfa11faf3ccc49574e8137f87ec5a3b07ee24cd64928e43075479861364736f6c63782c302e382e33312d646576656c6f702e323032362e372e32302b636f6d6d69742e66643566333839632e6d6f64005d";
+
+/// `signed_read` distinguishes an authenticated RPC read from a mined write — both are tx type 74,
+/// so the type byte alone cannot tell them apart. Asserts the flag is true on the signed-read call
+/// path and false everywhere else (mined type-74 write, plain unauthenticated call).
+#[tokio::test(flavor = "multi_thread")]
+async fn test_seismic_signed_read_flag() {
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    api.anvil_set_auto_mine(true).await.unwrap();
+    let signer = handle.dev_wallets().next().unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(EthereumWallet::new(signer.clone()))
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
+    let deployer = handle.dev_accounts().next().unwrap();
+    let network_pubkey = provider.get_tee_pubkey().await.unwrap();
+    let chain_id = provider.get_chain_id().await.unwrap();
+
+    let deploy_code = Bytes::from_hex(SIGNED_READ_PROBE_DEPLOY).unwrap();
+    let deploy_req =
+        tx_builder().with_from(deployer).with_kind(TxKind::Create).with_input(deploy_code).into();
+    let contract = provider
+        .send_transaction(deploy_req.into())
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap()
+        .contract_address
+        .unwrap();
+
+    let require_signed_read = Bytes::from_hex("6cac1460").unwrap();
+    let flag = Bytes::from_hex("890eba68").unwrap();
+    let record = Bytes::from_hex("266cf109").unwrap();
+
+    // 1. An authenticated signed read must observe signed_read == 1.
+    let signed = get_signed_seismic_tx_typed_data(
+        &signer,
+        &network_pubkey,
+        provider.get_transaction_count(deployer).await.unwrap(),
+        TxKind::Call(contract),
+        chain_id,
+        require_signed_read,
+        true,
+    )
+    .await;
+    let signed_res =
+        api.call(SeismicCallRequest::TypedData(signed), None, EvmOverrides::default()).await;
+    assert!(
+        signed_res.is_ok(),
+        "signed read of requireSignedRead() should succeed (signed_read == 1), got {signed_res:?}"
+    );
+
+    // 2. A plain unauthenticated eth_call is not a signed read. Its response comes back in
+    //    plaintext, so assert the flag value directly rather than inferring it from a revert.
+    let plain = TransactionRequest {
+        inner: AlloyTransactionRequest {
+            to: Some(TxKind::Call(contract)),
+            input: TransactionInput { input: Some(flag), data: None },
+            ..Default::default()
+        },
+        seismic_elements: None,
+    };
+    let plain_res = api
+        .call(
+            SeismicCallRequest::TransactionRequest(WithOtherFields::new(plain).into()),
+            None,
+            EvmOverrides::default(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        U256::from_be_slice(plain_res.as_ref()),
+        U256::ZERO,
+        "a plain unauthenticated eth_call must see signed_read == 0, got {plain_res}"
+    );
+
+    // 3. A mined type-74 WRITE is not a read: it must record signed_read == 0. This is the case the
+    //    tx type byte cannot distinguish, since the write is also type 74.
+    let write = get_signed_seismic_tx_typed_data(
+        &signer,
+        &network_pubkey,
+        provider.get_transaction_count(deployer).await.unwrap(),
+        TxKind::Call(contract),
+        chain_id,
+        record,
+        false,
+    )
+    .await;
+    let tx_hash = api.send_signed_typed_data_tx(write).await.unwrap();
+    api.mine_one().await;
+    assert!(
+        provider.get_transaction_receipt(tx_hash).await.unwrap().unwrap().inner.inner.status(),
+        "seismic write reverted"
+    );
+    let recorded = provider.get_storage_at(contract, U256::from(0)).await.unwrap();
+    assert_eq!(
+        recorded,
+        U256::ZERO,
+        "a mined type-74 write must record signed_read == 0, got {recorded}"
+    );
+}

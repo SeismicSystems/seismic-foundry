@@ -531,6 +531,13 @@ interface Vm {
     #[cheatcode(group = Evm, safety = Unsafe)]
     function txGasPrice(uint256 newGasPrice) external;
 
+    /// Sets whether the current transaction executes as an authenticated Seismic signed read.
+    /// A signed read and a mined Seismic write are both `tx_type == 74`; this is the finer
+    /// distinction, readable from a contract via the `0x6A` tx-context precompile with input
+    /// `0x01`.
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function signedRead(bool newSignedRead) external;
+
     /// Sets `block.timestamp`.
     #[cheatcode(group = Evm, safety = Unsafe)]
     function warp(uint256 newTimestamp) external;

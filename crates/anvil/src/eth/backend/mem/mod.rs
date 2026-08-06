@@ -1727,6 +1727,10 @@ impl Backend {
             SeismicClassification::TrustedSeismic => SEISMIC_TX_TYPE_ID,
             SeismicClassification::Untrusted => request.minimal_tx_type() as u8,
         };
+        // Everything routed through here is a call/estimate, never a mined tx, so an authenticated
+        // Seismic request is by definition a signed read. Mined writes build their env elsewhere
+        // and keep the `false` default.
+        let signed_read = matches!(classification, SeismicClassification::TrustedSeismic);
         let cloned_inner = request.inner.clone();
 
         let WithOtherFields::<TransactionRequest> {
@@ -1816,7 +1820,7 @@ impl Backend {
             ..Default::default()
         };
         base.set_signed_authorization(authorization_list.unwrap_or_default());
-        env.tx = OpTransaction { base, ..Default::default() };
+        env.tx = OpTransaction { base, ..Default::default() }.with_signed_read(signed_read);
 
         if let Some(nonce) = nonce {
             env.tx.base.nonce = nonce;
