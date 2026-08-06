@@ -2153,14 +2153,13 @@ impl Backend {
                     .inner
                     .metadata(sender)
                     .map_err(|_e| BlockchainError::MissingRequiredFields)?;
-                /*
-                NOTE: we allow them to make signed
+                // A signed call must be signed as a read (matches reth's
+                // ensure_signed_read_request).
                 if !tx_metadata.seismic_elements.signed_read {
                     return Err(BlockchainError::Message(
-                        "Seismic call has signed_read set to false".into(),
+                        "signed call must set signed_read=true".into(),
                     ));
                 }
-                */
                 Ok(Some(tx_metadata))
             }
             _ => {
