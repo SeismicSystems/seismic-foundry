@@ -673,7 +673,7 @@ impl PendingTransaction {
                     authorization_list,
                 } = &tx.tx();
 
-                let tx_io_sk = seismic_crypto::get_unsecure_sample_secp256k1_sk();
+                let tx_io_sk = seismic_crypto::well_known_tx_io_keypair().secret_key();
                 let tx_metadata = tx.tx().tx_metadata(caller);
                 OpTransaction::new(TxEnv {
                     caller,
@@ -1744,7 +1744,7 @@ mod tests {
         b256,
         hex::{self, FromHex},
     };
-    use seismic_crypto::get_unsecure_sample_secp256k1_pk;
+    use seismic_crypto::well_known_tx_io_keypair;
     use std::str::FromStr;
 
     // <https://github.com/foundry-rs/foundry/issues/10852>
@@ -2001,7 +2001,7 @@ mod tests {
             to: Address::from_str("d3e8763675e4c425df46cc3b5c0f6cbdac396046").unwrap().into(),
             value: U256::from(1000000000000000u64),
             seismic_elements: TxSeismicElements {
-                encryption_pubkey: get_unsecure_sample_secp256k1_pk(),
+                encryption_pubkey: well_known_tx_io_keypair().public_key(),
                 encryption_nonce: U96::from_str("0x46a2b6020bba77fcb1e676a6").unwrap(),
                 message_version: 0,
                 recent_block_hash: FixedBytes::<32>::from_hex(
@@ -2055,7 +2055,7 @@ mod tests {
             value: U256::ZERO,
             input: Bytes::new(),
             seismic_elements: TxSeismicElements {
-                encryption_pubkey: get_unsecure_sample_secp256k1_pk(),
+                encryption_pubkey: well_known_tx_io_keypair().public_key(),
                 encryption_nonce: U96::ZERO,
                 message_version: 0,
                 recent_block_hash: B256::ZERO,

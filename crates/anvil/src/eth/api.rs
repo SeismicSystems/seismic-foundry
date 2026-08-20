@@ -181,9 +181,8 @@ impl EthApi {
         trace!(target: "rpc::api", "executing eth request");
         let response = match request.clone() {
             EthRequest::SeismicGetTeePublicKey(()) => {
-                // Use the unsecure sample public key for mock/testing
                 let result: Result<seismic_crypto::secp256k1::PublicKey> =
-                    Ok(seismic_crypto::get_unsecure_sample_secp256k1_pk());
+                    Ok(seismic_crypto::well_known_tx_io_keypair().public_key());
                 result.to_rpc_result()
             }
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),
