@@ -121,7 +121,7 @@ use revm::{
     primitives::{FlaggedStorage, KECCAK_EMPTY, hardfork::SpecId as RevmSpecId},
     state::AccountInfo,
 };
-use seismic_crypto::get_unsecure_sample_secp256k1_sk;
+use seismic_crypto::well_known_tx_io_keypair;
 use std::{
     collections::BTreeMap,
     fmt::Debug,
@@ -1681,7 +1681,7 @@ impl Backend {
     fn check_calldata_decryption(
         seismic_request: &TransactionRequest,
     ) -> Result<(), BlockchainError> {
-        match seismic_request.to_transaction_request(&get_unsecure_sample_secp256k1_sk()) {
+        match seismic_request.to_transaction_request(&well_known_tx_io_keypair().secret_key()) {
             // check if we can decrypt calldata before building call env
             // because it will panic inside there
             Ok(_) => Ok(()),
@@ -1757,7 +1757,7 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
-        let tx_io_sk = seismic_crypto::get_unsecure_sample_secp256k1_sk();
+        let tx_io_sk = seismic_crypto::well_known_tx_io_keypair().secret_key();
 
         let kind = match to {
             Some(addr) => TxKind::Call(*addr),
@@ -2155,7 +2155,7 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let tx_metadata = Self::validate_seismic_call_tx_metadata(&request)?;
-        let tx_io_sk = seismic_crypto::get_unsecure_sample_secp256k1_sk();
+        let tx_io_sk = seismic_crypto::well_known_tx_io_keypair().secret_key();
         if let Some(metadata) = &tx_metadata {
             let encrypted_input = request.inner.input.clone().input.unwrap_or(Bytes::new()).clone();
             if let Err(e) = metadata.decrypt_request(&tx_io_sk, &encrypted_input) {
@@ -3805,7 +3805,7 @@ impl TransactionValidator for Backend {
             if tx_metadata.seismic_elements.signed_read {
                 return Err(InvalidTransactionError::SignedReadMismatch);
             }
-            let tx_io_sk = seismic_crypto::get_unsecure_sample_secp256k1_sk();
+            let tx_io_sk = seismic_crypto::well_known_tx_io_keypair().secret_key();
             let _decrypted_data = inner
                 .seismic_elements
                 .decrypt_request(&tx_io_sk, &inner.input, &tx_metadata)
