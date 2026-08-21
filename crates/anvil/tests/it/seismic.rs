@@ -980,6 +980,41 @@ async fn test_txtype_signed_estimate_classifies_seismic() {
     );
 }
 
+/// A signed request with wire `signed_read=false` (write intent) must be rejected on estimateGas,
+/// not just eth_call — the authenticated boundary must not let a write payload act as a signed
+/// read.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_signed_estimate_rejects_wire_false() {
+    let (api, handle) = spawn(NodeConfig::test()).await;
+    api.anvil_set_auto_mine(true).await.unwrap();
+    let signer = handle.dev_wallets().next().unwrap();
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(EthereumWallet::new(signer.clone()))
+        .connect_http(reqwest::Url::parse(handle.http_endpoint().as_str()).unwrap())
+        .await
+        .unwrap();
+    let deployer = handle.dev_accounts().next().unwrap();
+    let network_pubkey = provider.get_tee_pubkey().await.unwrap();
+    let chain_id = provider.get_chain_id().await.unwrap();
+    let nonce = provider.get_transaction_count(deployer).await.unwrap();
+
+    let signed = get_signed_seismic_tx_typed_data(
+        &signer,
+        &network_pubkey,
+        nonce,
+        TxKind::Call(deployer),
+        chain_id,
+        Bytes::new(),
+        false,
+    )
+    .await;
+    let res = api
+        .estimate_gas(SeismicCallRequest::TypedData(signed), None, EvmOverrides::default())
+        .await;
+    assert!(res.is_err(), "signed estimate with wire signed_read=false must be rejected");
+}
+
 /// End-to-end through the real state-changing path (not eth_call/estimate): a mined type-74
 /// transaction that executes a contract calling the 0x6A precompile records `txtype() == 74` into
 /// storage; a mined standard (EIP-1559) transaction records its own type instead.

@@ -1727,9 +1727,6 @@ impl Backend {
             SeismicClassification::TrustedSeismic => SEISMIC_TX_TYPE_ID,
             SeismicClassification::Untrusted => request.minimal_tx_type() as u8,
         };
-        // Everything routed through here is a call/estimate, never a mined tx, so an authenticated
-        // Seismic request is by definition a signed read. Mined writes build their env elsewhere
-        // and keep the `false` default.
         let signed_read = matches!(classification, SeismicClassification::TrustedSeismic);
         let cloned_inner = request.inner.clone();
 
@@ -2153,8 +2150,6 @@ impl Backend {
                     .inner
                     .metadata(sender)
                     .map_err(|_e| BlockchainError::MissingRequiredFields)?;
-                // A signed call must be signed as a read (matches reth's
-                // ensure_signed_read_request).
                 if !tx_metadata.seismic_elements.signed_read {
                     return Err(BlockchainError::Message(
                         "signed call must set signed_read=true".into(),

@@ -10173,7 +10173,7 @@
     {
       "func": {
         "id": "signedRead",
-        "description": "Sets whether the current transaction executes as an authenticated Seismic signed read.\nA signed read and a mined Seismic write are both `tx_type == 74`; this is the finer\ndistinction, readable from a contract via the `0x6A` tx-context precompile with input\n`0x01`.",
+        "description": "Sets whether the current transaction executes as an authenticated Seismic signed read.",
         "declaration": "function signedRead(bool newSignedRead) external;",
         "visibility": "external",
         "mutability": "",

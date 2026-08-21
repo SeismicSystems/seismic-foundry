@@ -3209,6 +3209,11 @@ impl EthApi {
                 let sender = signed_seismic_tx.recover_signer().map_err(|e| {
                     BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
                 })?;
+                if !signed_seismic_tx.tx().seismic_elements.signed_read {
+                    return Err(BlockchainError::Message(
+                        "signed call must set signed_read=true".into(),
+                    ));
+                }
                 let tx: TransactionRequest = signed_seismic_tx.tx().clone().into();
                 (tx, sender, SeismicClassification::TrustedSeismic)
             } else {

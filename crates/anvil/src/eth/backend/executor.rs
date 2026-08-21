@@ -504,7 +504,6 @@ where
         cfg: env.evm_env.cfg_env.clone(),
         // Propagate tx_hash so the RNG precompile produces random (non-zero) output.
         // See: https://github.com/SeismicSystems/seismic-revm/issues/199
-        // signed_read rides along for the same reason: `new()` would silently reset it.
         tx: SeismicTransaction::new(env.tx.base.clone())
             .with_tx_hash(env.tx.tx_hash)
             .with_signed_read(env.tx.signed_read),
