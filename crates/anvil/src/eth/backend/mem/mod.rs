@@ -1640,7 +1640,7 @@ impl Backend {
                     apply_state_overrides(state_overrides.into_iter().collect(), &mut cache_db)?;
                 }
                 if let Some(block_overrides) = overrides.block {
-                    cache_db.apply_block_overrides(*block_overrides, &mut block);
+                    cache_db.apply_block_overrides(*block_overrides, &mut block)?;
                 }
                 self.call_with_state(&cache_db, request, fee_details, block)
             }?;
@@ -1669,7 +1669,7 @@ impl Backend {
                     apply_state_overrides(state_overrides.into_iter().collect(), &mut cache_db)?;
                 }
                 if let Some(block_overrides) = overrides.block {
-                    alloy_evm::overrides::apply_block_overrides(*block_overrides, &mut cache_db, &mut block);
+                    alloy_evm::overrides::apply_block_overrides(*block_overrides, &mut cache_db, &mut block)?;
                 }
                 self.seismic_call_with_state(&cache_db, request, fee_details, block)
             }?;
@@ -1878,7 +1878,7 @@ impl Backend {
                     apply_state_overrides(state_overrides, &mut cache_db)?;
                 }
                 if let Some(block_overrides) = block_overrides {
-                    cache_db.apply_block_overrides(block_overrides, &mut block_env);
+                    cache_db.apply_block_overrides(block_overrides, &mut block_env)?;
                 }
 
                 // execute all calls in that block
@@ -2203,7 +2203,7 @@ impl Backend {
                 apply_state_overrides(state_overrides, &mut cache_db)?;
             }
             if let Some(block_overrides) = block_overrides {
-                cache_db.apply_block_overrides(block_overrides, &mut block);
+                cache_db.apply_block_overrides(block_overrides, &mut block)?;
             }
 
             if let Some(tracer) = tracer {
