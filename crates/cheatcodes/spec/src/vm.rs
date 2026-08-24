@@ -536,7 +536,8 @@ interface Vm {
     #[cheatcode(group = Evm, safety = Unsafe)]
     function txType(uint8 newTxType) external;
 
-    /// Sets whether the current transaction executes as an authenticated Seismic signed read.
+    /// Sets the raw `signed_read` flag for subsequent calls. `TxUtils.isSignedRead()` only returns
+    /// true when this is paired with a Seismic tx type, so also call `vm.txType(0x4A)`.
     #[cheatcode(group = Evm, safety = Unsafe)]
     function signedRead(bool newSignedRead) external;
 
