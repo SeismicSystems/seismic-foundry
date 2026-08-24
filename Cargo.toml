@@ -394,12 +394,12 @@ alloy-sol-type-parser = { git = "https://github.com/SeismicSystems/seismic-alloy
 alloy-trie = { git = "https://github.com/SeismicSystems/seismic-trie.git", rev = "2787e2265d492fa8eaee00424585b8f7e522178f" }
 
 # seismic-revm
-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "45b4f4f036d324013636c9f3203012e58971c187" }
-revm-context-interface = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "45b4f4f036d324013636c9f3203012e58971c187" }
-revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "45b4f4f036d324013636c9f3203012e58971c187" }
-revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "45b4f4f036d324013636c9f3203012e58971c187" }
-op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "45b4f4f036d324013636c9f3203012e58971c187" }
-seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "45b4f4f036d324013636c9f3203012e58971c187" }
+revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e80a2c739f9d53db8e3016d79cb2b7b37408d0f4" }
+revm-context-interface = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e80a2c739f9d53db8e3016d79cb2b7b37408d0f4" }
+revm-interpreter = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e80a2c739f9d53db8e3016d79cb2b7b37408d0f4" }
+revm-primitives = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e80a2c739f9d53db8e3016d79cb2b7b37408d0f4" }
+op-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e80a2c739f9d53db8e3016d79cb2b7b37408d0f4" }
+seismic-revm = { git = "https://github.com/SeismicSystems/seismic-revm.git", rev = "e80a2c739f9d53db8e3016d79cb2b7b37408d0f4" }
 
 revm-inspectors = { git = "https://github.com/SeismicSystems/seismic-revm-inspectors.git", rev = "025bdf5924af5aa966c5b349f1f11a6d3e547fa4" }
 
@@ -411,9 +411,9 @@ seismic-alloy-rpc-types = { git = "https://github.com/SeismicSystems/seismic-all
 seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git", rev = "70d1fb739c411b86199578b1f190fbc03c27ccda" }
 
 # alloy-evm
-alloy-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "7a82b32aada956a316bb547b26c547ad0ef7c2ad" }
-alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "7a82b32aada956a316bb547b26c547ad0ef7c2ad" }
-alloy-seismic-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "7a82b32aada956a316bb547b26c547ad0ef7c2ad" }
+alloy-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "8d9f7b41215a86b0c9eb728021a61da03d80905e" }
+alloy-op-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "8d9f7b41215a86b0c9eb728021a61da03d80905e" }
+alloy-seismic-evm = { git = "https://github.com/SeismicSystems/seismic-evm.git", rev = "8d9f7b41215a86b0c9eb728021a61da03d80905e" }
 
 # foundry
 foundry-compilers = { git = "https://github.com/SeismicSystems/seismic-compilers.git", rev = "97c0bb824a434fae8b2082474e682e5907a8ba20" }

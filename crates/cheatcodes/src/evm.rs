@@ -555,6 +555,14 @@ impl Cheatcode for txGasPriceCall {
     }
 }
 
+impl Cheatcode for signedReadCall {
+    fn apply_stateful(&self, ccx: &mut CheatsCtxt) -> Result {
+        let Self { newSignedRead } = self;
+        ccx.ecx.tx.signed_read = *newSignedRead;
+        Ok(Default::default())
+    }
+}
+
 impl Cheatcode for warpCall {
     fn apply_stateful(&self, ccx: &mut CheatsCtxt) -> Result {
         let Self { newTimestamp } = self;
