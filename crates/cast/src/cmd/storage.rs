@@ -1,6 +1,5 @@
 use crate::{Cast, opts::parse_slot};
 use alloy_ens::NameOrAddress;
-use alloy_network::AnyNetwork;
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::Provider;
 use alloy_rpc_types::BlockId;
@@ -34,6 +33,8 @@ use foundry_config::{
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+
+use seismic_prelude::foundry::AnyNetwork;
 
 /// The minimum Solc version for outputting storage layouts.
 ///
@@ -159,7 +160,9 @@ impl StorageArgs {
         };
         let metadata = source.items.first().unwrap();
         if metadata.is_vyper() {
-            eyre::bail!("Contract at provided address is not a valid Solidity contract")
+            {
+                eyre::bail!("Contract at provided address is not a valid Solidity contract");
+            }
         }
 
         // Create a new temp project

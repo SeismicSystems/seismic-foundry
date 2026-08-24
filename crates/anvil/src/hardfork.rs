@@ -1,12 +1,16 @@
+use std::str::FromStr;
+
 use alloy_hardforks::EthereumHardfork;
 use alloy_op_hardforks::OpHardfork::{self};
 use alloy_rpc_types::BlockNumberOrTag;
 
 use op_revm::OpSpecId;
 use revm::primitives::hardfork::SpecId;
+use seismic_prelude::foundry::SeismicSpecId;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ChainHardfork {
+    Seismic(SeismicHardfork),
     Ethereum(EthereumHardfork),
     Optimism(OpHardfork),
 }
@@ -23,9 +27,16 @@ impl From<OpHardfork> for ChainHardfork {
     }
 }
 
+impl From<SeismicHardfork> for ChainHardfork {
+    fn from(value: SeismicHardfork) -> Self {
+        Self::Seismic(value)
+    }
+}
+
 impl From<ChainHardfork> for SpecId {
     fn from(fork: ChainHardfork) -> Self {
         match fork {
+            ChainHardfork::Seismic(hardfork) => hardfork.into(),
             ChainHardfork::Ethereum(hardfork) => spec_id_from_ethereum_hardfork(hardfork),
             ChainHardfork::Optimism(hardfork) => spec_id_from_optimism_hardfork(hardfork).into(),
         }
@@ -59,6 +70,7 @@ pub fn spec_id_from_ethereum_hardfork(hardfork: EthereumHardfork) -> SpecId {
         | EthereumHardfork::Bpo3
         | EthereumHardfork::Bpo4
         | EthereumHardfork::Bpo5 => unimplemented!(),
+        _ => unimplemented!(),
     }
 }
 
@@ -75,6 +87,7 @@ pub fn spec_id_from_optimism_hardfork(hardfork: OpHardfork) -> OpSpecId {
         OpHardfork::Isthmus => OpSpecId::ISTHMUS,
         OpHardfork::Interop => OpSpecId::INTEROP,
         OpHardfork::Jovian => OpSpecId::ISTHMUS,
+        _ => unimplemented!(),
     }
 }
 
@@ -87,6 +100,37 @@ pub fn ethereum_hardfork_from_block_tag(block: impl Into<BlockNumberOrTag>) -> E
     };
 
     EthereumHardfork::from_mainnet_block_number(num)
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SeismicHardfork {
+    Mercury,
+    #[default]
+    Latest,
+}
+
+impl FromStr for SeismicHardfork {
+    type Err = eyre::Report;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.to_lowercase();
+        let hardfork = match s.as_str() {
+            "mercury" => Self::Mercury,
+            "latest" => Self::Latest,
+            _ => {
+                eyre::bail!("Unknown hardfork {s}");
+            }
+        };
+        Ok(hardfork)
+    }
+}
+
+impl From<SeismicHardfork> for SpecId {
+    fn from(fork: SeismicHardfork) -> Self {
+        match fork {
+            SeismicHardfork::Mercury | SeismicHardfork::Latest => SeismicSpecId::MERCURY.into(),
+        }
+    }
 }
 
 #[cfg(test)]

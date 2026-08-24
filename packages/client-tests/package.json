@@ -1,0 +1,20 @@
+{
+  "name": "client-tests",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  },
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "viem": "2.x",
+    "seismic-viem": "^1.1.1",
+    "seismic-viem-tests": "^0.1.4"
+  }
+}

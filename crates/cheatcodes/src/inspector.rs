@@ -21,7 +21,6 @@ use crate::{
     utils::IgnoredTraces,
 };
 use alloy_consensus::BlobTransactionSidecar;
-use alloy_evm::eth::EthEvmContext;
 use alloy_network::TransactionBuilder4844;
 use alloy_primitives::{
     Address, B256, Bytes, Log, TxKind, U256, hex,
@@ -29,7 +28,7 @@ use alloy_primitives::{
 };
 use alloy_rpc_types::{
     AccessList,
-    request::{TransactionInput, TransactionRequest},
+    request::{TransactionInput, TransactionRequest as AlloyTransactionRequest},
 };
 use alloy_sol_types::{SolCall, SolInterface, SolValue};
 use foundry_common::{
@@ -56,7 +55,7 @@ use revm::{
     bytecode::opcode as op,
     context::{BlockEnv, JournalTr, LocalContext, TransactionType, result::EVMError},
     context_interface::{CreateScheme, transaction::SignedAuthorization},
-    handler::FrameResult,
+    handler::{EvmTr, FrameResult},
     interpreter::{
         CallInputs, CallOutcome, CallScheme, CreateInputs, CreateOutcome, FrameInput, Gas, Host,
         InstructionResult, Interpreter, InterpreterAction, InterpreterResult,
@@ -74,6 +73,8 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
+
+use seismic_prelude::foundry::{EthEvmContext, SeismicChain, TransactionRequest};
 
 mod utils;
 
@@ -96,7 +97,7 @@ pub trait CheatcodesExecutor {
         ccx: &mut CheatsCtxt,
     ) -> Result<CreateOutcome, EVMError<DatabaseError>> {
         with_evm(self, ccx, |evm| {
-            evm.inner.ctx.journaled_state.depth += 1;
+            evm.inner.ctx().journaled_state.depth += 1;
 
             let frame = FrameInput::Create(Box::new(inputs));
 
@@ -105,7 +106,7 @@ pub trait CheatcodesExecutor {
                 FrameResult::Create(create) => create,
             };
 
-            evm.inner.ctx.journaled_state.depth -= 1;
+            evm.inner.ctx().journaled_state.depth -= 1;
 
             Ok(outcome)
         })
@@ -145,7 +146,7 @@ where
             database: &mut *ccx.ecx.journaled_state.database as &mut dyn DatabaseExt,
         },
         local: LocalContext::default(),
-        chain: (),
+        chain: SeismicChain::with_random_rng_key(),
         error,
     };
 
@@ -153,11 +154,11 @@ where
 
     let res = f(&mut evm)?;
 
-    ccx.ecx.journaled_state.inner = evm.inner.ctx.journaled_state.inner;
-    ccx.ecx.block = evm.inner.ctx.block;
-    ccx.ecx.tx = evm.inner.ctx.tx;
-    ccx.ecx.cfg = evm.inner.ctx.cfg;
-    ccx.ecx.error = evm.inner.ctx.error;
+    ccx.ecx.journaled_state.inner = evm.inner.0.ctx.journaled_state.inner;
+    ccx.ecx.block = evm.inner.0.ctx.block;
+    ccx.ecx.tx = evm.inner.0.ctx.tx;
+    ccx.ecx.cfg = evm.inner.0.ctx.cfg;
+    ccx.ecx.error = evm.inner.0.ctx.error;
 
     Ok(res)
 }
@@ -314,7 +315,7 @@ impl ArbitraryStorage {
     pub fn save(&mut self, ecx: Ecx, address: Address, slot: U256, data: U256) {
         self.values.get_mut(&address).expect("missing arbitrary address entry").insert(slot, data);
         if let Ok(mut account) = ecx.journaled_state.load_account(address) {
-            account.storage.insert(slot, EvmStorageSlot::new(data, 0));
+            account.storage.insert(slot, EvmStorageSlot::new(data.into(), 0));
         }
     }
 
@@ -332,14 +333,14 @@ impl ArbitraryStorage {
                 storage_cache.insert(slot, new_value);
                 // Update source storage with new value.
                 if let Ok(mut source_account) = ecx.journaled_state.load_account(*source) {
-                    source_account.storage.insert(slot, EvmStorageSlot::new(new_value, 0));
+                    source_account.storage.insert(slot, EvmStorageSlot::new(new_value.into(), 0));
                 }
                 new_value
             }
         };
         // Update target storage with new value.
         if let Ok(mut target_account) = ecx.journaled_state.load_account(target) {
-            target_account.storage.insert(slot, EvmStorageSlot::new(value, 0));
+            target_account.storage.insert(slot, EvmStorageSlot::new(value.into(), 0));
         }
         value
     }
@@ -860,14 +861,17 @@ impl Cheatcodes {
                         ecx.journaled_state.inner.state().get_mut(&broadcast.new_origin).unwrap();
 
                     let mut tx_req = TransactionRequest {
-                        from: Some(broadcast.new_origin),
-                        to: Some(TxKind::from(Some(call.target_address))),
-                        value: call.transfer_value(),
-                        input,
-                        nonce: Some(account.info.nonce),
-                        chain_id: Some(ecx.cfg.chain_id),
-                        gas: if is_fixed_gas_limit { Some(call.gas_limit) } else { None },
-                        ..Default::default()
+                        inner: AlloyTransactionRequest {
+                            from: Some(broadcast.new_origin),
+                            to: Some(TxKind::from(Some(call.target_address))),
+                            value: call.transfer_value(),
+                            input,
+                            nonce: Some(account.info.nonce),
+                            chain_id: Some(ecx.cfg.chain_id),
+                            gas: if is_fixed_gas_limit { Some(call.gas_limit) } else { None },
+                            ..Default::default()
+                        },
+                        seismic_elements: None,
                     };
 
                     let active_delegations = std::mem::take(&mut self.active_delegations);
@@ -1618,13 +1622,16 @@ impl Inspector<EthEvmContext<&mut dyn DatabaseExt>> for Cheatcodes {
                 self.broadcastable_transactions.push_back(BroadcastableTransaction {
                     rpc: ecx.journaled_state.database.active_fork_url(),
                     transaction: TransactionRequest {
-                        from: Some(broadcast.new_origin),
-                        to: None,
-                        value: Some(input.value()),
-                        input: TransactionInput::new(input.init_code()),
-                        nonce: Some(account.info.nonce),
-                        gas: if is_fixed_gas_limit { Some(input.gas_limit()) } else { None },
-                        ..Default::default()
+                        inner: AlloyTransactionRequest {
+                            from: Some(broadcast.new_origin),
+                            to: None,
+                            value: Some(input.value()),
+                            input: TransactionInput::new(input.init_code()),
+                            nonce: Some(account.info.nonce),
+                            gas: if is_fixed_gas_limit { Some(input.gas_limit()) } else { None },
+                            ..Default::default()
+                        },
+                        seismic_elements: None,
                     }
                     .into(),
                 });

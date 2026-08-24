@@ -4,7 +4,6 @@ use super::string::parse;
 use crate::{Cheatcode, Cheatcodes, CheatcodesExecutor, CheatsCtxt, Result, Vm::*};
 use alloy_dyn_abi::DynSolType;
 use alloy_json_abi::ContractObject;
-use alloy_network::AnyTransactionReceipt;
 use alloy_primitives::{Bytes, U256, hex, map::Entry};
 use alloy_provider::network::ReceiptResponse;
 use alloy_sol_types::SolValue;
@@ -24,6 +23,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use walkdir::WalkDir;
+
+use seismic_prelude::foundry::AnyTransactionReceipt;
 
 impl Cheatcode for existsCall {
     fn apply(&self, state: &mut Cheatcodes) -> Result {
@@ -506,7 +507,9 @@ fn get_artifact_code(state: &Cheatcodes, path: &str, deployed: bool) -> Result<B
                         let name = file.replace(".sol", "");
                         PathBuf::from(format!("{file}/{name}.json"))
                     }
-                    _ => bail!("invalid artifact path"),
+                    _ => {
+                        bail!("invalid artifact path");
+                    }
                 };
 
             state.config.paths.artifacts.join(path_in_artifacts)

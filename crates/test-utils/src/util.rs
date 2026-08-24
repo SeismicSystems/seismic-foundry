@@ -47,7 +47,7 @@ static TEMPLATE_LOCK: LazyLock<PathBuf> =
 static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
 /// The default Solc version used when compiling tests.
-pub const SOLC_VERSION: &str = "0.8.30";
+pub const SOLC_VERSION: &str = "0.8.31";
 
 /// Another Solc version used when compiling tests.
 ///
@@ -285,7 +285,10 @@ pub fn initialize(target: &Path) {
 
             cmd.args(["init", "--force"]).assert_success();
             prj.write_config(Config {
-                solc: Some(foundry_config::SolcReq::Version(SOLC_VERSION.parse().unwrap())),
+                // TODO: set to SolcReq::Version when ssolc supports version selection
+                // (see https://github.com/SeismicSystems/seismic-foundry/issues/186)
+                solc: None,
+                evm_version: foundry_compilers::artifacts::EvmVersion::Mercury,
                 ..Default::default()
             });
 
@@ -707,7 +710,7 @@ impl TestProject {
 
     /// Returns the path to the forge executable.
     pub fn forge_bin(&self) -> Command {
-        let forge = self.exe_root.join(format!("../forge{}", env::consts::EXE_SUFFIX));
+        let forge = self.exe_root.join(format!("../sforge{}", env::consts::EXE_SUFFIX));
         let forge = forge.canonicalize().unwrap_or_else(|_| forge.clone());
         let mut cmd = Command::new(forge);
         cmd.current_dir(self.inner.root());

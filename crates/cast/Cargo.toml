@@ -17,10 +17,13 @@ workspace = true
 name = "cast"
 
 [[bin]]
-name = "cast"
+name = "scast"
 path = "bin/main.rs"
 
 [dependencies]
+seismic-prelude.workspace = true
+secp256k1 = "0.30"
+
 # lib
 foundry-block-explorers.workspace = true
 foundry-common.workspace = true

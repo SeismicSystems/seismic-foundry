@@ -9,8 +9,11 @@ use foundry_compilers::artifacts::EvmVersion;
 use foundry_config::{Chain, Config, utils::evm_spec_id};
 use foundry_evm_core::{backend::Backend, fork::CreateFork, opts::EvmOpts};
 use foundry_evm_traces::TraceMode;
-use revm::{primitives::hardfork::SpecId, state::Bytecode};
+use revm::state::Bytecode;
 use std::ops::{Deref, DerefMut};
+
+use alloy_primitives::FlaggedStorage;
+use seismic_prelude::foundry::SpecId;
 
 /// A default executor with tracing enabled
 pub struct TracingExecutor {
@@ -52,15 +55,21 @@ impl TracingExecutor {
                     executor.set_code(address, bytecode)?;
                 }
                 if let Some(state) = overrides.state {
-                    let state: HashMap<U256, U256> = state
+                    let state: HashMap<U256, FlaggedStorage> = state
                         .into_iter()
-                        .map(|(slot, value)| (slot.into(), value.into()))
+                        .map(|(slot, value)| {
+                            (slot.into(), FlaggedStorage::from(U256::from_be_bytes(value.0)))
+                        })
                         .collect();
                     executor.set_storage(address, state)?;
                 }
                 if let Some(state_diff) = overrides.state_diff {
                     for (slot, value) in state_diff {
-                        executor.set_storage_slot(address, slot.into(), value.into())?;
+                        executor.set_storage_slot(
+                            address,
+                            slot.into(),
+                            FlaggedStorage::from(U256::from_be_bytes(value.0)),
+                        )?;
                     }
                 }
             }

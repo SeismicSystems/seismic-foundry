@@ -1,5 +1,6 @@
+use crate::utils::apply_chain_and_block_specific_env_changes;
 use alloy_consensus::Transaction;
-use alloy_network::{AnyNetwork, TransactionResponse};
+use alloy_network::TransactionResponse;
 use alloy_primitives::{
     Address, Bytes, U256,
     map::{HashMap, HashSet},
@@ -30,7 +31,7 @@ use foundry_evm::{
 };
 use foundry_evm_core::env::AsEnvMut;
 
-use crate::utils::apply_chain_and_block_specific_env_changes;
+use seismic_prelude::foundry::AnyNetwork;
 
 /// CLI arguments for `cast run`.
 #[derive(Clone, Debug, Parser)]
@@ -151,8 +152,10 @@ impl RunArgs {
             ));
         }
 
-        let tx_block_number =
-            tx.block_number.ok_or_else(|| eyre::eyre!("tx may still be pending: {:?}", tx_hash))?;
+        let tx_block_number = tx
+            .inner()
+            .block_number
+            .ok_or_else(|| eyre::eyre!("tx may still be pending: {:?}", tx_hash))?;
 
         // fetch the block the transaction was mined in
         let block = provider.get_block(tx_block_number.into()).full().await?;
@@ -247,7 +250,7 @@ impl RunArgs {
                         break;
                     }
 
-                    configure_tx_env(&mut env.as_env_mut(), &tx.inner);
+                    configure_tx_env(&mut env.as_env_mut(), &tx.inner());
 
                     env.evm_env.cfg_env.disable_balance_check = true;
 
@@ -288,8 +291,8 @@ impl RunArgs {
         let result = {
             executor.set_trace_printer(self.trace_printer);
 
-            configure_tx_env(&mut env.as_env_mut(), &tx.inner);
-            if is_impersonated_tx(tx.inner.inner.inner()) {
+            configure_tx_env(&mut env.as_env_mut(), &tx.inner());
+            if is_impersonated_tx(tx.inner().inner.inner()) {
                 env.evm_env.cfg_env.disable_balance_check = true;
             }
 

@@ -5,7 +5,7 @@ use crate::{
 };
 use alloy_eips::BlockId;
 use alloy_hardforks::EthereumHardfork;
-use alloy_network::{EthereumWallet, TransactionBuilder};
+use alloy_network::TransactionBuilder;
 use alloy_primitives::{
     Address, Bytes, U256,
     hex::{self, FromHex},
@@ -30,6 +30,8 @@ use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{NodeConfig, spawn};
 
+use seismic_prelude::foundry::EthereumWallet;
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_transfer_parity_traces() {
     let (_api, handle) = spawn(NodeConfig::test()).await;
@@ -41,7 +43,7 @@ async fn test_get_transfer_parity_traces() {
     let amount = handle.genesis_balance().checked_div(U256::from(2u64)).unwrap();
     // specify the `from` field so that the client knows which account to use
     let tx = TransactionRequest::default().to(to).value(amount).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     // broadcast it via the eth_sendTransaction API
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
@@ -140,7 +142,7 @@ async fn test_transfer_debug_trace_call() {
     let traces = handle
         .http_provider()
         .debug_trace_call(
-            WithOtherFields::new(tx),
+            WithOtherFields::new(tx.into()),
             BlockId::latest(),
             GethDebugTracingCallOptions::default(),
         )
@@ -188,7 +190,7 @@ async fn test_call_tracer_debug_trace_call() {
     let internal_call_tx_traces = handle
         .http_provider()
         .debug_trace_call(
-            WithOtherFields::new(internal_call_tx.clone()),
+            WithOtherFields::new(internal_call_tx.clone().into()),
             BlockId::latest(),
             GethDebugTracingCallOptions::default().with_tracing_options(
                 GethDebugTracingOptions::default()
@@ -216,7 +218,7 @@ async fn test_call_tracer_debug_trace_call() {
     let internal_call_only_top_call_tx_traces = handle
         .http_provider()
         .debug_trace_call(
-            WithOtherFields::new(internal_call_tx.clone()),
+            WithOtherFields::new(internal_call_tx.clone().into()),
             BlockId::latest(),
             GethDebugTracingCallOptions::default().with_tracing_options(
                 GethDebugTracingOptions::default()
@@ -245,7 +247,7 @@ async fn test_call_tracer_debug_trace_call() {
     let direct_call_tx_traces = handle
         .http_provider()
         .debug_trace_call(
-            WithOtherFields::new(direct_call_tx),
+            WithOtherFields::new(direct_call_tx.into()),
             BlockId::latest(),
             GethDebugTracingCallOptions::default().with_tracing_options(
                 GethDebugTracingOptions::default()
@@ -268,6 +270,8 @@ async fn test_call_tracer_debug_trace_call() {
     }
 }
 
+/*
+// Disabled: seismic-evm#45 disallows code overrides in state overrides
 #[tokio::test(flavor = "multi_thread")]
 async fn test_debug_trace_call_state_override() {
     let (_api, handle) = spawn(NodeConfig::test()).await;
@@ -289,7 +293,7 @@ async fn test_debug_trace_call_state_override() {
     let tx_traces = handle
         .http_provider()
         .debug_trace_call(
-            WithOtherFields::new(tx.clone()),
+            WithOtherFields::new(tx.clone().into()),
             BlockId::latest(),
             GethDebugTracingCallOptions::default()
                 .with_tracing_options(GethDebugTracingOptions::default())
@@ -311,9 +315,11 @@ async fn test_debug_trace_call_state_override() {
         }
     }
 }
+*/
 
 // <https://github.com/foundry-rs/foundry/issues/2656>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_trace_address_fork() {
     let (api, handle) = spawn(fork_config().with_fork_block_number(Some(15291050u64))).await;
     let provider = handle.http_provider();
@@ -328,7 +334,7 @@ async fn test_trace_address_fork() {
         .with_input::<Bytes>(input.into())
         .with_gas_limit(300_000);
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     api.anvil_impersonate_account(from).await.unwrap();
 
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
@@ -512,6 +518,7 @@ async fn test_trace_address_fork() {
 // <https://github.com/foundry-rs/foundry/issues/2705>
 // <https://etherscan.io/tx/0x2d951c5c95d374263ca99ad9c20c9797fc714330a8037429a3aa4c83d456f845>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_trace_address_fork2() {
     let (api, handle) = spawn(fork_config().with_fork_block_number(Some(15314401u64))).await;
     let provider = handle.http_provider();
@@ -526,11 +533,11 @@ async fn test_trace_address_fork2() {
         .with_input::<Bytes>(input.into())
         .with_gas_limit(350_000);
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     api.anvil_impersonate_account(from).await.unwrap();
 
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.as_receipt().unwrap().status.coerce_status();
     assert!(status);
 
     let traces = provider.trace_transaction(tx.transaction_hash).await.unwrap();
@@ -799,7 +806,7 @@ async fn test_trace_filter() {
 
     for i in 0..=5 {
         let tx = TransactionRequest::default().to(to).value(U256::from(i)).from(from);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         api.send_transaction(tx).await.unwrap();
     }
 
@@ -819,11 +826,11 @@ async fn test_trace_filter() {
 
     for i in 0..=5 {
         let tx = TransactionRequest::default().to(to).value(U256::from(i)).from(from);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
         let tx = TransactionRequest::default().to(to_two).value(U256::from(i)).from(from_two);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
     }
 
@@ -857,7 +864,7 @@ async fn test_trace_filter() {
     // Mine transactions to filter against
     for i in 0..=5 {
         let tx = TransactionRequest::default().to(to_two).value(U256::from(i)).from(from_two);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
     }
 
@@ -922,7 +929,7 @@ async fn test_trace_filter() {
 
     for i in 0..=10 {
         let tx = TransactionRequest::default().to(to).value(U256::from(i)).from(from);
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
     }
 
@@ -978,7 +985,7 @@ fault: function(log) {}
 
     let result = api
         .debug_trace_call(
-            WithOtherFields::new(internal_call_tx),
+            WithOtherFields::new(internal_call_tx.into()),
             Some(BlockId::latest()),
             GethDebugTracingCallOptions::default()
                 .with_tracing_options(GethDebugTracingOptions::js_tracer(js_tracer_code)),
@@ -1045,7 +1052,9 @@ async fn test_debug_trace_transaction_js_tracer() {
         .with_max_priority_fee_per_gas(100_000_000_000);
 
     let receipt = provider
-        .send_transaction(internal_call_tx.into())
+        .send_transaction(
+            Into::<seismic_prelude::foundry::TransactionRequest>::into(internal_call_tx).into(),
+        )
         .await
         .unwrap()
         .get_receipt()

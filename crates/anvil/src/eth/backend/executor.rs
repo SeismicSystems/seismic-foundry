@@ -2,16 +2,12 @@ use crate::{
     PrecompileFactory,
     eth::{
         backend::{
-            cheats::{CheatEcrecover, CheatsManager},
-            db::Db,
-            env::Env,
-            mem::op_haltreason_to_instruction_result,
+            cheats::CheatsManager, db::Db, env::Env, mem::op_haltreason_to_instruction_result,
             validate::TransactionValidator,
         },
         error::InvalidTransactionError,
         pool::transactions::PoolTransaction,
     },
-    evm::celo_precompile,
     inject_precompiles,
     mem::inspector::AnvilInspector,
 };
@@ -19,12 +15,7 @@ use alloy_consensus::{
     Receipt, ReceiptWithBloom, constants::EMPTY_WITHDRAWALS, proofs::calculate_receipt_root,
 };
 use alloy_eips::{eip7685::EMPTY_REQUESTS_HASH, eip7840::BlobParams};
-use alloy_evm::{
-    EthEvm, Evm,
-    eth::EthEvmContext,
-    precompiles::{DynPrecompile, Precompile, PrecompilesMap},
-};
-use alloy_op_evm::OpEvm;
+use alloy_evm::{Evm, eth::EthEvmContext};
 use alloy_primitives::{B256, Bloom, BloomInput, Log};
 use anvil_core::eth::{
     block::{Block, BlockInfo, PartialHeader},
@@ -36,14 +27,13 @@ use foundry_evm::{
     backend::DatabaseError,
     traces::{CallTraceDecoder, CallTraceNode},
 };
-use foundry_evm_core::{either_evm::EitherEvm, precompiles::EC_RECOVER};
-use op_revm::{L1BlockInfo, OpContext, precompiles::OpPrecompiles};
+use foundry_evm_core::either_evm::EitherEvm;
+use op_revm::OpContext;
 use revm::{
     Database, DatabaseRef, Inspector, Journal,
-    context::{Block as RevmBlock, BlockEnv, Cfg, CfgEnv, Evm as RevmEvm, JournalTr, LocalContext},
+    context::{Block as RevmBlock, BlockEnv, Cfg, JournalTr, LocalContext},
     context_interface::result::{EVMError, ExecutionResult, Output},
     database::WrapDatabaseRef,
-    handler::{EthPrecompiles, instructions::EthInstructions},
     interpreter::InstructionResult,
     precompile::{
         PrecompileSpecId, Precompiles,
@@ -52,6 +42,12 @@ use revm::{
     primitives::hardfork::SpecId,
 };
 use std::{fmt::Debug, sync::Arc};
+
+use foundry_evm_core::SeismicEvm;
+use seismic_prelude::foundry::{
+    CfgEnv, RevmEvm, SeismicChain, SeismicContext, SeismicInstructions, SeismicPrecompiles,
+    SeismicTransaction,
+};
 
 /// Represents an executed transaction (transacted on the DB)
 #[derive(Debug)]
@@ -93,6 +89,7 @@ impl ExecutedTransaction {
                 deposit_nonce: Some(0),
                 deposit_receipt_version: Some(1),
             }),
+            TypedTransaction::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         }
     }
 }
@@ -156,15 +153,15 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
         let mix_hash = self.block_env.prevrandao;
         let beneficiary = self.block_env.beneficiary;
         let timestamp = self.block_env.timestamp;
-        let base_fee = if self.cfg_env.spec.is_enabled_in(SpecId::LONDON) {
+        let base_fee = if self.cfg_env.spec.into_eth_spec().is_enabled_in(SpecId::LONDON) {
             Some(self.block_env.basefee)
         } else {
             None
         };
 
-        let is_shanghai = self.cfg_env.spec >= SpecId::SHANGHAI;
-        let is_cancun = self.cfg_env.spec >= SpecId::CANCUN;
-        let is_prague = self.cfg_env.spec >= SpecId::PRAGUE;
+        let is_shanghai = self.cfg_env.spec.into_eth_spec() >= SpecId::SHANGHAI;
+        let is_cancun = self.cfg_env.spec.into_eth_spec() >= SpecId::CANCUN;
+        let is_prague = self.cfg_env.spec.into_eth_spec() >= SpecId::PRAGUE;
         let excess_blob_gas = if is_cancun { self.block_env.blob_excess_gas() } else { None };
         let mut cumulative_blob_gas_used = if is_cancun { Some(0u64) } else { None };
 
@@ -235,6 +232,7 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
                 out: out.map(Output::into_data),
                 nonce: tx.nonce,
                 gas_used: tx.gas_used,
+                tx_type: Some(transaction.tx_type() as isize),
             };
 
             transaction_infos.push(info);
@@ -272,11 +270,19 @@ impl<DB: Db + ?Sized, V: TransactionValidator> TransactionExecutor<'_, DB, V> {
     }
 
     fn env_for(&self, tx: &PendingTransaction) -> Env {
+        #[allow(unused_mut)]
         let mut tx_env = tx.to_revm_tx_env();
 
+        // Set the actual tx hash for RNG domain separation.
+        // Without this, tx_hash defaults to B256::ZERO and the RNG
+        // precompile produces identical output for every transaction.
+        tx_env.tx_hash = *tx.hash();
+
+        /*
         if self.optimism {
             tx_env.enveloped_tx = Some(alloy_rlp::encode(&tx.transaction.transaction).into());
         }
+        */
 
         Env::new(self.cfg_env.clone(), self.block_env.clone(), tx_env, self.optimism, self.celo)
     }
@@ -366,10 +372,12 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
             }
 
             if self.celo {
+                /*
                 evm.precompiles_mut()
                     .apply_precompile(&celo_precompile::CELO_TRANSFER_ADDRESS, move |_| {
                         Some(celo_precompile::precompile())
                     });
+                */
             }
 
             if let Some(factory) = &self.precompile_factory {
@@ -378,6 +386,8 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
 
             let cheats = Arc::new(self.cheats.clone());
             if cheats.has_recover_overrides() {
+                // NOTE: seismic-anvil does not support this; typing too annoying
+                /*
                 let cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
                 evm.precompiles_mut().apply_precompile(&EC_RECOVER, move |_| {
                     Some(DynPrecompile::new_stateful(
@@ -385,6 +395,7 @@ impl<DB: Db + ?Sized, V: TransactionValidator> Iterator for &mut TransactionExec
                         move |input| cheat_ecrecover.call(input),
                     ))
                 });
+                */
             }
 
             trace!(target: "backend", "[{:?}] executing", transaction.hash());
@@ -477,11 +488,37 @@ pub fn new_evm_with_inspector<DB, I>(
     db: DB,
     env: &Env,
     inspector: I,
-) -> EitherEvm<DB, I, PrecompilesMap>
+) -> EitherEvm<DB, I, SeismicPrecompiles<SeismicContext<DB>>>
 where
     DB: Database<Error = DatabaseError> + Debug,
-    I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>>,
+    I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>> + Inspector<SeismicContext<DB>>,
 {
+    let spec = env.evm_env.cfg_env.spec;
+    let eth_context = SeismicContext {
+        journaled_state: {
+            let mut journal = Journal::new(db);
+            journal.set_spec_id(spec.into_eth_spec());
+            journal
+        },
+        block: env.evm_env.block_env.clone(),
+        cfg: env.evm_env.cfg_env.clone(),
+        // Propagate tx_hash so the RNG precompile produces random (non-zero) output.
+        // See: https://github.com/SeismicSystems/seismic-revm/issues/199
+        tx: SeismicTransaction::new(env.tx.base.clone()).with_tx_hash(env.tx.tx_hash),
+        chain: SeismicChain::with_random_rng_key(),
+        local: LocalContext::default(),
+        error: Ok(()),
+    };
+
+    let eth_precompiles = Precompiles::new(PrecompileSpecId::from_spec_id(spec.into_eth_spec()));
+    let eth_evm = RevmEvm::new_with_inspector(
+        eth_context,
+        inspector,
+        SeismicInstructions::default(),
+        eth_precompiles,
+    );
+    EitherEvm::Seismic(SeismicEvm::new(eth_evm, true))
+    /*
     if env.is_optimism {
         let op_cfg = env.evm_env.cfg_env.clone().with_spec(op_revm::OpSpecId::ISTHMUS);
         let op_context = OpContext {
@@ -542,6 +579,7 @@ where
 
         EitherEvm::Eth(eth)
     }
+    */
 }
 
 /// Creates a new EVM with the given inspector and wraps the database in a `WrapDatabaseRef`.
@@ -549,11 +587,16 @@ pub fn new_evm_with_inspector_ref<'db, DB, I>(
     db: &'db DB,
     env: &Env,
     inspector: &'db mut I,
-) -> EitherEvm<WrapDatabaseRef<&'db DB>, &'db mut I, PrecompilesMap>
+) -> EitherEvm<
+    WrapDatabaseRef<&'db DB>,
+    &'db mut I,
+    SeismicPrecompiles<SeismicContext<WrapDatabaseRef<&'db DB>>>,
+>
 where
     DB: DatabaseRef<Error = DatabaseError> + Debug + 'db + ?Sized,
     I: Inspector<EthEvmContext<WrapDatabaseRef<&'db DB>>>
-        + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>,
+        + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>
+        + Inspector<SeismicContext<WrapDatabaseRef<&'db DB>>>,
     WrapDatabaseRef<&'db DB>: Database<Error = DatabaseError>,
 {
     new_evm_with_inspector(WrapDatabaseRef(db), env, inspector)

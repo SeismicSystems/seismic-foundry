@@ -136,6 +136,7 @@ forgetest!(can_extract_config_values, |prj, cmd| {
         ignored_file_paths: vec![],
         deny_warnings: false,
         via_ir: true,
+        unsafe_via_ir: false,
         ast: false,
         rpc_storage_caching: StorageCachingConfig {
             chains: CachedChains::None,
@@ -177,6 +178,9 @@ forgetest!(can_extract_config_values, |prj, cmd| {
         compilation_restrictions: Default::default(),
         script_execution_protection: true,
         _non_exhaustive: (),
+        seismic: true,
+        no_seismic_warnings: false,
+        seismic_warnings_in_tests: true,
     };
     prj.write_config(input.clone());
     let config = cmd.config();

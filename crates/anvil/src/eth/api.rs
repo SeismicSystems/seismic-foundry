@@ -40,11 +40,10 @@ use alloy_eips::{
 };
 use alloy_evm::overrides::{OverrideBlockHashes, apply_state_overrides};
 use alloy_network::{
-    AnyRpcBlock, AnyRpcTransaction, BlockResponse, Ethereum, NetworkWallet, TransactionBuilder,
-    TransactionResponse, eip2718::Decodable2718,
+    BlockResponse, NetworkWallet, TransactionBuilder, TransactionResponse, eip2718::Decodable2718,
 };
 use alloy_primitives::{
-    Address, B64, B256, Bytes, Signature, TxHash, TxKind, U64, U256,
+    Address, B64, B256, Bytes, FlaggedStorage, Signature, TxHash, TxKind, U64, U256,
     map::{HashMap, HashSet},
 };
 use alloy_provider::utils::{
@@ -57,8 +56,7 @@ use alloy_rpc_types::{
     anvil::{
         ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
     },
-    request::TransactionRequest,
-    simulate::{SimulatePayload, SimulatedBlock},
+    simulate::SimulatedBlock,
     state::{AccountOverride, EvmOverrides, StateOverridesBuilder},
     trace::{
         filter::TraceFilter,
@@ -102,6 +100,12 @@ use std::{sync::Arc, time::Duration};
 use tokio::{
     sync::mpsc::{UnboundedReceiver, unbounded_channel},
     try_join,
+};
+use yansi::Paint;
+
+use seismic_prelude::foundry::{
+    AnyNetwork, AnyRpcBlock, AnyRpcTransaction, Decodable712, SeismicCallRequest,
+    SeismicRawTxRequest, SimulatePayload, TransactionRequest, TypedDataRequest, tx_builder,
 };
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -176,6 +180,11 @@ impl EthApi {
     pub async fn execute(&self, request: EthRequest) -> ResponseResult {
         trace!(target: "rpc::api", "executing eth request");
         let response = match request.clone() {
+            EthRequest::SeismicGetTeePublicKey(()) => {
+                let result: Result<seismic_crypto::secp256k1::PublicKey> =
+                    Ok(seismic_crypto::well_known_tx_io_keypair().public_key());
+                result.to_rpc_result()
+            }
             EthRequest::Web3ClientVersion(()) => self.client_version().to_rpc_result(),
             EthRequest::Web3Sha3(content) => self.sha3(content).to_rpc_result(),
             EthRequest::EthGetAccount(addr, block) => {
@@ -208,6 +217,9 @@ impl EthApi {
             EthRequest::EthBlockNumber(_) => self.block_number().to_rpc_result(),
             EthRequest::EthGetStorageAt(addr, slot, block) => {
                 self.storage_at(addr, slot, block).await.to_rpc_result()
+            }
+            EthRequest::EthGetFlaggedStorageAt(addr, slot, block) => {
+                self.flagged_storage_at(addr, slot, block).await.to_rpc_result()
             }
             EthRequest::EthGetBlockByHash(hash, full) => {
                 if full {
@@ -260,16 +272,23 @@ impl EthApi {
             EthRequest::EthSignTypedDataV4(addr, data) => {
                 self.sign_typed_data_v4(addr, &data).await.to_rpc_result()
             }
-            EthRequest::EthSendRawTransaction(tx) => {
-                self.send_raw_transaction(tx).await.to_rpc_result()
-            }
+            EthRequest::EthSendRawTransaction(tx_req) => match tx_req {
+                SeismicRawTxRequest::Bytes(tx) => {
+                    self.send_raw_transaction(tx).await.to_rpc_result()
+                }
+                SeismicRawTxRequest::TypedData(td) => {
+                    self.send_signed_typed_data_tx(td).await.to_rpc_result()
+                }
+            },
             EthRequest::EthSendRawTransactionSync(tx) => {
+                // TODO: make this typed-data friendly
                 self.send_raw_transaction_sync(tx).await.to_rpc_result()
             }
             EthRequest::EthCall(call, block, state_override, block_overrides) => self
                 .call(call, block, EvmOverrides::new(state_override, block_overrides))
                 .await
                 .to_rpc_result(),
+
             EthRequest::EthSimulateV1(simulation, block) => {
                 self.simulate_v1(simulation, block).await.to_rpc_result()
             }
@@ -571,7 +590,7 @@ impl EthApi {
         match self.pool.get_transaction(hash) {
             Some(tx) => Ok(Some(tx.transaction.encoded_2718().into())),
             None => match self.backend.transaction_by_hash(hash).await? {
-                Some(tx) => Ok(Some(tx.inner.inner.encoded_2718().into())),
+                Some(tx) => Ok(Some(tx.inner().inner.encoded_2718().into())),
                 None => Ok(None),
             },
         }
@@ -806,6 +825,35 @@ impl EthApi {
         self.backend.storage_at(address, index, Some(block_request)).await
     }
 
+    /// Returns content of the storage at given address with privacy flag.
+    ///
+    /// Handler for custom RPC call: `eth_getFlaggedStorageAt`
+    pub async fn flagged_storage_at(
+        &self,
+        address: Address,
+        index: U256,
+        block_number: Option<BlockId>,
+    ) -> Result<FlaggedStorage> {
+        node_info!("eth_getFlaggedStorageAt");
+        let block_request = self.block_request(block_number).await?;
+
+        // check if the number predates the fork, if in fork mode
+        if let BlockRequest::Number(number) = block_request
+            && let Some(fork) = self.get_fork()
+            && fork.predates_fork(number)
+        {
+            // For forked data, we don't have privacy info, assume public
+            return Ok(FlaggedStorage::from(
+                fork.storage_at(address, index, Some(BlockNumber::Number(number))).await?,
+            ));
+        }
+
+        self.backend
+            .flagged_storage_at(address, index, Some(block_request))
+            .await
+            .map_err(|e| e.into())
+    }
+
     /// Returns block with given hash.
     ///
     /// Handler for ETH RPC call: `eth_getBlockByHash`
@@ -1022,11 +1070,12 @@ impl EthApi {
 
         let (nonce, _) = self.request_nonce(&request, from).await?;
 
-        if request.gas.is_none() {
+        if request.inner.inner.gas.is_none() {
             // estimate if not provided
-            if let Ok(gas) = self.estimate_gas(request.clone(), None, EvmOverrides::default()).await
+            if let Ok(gas) =
+                self.do_estimate_gas(request.clone(), None, EvmOverrides::default()).await
             {
-                request.gas = Some(gas.to());
+                request.inner.inner.gas = Some(gas as u64);
             }
         }
 
@@ -1052,9 +1101,10 @@ impl EthApi {
 
         if request.gas.is_none() {
             // estimate if not provided
-            if let Ok(gas) = self.estimate_gas(request.clone(), None, EvmOverrides::default()).await
+            if let Ok(gas) =
+                self.do_estimate_gas(request.clone(), None, EvmOverrides::default()).await
             {
-                request.gas = Some(gas.to());
+                request.gas = Some(gas as u64);
             }
         }
 
@@ -1179,12 +1229,49 @@ impl EthApi {
         Ok(ReceiptResponse::from(receipt))
     }
 
-    /// Call contract, returning the output data.
+    /// Sends signed typed data transaction, returning its hash.
     ///
-    /// Handler for ETH RPC call: `eth_call`
-    pub async fn call(
+    /// Handler for ETH RPC call: `eth_sendRawTransaction`
+    pub async fn send_signed_typed_data_tx(&self, td: TypedDataRequest) -> Result<TxHash> {
+        node_info!("eth_sendRawTransaction via eth_signTypedData");
+
+        // TODO: make this work
+        let transaction = TypedTransaction::decode_712(&td).map_err(|e| {
+            BlockchainError::Message(format!(
+                "Failed to decode typed data into seismic tx: {:?}",
+                e
+            ))
+        })?;
+
+        // NOTE: rest is copy pasta from send_raw_transaction
+        self.ensure_typed_transaction_supported(&transaction)?;
+
+        let pending_transaction = PendingTransaction::new(transaction)?;
+
+        // pre-validate
+        self.backend.validate_pool_transaction(&pending_transaction).await?;
+
+        let on_chain_nonce = self.backend.current_nonce(*pending_transaction.sender()).await?;
+        let from = *pending_transaction.sender();
+        let nonce = pending_transaction.transaction.nonce();
+        let requires = required_marker(nonce, on_chain_nonce, from);
+
+        let priority = self.transaction_priority(&pending_transaction.transaction);
+        let pool_transaction = PoolTransaction {
+            requires,
+            provides: vec![to_marker(nonce, *pending_transaction.sender())],
+            pending_transaction,
+            priority,
+        };
+
+        let tx = self.pool.add_transaction(pool_transaction)?;
+        trace!(target: "node", "Added transaction: [{:?}] sender={:?}", tx.hash(), from);
+        Ok(*tx.hash())
+    }
+
+    async fn seismic_call(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        seismic_request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
         overrides: EvmOverrides,
     ) -> Result<Bytes> {
@@ -1200,9 +1287,11 @@ impl EthApi {
                     "not available on past forked blocks".to_string(),
                 ));
             }
-            return Ok(fork.call(&request, Some(number.into())).await?);
+            // TODO: allow them to make seismic calls on forks
+            return Ok(fork.call(&seismic_request, Some(number.into())).await?);
         }
 
+        let request = seismic_request.clone().inner.inner;
         let fees = FeeDetails::new(
             request.gas_price,
             request.max_fee_per_gas,
@@ -1210,16 +1299,73 @@ impl EthApi {
             request.max_fee_per_blob_gas,
         )?
         .or_zero_fees();
-        // this can be blocking for a bit, especially in forking mode
-        // <https://github.com/foundry-rs/foundry/issues/6036>
-        self.on_blocking_task(|this| async move {
-            let (exit, out, gas, _) =
-                this.backend.call(request, fees, Some(block_request), overrides).await?;
-            trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
 
+        let block_request = self.block_request(block_number).await?;
+        self.on_blocking_task(|this| async move {
+            let (exit, out, gas, _) = this
+                .backend
+                .seismic_call(seismic_request, fees, Some(block_request), overrides)
+                .await?;
+            trace!(target : "node", "Call status {:?}, gas {}", exit, gas);
             ensure_return_ok(exit, &out)
         })
         .await
+    }
+
+    /// Call contract, returning the output data.
+    ///
+    /// Handler for ETH RPC call: `eth_call`
+    pub async fn call(
+        &self,
+        request: impl Into<SeismicCallRequest>,
+        block_number: Option<BlockId>,
+        overrides: EvmOverrides,
+    ) -> Result<Bytes> {
+        match request.into() {
+            SeismicCallRequest::TransactionRequest(mut tx) => {
+                let user_provided_from = tx.inner.from;
+
+                // Zero `from` to prevent caller spoofing on unsigned calls (for privacy).
+                // The remaining fields are zeroed because the zero-address caller has
+                // nonce 0 and balance 0, so any user-supplied nonce/fees/value would
+                // fail revm's pre-execution validation (NonceTooHigh / InsufficientFunds).
+                // When these are None, build_call_env sets disable_nonce_check and
+                // disable_balance_check, bypassing those checks.
+                // TODO(samlaf): maybe move this into a sanitize_from() or so in seismic-alloy.
+                tx.inner.from = None;
+                tx.inner.nonce = None;
+                tx.inner.value = None;
+                tx.inner.gas_price = None;
+                tx.inner.max_fee_per_gas = None;
+                tx.inner.max_priority_fee_per_gas = None;
+                tx.inner.max_fee_per_blob_gas = None;
+
+                match self.seismic_call(WithOtherFields::new(tx), block_number, overrides).await {
+                    Ok(bytes) => Ok(bytes),
+                    Err(original_err) => {
+                        // Only attach a custom message if user tried to set `from` != zero
+                        let tried_to_spoof_from =
+                            user_provided_from.map_or(false, |addr| !addr.is_zero());
+
+                        if tried_to_spoof_from {
+                            // We'll embed the original error's text (which may include
+                            // revert data) plus a multiline explanation:
+                            Err(BlockchainError::Message(format!(
+                                "Unsigned call failed: {orig}. The call included a non-zero 'from' address, which is not allowed in unsigned calls. If you need to set 'from', please use a signed call.",
+                                orig = original_err
+                            )))
+                        } else {
+                            // Otherwise bubble up the original error
+                            Err(original_err)
+                        }
+                    }
+                }
+            }
+            other => {
+                let request = Self::recover_signed_request(other)?;
+                self.seismic_call(request, block_number, overrides).await
+            }
+        }
     }
 
     pub async fn simulate_v1(
@@ -1287,7 +1433,7 @@ impl EthApi {
                 ensure_return_ok(exit, &out)?;
 
                 // execute again but with access list set
-                request.access_list = Some(access_list.clone());
+                request.inner.inner.access_list = Some(access_list.clone());
 
                 let (exit, out, gas_used, _) = self.backend.call_with_state(
                     &state,
@@ -1310,13 +1456,33 @@ impl EthApi {
     /// If no block parameter is given, it will use the pending block by default
     ///
     /// Handler for ETH RPC call: `eth_estimateGas`
+    ///
+    /// Same sanitization as `eth_call`: unsigned requests have `from` and gas/value
+    /// fields cleared to prevent caller spoofing that could leak private state.
+    /// Signed requests (TypedData/Bytes) authenticate the sender cryptographically.
     pub async fn estimate_gas(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        request: SeismicCallRequest,
         block_number: Option<BlockId>,
         overrides: EvmOverrides,
     ) -> Result<U256> {
         node_info!("eth_estimateGas");
+
+        let request = match request {
+            SeismicCallRequest::TransactionRequest(mut tx) => {
+                // See comment in eth_call above — same rationale.
+                tx.inner.from = None;
+                tx.inner.nonce = None;
+                tx.inner.value = None;
+                tx.inner.gas_price = None;
+                tx.inner.max_fee_per_gas = None;
+                tx.inner.max_priority_fee_per_gas = None;
+                tx.inner.max_fee_per_blob_gas = None;
+                WithOtherFields::new(tx)
+            }
+            other => Self::recover_signed_request(other)?,
+        };
+
         self.do_estimate_gas(
             request,
             block_number.or_else(|| Some(BlockNumber::Pending.into())),
@@ -1765,12 +1931,13 @@ impl EthApi {
     /// Handler for RPC call: `debug_traceCall`
     pub async fn debug_trace_call(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        seismic_request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
         opts: GethDebugTracingCallOptions,
     ) -> Result<GethTrace> {
         node_info!("debug_traceCall");
         let block_request = self.block_request(block_number).await?;
+        let request = seismic_request.clone().inner.inner;
         let fees = FeeDetails::new(
             request.gas_price,
             request.max_fee_per_gas,
@@ -1780,7 +1947,7 @@ impl EthApi {
         .or_zero_fees();
 
         let result: std::result::Result<GethTrace, BlockchainError> =
-            self.backend.call_with_tracing(request, fees, Some(block_request), opts).await;
+            self.backend.call_with_tracing(seismic_request, fees, Some(block_request), opts).await;
         result
     }
 
@@ -1958,7 +2125,7 @@ impl EthApi {
     /// Handler for RPC call: `anvil_dropAllTransactions`
     pub async fn anvil_drop_all_transactions(&self) -> Result<()> {
         node_info!("anvil_dropAllTransactions");
-        self.pool.clear();
+        self.pool.resetting();
         Ok(())
     }
 
@@ -2027,7 +2194,7 @@ impl EthApi {
         calldata: Bytes,
         expected_value: U256,
     ) -> Result<B256> {
-        let tx = TransactionRequest::default().with_to(token_address).with_input(calldata.clone());
+        let tx = tx_builder().with_to(token_address).with_input(calldata.clone()).into();
 
         // first collect all the slots that are used by the function call
         let access_list_result =
@@ -2390,7 +2557,7 @@ impl EthApi {
 
                     TransactionData::JSON(req) => {
                         let mut tx_req = WithOtherFields::new(req);
-                        let from = tx_req.from.map(Ok).unwrap_or_else(|| {
+                        let from = tx_req.inner.inner.from.map(Ok).unwrap_or_else(|| {
                             self.accounts()?
                                 .first()
                                 .copied()
@@ -2409,14 +2576,17 @@ impl EthApi {
                         // Estimate gas
                         if tx_req.gas.is_none()
                             && let Ok(gas) = self
-                                .estimate_gas(tx_req.clone(), None, EvmOverrides::default())
+                                .do_estimate_gas(tx_req.clone(), None, EvmOverrides::default())
                                 .await
                         {
-                            tx_req.gas = Some(gas.to());
+                            tx_req.gas = Some(gas as u64);
                         }
 
                         // Build typed transaction request
-                        let typed = self.build_typed_tx_request(tx_req, *curr_nonce)?;
+                        let typed = self.build_typed_tx_request(
+                            WithOtherFields::new(tx_req.inner.into()),
+                            *curr_nonce,
+                        )?;
 
                         // Increment nonce
                         *curr_nonce += 1;
@@ -2604,12 +2774,12 @@ impl EthApi {
                             .coerce_status()
                             && let Some(reason) = RevertDecoder::new().maybe_decode(&output, None)
                         {
-                            tx.other.insert(
+                            tx.0.other.insert(
                                 "revertReason".to_string(),
                                 serde_json::to_value(reason).expect("Infallible"),
                             );
                         }
-                        tx.other.insert(
+                        tx.0.other.insert(
                             "output".to_string(),
                             serde_json::to_value(output).expect("Infallible"),
                         );
@@ -2675,7 +2845,7 @@ impl EthApi {
     ) -> Result<TxHash> {
         node_info!("eth_sendUnsignedTransaction");
         // either use the impersonated account of the request's `from` field
-        let from = request.from.ok_or(BlockchainError::NoSignerAvailable)?;
+        let from = request.inner.inner.from.ok_or(BlockchainError::NoSignerAvailable)?;
 
         let (nonce, on_chain_nonce) = self.request_nonce(&request, from).await?;
 
@@ -2804,10 +2974,11 @@ impl EthApi {
 
     pub async fn wallet_send_transaction(
         &self,
-        mut request: WithOtherFields<TransactionRequest>,
+        mut seismic_request: WithOtherFields<TransactionRequest>,
     ) -> Result<TxHash> {
         node_info!("wallet_sendTransaction");
 
+        let request = seismic_request.clone().inner.inner;
         // Validate the request
         // reject transactions that have a non-zero value to prevent draining the executor.
         if request.value.is_some_and(|val| val > U256::ZERO) {
@@ -2866,20 +3037,23 @@ impl EthApi {
 
         let wallet = self.backend.executor_wallet().ok_or(WalletError::InternalError)?;
 
-        let from = NetworkWallet::<Ethereum>::default_signer_address(&wallet);
+        let from = NetworkWallet::<AnyNetwork>::default_signer_address(&wallet);
 
         let nonce = self.get_transaction_count(from, Some(BlockId::latest())).await?;
 
-        request.nonce = Some(nonce);
+        seismic_request.set_nonce(nonce);
 
         let chain_id = self.chain_id();
 
-        request.chain_id = Some(chain_id);
+        seismic_request.set_chain_id(chain_id);
 
-        request.from = Some(from);
+        seismic_request.set_from(from);
 
-        let gas_limit_fut =
-            self.estimate_gas(request.clone(), Some(BlockId::latest()), EvmOverrides::default());
+        let gas_limit_fut = self.do_estimate_gas(
+            seismic_request.clone(),
+            Some(BlockId::latest()),
+            EvmOverrides::default(),
+        );
 
         let fees_fut = self.fee_history(
             U256::from(EIP1559_FEE_ESTIMATION_PAST_BLOCKS),
@@ -2892,17 +3066,19 @@ impl EthApi {
         let gas_limit = gas_limit?;
         let fees = fees?;
 
-        request.gas = Some(gas_limit.to());
+        seismic_request.inner.inner.gas = Some(gas_limit as u64);
 
         let base_fee = fees.latest_block_base_fee().unwrap_or_default();
 
         let estimation = eip1559_default_estimator(base_fee, &fees.reward.unwrap_or_default());
 
-        request.max_fee_per_gas = Some(estimation.max_fee_per_gas);
-        request.max_priority_fee_per_gas = Some(estimation.max_priority_fee_per_gas);
-        request.gas_price = None;
+        seismic_request.inner.inner.max_fee_per_gas = Some(estimation.max_fee_per_gas);
+        seismic_request.inner.inner.max_priority_fee_per_gas =
+            Some(estimation.max_priority_fee_per_gas);
+        seismic_request.inner.inner.gas_price = None;
 
-        let envelope = request.build(&wallet).await.map_err(|_| WalletError::InternalError)?;
+        let envelope =
+            seismic_request.build(&wallet).await.map_err(|_| WalletError::InternalError)?;
 
         self.send_raw_transaction(envelope.encoded_2718().into()).await
     }
@@ -2976,6 +3152,59 @@ impl EthApi {
         Ok(blocks_to_mine)
     }
 
+    /// Decode a signed SeismicCallRequest (TypedData or Bytes) into a
+    /// WithOtherFields<TransactionRequest> with the authenticated sender set as `from`.
+    fn recover_signed_request(
+        request: SeismicCallRequest,
+    ) -> Result<WithOtherFields<TransactionRequest>> {
+        let typed_tx = match request {
+            SeismicCallRequest::TypedData(td) => {
+                TypedTransaction::decode_712(&td).map_err(|e| {
+                    BlockchainError::Message(format!(
+                        "Failed to decode typed data into seismic tx: {:?}",
+                        e
+                    ))
+                })?
+            }
+            SeismicCallRequest::Bytes(bytes) => {
+                // eth_call / estimateGas legitimately accept signed-read seismic txs, so decode
+                // permissively here. Tx/block ingress uses the strict `decode_2718`, which rejects
+                // signed reads to prevent replay-as-write.
+                TypedTransaction::decode_2718_permit_seismic_calls(&mut bytes.as_ref())
+                    .map_err(|_| BlockchainError::FailedToDecodeSignedTransaction)?
+            }
+            SeismicCallRequest::TransactionRequest(_) => {
+                return Err(BlockchainError::Message(
+                    "Expected signed request (TypedData or Bytes)".to_string(),
+                ));
+            }
+        };
+
+        // Recover the sender — seismic txs use seismic-specific recovery,
+        // non-seismic txs use PendingTransaction for standard recovery.
+        let (tx, sender) = if let Some(signed_seismic_tx) = typed_tx.clone().seismic() {
+            let sender = signed_seismic_tx.recover_signer().map_err(|e| {
+                BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+            })?;
+            let tx: TransactionRequest = signed_seismic_tx.tx().clone().into();
+            (tx, sender)
+        } else {
+            let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
+                BlockchainError::Message(
+                    "Failed to convert typed transaction to request".to_string(),
+                )
+            })?;
+            let pending = PendingTransaction::new(typed_tx).map_err(|e| {
+                BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+            })?;
+            (tx, *pending.sender())
+        };
+
+        let mut request = WithOtherFields::new(tx);
+        request.inner.inner.from = Some(sender);
+        Ok(request)
+    }
+
     async fn do_estimate_gas(
         &self,
         request: WithOtherFields<TransactionRequest>,
@@ -3009,7 +3238,7 @@ impl EthApi {
                         )?;
                     }
                     if let Some(block_overrides) = overrides.block {
-                        cache_db.apply_block_overrides(*block_overrides, &mut block);
+                        cache_db.apply_block_overrides(*block_overrides, &mut block)?;
                     }
                     this.do_estimate_gas_with_state(request, &cache_db, block)
                 })
@@ -3023,12 +3252,13 @@ impl EthApi {
     /// This will execute the transaction request and find the best gas limit via binary search.
     fn do_estimate_gas_with_state(
         &self,
-        mut request: WithOtherFields<TransactionRequest>,
+        mut seismic_request: WithOtherFields<TransactionRequest>,
         state: &dyn DatabaseRef,
         block_env: BlockEnv,
     ) -> Result<u128> {
         // If the request is a simple native token transfer we can optimize
         // We assume it's a transfer if we have no input data.
+        let request = seismic_request.clone().inner.inner;
         let to = request.to.as_ref().and_then(TxKind::to);
 
         // check certain fields to see if the request could be a simple transfer
@@ -3076,12 +3306,20 @@ impl EthApi {
             highest_gas_limit = std::cmp::min(highest_gas_limit, allowance.saturating_to());
         }
 
-        let mut call_to_estimate = request.clone();
+        let mut call_to_estimate = seismic_request.clone();
         call_to_estimate.gas = Some(highest_gas_limit as u64);
 
-        // execute the call without writing to db
-        let ethres =
-            self.backend.call_with_state(&state, call_to_estimate, fees.clone(), block_env.clone());
+        // Execute the call without writing to db. Route through the seismic-aware
+        // wrapper (like `eth_call`) so a seismic request's output, including revert
+        // output (which can embed private state just like a successful return value),
+        // is encrypted under the caller's key before it can reach the error path.
+        // Non-seismic requests pass through unencrypted.
+        let ethres = self.backend.seismic_call_with_state(
+            &state,
+            call_to_estimate,
+            fees.clone(),
+            block_env.clone(),
+        );
 
         let gas_used = match ethres.try_into()? {
             GasEstimationCallResult::Success(gas) => Ok(gas),
@@ -3103,7 +3341,7 @@ impl EthApi {
         // transaction requires to succeed
 
         // Get the starting lowest gas needed depending on the transaction kind.
-        let mut lowest_gas_limit = determine_base_gas_by_kind(&request);
+        let mut lowest_gas_limit = determine_base_gas_by_kind(&seismic_request);
 
         // pick a point that's close to the estimated gas
         let mut mid_gas_limit =
@@ -3111,10 +3349,13 @@ impl EthApi {
 
         // Binary search for the ideal gas limit
         while (highest_gas_limit - lowest_gas_limit) > 1 {
-            request.gas = Some(mid_gas_limit as u64);
-            let ethres = self.backend.call_with_state(
+            seismic_request.set_gas_limit(mid_gas_limit as u64);
+            let request = seismic_request.clone().inner;
+            // Seismic-aware for the same reason as the initial estimate call above:
+            // revert output must not leave the node in cleartext.
+            let ethres = self.backend.seismic_call_with_state(
                 &state,
-                request.clone(),
+                WithOtherFields::new(request.clone()),
                 fees.clone(),
                 block_env.clone(),
             );
@@ -3270,9 +3511,10 @@ impl EthApi {
 
     fn build_typed_tx_request(
         &self,
-        request: WithOtherFields<TransactionRequest>,
+        seismic_request: WithOtherFields<TransactionRequest>,
         nonce: u64,
     ) -> Result<TypedTransactionRequest> {
+        let request = seismic_request.clone().inner.inner;
         let chain_id = request.chain_id.unwrap_or_else(|| self.chain_id());
         let max_fee_per_gas = request.max_fee_per_gas;
         let max_fee_per_blob_gas = request.max_fee_per_blob_gas;
@@ -3281,7 +3523,7 @@ impl EthApi {
         let gas_limit = request.gas.unwrap_or_else(|| self.backend.gas_limit());
         let from = request.from;
 
-        let request = match transaction_request_to_typed(request) {
+        let request = match transaction_request_to_typed(seismic_request) {
             Some(TypedTransactionRequest::Legacy(mut m)) => {
                 m.nonce = nonce;
                 m.chain_id = Some(chain_id);
@@ -3363,6 +3605,14 @@ impl EthApi {
                 m.gas_limit = gas_limit;
                 TypedTransactionRequest::Deposit(m)
             }
+            Some(TypedTransactionRequest::Seismic(mut m)) => {
+                m.gas_limit = gas_limit as u64;
+                if gas_price.is_none() {
+                    m.gas_price = self.gas_price();
+                }
+                m.chain_id = chain_id;
+                TypedTransactionRequest::Seismic(m)
+            }
             None => return Err(BlockchainError::FailedToDecodeTransaction),
         };
         Ok(request)
@@ -3384,6 +3634,7 @@ impl EthApi {
                 false,
             ),
             TypedTransactionRequest::EIP2930(_)
+            | TypedTransactionRequest::Seismic(_)
             | TypedTransactionRequest::EIP1559(_)
             | TypedTransactionRequest::EIP7702(_)
             | TypedTransactionRequest::EIP4844(_)
@@ -3427,7 +3678,7 @@ impl EthApi {
     ) -> Result<(u64, u64)> {
         let highest_nonce =
             self.get_transaction_count(from, Some(BlockId::Number(BlockNumber::Pending))).await?;
-        let nonce = request.nonce.unwrap_or(highest_nonce);
+        let nonce = request.inner.nonce.unwrap_or(highest_nonce);
 
         Ok((nonce, highest_nonce))
     }
@@ -3462,6 +3713,7 @@ impl EthApi {
             TypedTransaction::EIP7702(_) => self.backend.ensure_eip7702_active(),
             TypedTransaction::Deposit(_) => self.backend.ensure_op_deposits_active(),
             TypedTransaction::Legacy(_) => Ok(()),
+            TypedTransaction::Seismic(_) => Ok(()),
         }
     }
 }
@@ -3514,6 +3766,10 @@ fn determine_base_gas_by_kind(request: &WithOtherFields<TransactionRequest>) -> 
             },
             TypedTransactionRequest::EIP4844(_) => MIN_TRANSACTION_GAS,
             TypedTransactionRequest::Deposit(req) => match req.to {
+                TxKind::Call(_) => MIN_TRANSACTION_GAS,
+                TxKind::Create => MIN_CREATE_GAS,
+            },
+            TypedTransactionRequest::Seismic(req) => match req.to {
                 TxKind::Call(_) => MIN_TRANSACTION_GAS,
                 TxKind::Create => MIN_CREATE_GAS,
             },

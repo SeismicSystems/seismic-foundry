@@ -82,6 +82,11 @@ pub struct BuildOpts {
     #[serde(skip)]
     pub via_ir: bool,
 
+    /// Allow via-IR pipeline on Seismic's ssolc (experimental).
+    #[arg(long, help_heading = "Compiler options")]
+    #[serde(skip)]
+    pub unsafe_via_ir: bool,
+
     /// Changes compilation to only use literal content and not URLs.
     #[arg(long, help_heading = "Compiler options")]
     #[serde(skip)]
@@ -128,6 +133,18 @@ pub struct BuildOpts {
     )]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build_info_path: Option<PathBuf>,
+
+    /// Suppress all seismic/ssolc warnings (codes >= 10000).
+    #[arg(long, help_heading = "Compiler options")]
+    #[serde(skip)]
+    pub no_seismic_warnings: bool,
+
+    /// Show seismic warnings even in test files (*.t.sol).
+    ///
+    /// By default, seismic warnings are suppressed in test files.
+    #[arg(long, help_heading = "Compiler options")]
+    #[serde(skip)]
+    pub seismic_warnings_in_tests: bool,
 
     /// Skip building files whose names contain the given filter.
     ///
@@ -227,6 +244,10 @@ impl Provider for BuildOpts {
             dict.insert("via_ir".to_string(), true.into());
         }
 
+        if self.unsafe_via_ir {
+            dict.insert("unsafe_via_ir".to_string(), true.into());
+        }
+
         if self.use_literal_content {
             dict.insert("use_literal_content".to_string(), true.into());
         }
@@ -251,6 +272,14 @@ impl Provider for BuildOpts {
 
         if self.build_info {
             dict.insert("build_info".to_string(), self.build_info.into());
+        }
+
+        if self.no_seismic_warnings {
+            dict.insert("no_seismic_warnings".to_string(), true.into());
+        }
+
+        if self.seismic_warnings_in_tests {
+            dict.insert("seismic_warnings_in_tests".to_string(), true.into());
         }
 
         if self.compiler.ast {

@@ -1,12 +1,8 @@
-use crate::{
-    Cast,
-    tx::{self, CastTxBuilder},
-};
+use crate::tx::{self, CastTxBuilder};
 use alloy_ens::NameOrAddress;
-use alloy_network::{AnyNetwork, EthereumWallet};
-use alloy_provider::{Provider, ProviderBuilder};
-use alloy_rpc_types::TransactionRequest;
-use alloy_serde::WithOtherFields;
+use alloy_network::{TransactionBuilder, eip2718::Encodable2718};
+use alloy_primitives::Bytes;
+use alloy_provider::Provider;
 use alloy_signer::Signer;
 use clap::Parser;
 use eyre::{Result, eyre};
@@ -15,7 +11,10 @@ use foundry_cli::{
     utils,
     utils::LoadConfig,
 };
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, SeismicProviderExt};
 use std::{path::PathBuf, str::FromStr};
+
+use super::seismic_utils;
 
 /// CLI arguments for `cast send`.
 #[derive(Debug, Parser)]
@@ -40,6 +39,16 @@ pub struct SendTxArgs {
     /// The number of confirmations until the receipt is fetched.
     #[arg(long, default_value = "1")]
     confirmations: u64,
+
+    /// Encrypt calldata via ECDH and send as a Seismic transaction (type 74).
+    ///
+    /// --seismic <SK>: use this hex-encoded private key for encryption
+    ///
+    /// --seismic: generate a random ephemeral key
+    ///
+    /// (omit flag): send a standard transaction
+    #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
+    pub seismic: Option<Option<String>>,
 
     #[command(subcommand)]
     command: Option<SendTxSubcommands>,
@@ -95,11 +104,12 @@ impl SendTxArgs {
             cast_async,
             mut args,
             tx,
-            confirmations,
+            confirmations: _,
             command,
             unlocked,
             path,
             timeout,
+            seismic,
         } = self;
 
         let blob_data = if let Some(path) = path { Some(std::fs::read(path)?) } else { None };
@@ -110,15 +120,11 @@ impl SendTxArgs {
             args: constructor_args,
         }) = command
         {
-            // ensure we don't violate settings for transactions that can't be CREATE: 7702 and 4844
-            // which require mandatory target
             if to.is_none() && tx.auth.is_some() {
                 return Err(eyre!(
                     "EIP-7702 transactions can't be CREATE transactions and require a destination address"
                 ));
             }
-            // ensure we don't violate settings for transactions that can't be CREATE: 7702 and 4844
-            // which require mandatory target
             if to.is_none() && blob_data.is_some() {
                 return Err(eyre!(
                     "EIP-4844 transactions can't be CREATE transactions and require a destination address"
@@ -145,17 +151,62 @@ impl SendTxArgs {
 
         let timeout = timeout.unwrap_or(config.transaction_timeout);
 
-        // Case 1:
-        // Default to sending via eth_sendTransaction if the --unlocked flag is passed.
-        // This should be the only way this RPC method is used as it requires a local node
-        // or remote RPC with unlocked accounts.
+        if seismic.is_some() {
+            let signer = eth.wallet.signer().await?;
+            let from = signer.address();
+            tx::validate_from_address(eth.wallet.from, from)?;
+
+            let encryption_sk = seismic_utils::get_or_generate_encryption_key(seismic.unwrap())?;
+
+            // build_raw avoids unsigned gas estimation (the node sanitizes `from`
+            // on unsigned eth_estimateGas, breaking msg.sender-gated contracts).
+            let (mut tx, _) = builder.build_raw(&signer).await?;
+
+            if tx.nonce.is_none() {
+                tx.set_nonce(provider.get_transaction_count(from).await?);
+            }
+            if tx.inner.gas_price.is_none() {
+                tx.inner.gas_price = Some(provider.get_gas_price().await?);
+            }
+
+            let (seismic_elements, block_gas_limit) =
+                seismic_utils::create_seismic_elements(&provider, &encryption_sk, false).await?;
+            let network_pubkey = provider.get_tee_pubkey().await?;
+            let original_input = tx.inner.input.input().unwrap_or_default().clone();
+
+            seismic_utils::prepare_seismic_fields(&mut tx, seismic_elements);
+            seismic_utils::encrypt_tx_input(
+                &mut tx,
+                &original_input,
+                &network_pubkey,
+                &encryption_sk,
+                from,
+            )?;
+
+            let wallet = EthereumWallet::from(signer);
+            if tx.inner.gas.is_none() {
+                seismic_utils::estimate_gas_signed(&provider, &mut tx, &wallet, block_gas_limit)
+                    .await?;
+            }
+
+            let signed = tx
+                .build(&wallet)
+                .await
+                .map_err(|e| eyre::eyre!("Failed to sign seismic transaction: {e:?}"))?;
+            let encoded = Bytes::from(signed.encoded_2718());
+            let tx_hash: alloy_primitives::B256 = provider
+                .client()
+                .request("eth_sendRawTransaction", (encoded,))
+                .await
+                .map_err(|e| eyre::eyre!("Failed to send seismic transaction: {e}"))?;
+
+            return cast_send(&provider, tx_hash, cast_async, timeout).await;
+        }
+
         if unlocked {
-            // only check current chain id if it was specified in the config
             if let Some(config_chain) = config.chain {
                 let current_chain_id = provider.get_chain_id().await?;
                 let config_chain_id = config_chain.id();
-                // switch chain if current chain id is not the same as the one specified in the
-                // config
                 if config_chain_id != current_chain_id {
                     sh_warn!("Switching to chain {}", config_chain)?;
                     provider
@@ -171,13 +222,11 @@ impl SendTxArgs {
 
             let (tx, _) = builder.build(config.sender).await?;
 
-            cast_send(provider, tx, cast_async, confirmations, timeout).await
-        // Case 2:
-        // An option to use a local signer was provided.
-        // If we cannot successfully instantiate a local signer, then we will assume we don't have
-        // enough information to sign and we must bail.
+            // Unlocked accounts use eth_sendTransaction (node signs)
+            let tx_hash: alloy_primitives::B256 =
+                provider.client().request("eth_sendTransaction", (tx,)).await?;
+            cast_send(&provider, tx_hash, cast_async, timeout).await
         } else {
-            // Retrieve the signer, and bail if it can't be constructed.
             let signer = eth.wallet.signer().await?;
             let from = signer.address();
 
@@ -185,35 +234,43 @@ impl SendTxArgs {
 
             let (tx, _) = builder.build(&signer).await?;
 
+            // Sign and send via eth_sendRawTransaction directly.
+            // provider.send_transaction() stack overflows on the SeismicFoundry
+            // network due to a recursive build() in the filler chain.
             let wallet = EthereumWallet::from(signer);
-            let provider = ProviderBuilder::<_, _, AnyNetwork>::default()
-                .wallet(wallet)
-                .connect_provider(&provider);
+            let signed = tx
+                .build(&wallet)
+                .await
+                .map_err(|e| eyre::eyre!("Failed to sign transaction: {e:?}"))?;
+            let encoded = Bytes::from(signed.encoded_2718());
+            let tx_hash: alloy_primitives::B256 =
+                provider.client().request("eth_sendRawTransaction", (encoded,)).await?;
 
-            cast_send(provider, tx, cast_async, confirmations, timeout).await
+            cast_send(&provider, tx_hash, cast_async, timeout).await
         }
     }
 }
 
 async fn cast_send<P: Provider<AnyNetwork>>(
-    provider: P,
-    tx: WithOtherFields<TransactionRequest>,
+    provider: &P,
+    tx_hash: alloy_primitives::B256,
     cast_async: bool,
-    confs: u64,
     timeout: u64,
 ) -> Result<()> {
-    let cast = Cast::new(provider);
-    let pending_tx = cast.send(tx).await?;
-
-    let tx_hash = pending_tx.inner().tx_hash();
-
-    if cast_async {
-        sh_println!("{tx_hash:#x}")?;
-    } else {
-        let receipt =
-            cast.receipt(format!("{tx_hash:#x}"), None, confs, Some(timeout), false).await?;
-        sh_println!("{receipt}")?;
+    sh_println!("{tx_hash:#x}")?;
+    if !cast_async {
+        let start = std::time::Instant::now();
+        let timeout_dur = std::time::Duration::from_secs(timeout);
+        loop {
+            if let Some(receipt) = provider.get_transaction_receipt(tx_hash).await? {
+                sh_println!("{}", serde_json::to_string_pretty(&receipt)?)?;
+                break;
+            }
+            if start.elapsed() > timeout_dur {
+                eyre::bail!("Timed out waiting for transaction receipt");
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        }
     }
-
     Ok(())
 }

@@ -3,13 +3,15 @@
 #![allow(rustdoc::private_doc_tests)]
 
 use crate::{EthApi, shutdown::Shutdown, tasks::block_listener::BlockListener};
-use alloy_network::{AnyHeader, AnyNetwork};
+use alloy_network::AnyHeader;
 use alloy_primitives::B256;
 use alloy_provider::Provider;
 use alloy_rpc_types::anvil::Forking;
 use futures::StreamExt;
 use std::fmt;
 use tokio::{runtime::Handle, task::JoinHandle};
+
+use seismic_prelude::foundry::AnyNetwork;
 
 pub mod block_listener;
 

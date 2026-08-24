@@ -1,14 +1,18 @@
 //! Provider-related instantiation and usage utilities.
 
+pub mod json_rpc_logging;
 pub mod runtime_transport;
 
 use crate::{
-    ALCHEMY_FREE_TIER_CUPS, REQUEST_TIMEOUT, provider::runtime_transport::RuntimeTransportBuilder,
+    ALCHEMY_FREE_TIER_CUPS, REQUEST_TIMEOUT,
+    provider::{json_rpc_logging::JsonRpcLoggingLayer, runtime_transport::RuntimeTransportBuilder},
 };
 use alloy_provider::{
-    Identity, ProviderBuilder as AlloyProviderBuilder, RootProvider,
-    fillers::{ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller},
-    network::{AnyNetwork, EthereumWallet},
+    ProviderBuilder as AlloyProviderBuilder, RootProvider,
+    fillers::{
+        BlobGasFiller, ChainIdFiller, FillProvider, JoinFill, NonceFiller, SimpleNonceManager,
+        WalletFiller,
+    },
 };
 use alloy_rpc_client::ClientBuilder;
 use alloy_transport::{layers::RetryBackoffLayer, utils::guess_local_url};
@@ -23,6 +27,8 @@ use std::{
 };
 use url::ParseError;
 
+use seismic_prelude::foundry::{AnyNetwork, EthereumWallet, GasFiller};
+
 /// The assumed block time for unknown chains.
 /// We assume that these are chains have a faster block time.
 const DEFAULT_UNKNOWN_CHAIN_BLOCK_TIME: Duration = Duration::from_secs(3);
@@ -33,24 +39,40 @@ const POLL_INTERVAL_BLOCK_TIME_SCALE_FACTOR: f32 = 0.6;
 /// Helper type alias for a retry provider
 pub type RetryProvider<N = AnyNetwork> = RootProvider<N>;
 
-/// Helper type alias for a retry provider with a signer
-pub type RetryProviderWithSigner<N = AnyNetwork> = FillProvider<
+/// Filler chain for signed providers: Wallet → Nonce+ChainId → BlobGas → SeismicGas.
+/// The SeismicGasFiller signs gas estimation requests so the node can authenticate
+/// the caller (preventing from-spoofing on eth_estimateGas).
+pub type SignedFillerChain<N = AnyNetwork> = JoinFill<
     JoinFill<
         JoinFill<
-            Identity,
-            JoinFill<
-                GasFiller,
-                JoinFill<
-                    alloy_provider::fillers::BlobGasFiller,
-                    JoinFill<NonceFiller, ChainIdFiller>,
-                >,
-            >,
+            WalletFiller<EthereumWallet>,
+            JoinFill<NonceFiller<SimpleNonceManager>, ChainIdFiller>,
         >,
-        WalletFiller<EthereumWallet>,
+        BlobGasFiller,
     >,
-    RootProvider<N>,
-    N,
+    GasFiller<N>,
 >;
+
+/// Build the signed filler chain with the given wallet and RPC URL.
+pub fn signed_filler_chain(wallet: EthereumWallet, rpc_url: reqwest::Url) -> SignedFillerChain {
+    JoinFill::new(
+        JoinFill::new(
+            JoinFill::new(
+                WalletFiller::new(wallet.clone()),
+                JoinFill::new(
+                    NonceFiller::<SimpleNonceManager>::simple(),
+                    ChainIdFiller::default(),
+                ),
+            ),
+            BlobGasFiller,
+        ),
+        GasFiller::new(rpc_url, wallet),
+    )
+}
+
+/// Helper type alias for a retry provider with a signer
+pub type RetryProviderWithSigner<N = AnyNetwork> =
+    FillProvider<SignedFillerChain<N>, RootProvider<N>, N>;
 
 /// Constructs a provider with a 100 millisecond interval poll if it's a localhost URL (most likely
 /// an anvil or other dev node) and with the default, or 7 second otherwise.
@@ -270,13 +292,16 @@ impl ProviderBuilder {
         let retry_layer =
             RetryBackoffLayer::new(max_retry, initial_backoff, compute_units_per_second);
 
-        let transport = RuntimeTransportBuilder::new(url)
+        let transport = RuntimeTransportBuilder::new(url.clone())
             .with_timeout(timeout)
             .with_headers(headers)
             .with_jwt(jwt)
             .accept_invalid_certs(accept_invalid_certs)
             .build();
-        let client = ClientBuilder::default().layer(retry_layer).transport(transport, is_local);
+        let client = ClientBuilder::default()
+            .layer(retry_layer)
+            .layer(JsonRpcLoggingLayer)
+            .transport(transport, is_local);
 
         if !is_local {
             client.set_poll_interval(
@@ -315,14 +340,17 @@ impl ProviderBuilder {
         let retry_layer =
             RetryBackoffLayer::new(max_retry, initial_backoff, compute_units_per_second);
 
-        let transport = RuntimeTransportBuilder::new(url)
+        let transport = RuntimeTransportBuilder::new(url.clone())
             .with_timeout(timeout)
             .with_headers(headers)
             .with_jwt(jwt)
             .accept_invalid_certs(accept_invalid_certs)
             .build();
 
-        let client = ClientBuilder::default().layer(retry_layer).transport(transport, is_local);
+        let client = ClientBuilder::default()
+            .layer(retry_layer)
+            .layer(JsonRpcLoggingLayer)
+            .transport(transport, is_local);
 
         if !is_local {
             client.set_poll_interval(
@@ -337,8 +365,7 @@ impl ProviderBuilder {
         }
 
         let provider = AlloyProviderBuilder::<_, _, AnyNetwork>::default()
-            .with_recommended_fillers()
-            .wallet(wallet)
+            .layer(signed_filler_chain(wallet, url.clone()))
             .connect_provider(RootProvider::new(client));
 
         Ok(provider)

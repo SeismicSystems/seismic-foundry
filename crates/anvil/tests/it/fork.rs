@@ -9,7 +9,7 @@ use alloy_eips::{
     eip7840::BlobParams,
     eip7910::{EthConfig, SystemContract},
 };
-use alloy_network::{EthereumWallet, ReceiptResponse, TransactionBuilder, TransactionResponse};
+use alloy_network::{ReceiptResponse, TransactionBuilder, TransactionResponse};
 use alloy_primitives::{Address, Bytes, TxHash, TxKind, U64, U256, address, b256, bytes, uint};
 use alloy_provider::Provider;
 use alloy_rpc_types::{
@@ -33,6 +33,8 @@ use std::{
     thread::sleep,
     time::Duration,
 };
+
+use seismic_prelude::foundry::{EthereumWallet, tx_builder};
 
 const BLOCK_NUMBER: u64 = 14_608_400u64;
 const DEAD_BALANCE_AT_BLOCK_NUMBER: u128 = 12_556_069_338_441_120_059_867u128;
@@ -72,6 +74,7 @@ pub fn fork_config() -> NodeConfig {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_gas_limit_applied_from_config() {
     let (api, _handle) = spawn(fork_config().with_gas_limit(Some(10_000_000))).await;
 
@@ -79,6 +82,7 @@ async fn test_fork_gas_limit_applied_from_config() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_gas_limit_disabled_from_config() {
     let (api, handle) = spawn(fork_config().disable_block_gas_limit(true)).await;
 
@@ -91,18 +95,19 @@ async fn test_fork_gas_limit_disabled_from_config() {
         .to(Address::random())
         .value(U256::from(1337u64))
         .from(handle.dev_wallets().next().unwrap().address());
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let _ = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
     let tx = TransactionRequest::default()
         .to(Address::random())
         .value(U256::from(1337u64))
         .from(handle.dev_wallets().next().unwrap().address());
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let _ = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_spawn_fork() {
     let (api, _handle) = spawn(fork_config()).await;
     assert!(api.is_fork());
@@ -112,6 +117,7 @@ async fn test_spawn_fork() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_eth_get_balance() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -125,6 +131,7 @@ async fn test_fork_eth_get_balance() {
 
 // <https://github.com/foundry-rs/foundry/issues/4082>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_eth_get_balance_after_mine() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -143,6 +150,7 @@ async fn test_fork_eth_get_balance_after_mine() {
 
 // <https://github.com/foundry-rs/foundry/issues/4082>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_eth_get_code_after_mine() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -160,6 +168,7 @@ async fn test_fork_eth_get_code_after_mine() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_eth_get_code() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -191,6 +200,7 @@ async fn test_fork_eth_get_code() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_eth_get_nonce() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -209,6 +219,7 @@ async fn test_fork_eth_get_nonce() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_optimism_with_transaction_hash() {
     use std::str::FromStr;
 
@@ -229,6 +240,7 @@ async fn test_fork_optimism_with_transaction_hash() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_eth_fee_history() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -241,6 +253,7 @@ async fn test_fork_eth_fee_history() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_reset() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -255,7 +268,7 @@ async fn test_fork_reset() {
     let initial_nonce = provider.get_transaction_count(from).await.unwrap();
 
     let tx = TransactionRequest::default().to(to).value(amount).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
     assert_eq!(tx.transaction_index, Some(0));
 
@@ -286,6 +299,7 @@ async fn test_fork_reset() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_reset_setup() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     let provider = handle.http_provider();
@@ -313,6 +327,7 @@ async fn test_fork_reset_setup() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_state_snapshotting() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -329,7 +344,7 @@ async fn test_fork_state_snapshotting() {
 
     let provider = handle.http_provider();
     let tx = TransactionRequest::default().to(to).value(amount).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let _ = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -352,6 +367,7 @@ async fn test_fork_state_snapshotting() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_state_snapshotting_repeated() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -368,7 +384,7 @@ async fn test_fork_state_snapshotting_repeated() {
     let amount = handle.genesis_balance().checked_div(U256::from(92u64)).unwrap();
 
     let tx = TransactionRequest::default().to(to).value(amount).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let tx_provider = handle.http_provider();
     let _ = tx_provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -399,6 +415,7 @@ async fn test_fork_state_snapshotting_repeated() {
 
 // <https://github.com/foundry-rs/foundry/issues/6463>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_state_snapshotting_blocks() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -415,8 +432,8 @@ async fn test_fork_state_snapshotting_blocks() {
     let amount = handle.genesis_balance().checked_div(U256::from(2u64)).unwrap();
 
     // send the transaction
-    let tx = TransactionRequest::default().to(to).value(amount).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_to(to).with_value(amount).with_from(from);
+    let tx = WithOtherFields::new(tx.into());
     let _ = provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
     let block_number_after = provider.get_block_number().await.unwrap();
@@ -450,6 +467,7 @@ async fn test_fork_state_snapshotting_blocks() {
 /// changes don't make into the read only Database that holds the remote state, which is flushed to
 /// a cache file.
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_separate_states() {
     let (api, handle) = spawn(fork_config().with_fork_block_number(Some(14723772u64))).await;
     let provider = handle.http_provider();
@@ -479,6 +497,7 @@ async fn test_separate_states() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_deploy_greeter_on_fork() {
     let (_api, handle) = spawn(fork_config().with_fork_block_number(Some(14723772u64))).await;
 
@@ -499,6 +518,7 @@ async fn can_deploy_greeter_on_fork() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_reset_properly() {
     let (origin_api, origin_handle) = spawn(NodeConfig::test()).await;
     let account = origin_handle.dev_accounts().next().unwrap();
@@ -518,7 +538,7 @@ async fn can_reset_properly() {
     let to = Address::random();
     let to_balance = fork_provider.get_balance(to).await.unwrap();
     let tx = TransactionRequest::default().from(account).to(to).value(U256::from(1337u64));
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let tx = fork_tx_provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
     // nonce incremented by 1
@@ -539,6 +559,7 @@ async fn can_reset_properly() {
 
 // Ref: <https://github.com/foundry-rs/foundry/issues/8684>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_reset_fork_to_new_fork() {
     let eth_rpc_url = next_rpc_endpoint(NamedChain::Mainnet);
     let (api, handle) = spawn(NodeConfig::test().with_eth_rpc_url(Some(eth_rpc_url))).await;
@@ -548,7 +569,7 @@ async fn can_reset_fork_to_new_fork() {
 
     let tx = TransactionRequest::default().with_to(op).with_input("0x54fd4d50");
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let mainnet_call_output = provider.call(tx).await.unwrap();
 
@@ -569,6 +590,7 @@ async fn can_reset_fork_to_new_fork() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_timestamp() {
     let start = std::time::Instant::now();
 
@@ -583,9 +605,9 @@ async fn test_fork_timestamp() {
 
     let tx =
         TransactionRequest::default().to(Address::random()).value(U256::from(1337u64)).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 
     let block = provider.get_block(BlockId::latest()).await.unwrap().unwrap();
@@ -606,7 +628,7 @@ async fn test_fork_timestamp() {
 
     let tx =
         TransactionRequest::default().to(Address::random()).value(U256::from(1337u64)).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let _ = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap(); // FIXME: Awaits endlessly here.
 
     let block = provider.get_block(BlockId::latest()).await.unwrap().unwrap();
@@ -622,7 +644,7 @@ async fn test_fork_timestamp() {
     api.evm_set_next_block_timestamp(BLOCK_TIMESTAMP + 1).unwrap();
     let tx =
         TransactionRequest::default().to(Address::random()).value(U256::from(1337u64)).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let _tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
     let block = provider.get_block(BlockId::latest()).await.unwrap().unwrap();
@@ -630,7 +652,7 @@ async fn test_fork_timestamp() {
 
     let tx =
         TransactionRequest::default().to(Address::random()).value(U256::from(1337u64)).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let _ = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
     let block = provider.get_block(BlockId::latest()).await.unwrap().unwrap();
@@ -640,6 +662,7 @@ async fn test_fork_timestamp() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_set_empty_code() {
     let (api, _handle) = spawn(fork_config()).await;
     let addr = "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984".parse().unwrap();
@@ -651,6 +674,7 @@ async fn test_fork_set_empty_code() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_can_send_tx() {
     let (api, handle) =
         spawn(fork_config().with_blocktime(Some(std::time::Duration::from_millis(800)))).await;
@@ -668,7 +692,7 @@ async fn test_fork_can_send_tx() {
     let addr = Address::random();
     let val = U256::from(1337u64);
     let tx = TransactionRequest::default().to(addr).value(val).from(signer);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     // broadcast it via the eth_sendTransaction API
     let _ = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -678,6 +702,7 @@ async fn test_fork_can_send_tx() {
 
 // <https://github.com/foundry-rs/foundry/issues/1920>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_nft_set_approve_all() {
     let (api, handle) = spawn(
         fork_config()
@@ -709,10 +734,10 @@ async fn test_fork_nft_set_approve_all() {
         .from(owner)
         .to(nouns_addr)
         .with_input(approval.calldata().to_owned());
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     api.anvil_impersonate_account(owner).await.unwrap();
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 
     // transfer: impersonate real owner and transfer nft
@@ -725,9 +750,9 @@ async fn test_fork_nft_set_approve_all() {
         .from(real_owner)
         .to(nouns_addr)
         .with_input(call.calldata().to_owned());
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 
     let real_owner = nouns.ownerOf(token_id).call().await.unwrap();
@@ -736,6 +761,7 @@ async fn test_fork_nft_set_approve_all() {
 
 // <https://github.com/foundry-rs/foundry/issues/2261>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_with_custom_chain_id() {
     // spawn a forked node with some random chainId
     let (api, handle) = spawn(
@@ -761,6 +787,7 @@ async fn test_fork_with_custom_chain_id() {
 
 // <https://github.com/foundry-rs/foundry/issues/1920>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_can_send_opensea_tx() {
     let (api, handle) = spawn(
         fork_config()
@@ -785,14 +812,15 @@ async fn test_fork_can_send_opensea_tx() {
         .with_input(input)
         .with_gas_price(22180711707u128)
         .with_gas_limit(150_000);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_base_fee() {
     let (api, handle) = spawn(fork_config()).await;
 
@@ -806,11 +834,12 @@ async fn test_fork_base_fee() {
     let addr = Address::random();
     let val = U256::from(1337u64);
     let tx = TransactionRequest::default().from(from).to(addr).value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let _res = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_init_base_fee() {
     let (api, handle) = spawn(fork_config().with_fork_block_number(Some(13184859u64))).await;
 
@@ -831,6 +860,7 @@ async fn test_fork_init_base_fee() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_reset_fork_on_new_blocks() {
     let (api, handle) =
         spawn(NodeConfig::test().with_eth_rpc_url(Some(rpc::next_http_archive_rpc_url()))).await;
@@ -862,6 +892,7 @@ async fn test_reset_fork_on_new_blocks() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_call() {
     let input: Bytes = "0x77c7b8fc".parse().unwrap();
     let to: Address = "0x99d1Fa417f94dcD62BfE781a1213c092a47041Bc".parse().unwrap();
@@ -869,18 +900,21 @@ async fn test_fork_call() {
 
     let provider = http_provider(rpc::next_http_archive_rpc_url().as_str());
     let tx = TransactionRequest::default().to(to).with_input(input.clone());
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let res0 = provider.call(tx).block(BlockId::Number(block_number.into())).await.unwrap();
 
     let (api, _) = spawn(fork_config().with_fork_block_number(Some(block_number))).await;
 
     let res1 = api
         .call(
-            WithOtherFields::new(TransactionRequest {
-                to: Some(TxKind::from(to)),
-                input: input.into(),
-                ..Default::default()
-            }),
+            WithOtherFields::new(
+                TransactionRequest {
+                    to: Some(TxKind::from(to)),
+                    input: input.into(),
+                    ..Default::default()
+                }
+                .into(),
+            ),
             None,
             EvmOverrides::default(),
         )
@@ -891,6 +925,7 @@ async fn test_fork_call() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_block_timestamp() {
     let (api, _) = spawn(fork_config()).await;
 
@@ -902,6 +937,7 @@ async fn test_fork_block_timestamp() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_snapshot_block_timestamp() {
     let (api, _) = spawn(fork_config()).await;
 
@@ -917,6 +953,7 @@ async fn test_fork_snapshot_block_timestamp() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_uncles_fetch() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -956,6 +993,7 @@ async fn test_fork_uncles_fetch() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_block_transaction_count() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -970,7 +1008,7 @@ async fn test_fork_block_transaction_count() {
 
     let tx =
         TransactionRequest::default().from(sender).value(U256::from(42u64)).with_gas_limit(100_000);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let _ = provider.send_transaction(tx).await.unwrap();
 
     let pending_txs =
@@ -1010,6 +1048,7 @@ async fn test_fork_block_transaction_count() {
 
 // <https://github.com/foundry-rs/foundry/issues/2931>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_impersonate_in_fork() {
     let (api, handle) = spawn(fork_config().with_fork_block_number(Some(15347924u64))).await;
     let provider = handle.http_provider();
@@ -1021,8 +1060,8 @@ async fn can_impersonate_in_fork() {
     // fund the impersonated account
     api.anvil_set_balance(token_holder, U256::from(1e18)).await.unwrap();
 
-    let tx = TransactionRequest::default().from(token_holder).to(to).value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(token_holder).with_to(to).with_value(val);
+    let tx = WithOtherFields::new(tx.into());
     let res = provider.send_transaction(tx.clone()).await;
     res.unwrap_err();
 
@@ -1030,7 +1069,7 @@ async fn can_impersonate_in_fork() {
 
     let res = provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
     assert_eq!(res.from, token_holder);
-    let status = res.inner.inner.inner.receipt.status.coerce_status();
+    let status = res.inner.inner.status();
     assert!(status);
 
     let balance = provider.get_balance(to).await.unwrap();
@@ -1067,6 +1106,7 @@ async fn test_total_difficulty_fork() {
 
 // <https://etherscan.io/block/14608400>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_transaction_receipt() {
     let (api, _) = spawn(fork_config()).await;
 
@@ -1091,6 +1131,7 @@ async fn test_transaction_receipt() {
 
 // <https://etherscan.io/block/14608400>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_block_receipts() {
     let (api, _) = spawn(fork_config()).await;
 
@@ -1110,6 +1151,7 @@ async fn test_block_receipts() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_override_fork_chain_id() {
     let chain_id_override = 5u64;
     let (_api, handle) = spawn(
@@ -1140,6 +1182,7 @@ async fn can_override_fork_chain_id() {
 
 // <https://github.com/foundry-rs/foundry/issues/6485>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_reset_moonbeam() {
     crate::init_tracing();
     let (api, handle) = spawn(
@@ -1155,10 +1198,10 @@ async fn test_fork_reset_moonbeam() {
 
     let tx =
         TransactionRequest::default().to(Address::random()).value(U256::from(1337u64)).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     api.anvil_impersonate_account(from).await.unwrap();
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 
     // reset to check timestamp works after resetting
@@ -1171,14 +1214,15 @@ async fn test_fork_reset_moonbeam() {
 
     let tx =
         TransactionRequest::default().to(Address::random()).value(U256::from(1337u64)).from(from);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let tx = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
-    let status = tx.inner.inner.inner.receipt.status.coerce_status();
+    let status = tx.inner.inner.status();
     assert!(status);
 }
 
 // <https://github.com/foundry-rs/foundry/issues/6640
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_reset_basefee() {
     // <https://etherscan.io/block/18835000>
     let (api, _handle) = spawn(fork_config().with_fork_block_number(Some(18835000u64))).await;
@@ -1203,6 +1247,7 @@ async fn test_fork_reset_basefee() {
 
 // <https://github.com/foundry-rs/foundry/issues/6795>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_arbitrum_fork_dev_balance() {
     let (api, handle) = spawn(
         fork_config()
@@ -1220,6 +1265,7 @@ async fn test_arbitrum_fork_dev_balance() {
 
 // <https://github.com/foundry-rs/foundry/issues/9152>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_arb_fork_mining() {
     let fork_block_number = 266137031u64;
     let fork_rpc = next_rpc_endpoint(NamedChain::Arbitrum);
@@ -1241,6 +1287,7 @@ async fn test_arb_fork_mining() {
 
 // <https://github.com/foundry-rs/foundry/issues/6749>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_arbitrum_fork_block_number() {
     // fork to get initial block for test
     let (_, handle) = spawn(
@@ -1294,6 +1341,7 @@ async fn test_arbitrum_fork_block_number() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_base_fork_gas_limit() {
     // fork to get initial block for test
     let (api, handle) = spawn(
@@ -1313,17 +1361,21 @@ async fn test_base_fork_gas_limit() {
 
 // <https://github.com/foundry-rs/foundry/issues/7023>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_execution_reverted() {
     let target = 16681681u64;
     let (api, _handle) = spawn(fork_config().with_fork_block_number(Some(target + 1))).await;
 
     let resp = api
         .call(
-            WithOtherFields::new(TransactionRequest {
-                to: Some(TxKind::from(address!("0xFd6CC4F251eaE6d02f9F7B41D1e80464D3d2F377"))),
-                input: TransactionInput::new(bytes!("8f283b3c")),
-                ..Default::default()
-            }),
+            WithOtherFields::new(
+                TransactionRequest {
+                    to: Some(TxKind::from(address!("0xFd6CC4F251eaE6d02f9F7B41D1e80464D3d2F377"))),
+                    input: TransactionInput::new(bytes!("8f283b3c")),
+                    ..Default::default()
+                }
+                .into(),
+            ),
             Some(target.into()),
             EvmOverrides::default(),
         )
@@ -1392,7 +1444,7 @@ async fn test_immutable_fork_transaction_hash() {
         (expected_transactions[2], address!("0x4f07d669d76ed9a17799fc4c04c4005196240940")),
     ] {
         let tx = api.backend.mined_transaction_by_hash(expected.0).unwrap();
-        assert_eq!(tx.inner.inner.signer(), expected.1);
+        assert_eq!(tx.inner().inner.signer(), expected.1);
     }
 
     // Validate the order of transactions in the new block
@@ -1415,6 +1467,7 @@ async fn test_immutable_fork_transaction_hash() {
 
 // <https://github.com/foundry-rs/foundry/issues/4700>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_query_at_fork_block() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -1436,6 +1489,7 @@ async fn test_fork_query_at_fork_block() {
 
 // <https://github.com/foundry-rs/foundry/issues/4173>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_reset_dev_account_nonce() {
     let config: NodeConfig = fork_config();
     let address = config.genesis_accounts[0].address();
@@ -1465,7 +1519,8 @@ async fn test_reset_dev_account_nonce() {
                 .from(address)
                 .to(address)
                 .nonce(nonce_after)
-                .gas_limit(21000),
+                .gas_limit(21000)
+                .into(),
         ))
         .await
         .unwrap()
@@ -1477,6 +1532,7 @@ async fn test_reset_dev_account_nonce() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_set_erc20_balance() {
     let config: NodeConfig = fork_config();
     let address = config.genesis_accounts[0].address();
@@ -1502,6 +1558,7 @@ async fn test_set_erc20_balance() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_set_erc20_allowance() {
     let config: NodeConfig = fork_config();
     let owner = config.genesis_accounts[0].address();
@@ -1527,6 +1584,7 @@ async fn test_set_erc20_allowance() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_add_balance() {
     let config: NodeConfig = fork_config();
     let address = config.genesis_accounts[0].address();
@@ -1543,6 +1601,7 @@ async fn test_add_balance() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_reset_updates_cache_path_when_rpc_url_not_provided() {
     let config: NodeConfig = fork_config();
 
@@ -1579,6 +1638,7 @@ async fn test_reset_updates_cache_path_when_rpc_url_not_provided() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_get_account() {
     let (_api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -1598,7 +1658,7 @@ async fn test_fork_get_account() {
 
     let tx = TransactionRequest::default().from(alice).to(bob).value(U256::from(142));
 
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
     let receipt = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
     assert!(receipt.status());
@@ -1645,6 +1705,7 @@ fn assert_hardfork_config(
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_config_with_cancun_hardfork() {
     let (api, _handle) =
         spawn(NodeConfig::test().with_hardfork(Some(EthereumHardfork::Cancun.into()))).await;
@@ -1688,6 +1749,7 @@ async fn test_config_with_cancun_hardfork() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_config_with_prague_hardfork_with_celo() {
     let (api, _handle) = spawn(
         NodeConfig::test().with_hardfork(Some(EthereumHardfork::Prague.into())).with_celo(true),
@@ -1750,6 +1812,7 @@ async fn test_config_with_prague_hardfork_with_celo() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_config_with_osaka_hardfork() {
     let (api, _handle) =
         spawn(NodeConfig::test().with_hardfork(Some(EthereumHardfork::Osaka.into()))).await;
@@ -1810,6 +1873,7 @@ async fn test_config_with_osaka_hardfork() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_config_with_osaka_hardfork_with_precompile_factory() {
     fn custom_echo_precompile(input: &[u8], _gas_limit: u64) -> PrecompileResult {
         Ok(PrecompileOutput { bytes: Bytes::copy_from_slice(input), gas_used: 0, reverted: false })

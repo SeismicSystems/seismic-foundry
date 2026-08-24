@@ -7,7 +7,7 @@ use crate::{
     config::PruneStateHistoryConfig,
     eth::{
         backend::{
-            cheats::{CheatEcrecover, CheatsManager},
+            cheats::CheatsManager,
             db::{Db, MaybeFullDatabase, SerializableState},
             env::Env,
             executor::{ExecutedTransactions, TransactionExecutor},
@@ -36,8 +36,8 @@ use crate::{
 };
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    Account, Blob, BlockHeader, EnvKzgSettings, Header, Receipt, ReceiptWithBloom, Signed,
-    Transaction as TransactionTrait, TxEnvelope,
+    Account, Blob, BlockHeader, EnvKzgSettings, EthereumTxEnvelope, Header, Receipt,
+    ReceiptWithBloom, Signed, Transaction as TransactionTrait,
     proofs::{calculate_receipt_root, calculate_transaction_root},
     transaction::Recovered,
 };
@@ -49,11 +49,9 @@ use alloy_evm::{
     Database, Evm,
     eth::EthEvmContext,
     overrides::{OverrideBlockHashes, apply_state_overrides},
-    precompiles::{DynPrecompile, Precompile, PrecompilesMap},
 };
 use alloy_network::{
-    AnyHeader, AnyRpcBlock, AnyRpcHeader, AnyRpcTransaction, AnyTxEnvelope, AnyTxType,
-    EthereumWallet, UnknownTxEnvelope, UnknownTypedTransaction,
+    AnyHeader, AnyRpcHeader, AnyTxType, UnknownTxEnvelope, UnknownTypedTransaction,
 };
 use alloy_primitives::{
     Address, B256, Bytes, TxHash, TxKind, U64, U256, address, hex, keccak256, logs_bloom,
@@ -62,11 +60,10 @@ use alloy_primitives::{
 use alloy_rpc_types::{
     AccessList, Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions,
     EIP1186AccountProofResponse as AccountProof, EIP1186StorageProof as StorageProof, Filter,
-    Header as AlloyHeader, Index, Log, Transaction, TransactionReceipt,
+    Header as AlloyHeader, Index, Log, Transaction,
     anvil::Forking,
-    request::TransactionRequest,
     serde_helpers::JsonStorageKey,
-    simulate::{SimBlock, SimCallResult, SimulatePayload, SimulatedBlock},
+    simulate::{SimCallResult, SimulatedBlock},
     state::EvmOverrides,
     trace::{
         filter::TraceFilter,
@@ -85,8 +82,7 @@ use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
         DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
-        TransactionInfo, TypedReceipt, TypedTransaction, has_optimism_fields,
-        transaction_request_to_typed,
+        TransactionInfo, TypedReceipt, TypedTransaction, transaction_request_to_typed,
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
 };
@@ -99,22 +95,21 @@ use foundry_evm::{
     constants::DEFAULT_CREATE2_DEPLOYER_RUNTIME_CODE,
     decode::RevertDecoder,
     inspectors::AccessListInspector,
+    seismic_constants::{AES_LIB_RUNTIME_CODE, DIRECTORY_RUNTIME_CODE, INTELLIGENCE_RUNTIME_CODE},
     traces::{CallTraceDecoder, TracingInspectorConfig},
     utils::{get_blob_base_fee_update_fraction, get_blob_base_fee_update_fraction_by_spec_id},
 };
-use foundry_evm_core::{either_evm::EitherEvm, precompiles::EC_RECOVER};
+use foundry_evm_core::either_evm::EitherEvm;
 use futures::channel::mpsc::{UnboundedSender, unbounded};
 use op_alloy_consensus::DEPOSIT_TX_TYPE_ID;
-use op_revm::{
-    OpContext, OpHaltReason, OpTransaction, transaction::deposit::DepositTransactionParts,
-};
+use op_revm::OpContext;
 use parking_lot::{Mutex, RwLock};
 use revm::{
     DatabaseCommit, Inspector,
     context::{Block as RevmBlock, BlockEnv, Cfg, TxEnv},
     context_interface::{
         block::BlobExcessGasAndPrice,
-        result::{ExecutionResult, Output, ResultAndState},
+        result::{ExecutionResult, HaltReason, Output, ResultAndState},
     },
     database::{CacheDB, WrapDatabaseRef},
     interpreter::InstructionResult,
@@ -123,9 +118,10 @@ use revm::{
         secp256r1::{P256VERIFY, P256VERIFY_ADDRESS, P256VERIFY_BASE_GAS_FEE},
         u64_to_address,
     },
-    primitives::{KECCAK_EMPTY, hardfork::SpecId},
+    primitives::{FlaggedStorage, KECCAK_EMPTY, hardfork::SpecId as RevmSpecId},
     state::AccountInfo,
 };
+use seismic_crypto::well_known_tx_io_keypair;
 use std::{
     collections::BTreeMap,
     fmt::Debug,
@@ -137,6 +133,16 @@ use std::{
 };
 use storage::{Blockchain, DEFAULT_HISTORY_LIMIT, MinedTransaction};
 use tokio::sync::RwLock as AsyncRwLock;
+
+use alloy_rpc_types::TransactionRequest as AlloyTransactionRequest;
+use seismic_prelude::{
+    foundry::{
+        AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope, EthereumWallet, InputDecryptionElements,
+        OpTransaction, SeismicContext, SeismicPrecompiles, SimBlock, SimulatePayload, SpecId,
+        TransactionReceipt, TransactionRequest, TxEnvelope,
+    },
+    reth::{SEISMIC_TX_TYPE_ID, TxSeismicMetadata},
+};
 
 pub mod cache;
 pub mod fork_db;
@@ -287,7 +293,7 @@ impl Backend {
             let env = env.read();
             Blockchain::new(
                 &env,
-                env.evm_env.cfg_env.spec,
+                env.evm_env.cfg_env.spec.into_eth_spec(),
                 fees.is_eip1559().then(|| fees.base_fee()),
                 genesis.timestamp,
                 genesis.number,
@@ -396,6 +402,27 @@ impl Backend {
         // Note: this can only fail in forking mode, in which case we can't recover
         backend.apply_genesis().await.wrap_err("failed to create genesis")?;
         Ok(backend)
+    }
+
+    /// Writes Directory code, and accompanying AES library, directly to the
+    /// database at the addresses provided.
+    pub async fn set_directory(
+        &self,
+        aes_address: Address,
+        directory_address: Address,
+    ) -> DatabaseResult<()> {
+        self.set_code(aes_address, Bytes::from_static(AES_LIB_RUNTIME_CODE)).await?;
+        self.set_code(directory_address, Bytes::from_static(DIRECTORY_RUNTIME_CODE)).await?;
+
+        Ok(())
+    }
+
+    /// Writes Intelligence code directly to the database at the addresses
+    /// provided.
+    pub async fn set_intelligence(&self, intelligence_address: Address) -> DatabaseResult<()> {
+        self.set_code(intelligence_address, Bytes::from_static(INTELLIGENCE_RUNTIME_CODE)).await?;
+
+        Ok(())
     }
 
     /// Writes the CREATE2 deployer code directly to the database at the address provided.
@@ -668,8 +695,13 @@ impl Backend {
 
         // Clear all storage and reinitialize with genesis
         let base_fee = if self.fees.is_eip1559() { Some(self.fees.base_fee()) } else { None };
-        *self.blockchain.storage.write() =
-            BlockchainStorage::new(&env, spec_id, base_fee, genesis_timestamp, genesis_number);
+        *self.blockchain.storage.write() = BlockchainStorage::new(
+            &env,
+            spec_id.into_eth_spec(),
+            base_fee,
+            genesis_timestamp,
+            genesis_number,
+        );
         self.states.write().clear();
 
         // Clear the database
@@ -807,7 +839,8 @@ impl Backend {
         slot: U256,
         val: B256,
     ) -> DatabaseResult<()> {
-        self.db.write().await.set_storage_at(address, slot.into(), val)
+        let val_u256: U256 = val.into();
+        self.db.write().await.set_storage_at(address, slot.into(), val_u256.into())
     }
 
     /// Returns the configured specid
@@ -817,27 +850,27 @@ impl Backend {
 
     /// Returns true for post London
     pub fn is_eip1559(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::LONDON as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::LONDON as u8)
     }
 
     /// Returns true for post Merge
     pub fn is_eip3675(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::MERGE as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::MERGE as u8)
     }
 
     /// Returns true for post Berlin
     pub fn is_eip2930(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::BERLIN as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::BERLIN as u8)
     }
 
     /// Returns true for post Cancun
     pub fn is_eip4844(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::CANCUN as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::CANCUN as u8)
     }
 
     /// Returns true for post Prague
     pub fn is_eip7702(&self) -> bool {
-        (self.spec_id() as u8) >= (SpecId::PRAGUE as u8)
+        (self.spec_id() as u8) >= (RevmSpecId::PRAGUE as u8)
     }
 
     /// Returns true if op-stack deposits are active
@@ -853,7 +886,7 @@ impl Backend {
     /// Returns the precompiles for the current spec.
     pub fn precompiles(&self) -> BTreeMap<String, Address> {
         let spec_id = self.env.read().evm_env.cfg_env.spec;
-        let precompiles = Precompiles::new(PrecompileSpecId::from_spec_id(spec_id));
+        let precompiles = Precompiles::new(PrecompileSpecId::from_spec_id(spec_id.into_eth_spec()));
 
         let mut precompiles_map = BTreeMap::<String, Address>::default();
         for (address, precompile) in precompiles.inner() {
@@ -889,11 +922,11 @@ impl Backend {
 
         let spec_id = self.env.read().evm_env.cfg_env.spec;
 
-        if spec_id >= SpecId::CANCUN {
+        if spec_id.into_eth_spec() >= RevmSpecId::CANCUN {
             system_contracts.extend(SystemContract::cancun());
         }
 
-        if spec_id >= SpecId::PRAGUE {
+        if spec_id.into_eth_spec() >= RevmSpecId::PRAGUE {
             system_contracts.extend(SystemContract::prague(None));
         }
 
@@ -902,13 +935,13 @@ impl Backend {
 
     /// Returns [`BlobParams`] corresponding to the current spec.
     pub fn blob_params(&self) -> BlobParams {
-        let spec_id = self.env.read().evm_env.cfg_env.spec;
+        let spec_id = self.env.read().evm_env.cfg_env.spec.into_eth_spec();
 
-        if spec_id >= SpecId::OSAKA {
+        if spec_id >= RevmSpecId::OSAKA {
             return BlobParams::osaka();
         }
 
-        if spec_id >= SpecId::PRAGUE {
+        if spec_id >= RevmSpecId::PRAGUE {
             return BlobParams::prague();
         }
 
@@ -1221,17 +1254,39 @@ impl Backend {
         env
     }
 
+    /*
+    ) -> EitherEvm<
+        WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>,
+        &'db mut I,
+        SeismicPrecompiles<
+            SeismicContext<WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>>,
+        >,
+    >
+    where
+        I: Inspector<EthEvmContext<WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>>>
+            + Inspector<OpContext<WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>>>
+            + Inspector<SeismicContext<WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>>>,
+        WrapDatabaseRef<&'db dyn DatabaseRef<Error = DatabaseError>>:
+            Database<Error = DatabaseError>,
+
+    */
+
     /// Creates an EVM instance with optionally injected precompiles.
     fn new_evm_with_inspector_ref<'db, I, DB>(
         &self,
         db: &'db DB,
         env: &Env,
         inspector: &'db mut I,
-    ) -> EitherEvm<WrapDatabaseRef<&'db DB>, &'db mut I, PrecompilesMap>
+    ) -> EitherEvm<
+        WrapDatabaseRef<&'db DB>,
+        &'db mut I,
+        SeismicPrecompiles<SeismicContext<WrapDatabaseRef<&'db DB>>>,
+    >
     where
-        DB: DatabaseRef + ?Sized,
+        DB: DatabaseRef<Error = DatabaseError> + Debug + 'db + ?Sized,
         I: Inspector<EthEvmContext<WrapDatabaseRef<&'db DB>>>
-            + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>,
+            + Inspector<OpContext<WrapDatabaseRef<&'db DB>>>
+            + Inspector<SeismicContext<WrapDatabaseRef<&'db DB>>>,
         WrapDatabaseRef<&'db DB>: Database<Error = DatabaseError>,
     {
         let mut evm = new_evm_with_inspector_ref(db, env, inspector);
@@ -1241,10 +1296,12 @@ impl Backend {
         }
 
         if self.is_celo() {
+            /*
             evm.precompiles_mut()
                 .apply_precompile(&celo_precompile::CELO_TRANSFER_ADDRESS, move |_| {
                     Some(celo_precompile::precompile())
                 });
+            */
         }
 
         if let Some(factory) = &self.precompile_factory {
@@ -1253,13 +1310,15 @@ impl Backend {
 
         let cheats = Arc::new(self.cheats.clone());
         if cheats.has_recover_overrides() {
-            let cheat_ecrecover = CheatEcrecover::new(Arc::clone(&cheats));
+            // NOTE: seismic-anvil does not support this; typing too annoying
+            /*
             evm.precompiles_mut().apply_precompile(&EC_RECOVER, move |_| {
                 Some(DynPrecompile::new_stateful(
                     cheat_ecrecover.precompile_id().clone(),
                     move |input| cheat_ecrecover.call(input),
                 ))
             });
+            */
         }
 
         evm
@@ -1275,11 +1334,15 @@ impl Backend {
     > {
         let mut env = self.next_env();
         env.tx = tx.pending_transaction.to_revm_tx_env();
+        // Set tx_hash so the RNG precompile produces random (non-zero) output.
+        env.tx.tx_hash = *tx.pending_transaction.hash();
 
+        /*
         if env.is_optimism {
             env.tx.enveloped_tx =
                 Some(alloy_rlp::encode(&tx.pending_transaction.transaction.transaction).into());
         }
+        */
 
         let db = self.db.read().await;
         let mut inspector = self.build_inspector();
@@ -1376,7 +1439,6 @@ impl Backend {
     ) -> MinedBlockOutcome {
         let _mining_guard = self.mining.lock().await;
         trace!(target: "backend", "creating new block with {} transactions", pool_transactions.len());
-
         let (outcome, header, block_hash) = {
             let current_base_fee = self.base_fee();
             let current_excess_blob_gas_and_price = self.excess_blob_gas_and_price();
@@ -1547,7 +1609,9 @@ impl Backend {
 
         self.fees.set_blob_excess_gas_and_price(BlobExcessGasAndPrice::new(
             next_block_excess_blob_gas,
-            get_blob_base_fee_update_fraction_by_spec_id(*self.env.read().evm_env.spec_id()),
+            get_blob_base_fee_update_fraction_by_spec_id(
+                self.env.read().evm_env.spec_id().into_eth_spec(),
+            ),
         ));
 
         // notify all listeners
@@ -1576,13 +1640,55 @@ impl Backend {
                     apply_state_overrides(state_overrides.into_iter().collect(), &mut cache_db)?;
                 }
                 if let Some(block_overrides) = overrides.block {
-                    cache_db.apply_block_overrides(*block_overrides, &mut block);
+                    cache_db.apply_block_overrides(*block_overrides, &mut block)?;
                 }
                 self.call_with_state(&cache_db, request, fee_details, block)
             }?;
             trace!(target: "backend", "call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
             Ok((exit, out, gas, state))
         }).await?
+    }
+
+    /// Executes the [TransactionRequest] without writing to the DB
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `block_number` is greater than the current height
+    pub async fn seismic_call(
+        &self,
+        request: WithOtherFields<TransactionRequest>,
+        fee_details: FeeDetails,
+        block_request: Option<BlockRequest>,
+        overrides: EvmOverrides,
+    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
+        self.with_database_at(block_request, |state, mut block| {
+            let block_number = block.number;
+            let (exit, out, gas, state) = {
+                let mut cache_db = CacheDB::new(state);
+                if let Some(state_overrides) = overrides.state {
+                    apply_state_overrides(state_overrides.into_iter().collect(), &mut cache_db)?;
+                }
+                if let Some(block_overrides) = overrides.block {
+                    alloy_evm::overrides::apply_block_overrides(*block_overrides, &mut cache_db, &mut block)?;
+                }
+                self.seismic_call_with_state(&cache_db, request, fee_details, block)
+            }?;
+            trace!(target: "backend", "seismic call return {:?} out: {:?} gas {} on block {}", exit, out, gas, block_number);
+            Ok((exit, out, gas, state))
+        }).await?
+    }
+
+    fn check_calldata_decryption(
+        seismic_request: &TransactionRequest,
+    ) -> Result<(), BlockchainError> {
+        match seismic_request.to_transaction_request(&well_known_tx_io_keypair().secret_key()) {
+            // check if we can decrypt calldata before building call env
+            // because it will panic inside there
+            Ok(_) => Ok(()),
+            Err(e) => {
+                return Err(BlockchainError::FailedToDecryptCalldata(e));
+            }
+        }
     }
 
     /// ## EVM settings
@@ -1600,25 +1706,27 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Env {
         let tx_type = request.minimal_tx_type() as u8;
+        let cloned_inner = request.inner.clone();
 
         let WithOtherFields::<TransactionRequest> {
             inner:
                 TransactionRequest {
-                    from,
-                    to,
-                    gas,
-                    value,
-                    input,
-                    access_list,
-                    blob_versioned_hashes,
-                    authorization_list,
-                    nonce,
-                    sidecar: _,
-                    chain_id,
-                    transaction_type,
-                    .. // Rest of the gas fees related fields are taken from `fee_details`
+                    inner: AlloyTransactionRequest {
+                        from,
+                        to,
+                        gas,
+                        value,
+                        access_list,
+                        blob_versioned_hashes,
+                        authorization_list,
+                        nonce,
+                        sidecar: _,
+                        chain_id,
+                        .. // Rest of the gas fees related fields are taken from `fee_details`
+                    },
+                    seismic_elements: _,
                 },
-            other,
+            other: _,
         } = request;
 
         let FeeDetails {
@@ -1649,6 +1757,20 @@ impl Backend {
         let caller = from.unwrap_or_default();
         let to = to.as_ref().and_then(TxKind::to);
         let blob_hashes = blob_versioned_hashes.unwrap_or_default();
+        let tx_io_sk = seismic_crypto::well_known_tx_io_keypair().secret_key();
+
+        let kind = match to {
+            Some(addr) => TxKind::Call(*addr),
+            None => TxKind::Create,
+        };
+        let value = value.unwrap_or_default();
+        let chain_id = chain_id.unwrap_or(self.env.read().evm_env.cfg_env.chain_id);
+        let data = match cloned_inner.to_transaction_request(&tx_io_sk) {
+            Ok(tx_req) => tx_req.input.normalized_input().input.unwrap_or_default(),
+            Err(e) => {
+                panic!("Failed to decrypt seismic tx calldata: {e}")
+            }
+        };
         let mut base = TxEnv {
             caller,
             gas_limit,
@@ -1663,14 +1785,11 @@ impl Backend {
                     }
                 })
                 .unwrap_or_default(),
-            kind: match to {
-                Some(addr) => TxKind::Call(*addr),
-                None => TxKind::Create,
-            },
+            kind,
             tx_type,
-            value: value.unwrap_or_default(),
-            data: input.into_input().unwrap_or_default(),
-            chain_id: Some(chain_id.unwrap_or(self.env.read().evm_env.cfg_env.chain_id)),
+            value,
+            data,
+            chain_id: Some(chain_id),
             access_list: access_list.unwrap_or_default(),
             blob_hashes,
             ..Default::default()
@@ -1691,6 +1810,7 @@ impl Backend {
             env.evm_env.cfg_env.disable_base_fee = true;
         }
 
+        /*
         // Deposit transaction?
         if transaction_type == Some(DEPOSIT_TX_TYPE_ID) && has_optimism_fields(&other) {
             let deposit = DepositTransactionParts {
@@ -1709,6 +1829,7 @@ impl Backend {
             };
             env.tx.deposit = deposit;
         }
+        */
 
         env
     }
@@ -1757,11 +1878,12 @@ impl Backend {
                     apply_state_overrides(state_overrides, &mut cache_db)?;
                 }
                 if let Some(block_overrides) = block_overrides {
-                    cache_db.apply_block_overrides(block_overrides, &mut block_env);
+                    cache_db.apply_block_overrides(block_overrides, &mut block_env)?;
                 }
 
                 // execute all calls in that block
-                for (req_idx, request) in calls.into_iter().enumerate() {
+                for (req_idx, seismic_request) in calls.into_iter().enumerate() {
+                    let request = seismic_request.inner.clone();
                     let fee_details = FeeDetails::new(
                         request.gas_price,
                         request.max_fee_per_gas,
@@ -1770,8 +1892,9 @@ impl Backend {
                     )?
                     .or_zero_fees();
 
+                    Self::check_calldata_decryption(&seismic_request)?;
                     let mut env = self.build_call_env(
-                        WithOtherFields::new(request.clone()),
+                        WithOtherFields::new(seismic_request.clone()),
                         fee_details,
                         block_env.clone(),
                     );
@@ -1821,7 +1944,7 @@ impl Backend {
 
                     // create the transaction from a request
                     let from = request.from.unwrap_or_default();
-                    let request = transaction_request_to_typed(WithOtherFields::new(request))
+                    let request = transaction_request_to_typed(WithOtherFields::new(seismic_request))
                         .ok_or(BlockchainError::MissingRequiredFields)?;
                     let tx = build_typed_transaction(
                         request,
@@ -1949,7 +2072,7 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
         let mut inspector = self.build_inspector();
-
+        Self::check_calldata_decryption(&request)?;
         let env = self.build_call_env(request, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state } = evm.transact(env.tx)?;
@@ -1974,6 +2097,92 @@ impl Backend {
         Ok((exit_reason, out, gas_used as u128, state))
     }
 
+    /// If the request is a seismic tx, then make sure it has:
+    /// - seismic elements
+    /// - a 'from' field set (from the recovered signer)
+    /// - and it's marked as a signed read
+    /// ... and then create the metadata
+    ///
+    /// If not, then make sure it does not have seismic elements
+    fn validate_seismic_call_tx_metadata(
+        request: &WithOtherFields<TransactionRequest>,
+    ) -> Result<Option<TxSeismicMetadata>, BlockchainError> {
+        match request.transaction_type {
+            Some(SEISMIC_TX_TYPE_ID) => {
+                if request.inner.seismic_elements.is_none() {
+                    return Err(BlockchainError::MissingRequiredFields);
+                }
+                let sender = match request.from {
+                    Some(addr) => addr,
+                    None => {
+                        // this should never happen in practice,
+                        // because we patch the 'from' field manually
+                        return Err(BlockchainError::Message(
+                            "Failed to parse 'from' field for Seismic tx".into(),
+                        ));
+                    }
+                };
+                let tx_metadata = request
+                    .inner
+                    .metadata(sender)
+                    .map_err(|_e| BlockchainError::MissingRequiredFields)?;
+                /*
+                NOTE: we allow them to make signed
+                if !tx_metadata.seismic_elements.signed_read {
+                    return Err(BlockchainError::Message(
+                        "Seismic call has signed_read set to false".into(),
+                    ));
+                }
+                */
+                Ok(Some(tx_metadata))
+            }
+            _ => {
+                if request.inner.seismic_elements.is_some() {
+                    return Err(BlockchainError::Message(
+                        "Non-seismic tx has seismic fields".into(),
+                    ));
+                }
+                Ok(None)
+            }
+        }
+    }
+
+    pub fn seismic_call_with_state(
+        &self,
+        state: &dyn DatabaseRef<Error = DatabaseError>,
+        request: WithOtherFields<TransactionRequest>,
+        fee_details: FeeDetails,
+        block_env: BlockEnv,
+    ) -> Result<(InstructionResult, Option<Output>, u128, State), BlockchainError> {
+        let tx_metadata = Self::validate_seismic_call_tx_metadata(&request)?;
+        let tx_io_sk = seismic_crypto::well_known_tx_io_keypair().secret_key();
+        if let Some(metadata) = &tx_metadata {
+            let encrypted_input = request.inner.input.clone().input.unwrap_or(Bytes::new()).clone();
+            if let Err(e) = metadata.decrypt_request(&tx_io_sk, &encrypted_input) {
+                return Err(BlockchainError::Message(format!("Invalid AEAD metadata: {e}")));
+            }
+        }
+        let (exit_reason, out, gas_used, state) =
+            self.call_with_state(state, request, fee_details, block_env)?;
+        let output_data = out
+            .map(|plaintext_output| match tx_metadata {
+                Some(tx_metadata) => tx_metadata
+                    .seismic_elements
+                    .encrypt_response(&tx_io_sk, &plaintext_output.data(), &tx_metadata)
+                    .map_err(|e| {
+                        BlockchainError::Message(format!("Failed to encrypt output: {}", e))
+                    })
+                    .map(|ciphertext| match plaintext_output {
+                        Output::Call(_data) => Output::Call(ciphertext),
+                        Output::Create(_data, address) => Output::Create(ciphertext, address),
+                    }),
+                None => Ok(plaintext_output),
+            })
+            .transpose()?;
+
+        Ok((exit_reason, output_data, gas_used as u128, state))
+    }
+
     pub async fn call_with_tracing(
         &self,
         request: WithOtherFields<TransactionRequest>,
@@ -1981,8 +2190,9 @@ impl Backend {
         block_request: Option<BlockRequest>,
         opts: GethDebugTracingCallOptions,
     ) -> Result<GethTrace, BlockchainError> {
-        let GethDebugTracingCallOptions { tracing_options, block_overrides, state_overrides } =
-            opts;
+        let GethDebugTracingCallOptions {
+            tracing_options, block_overrides, state_overrides, ..
+        } = opts;
         let GethDebugTracingOptions { config, tracer, tracer_config, .. } = tracing_options;
 
         self.with_database_at(block_request, |state, mut block| {
@@ -1993,7 +2203,7 @@ impl Backend {
                 apply_state_overrides(state_overrides, &mut cache_db)?;
             }
             if let Some(block_overrides) = block_overrides {
-                cache_db.apply_block_overrides(block_overrides, &mut block);
+                cache_db.apply_block_overrides(block_overrides, &mut block)?;
             }
 
             if let Some(tracer) = tracer {
@@ -2007,7 +2217,7 @@ impl Backend {
                             let mut inspector = self.build_inspector().with_tracing_config(
                                 TracingInspectorConfig::from_geth_call_config(&call_config),
                             );
-
+                            Self::check_calldata_decryption(&request)?;
                             let env = self.build_call_env(request, fee_details, block);
                             let mut evm =
                                 self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
@@ -2041,13 +2251,19 @@ impl Backend {
                             revm_inspectors::tracing::js::JsInspector::new(code, config)
                                 .map_err(|err| BlockchainError::Message(err.to_string()))?;
 
+                        Self::check_calldata_decryption(&request)?;
                         let env = self.build_call_env(request, fee_details, block.clone());
                         let mut evm =
                             self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
                         let result = evm.transact(env.tx.clone())?;
                         let res = evm
                             .inspector_mut()
-                            .json_result(result, &env.tx.into_tx_env(), &block, &cache_db)
+                            .json_result(
+                                result,
+                                &IntoTxEnv::<TxEnv>::into_tx_env(env.tx),
+                                &block,
+                                &cache_db,
+                            )
                             .map_err(|err| BlockchainError::Message(err.to_string()))?;
 
                         Ok(GethTrace::JS(res))
@@ -2060,6 +2276,7 @@ impl Backend {
                 .build_inspector()
                 .with_tracing_config(TracingInspectorConfig::from_geth_config(&config));
 
+            Self::check_calldata_decryption(&request)?;
             let env = self.build_call_env(request, fee_details, block);
             let mut evm = self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
             let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
@@ -2100,8 +2317,9 @@ impl Backend {
         block_env: BlockEnv,
     ) -> Result<(InstructionResult, Option<Output>, u64, AccessList), BlockchainError> {
         let mut inspector =
-            AccessListInspector::new(request.access_list.clone().unwrap_or_default());
+            AccessListInspector::new(request.inner.inner.access_list.clone().unwrap_or_default());
 
+        Self::check_calldata_decryption(&request)?;
         let env = self.build_call_env(request, fee_details, block_env);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
@@ -2550,7 +2768,23 @@ impl Backend {
         self.with_database_at(block_request, |db, _| {
             trace!(target: "backend", "get storage for {:?} at {:?}", address, index);
             let val = db.storage_ref(address, index)?;
-            Ok(val.into())
+            Ok(B256::from(val.value))
+        })
+        .await?
+    }
+
+    /// Returns storage at given address and index with privacy flag
+    ///
+    /// Handler for custom RPC call: `eth_getFlaggedStorageAt`
+    pub async fn flagged_storage_at(
+        &self,
+        address: Address,
+        index: U256,
+        block_request: Option<BlockRequest>,
+    ) -> Result<FlaggedStorage, BlockchainError> {
+        self.with_database_at(block_request, |db, _| {
+            trace!(target: "backend", "get storage with privacy for {:?} at {:?}", address, index);
+            Ok(db.storage_ref(address, index)?)
         })
         .await?
     }
@@ -2806,7 +3040,9 @@ impl Backend {
 
         let target_tx = block.transactions[index].clone();
         let target_tx = PendingTransaction::from_maybe_impersonated(target_tx)?;
-        let tx_env = target_tx.to_revm_tx_env();
+        let mut tx_env = target_tx.to_revm_tx_env();
+        // Set tx_hash so the RNG precompile produces random (non-zero) output.
+        tx_env.tx_hash = *target_tx.hash();
 
         let config = tracer_config.into_json();
         let mut inspector = revm_inspectors::tracing::js::JsInspector::new(code, config)
@@ -2820,7 +3056,7 @@ impl Backend {
         let trace = inspector
             .json_result(
                 result,
-                &alloy_evm::IntoTxEnv::into_tx_env(tx_env),
+                &alloy_evm::IntoTxEnv::<TxEnv>::into_tx_env(tx_env),
                 &env.evm_env.block_env,
                 &cache_db,
             )
@@ -3001,6 +3237,7 @@ impl Backend {
                 .map_or(self.base_fee() as u128, |g| g as u128)
                 .saturating_add(t.tx().max_priority_fee_per_gas),
             TypedTransaction::Deposit(_) => 0_u128,
+            TypedTransaction::Seismic(_) => 0_u128,
         };
 
         let receipts = self.get_receipts(block.transactions.iter().map(|tx| tx.hash()));
@@ -3029,7 +3266,7 @@ impl Backend {
         let receipt_with_bloom =
             ReceiptWithBloom { receipt, logs_bloom: tx_receipt.as_receipt_with_bloom().logs_bloom };
 
-        let inner = match tx_receipt {
+        let inner: TypedReceipt<Receipt<Log>> = match tx_receipt {
             TypedReceipt::EIP1559(_) => TypedReceipt::EIP1559(receipt_with_bloom),
             TypedReceipt::Legacy(_) => TypedReceipt::Legacy(receipt_with_bloom),
             TypedReceipt::EIP2930(_) => TypedReceipt::EIP2930(receipt_with_bloom),
@@ -3040,22 +3277,24 @@ impl Backend {
                 deposit_nonce: r.deposit_nonce,
                 deposit_receipt_version: r.deposit_receipt_version,
             }),
+            TypedReceipt::Seismic(_) => TypedReceipt::Seismic(receipt_with_bloom),
         };
 
-        let inner = TransactionReceipt {
-            inner,
-            transaction_hash: info.transaction_hash,
-            transaction_index: Some(info.transaction_index),
-            block_number: Some(block.header.number),
-            gas_used: info.gas_used,
-            contract_address: info.contract_address,
-            effective_gas_price,
-            block_hash: Some(block_hash),
-            from: info.from,
-            to: info.to,
-            blob_gas_price: Some(blob_gas_price),
-            blob_gas_used,
-        };
+        let inner: alloy_rpc_types::TransactionReceipt<TypedReceipt<Receipt<Log>>> =
+            TransactionReceipt {
+                inner,
+                transaction_hash: info.transaction_hash,
+                transaction_index: Some(info.transaction_index),
+                block_number: Some(block.header.number),
+                gas_used: info.gas_used,
+                contract_address: info.contract_address,
+                effective_gas_price,
+                block_hash: Some(block_hash),
+                from: info.from,
+                to: info.to,
+                blob_gas_price: Some(blob_gas_price),
+                blob_gas_used,
+            };
 
         Some(MinedTransactionReceipt { inner, out: info.out.map(|o| o.0.into()) })
     }
@@ -3247,8 +3486,8 @@ impl Backend {
             let mut builder = HashBuilder::default()
                 .with_proof_retainer(ProofRetainer::new(vec![Nibbles::unpack(keccak256(address))]));
 
-            for (key, account) in trie_accounts(db) {
-                builder.add_leaf(key, &account);
+            for (key, account, is_private) in trie_accounts(db) {
+                builder.add_leaf(key, &account, is_private);
             }
 
             let _ = builder.root();
@@ -3274,7 +3513,7 @@ impl Backend {
                     .map(|(key, proof)| {
                         let storage_key: U256 = key.into();
                         let value = account.storage.get(&storage_key).copied().unwrap_or_default();
-                        StorageProof { key: JsonStorageKey::Hash(key), value, proof }
+                        StorageProof { key: JsonStorageKey::Hash(key), value: value.value, proof }
                     })
                     .collect(),
             };
@@ -3422,7 +3661,7 @@ impl TransactionValidator for Backend {
             if chain_id.to::<u64>() != tx_chain_id {
                 if let Some(legacy) = tx.as_legacy() {
                     // <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md>
-                    if env.evm_env.cfg_env.spec >= SpecId::SPURIOUS_DRAGON
+                    if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::SPURIOUS_DRAGON
                         && legacy.tx().chain_id.is_none()
                     {
                         warn!(target: "backend", ?chain_id, ?tx_chain_id, "incompatible EIP155-based V");
@@ -3445,7 +3684,9 @@ impl TransactionValidator for Backend {
         }
 
         // EIP-4844 structural validation
-        if env.evm_env.cfg_env.spec >= SpecId::CANCUN && tx.transaction.is_eip4844() {
+        if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::CANCUN
+            && tx.transaction.is_eip4844()
+        {
             // Heavy (blob validation) checks
             let blob_tx = match &tx.transaction {
                 TypedTransaction::EIP4844(tx) => tx.tx(),
@@ -3502,7 +3743,7 @@ impl TransactionValidator for Backend {
             }
 
             // EIP-1559 fee validation (London hard fork and later).
-            if env.evm_env.cfg_env.spec >= SpecId::LONDON {
+            if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::LONDON {
                 if tx.gas_price() < env.evm_env.block_env.basefee.into() && !is_deposit_tx {
                     warn!(target: "backend", "max fee per gas={}, too low, block basefee={}",tx.gas_price(),  env.evm_env.block_env.basefee);
                     return Err(InvalidTransactionError::FeeCapTooLow);
@@ -3518,7 +3759,7 @@ impl TransactionValidator for Backend {
             }
 
             // EIP-4844 blob fee validation
-            if env.evm_env.cfg_env.spec >= SpecId::CANCUN
+            if env.evm_env.cfg_env.spec.into_eth_spec() >= RevmSpecId::CANCUN
                 && tx.transaction.is_eip4844()
                 && let Some(max_fee_per_blob_gas) = tx.essentials().max_fee_per_blob_gas
                 && let Some(blob_gas_and_price) = &env.evm_env.block_env.blob_excess_gas_and_price
@@ -3556,6 +3797,25 @@ impl TransactionValidator for Backend {
                 }
             }
         }
+
+        if let TypedTransaction::Seismic(seismic_tx) = &tx.transaction {
+            // check that decryption works before we create tx env for it
+            let inner = seismic_tx.tx();
+            let tx_metadata = inner.tx_metadata(*pending.sender());
+            if tx_metadata.seismic_elements.signed_read {
+                return Err(InvalidTransactionError::SignedReadMismatch);
+            }
+            let tx_io_sk = seismic_crypto::well_known_tx_io_keypair().secret_key();
+            let _decrypted_data = inner
+                .seismic_elements
+                .decrypt_request(&tx_io_sk, &inner.input, &tx_metadata)
+                .map_err(|_e| {
+                    InvalidTransactionError::SeismicDecryptionFailed(format!(
+                        "Failed to decrypt seismic calldata"
+                    ))
+                })?;
+        }
+
         Ok(())
     }
 
@@ -3625,7 +3885,7 @@ pub fn transaction_build(
         }
     }
 
-    let mut transaction: Transaction = eth_transaction.clone().into();
+    let mut transaction: Transaction<TxEnvelope> = eth_transaction.clone().into();
 
     let effective_gas_price = if !eth_transaction.is_dynamic_fee() {
         transaction.effective_gas_price(base_fee)
@@ -3650,33 +3910,38 @@ pub fn transaction_build(
     // `BYPASS_SIGNATURE` which would result in different hashes
     // Note: for impersonated transactions this only concerns pending transactions because
     // there's // no `info` yet.
-    let hash = tx_hash.unwrap_or(*envelope.tx_hash());
+    let hash = tx_hash.unwrap_or(envelope.inner().tx_hash());
 
-    let envelope = match envelope.into_inner() {
+    let envelope = match envelope.into_inner().into() {
         TxEnvelope::Legacy(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Legacy(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Legacy(new_signed))
         }
         TxEnvelope::Eip1559(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Eip1559(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip1559(new_signed))
         }
         TxEnvelope::Eip2930(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Eip2930(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip2930(new_signed))
         }
         TxEnvelope::Eip4844(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Eip4844(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip4844(new_signed.into()))
         }
         TxEnvelope::Eip7702(signed_tx) => {
             let (t, sig, _) = signed_tx.into_parts();
             let new_signed = Signed::new_unchecked(t, sig, hash);
-            AnyTxEnvelope::Ethereum(TxEnvelope::Eip7702(new_signed))
+            AnyTxEnvelope::Ethereum(EthereumTxEnvelope::Eip7702(new_signed))
+        }
+        TxEnvelope::Seismic(signed_tx) => {
+            let (tx, signature, _) = signed_tx.into_parts();
+            let new_signed = Signed::new_unchecked(tx, signature, hash);
+            AnyTxEnvelope::Seismic(new_signed)
         }
     };
 
@@ -3701,13 +3966,16 @@ pub fn transaction_build(
 /// `storage_key` is the hash of the desired storage key, meaning
 /// this will only work correctly under a secure trie.
 /// `storage_key` == keccak(key)
-pub fn prove_storage(storage: &HashMap<U256, U256>, keys: &[B256]) -> Vec<Vec<Bytes>> {
+pub fn prove_storage(
+    storage: &HashMap<U256, alloy_primitives::FlaggedStorage>,
+    keys: &[B256],
+) -> Vec<Vec<Bytes>> {
     let keys: Vec<_> = keys.iter().map(|key| Nibbles::unpack(keccak256(key))).collect();
 
     let mut builder = HashBuilder::default().with_proof_retainer(ProofRetainer::new(keys.clone()));
 
-    for (key, value) in trie_storage(storage) {
-        builder.add_leaf(key, &value);
+    for (key, value, is_private) in trie_storage(storage) {
+        builder.add_leaf(key, &value, is_private);
     }
 
     let _ = builder.root();
@@ -3733,11 +4001,8 @@ pub fn is_arbitrum(chain_id: u64) -> bool {
     false
 }
 
-pub fn op_haltreason_to_instruction_result(op_reason: OpHaltReason) -> InstructionResult {
-    match op_reason {
-        OpHaltReason::Base(eth_h) => eth_h.into(),
-        OpHaltReason::FailedDeposit => InstructionResult::Stop,
-    }
+pub fn op_haltreason_to_instruction_result(reason: HaltReason) -> InstructionResult {
+    reason.into()
 }
 
 #[cfg(test)]

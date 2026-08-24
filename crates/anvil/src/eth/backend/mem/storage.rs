@@ -571,9 +571,15 @@ impl MinedTransaction {
                     }
                     GethDebugBuiltInTracerType::CallTracer => {
                         return match tracer_config.into_call_config() {
-                            Ok(call_config) => Ok(GethTraceBuilder::new(self.info.traces.clone())
-                                .geth_call_traces(call_config, self.receipt.cumulative_gas_used())
-                                .into()),
+                            Ok(call_config) => {
+                                let frame = GethTraceBuilder::new(self.info.traces.clone())
+                                    .geth_call_traces(
+                                        call_config,
+                                        self.receipt.cumulative_gas_used(),
+                                    );
+
+                                Ok(frame.into())
+                            }
                             Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
                         };
                     }

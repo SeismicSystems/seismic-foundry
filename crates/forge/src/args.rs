@@ -144,6 +144,8 @@ pub fn run_command(args: Forge) -> Result<()> {
         ForgeSubcommand::Soldeer(cmd) => global.block_on(cmd.run()),
         ForgeSubcommand::Eip712(cmd) => cmd.run(),
         ForgeSubcommand::BindJson(cmd) => cmd.run(),
+        /*
         ForgeSubcommand::Lint(cmd) => cmd.run(),
+        */
     }
 }

@@ -15,12 +15,14 @@ use alloy_primitives::B256;
 use anvil_core::eth::transaction::TypedTransaction;
 use futures::StreamExt;
 use parking_lot::{Mutex, RwLock};
-use revm::{context_interface::block::BlobExcessGasAndPrice, primitives::hardfork::SpecId};
+use revm::context_interface::block::BlobExcessGasAndPrice;
 
 use crate::eth::{
     backend::{info::StorageInfo, notifications::NewBlockNotifications},
     error::BlockchainError,
 };
+
+use seismic_prelude::foundry::SpecId;
 
 /// Maximum number of entries in the fee history cache
 pub const MAX_FEE_HISTORY_CACHE_SIZE: u64 = 2048u64;
@@ -44,6 +46,7 @@ pub fn default_elasticity() -> f64 {
 /// Stores the fee related information
 #[derive(Clone, Debug)]
 pub struct FeeManager {
+    #[allow(dead_code)]
     /// Hardfork identifier
     spec_id: SpecId,
     /// Tracks the base fee for the next block post London
@@ -87,11 +90,17 @@ impl FeeManager {
 
     /// Returns true for post London
     pub fn is_eip1559(&self) -> bool {
+        /*
         (self.spec_id as u8) >= (SpecId::LONDON as u8)
+        */
+        true
     }
 
     pub fn is_eip4844(&self) -> bool {
+        /*
         (self.spec_id as u8) >= (SpecId::CANCUN as u8)
+        */
+        true
     }
 
     /// Calculates the current blob gas price
@@ -290,6 +299,7 @@ impl FeeHistoryService {
                             .max_priority_fee_per_gas
                             .min(t.tx().max_fee_per_gas.saturating_sub(base_fee)),
                         Some(TypedTransaction::Deposit(_)) => 0,
+                        Some(TypedTransaction::Seismic(_)) => 0,
                         None => 0,
                     };
 

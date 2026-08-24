@@ -3,9 +3,10 @@
 use alloy_network::{ReceiptResponse, TransactionBuilder};
 use alloy_primitives::U256;
 use alloy_provider::{Provider, ext::TxPoolApi};
-use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use anvil::{NodeConfig, spawn};
+
+use seismic_prelude::foundry::tx_builder;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn geth_txpool() {
@@ -18,12 +19,12 @@ async fn geth_txpool() {
     let value = U256::from(42);
     let gas_price = 221435145689u128;
 
-    let tx = TransactionRequest::default()
+    let tx = tx_builder()
         .with_to(account)
         .with_from(account)
         .with_value(value)
         .with_gas_price(gas_price);
-    let tx = WithOtherFields::new(tx);
+    let tx = WithOtherFields::new(tx.into());
 
     // send a few transactions
     for _ in 0..10 {
@@ -80,21 +81,23 @@ async fn accepts_spend_after_funding_when_pool_checks_disabled() {
     let fund_value = U256::from(1_000_000_000_000_000_000u128); // 1 ether
 
     // tx1: fund spender from funder
-    let tx1 = TransactionRequest::default()
+    let tx1 = tx_builder()
         .with_from(funder)
         .with_to(spender)
         .with_value(fund_value)
-        .with_gas_price(gas_price_fund);
+        .with_gas_price(gas_price_fund)
+        .into();
     let tx1 = WithOtherFields::new(tx1);
 
     // tx2: spender attempts to send value greater than their pre-funding balance (0),
     // which would normally be rejected by pool balance checks, but should be accepted when disabled
     let spend_value = fund_value - U256::from(21_000u64) * U256::from(gas_price_spend);
-    let tx2 = TransactionRequest::default()
+    let tx2 = tx_builder()
         .with_from(spender)
         .with_to(funder)
         .with_value(spend_value)
-        .with_gas_price(gas_price_spend);
+        .with_gas_price(gas_price_spend)
+        .into();
     let tx2 = WithOtherFields::new(tx2);
 
     // Publish both transactions (funding first, then spend-before-funding-is-mined)

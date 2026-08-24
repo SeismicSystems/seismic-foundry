@@ -1302,6 +1302,472 @@ Compiler run successful!
 "#]]);
 });
 
+/// Returns `true` if `ssolc` is available in PATH.
+fn has_ssolc() -> bool {
+    std::process::Command::new("ssolc")
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok()
+}
+
+// test that ssolc shielded literal warnings (10103, 10401–10416) are emitted in src/ and can be
+// suppressed
+forgetest!(shielded_literal_warnings_emitted_in_src, |prj, cmd| {
+    // Skip if ssolc is not installed
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
+        return;
+    }
+
+    // Enable seismic (ssolc) and suppress unrelated warnings
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes = vec![SolidityErrorCode::SpdxLicenseNotProvided];
+    });
+
+    // Receiver lives in src/ — always compiled, provides the shielded interface
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    // Caller in src/ — all warnings should fire
+    prj.add_raw_source(
+        "src/Caller.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "./Receiver.sol";
+
+contract Caller {
+    Receiver public r;
+    constructor() {
+        // triggers 10401 (shielded-literal-new-int)
+        r = new Receiver(suint256(42));
+    }
+    function callWithLiteral() external {
+        // triggers 10402 (shielded-literal-ext-call-int)
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    // Build: expect all shielded literal warnings from src/
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Warning (10103)"),
+        "expected warning 10103 (shielded-constructor-param) in src/ output:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Warning (10401)"),
+        "expected warning 10401 (shielded-literal-new-int) in src/ output:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Warning (10402)"),
+        "expected warning 10402 (shielded-literal-ext-call-int) in src/ output:\n{stdout}"
+    );
+
+    // Now suppress all shielded warnings and the pre-release warning, then rebuild
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes = vec![
+            SolidityErrorCode::SpdxLicenseNotProvided,
+            SolidityErrorCode::ShieldedConstructorParam,
+            SolidityErrorCode::ShieldedLiteralNewExprInt,
+            SolidityErrorCode::ShieldedLiteralExtCallInt,
+            // 3805 = pre-release compiler warning
+            SolidityErrorCode::Other(3805),
+        ];
+    });
+
+    // With all warnings suppressed, build should report no warnings
+    let output2 = cmd.forge_fuse().args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(
+        stdout2.contains("Compiler run successful!") && !stdout2.contains("with warnings"),
+        "expected clean build with all warnings suppressed, got:\n{stdout2}"
+    );
+});
+
+// test that seismic-compilers suppresses ext-call shielded warnings in test/ files
+// but still emits constructor/new-expr warnings (CREATE always leaks, even in tests)
+forgetest!(shielded_literal_warnings_suppressed_in_test, |prj, cmd| {
+    // Skip if ssolc is not installed
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes = vec![
+            SolidityErrorCode::SpdxLicenseNotProvided,
+            // suppress pre-release warning so it doesn't interfere
+            SolidityErrorCode::Other(3805),
+        ];
+    });
+
+    // Receiver in src/
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    // Same patterns but in test/ — ext-call warnings (10402) should be auto-suppressed
+    // by seismic-compilers, but constructor (10103) and new-expr (10401) should remain
+    prj.add_raw_source(
+        "test/Caller.t.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "../src/Receiver.sol";
+
+contract CallerTest {
+    Receiver public r;
+    constructor() {
+        // 10401 (new-expr) — NOT suppressed, CREATE always leaks
+        r = new Receiver(suint256(42));
+    }
+    function testCallWithLiteral() external {
+        // 10402 (ext-call) — suppressed in test files
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // 10103 (constructor param) and 10401 (new-expr) should still appear
+    assert!(
+        stdout.contains("Warning (10103)"),
+        "expected warning 10103 (shielded-constructor-param) even in test/ file:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Warning (10401)"),
+        "expected warning 10401 (shielded-literal-new-int) even in test/ file:\n{stdout}"
+    );
+
+    // 10402 (ext-call) should be suppressed by seismic-compilers in test/ files
+    assert!(
+        !stdout.contains("Warning (10402)"),
+        "warning 10402 (shielded-literal-ext-call-int) should be suppressed in test/ file:\n{stdout}"
+    );
+});
+
+// test that seismic-compilers suppresses ext-call shielded warnings in script/ files
+forgetest!(shielded_literal_warnings_suppressed_in_script, |prj, cmd| {
+    // Skip if ssolc is not installed
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes =
+            vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
+    });
+
+    // Receiver in src/
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    // Same patterns in script/ — ext-call warnings should be suppressed
+    prj.add_raw_source(
+        "script/Deploy.s.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "../src/Receiver.sol";
+
+contract DeployScript {
+    Receiver public r;
+    constructor() {
+        // 10401 (new-expr) — NOT suppressed
+        r = new Receiver(suint256(42));
+    }
+    function run() external {
+        // 10402 (ext-call) — suppressed in script files
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // 10103 and 10401 should still appear
+    assert!(
+        stdout.contains("Warning (10103)"),
+        "expected warning 10103 (shielded-constructor-param) even in script/ file:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Warning (10401)"),
+        "expected warning 10401 (shielded-literal-new-int) even in script/ file:\n{stdout}"
+    );
+
+    // 10402 should be suppressed
+    assert!(
+        !stdout.contains("Warning (10402)"),
+        "warning 10402 (shielded-literal-ext-call-int) should be suppressed in script/ file:\n{stdout}"
+    );
+});
+
+// test that --no-seismic-warnings suppresses ALL seismic warnings (codes >= 10000) even in src/
+// and that the build summary reflects the suppression
+forgetest!(no_seismic_warnings_flag_suppresses_all, |prj, cmd| {
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes =
+            vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
+    });
+
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    prj.add_raw_source(
+        "src/Caller.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "./Receiver.sol";
+
+contract Caller {
+    Receiver public r;
+    constructor() {
+        r = new Receiver(suint256(42));
+    }
+    function callWithLiteral() external {
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    // Without the flag: seismic warnings should appear and build should report "with warnings"
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Warning (10"),
+        "expected seismic warnings without --no-seismic-warnings flag:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("with warnings"),
+        "build summary should say 'with warnings' when seismic warnings are present:\n{stdout}"
+    );
+
+    // With --no-seismic-warnings: all seismic warnings suppressed, build should be clean
+    let output2 = cmd
+        .forge_fuse()
+        .args(["build", "--force", "--no-seismic-warnings"])
+        .assert_success()
+        .get_output()
+        .clone();
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(
+        !stdout2.contains("Warning (10"),
+        "no seismic warnings should appear with --no-seismic-warnings flag:\n{stdout2}"
+    );
+    assert!(
+        stdout2.contains("Compiler run successful!")
+            && !stdout2.contains("Compiler run successful with warnings"),
+        "build should report clean success with --no-seismic-warnings:\n{stdout2}"
+    );
+});
+
+// test that --no-seismic-warnings only suppresses seismic warnings (>= 10000), not standard
+// Solidity warnings
+forgetest!(no_seismic_warnings_preserves_standard_warnings, |prj, cmd| {
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        // Only suppress SPDX and pre-release — leave other standard warnings enabled
+        config.ignored_error_codes =
+            vec![SolidityErrorCode::SpdxLicenseNotProvided, SolidityErrorCode::Other(3805)];
+    });
+
+    // Contract with both seismic warnings AND a standard Solidity warning (unused variable)
+    prj.add_raw_source(
+        "src/Mixed.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Mixed {
+    suint256 internal val;
+
+    constructor(suint256 _v) { val = _v; }
+
+    function doSomething() external view returns (uint256) {
+        uint256 unused = 42;
+        return uint256(val);
+    }
+}
+"#,
+    );
+
+    // With --no-seismic-warnings: seismic warnings gone, but standard warnings remain
+    let output = cmd
+        .args(["build", "--force", "--no-seismic-warnings"])
+        .assert_success()
+        .get_output()
+        .clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("Warning (10"),
+        "seismic warnings should be suppressed with --no-seismic-warnings:\n{stdout}"
+    );
+    // Standard Solidity unused-variable warning (2072) should still appear
+    assert!(
+        stdout.contains("Warning"),
+        "standard Solidity warnings should still appear with --no-seismic-warnings:\n{stdout}"
+    );
+});
+
+// test that --seismic-warnings-in-tests shows warnings that are normally suppressed in test files
+// and that the build output changes accordingly
+forgetest!(seismic_warnings_in_tests_flag_shows_suppressed, |prj, cmd| {
+    if !has_ssolc() {
+        eprintln!("skipping test: ssolc not found in PATH");
+        return;
+    }
+
+    prj.update_config(|config| {
+        config.seismic = true;
+        config.ignored_error_codes = vec![
+            SolidityErrorCode::SpdxLicenseNotProvided,
+            SolidityErrorCode::Other(3805),
+            // Suppress constructor/new-expr warnings so we can isolate 10402 behavior
+            SolidityErrorCode::ShieldedConstructorParam,
+            SolidityErrorCode::ShieldedLiteralNewExprInt,
+        ];
+    });
+
+    prj.add_raw_source(
+        "src/Receiver.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+contract Receiver {
+    suint256 internal val;
+    constructor(suint256 _v) { val = _v; }
+    function setVal(suint256 _v) external { val = _v; }
+}
+"#,
+    );
+
+    prj.add_raw_source(
+        "test/Caller.t.sol",
+        r#"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Receiver} from "../src/Receiver.sol";
+
+contract CallerTest {
+    Receiver public r;
+    constructor() {
+        r = new Receiver(suint256(42));
+    }
+    function testCallWithLiteral() external {
+        // 10402 (ext-call) — normally suppressed in test files
+        r.setVal(suint256(100));
+    }
+}
+"#,
+    );
+
+    // Without the flag: 10402 should be suppressed in test files, build should be clean
+    let output = cmd.args(["build", "--force"]).assert_success().get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("Warning (10402)"),
+        "10402 should be suppressed in test files by default:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("with warnings"),
+        "build should be clean when test-file warnings are suppressed:\n{stdout}"
+    );
+
+    // With --seismic-warnings-in-tests: 10402 should now appear and build should report warnings
+    let output2 = cmd
+        .forge_fuse()
+        .args(["build", "--force", "--seismic-warnings-in-tests"])
+        .assert_success()
+        .get_output()
+        .clone();
+    let stdout2 = String::from_utf8_lossy(&output2.stdout);
+    assert!(
+        stdout2.contains("Warning (10402)"),
+        "10402 should appear with --seismic-warnings-in-tests flag:\n{stdout2}"
+    );
+    assert!(
+        stdout2.contains("with warnings"),
+        "build should report 'with warnings' when test-file warnings are un-suppressed:\n{stdout2}"
+    );
+});
+
 // test that a failing `forge build` does not impact followup builds
 forgetest!(can_build_after_failure, |prj, cmd| {
     prj.insert_ds_test();

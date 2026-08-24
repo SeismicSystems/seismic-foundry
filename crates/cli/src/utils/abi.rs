@@ -2,12 +2,14 @@ use alloy_chains::Chain;
 use alloy_ens::NameOrAddress;
 use alloy_json_abi::Function;
 use alloy_primitives::{Address, hex};
-use alloy_provider::{Provider, network::AnyNetwork};
+use alloy_provider::Provider;
 use eyre::{OptionExt, Result};
 use foundry_common::abi::{
     encode_function_args, encode_function_args_raw, get_func, get_func_etherscan,
 };
 use futures::future::join_all;
+
+use seismic_prelude::foundry::AnyNetwork;
 
 async fn resolve_name_args<P: Provider<AnyNetwork>>(args: &[String], provider: &P) -> Vec<String> {
     join_all(args.iter().map(|arg| async {
@@ -33,7 +35,9 @@ pub async fn parse_function_args<P: Provider<AnyNetwork>>(
     etherscan_api_key: Option<&str>,
 ) -> Result<(Vec<u8>, Option<Function>)> {
     if sig.trim().is_empty() {
-        eyre::bail!("Function signature or calldata must be provided.")
+        {
+            eyre::bail!("Function signature or calldata must be provided.");
+        }
     }
 
     let args = resolve_name_args(&args, provider).await;

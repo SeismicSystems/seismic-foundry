@@ -2,10 +2,14 @@ use crate::abi::VendingMachine;
 use alloy_network::TransactionBuilder;
 use alloy_primitives::{U256, bytes};
 use alloy_provider::Provider;
-use alloy_rpc_types::TransactionRequest;
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use anvil::{NodeConfig, spawn};
+
+use reqwest::Url;
+use seismic_prelude::foundry::{
+    SeismicCallExt, SeismicProviderBuilder, ShieldedCallExt, tx_builder,
+};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_deploy_reverting() {
@@ -14,8 +18,8 @@ async fn test_deploy_reverting() {
     let sender = handle.dev_accounts().next().unwrap();
 
     let code = bytes!("5f5ffd"); // PUSH0 PUSH0 REVERT
-    let tx = TransactionRequest::default().from(sender).with_deploy_code(code);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(sender).with_deploy_code(code);
+    let tx = WithOtherFields::new(tx.into());
 
     // Calling/estimating gas fails early.
     let err = provider.call(tx.clone()).await.unwrap_err();
@@ -64,15 +68,29 @@ async fn test_revert_messages() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_solc_revert_example() {
     let (_api, handle) = spawn(NodeConfig::test()).await;
-    let sender = handle.dev_accounts().next().unwrap();
+    let wallet = handle.dev_wallets().next().unwrap();
     let provider = handle.http_provider();
+    let node_url = Url::parse(&handle.http_endpoint()).unwrap();
+
+    let seismic_provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet.clone())
+        .connect_http(node_url)
+        .await
+        .unwrap();
 
     let contract = VendingMachine::deploy(&provider).await.unwrap();
+    let seismic_contract = VendingMachine::new(*contract.address(), &seismic_provider);
+    let err = seismic_contract.buy(U256::from(100)).seismic().call().await.unwrap_err();
 
-    let err =
-        contract.buy(U256::from(100)).value(U256::from(1)).from(sender).call().await.unwrap_err();
+    // The revert surfaces during signed gas estimation in the fill pipeline. Signed-read
+    // revert output is encrypted under the caller's key (it can embed private state just
+    // like a successful return value), so the plaintext reason must NOT appear on the
+    // wire; only a generic revert error does. Recovering the reason requires client-side
+    // decryption of the error data, which seismic-alloy does not implement yet.
     let s = err.to_string();
-    assert!(s.contains("Not enough Ether provided."), "{s:?}");
+    assert!(s.contains("execution reverted"), "{s:?}");
+    assert!(!s.contains("Not enough Ether provided."), "revert reason leaked in cleartext: {s:?}");
 }
 
 // <https://github.com/foundry-rs/foundry/issues/1871>

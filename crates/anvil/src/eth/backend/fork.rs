@@ -3,7 +3,7 @@
 use crate::eth::{backend::db::Db, error::BlockchainError, pool::transactions::PoolTransaction};
 use alloy_consensus::Account;
 use alloy_eips::eip2930::AccessListResult;
-use alloy_network::{AnyRpcBlock, AnyRpcTransaction, BlockResponse, TransactionResponse};
+use alloy_network::{BlockResponse, TransactionResponse};
 use alloy_primitives::{
     Address, B256, Bytes, StorageValue, U256,
     map::{FbHashMap, HashMap},
@@ -15,8 +15,7 @@ use alloy_provider::{
 use alloy_rpc_types::{
     BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions, EIP1186AccountProofResponse,
     FeeHistory, Filter, Log,
-    request::TransactionRequest,
-    simulate::{SimulatePayload, SimulatedBlock},
+    simulate::SimulatedBlock,
     trace::{
         geth::{GethDebugTracingOptions, GethTrace},
         parity::LocalizedTransactionTrace as Trace,
@@ -33,6 +32,10 @@ use parking_lot::{
 use revm::context_interface::block::BlobExcessGasAndPrice;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock as AsyncRwLock;
+
+use seismic_prelude::foundry::{
+    AnyRpcBlock, AnyRpcTransaction, SimulatePayload, TransactionRequest,
+};
 
 /// Represents a fork of a remote client
 ///
@@ -201,9 +204,13 @@ impl ClientFork {
     /// Sends `eth_simulateV1`
     pub async fn simulate_v1(
         &self,
-        request: &SimulatePayload,
-        block: Option<BlockNumber>,
+        _request: &SimulatePayload,
+        _block: Option<BlockNumber>,
     ) -> Result<Vec<SimulatedBlock<AnyRpcBlock>>, TransportError> {
+        unimplemented!("TODO: implement seismic simulate");
+        /*
+        // TODO(christian): need to implement a separate simulate call for seismic tx,
+        // because otherwise we need to re-fork alloy...
         let mut simulate_call = self.provider().simulate(request);
         if let Some(n) = block {
             simulate_call = simulate_call.number(n.as_number().unwrap());
@@ -212,6 +219,7 @@ impl ClientFork {
         let res = simulate_call.await?;
 
         Ok(res)
+        */
     }
 
     /// Sends `eth_estimateGas`
@@ -221,6 +229,7 @@ impl ClientFork {
         block: Option<BlockNumber>,
     ) -> Result<u128, TransportError> {
         let block = block.unwrap_or_default();
+        // TODO: seismic provider
         let res = self.provider().estimate_gas(request.clone()).block(block.into()).await?;
 
         Ok(res as u128)
@@ -232,6 +241,7 @@ impl ClientFork {
         request: &WithOtherFields<TransactionRequest>,
         block: Option<BlockNumber>,
     ) -> Result<AccessListResult, TransportError> {
+        // TODO: seismic provider
         self.provider().create_access_list(request).block_id(block.unwrap_or_default().into()).await
     }
 

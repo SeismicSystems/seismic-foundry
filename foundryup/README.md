@@ -1,77 +1,71 @@
-# `foundryup`
+# `sfoundryup`
 
-Update or revert to a specific Foundry branch with ease.
+Update or revert to a specific Seismic Foundry version with ease.
 
-`foundryup` supports installing and managing multiple versions.
+`sfoundryup` supports installing and managing multiple versions.
 
 ## Installing
 
 ```sh
-curl -L https://foundry.paradigm.xyz | bash
+curl -L https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/foundryup/install | bash
 ```
 
 ## Usage
 
-To install the **nightly** version:
+To install the latest **stable** version (default):
 
 ```sh
-foundryup
+sfoundryup
 ```
 
-To **install** a specific **version** (in this case the `nightly` version):
+To install the latest **nightly**:
 
 ```sh
-foundryup --install nightly
+sfoundryup --install nightly
+```
+
+To **install** a specific **version**:
+
+```sh
+sfoundryup --install v0.1.0
 ```
 
 To **list** all **versions** installed:
 
 ```sh
-foundryup --list
+sfoundryup --list
 ```
 
 To switch between different versions and **use**:
 
 ```sh
-foundryup --use nightly-00efa0d5965269149f374ba142fb1c3c7edd6c94
+sfoundryup --use nightly
 ```
 
-To install a specific **branch** (in this case the `release/0.1.0` branch's latest commit):
+To install a specific **branch** (in this case the `seismic` branch's latest commit):
 
 ```sh
-foundryup --branch release/0.1.0
-```
-
-To install a **fork's main branch** (in this case `transmissions11/foundry`'s main branch):
-
-```sh
-foundryup --repo transmissions11/foundry
-```
-
-To install a **specific branch in a fork** (in this case the `patch-10` branch's latest commit in `transmissions11/foundry`):
-
-```sh
-foundryup --repo transmissions11/foundry --branch patch-10
+sfoundryup --branch seismic
 ```
 
 To install from a **specific Pull Request**:
 
 ```sh
-foundryup --pr 1071
+sfoundryup --pr 190
 ```
 
 To install from a **specific commit**:
 
 ```sh
-foundryup -C 94bfdb2
+sfoundryup -C 94bfdb2
 ```
 
-To install a local directory or repository (e.g. one located at `~/git/foundry`, assuming you're in the home directory)
+To install a local directory or repository (e.g. one located at `~/git/seismic-foundry`, assuming you're in the home directory)
 
 #### Note: --branch, --repo, and --version flags are ignored during local installations.
 
 ```sh
-foundryup --path ./git/foundry
+sfoundryup --path ./git/seismic-foundry
 ```
 
 ---
@@ -82,16 +76,16 @@ foundryup --path ./git/foundry
 
 ## Uninstalling
 
-Foundry contains everything in a `.foundry` directory, usually located in `/home/<user>/.foundry/` on Linux, `/Users/<user>/.foundry/` on MacOS and `C:\Users\<user>\.foundry` on Windows where `<user>` is your username.
+Seismic Foundry contains everything in a `.seismic` directory, usually located in `/home/<user>/.seismic/` on Linux and `/Users/<user>/.seismic/` on MacOS where `<user>` is your username.
 
-To uninstall Foundry remove the `.foundry` directory.
+To uninstall Seismic Foundry remove the `.seismic` directory.
 
-#### Warning ⚠️: .foundry directory can contain keystores. Make sure to backup any keystores you want to keep.
+#### Warning ⚠️: .seismic directory can contain keystores. Make sure to backup any keystores you want to keep.
 
-Remove Foundry from PATH:
+Remove sfoundryup from PATH:
 
-- Optionally Foundry can be removed from editing shell configuration file (`.bashrc`, `.zshrc`, etc.). To do so remove the line that adds Foundry to PATH:
+- Optionally sfoundryup can be removed by editing shell configuration file (`.bashrc`, `.zshrc`, etc.). To do so remove the line that adds sfoundryup to PATH:
 
 ```sh
-export PATH="$PATH:/home/user/.foundry/bin"
+export PATH="$PATH:/home/user/.seismic/bin"
 ```

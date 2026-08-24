@@ -19,7 +19,7 @@ use figment::{
 use filter::GlobMatcher;
 use foundry_compilers::{
     ArtifactOutput, ConfigurableArtifacts, Graph, Project, ProjectPathsConfig,
-    RestrictionsWithVersion, VyperLanguage,
+    RestrictionsWithVersion, SeismicConfig, VyperLanguage,
     artifacts::{
         BytecodeHash, DebuggingSettings, EvmVersion, Libraries, ModelCheckerSettings,
         ModelCheckerTarget, Optimizer, OptimizerDetails, RevertStrings, Settings, SettingsMetadata,
@@ -40,7 +40,7 @@ use foundry_compilers::{
     solc::{CliSettings, SolcSettings},
 };
 use regex::Regex;
-use revm::primitives::hardfork::SpecId;
+// use revm::primitives::hardfork::SpecId;
 use semver::Version;
 use serde::{Deserialize, Serialize, Serializer};
 use std::{
@@ -50,6 +50,8 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
+
+use seismic_prelude::foundry::SpecId;
 
 mod macros;
 
@@ -431,6 +433,8 @@ pub struct Config {
     /// If set to true, changes compilation pipeline to go through the Yul intermediate
     /// representation.
     pub via_ir: bool,
+    /// Allow via-IR pipeline on Seismic's ssolc (experimental, shielded type support incomplete).
+    pub unsafe_via_ir: bool,
     /// Whether to include the AST as JSON in the compiler output.
     pub ast: bool,
     /// RPC storage caching settings determines what chains and endpoints to cache
@@ -533,6 +537,29 @@ pub struct Config {
 
     /// Timeout for transactions in seconds.
     pub transaction_timeout: u64,
+
+    /// Seismic field (default: true)
+    ///
+    /// When set to true, ssolc (seismic-solidity compiler) will be used instead of solc.
+    ///
+    /// TODO(samlaf): do we really need this? The compiler could be chosen purely based off of
+    /// evm_version config value (if mercury, use ssolc; else use solc).
+    /// Also should we just rename this to `use_ssolc` instead of seismic, which is a bit confusing
+    /// because it looks like it might also be used to configure execution (tests, anvil, etc).
+    pub seismic: bool,
+
+    /// Suppress ALL seismic/ssolc warnings (codes >= 10000) globally.
+    ///
+    /// When set to true, no seismic-specific warnings will be emitted.
+    #[serde(default)]
+    pub no_seismic_warnings: bool,
+
+    /// Show seismic warnings even in test files.
+    ///
+    /// By default, seismic warnings (codes >= 10000) are suppressed in test files (*.t.sol).
+    /// Set this to true to see them.
+    #[serde(default)]
+    pub seismic_warnings_in_tests: bool,
 
     /// Warnings gathered when loading the Config. See [`WarningsProvider`] for more information.
     #[serde(rename = "__warnings", default, skip_serializing)]
@@ -904,7 +931,36 @@ impl Config {
         config.libs.sort_unstable();
         config.libs.dedup();
 
+        config.sanitize_seismic_settings();
+
         config
+    }
+
+    // This is called on every foundry.toml config files right now, including on lib/ configs.
+    // TODO(samlaf): this might have weird side effects at some point if our library ecosystem
+    // grows.
+    pub fn sanitize_seismic_settings(&mut self) {
+        // If Mercury feature set is required, then use seismic-compiler (self.seismic controls
+        // which compiler is used).
+        if self.evm_version == EvmVersion::Mercury {
+            self.seismic = true;
+        }
+    }
+
+    /// Validates seismic-specific config invariants. Call this at CLI entry points
+    /// (not during internal config loading like nested remappings).
+    pub fn validate_seismic_settings(&self) -> eyre::Result<()> {
+        // ssolc requires `--unsafe-via-ir` alongside `--via-ir`.
+        // The via-ir pipeline is unstable in ssolc — require explicit opt-in.
+        if self.seismic && self.via_ir && !self.unsafe_via_ir {
+            eyre::bail!(
+                "`via_ir = true` requires `unsafe_via_ir = true` when using ssolc.\n\
+                 The via-ir pipeline is an unstable/experimental feature in ssolc.\n\
+                 To opt in, add `unsafe_via_ir = true` to your foundry.toml or pass \
+                 `--unsafe-via-ir` on the command line."
+            );
+        }
+        Ok(())
     }
 
     /// Cleans up any duplicate `Remapping` and sorts them
@@ -1057,7 +1113,11 @@ impl Config {
             .set_offline(self.offline)
             .set_cached(cached)
             .set_build_info(!no_artifacts && self.build_info)
-            .set_no_artifacts(no_artifacts);
+            .set_no_artifacts(no_artifacts)
+            .set_seismic_config(SeismicConfig {
+                no_seismic_warnings: self.no_seismic_warnings,
+                seismic_warnings_in_tests: self.seismic_warnings_in_tests,
+            });
 
         if !self.skip.is_empty() {
             let filter = SkipBuildFilters::new(self.skip.clone(), self.root.clone());
@@ -1100,6 +1160,25 @@ impl Config {
         Ok(())
     }
 
+    /// Resolve path to `ssolc` binary by searching the system PATH.
+    #[inline]
+    pub fn get_default_ssolc_path(&self) -> Result<PathBuf, SolcError> {
+        let path = PathBuf::from("ssolc");
+        // Verify ssolc is reachable (Command::new resolves from PATH).
+        std::process::Command::new(&path)
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map_err(|_| {
+                SolcError::msg(
+                    "`ssolc` not found in PATH.\n\
+                     Install via: https://docs.seismic.systems/getting-started/installation",
+                )
+            })?;
+        Ok(path)
+    }
+
     /// Ensures that the configured version is installed if explicitly set
     ///
     /// If `solc` is [`SolcReq::Version`] then this will download and install the solc version if
@@ -1107,6 +1186,38 @@ impl Config {
     ///
     /// If `solc` is [`SolcReq::Local`] then this will ensure that the path exists.
     fn ensure_solc(&self) -> Result<Option<Solc>, SolcError> {
+        if self.seismic {
+            if let Some(ref solc_req) = self.solc {
+                match solc_req {
+                    SolcReq::Version(v) => {
+                        // TODO: support using different ssolc versions
+                        let ssolc_path = self.get_default_ssolc_path()?;
+                        eprintln!(
+                            "{}",
+                            yansi::Paint::yellow(&format!(
+                                "Warning: ssolc does not support version selection \
+                                 (requested {v}), using `{}`",
+                                ssolc_path.display()
+                            ))
+                        );
+                        return Ok(Some(Solc::new(ssolc_path)?));
+                    }
+                    SolcReq::Local(local_solc_path) => {
+                        if !local_solc_path.is_file() {
+                            return Err(SolcError::msg(format!(
+                                "`solc` {} does not exist",
+                                local_solc_path.display()
+                            )));
+                        }
+                        return Ok(Some(Solc::new(local_solc_path)?));
+                    }
+                }
+            }
+            // No solc explicitly configured — find ssolc in PATH
+            let ssolc_path = self.get_default_ssolc_path()?;
+            return Ok(Some(Solc::new(ssolc_path)?));
+        }
+
         if let Some(solc) = &self.solc {
             let solc = match solc {
                 SolcReq::Version(version) => {
@@ -1138,6 +1249,7 @@ impl Config {
     }
 
     /// Returns the [SpecId] derived from the configured [EvmVersion]
+    #[inline]
     pub fn evm_spec_id(&self) -> SpecId {
         evm_spec_id(self.evm_version, self.odyssey)
     }
@@ -1558,6 +1670,11 @@ impl Config {
             }),
             model_checker,
             via_ir: Some(self.via_ir),
+            // Only send when its explicitly set to true, since we plan for this option to be
+            // temporary, and so we want to remain backward and forward compatible with
+            // other ssolc compilers that might not recognize the option (hence sending
+            // false would break for no reason).
+            unsafe_via_ir: self.unsafe_via_ir.then_some(true),
             // Not used.
             stop_after: None,
             // Set in project paths.
@@ -1572,8 +1689,14 @@ impl Config {
             settings = settings.with_ast();
         }
 
-        let cli_settings =
-            CliSettings { extra_args: self.extra_args.clone(), ..Default::default() };
+        let cli_settings = CliSettings {
+            extra_args: self.extra_args.clone(),
+            seismic_cfg: SeismicConfig {
+                no_seismic_warnings: self.no_seismic_warnings,
+                seismic_warnings_in_tests: self.seismic_warnings_in_tests,
+            },
+            ..Default::default()
+        };
 
         Ok(SolcSettings { settings, cli_settings })
     }
@@ -2338,10 +2461,12 @@ impl Default for Config {
             allow_paths: vec![],
             include_paths: vec![],
             force: false,
-            evm_version: EvmVersion::Prague,
+            evm_version: EvmVersion::Mercury,
             gas_reports: vec!["*".to_string()],
             gas_reports_ignore: vec![],
             gas_reports_include_tests: false,
+            // TODO: restore version pinning when ssolc supports version selection
+            // (see https://github.com/SeismicSystems/seismic-foundry/issues/186)
             solc: None,
             vyper: Default::default(),
             auto_detect_solc: true,
@@ -2407,6 +2532,7 @@ impl Default for Config {
             ignored_file_paths: vec![],
             deny_warnings: false,
             via_ir: false,
+            unsafe_via_ir: false,
             ast: false,
             rpc_storage_caching: Default::default(),
             rpc_endpoints: Default::default(),
@@ -2439,6 +2565,9 @@ impl Default for Config {
             transaction_timeout: 120,
             additional_compiler_profiles: Default::default(),
             compilation_restrictions: Default::default(),
+            seismic: true,
+            no_seismic_warnings: false,
+            seismic_warnings_in_tests: false,
             script_execution_protection: true,
             _non_exhaustive: (),
         }
@@ -3523,7 +3652,7 @@ mod tests {
 
                 [etherscan]
                 optimism = { key = "https://etherscan-optimism.com/" }
-                mumbai = { key = "https://etherscan-mumbai.com/" }
+                amoy = { key = "https://etherscan-amoy.com/" }
             "#,
             )?;
 
@@ -3532,10 +3661,10 @@ mod tests {
             let optimism = config.get_etherscan_api_key(Some(NamedChain::Optimism.into()));
             assert_eq!(optimism, Some("https://etherscan-optimism.com/".to_string()));
 
-            config.etherscan_api_key = Some("mumbai".to_string());
+            config.etherscan_api_key = Some("amoy".to_string());
 
-            let mumbai = config.get_etherscan_api_key(Some(NamedChain::PolygonMumbai.into()));
-            assert_eq!(mumbai, Some("https://etherscan-mumbai.com/".to_string()));
+            let amoy = config.get_etherscan_api_key(Some(NamedChain::PolygonAmoy.into()));
+            assert_eq!(amoy, Some("https://etherscan-amoy.com/".to_string()));
 
             Ok(())
         });
@@ -3550,17 +3679,17 @@ mod tests {
                 [profile.default]
 
                 [etherscan]
-                mumbai = { key = "https://etherscan-mumbai.com/", chain = 80001 }
+                amoy = { key = "https://etherscan-amoy.com/", chain = 80002 }
             "#,
             )?;
 
             let config = Config::load().unwrap();
 
-            let mumbai = config
-                .get_etherscan_config_with_chain(Some(NamedChain::PolygonMumbai.into()))
+            let amoy = config
+                .get_etherscan_config_with_chain(Some(NamedChain::PolygonAmoy.into()))
                 .unwrap()
                 .unwrap();
-            assert_eq!(mumbai.key, "https://etherscan-mumbai.com/".to_string());
+            assert_eq!(amoy.key, "https://etherscan-amoy.com/".to_string());
 
             Ok(())
         });
@@ -3575,18 +3704,18 @@ mod tests {
                 [profile.default]
 
                 [etherscan]
-                mumbai = { key = "https://etherscan-mumbai.com/", chain = 80001 , url =  "https://verifier-url.com/"}
+                amoy = { key = "https://etherscan-amoy.com/", chain = 80002 , url =  "https://verifier-url.com/"}
             "#,
             )?;
 
             let config = Config::load().unwrap();
 
-            let mumbai = config
-                .get_etherscan_config_with_chain(Some(NamedChain::PolygonMumbai.into()))
+            let amoy = config
+                .get_etherscan_config_with_chain(Some(NamedChain::PolygonAmoy.into()))
                 .unwrap()
                 .unwrap();
-            assert_eq!(mumbai.key, "https://etherscan-mumbai.com/".to_string());
-            assert_eq!(mumbai.api_url, "https://verifier-url.com/".to_string());
+            assert_eq!(amoy.key, "https://etherscan-amoy.com/".to_string());
+            assert_eq!(amoy.api_url, "https://verifier-url.com/".to_string());
 
             Ok(())
         });
@@ -3599,23 +3728,23 @@ mod tests {
                 "foundry.toml",
                 r#"
                 [profile.default]
-                eth_rpc_url = "mumbai"
+                eth_rpc_url = "amoy"
 
                 [etherscan]
-                mumbai = { key = "https://etherscan-mumbai.com/" }
+                amoy = { key = "https://etherscan-amoy.com/" }
 
                 [rpc_endpoints]
-                mumbai = "https://polygon-mumbai.g.alchemy.com/v2/mumbai"
+                amoy = "https://polygon-amoy.g.alchemy.com/v2/amoy"
             "#,
             )?;
 
             let config = Config::load().unwrap();
 
-            let mumbai = config.get_etherscan_config_with_chain(None).unwrap().unwrap();
-            assert_eq!(mumbai.key, "https://etherscan-mumbai.com/".to_string());
+            let amoy = config.get_etherscan_config_with_chain(None).unwrap().unwrap();
+            assert_eq!(amoy.key, "https://etherscan-amoy.com/".to_string());
 
-            let mumbai_rpc = config.get_rpc_url().unwrap().unwrap();
-            assert_eq!(mumbai_rpc, "https://polygon-mumbai.g.alchemy.com/v2/mumbai");
+            let amoy_rpc = config.get_rpc_url().unwrap().unwrap();
+            assert_eq!(amoy_rpc, "https://polygon-amoy.g.alchemy.com/v2/amoy");
             Ok(())
         });
     }
@@ -6192,5 +6321,33 @@ mod tests {
 
             Ok(())
         });
+    }
+
+    #[test]
+    fn test_validate_seismic_via_ir_with_unsafe_via_ir_ok() {
+        let config = Config { via_ir: true, unsafe_via_ir: true, ..Default::default() };
+        config.validate_seismic_settings().unwrap();
+    }
+
+    #[test]
+    fn test_validate_seismic_via_ir_without_unsafe_via_ir_errors() {
+        let config = Config { via_ir: true, unsafe_via_ir: false, ..Default::default() };
+        let err = config.validate_seismic_settings().unwrap_err();
+        assert!(
+            err.to_string().contains("unsafe_via_ir"),
+            "error should mention unsafe_via_ir: {err}"
+        );
+    }
+
+    #[test]
+    fn test_validate_non_seismic_via_ir_without_unsafe_via_ir_ok() {
+        let config = Config {
+            seismic: false,
+            evm_version: EvmVersion::Paris,
+            via_ir: true,
+            unsafe_via_ir: false,
+            ..Default::default()
+        };
+        config.validate_seismic_settings().unwrap();
     }
 }

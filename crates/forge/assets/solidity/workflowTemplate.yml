@@ -21,13 +21,13 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Show Forge version
-        run: forge --version
+        run: sforge --version
 
       - name: Run Forge fmt
-        run: forge fmt --check
+        run: sforge fmt --check
 
       - name: Run Forge build
-        run: forge build --sizes
+        run: sforge build --sizes
 
       - name: Run Forge tests
-        run: forge test -vvv
+        run: sforge test -vvv

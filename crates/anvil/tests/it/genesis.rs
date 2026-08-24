@@ -57,6 +57,7 @@ async fn can_apply_genesis() {
 // <https://github.com/foundry-rs/foundry/issues/10059>
 // <https://github.com/foundry-rs/foundry/issues/10238>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "3/6 scenarios require mainnet fork RPC"]
 async fn chain_id_precedence() {
     // Order: --chain-id > fork-chain-id > Genesis > default.
 

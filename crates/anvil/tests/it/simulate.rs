@@ -4,13 +4,15 @@ use alloy_primitives::{TxKind, U256, address};
 use alloy_rpc_types::{
     BlockOverrides,
     request::TransactionRequest,
-    simulate::{SimBlock, SimulatePayload},
     state::{AccountOverride, StateOverridesBuilder},
 };
 use anvil::{NodeConfig, spawn};
 use foundry_test_utils::rpc;
 
+use seismic_prelude::foundry::{SimBlock, SimulatePayload};
+
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_simulate_v1() {
     crate::init_tracing();
     let (api, _) =
@@ -34,7 +36,7 @@ async fn test_fork_simulate_v1() {
         block_state_calls: vec![SimBlock {
             block_overrides,
             state_overrides,
-            calls: vec![tx_request],
+            calls: vec![tx_request.into()],
         }],
         trace_transfers: true,
         validation: false,
