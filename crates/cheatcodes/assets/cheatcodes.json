@@ -11214,6 +11214,26 @@
     },
     {
       "func": {
+        "id": "txType",
+        "description": "Sets the EIP-2718 transaction type for subsequent calls, so `txtype()` /\n`TxUtils.isSeismicTx()` can be exercised in tests (e.g. `74` for a Seismic tx).",
+        "declaration": "function txType(uint8 newTxType) external;",
+        "visibility": "external",
+        "mutability": "",
+        "signature": "txType(uint8)",
+        "selector": "0x032d1cc8",
+        "selectorBytes": [
+          3,
+          45,
+          28,
+          200
+        ]
+      },
+      "group": "evm",
+      "status": "stable",
+      "safety": "unsafe"
+    },
+    {
+      "func": {
         "id": "unixTime",
         "description": "Returns the time since unix epoch in milliseconds.",
         "declaration": "function unixTime() external view returns (uint256 milliseconds);",
