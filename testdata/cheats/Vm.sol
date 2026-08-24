@@ -501,6 +501,7 @@ interface Vm {
     function sign(uint256 privateKey, bytes32 digest) external pure returns (uint8 v, bytes32 r, bytes32 s);
     function sign(bytes32 digest) external pure returns (uint8 v, bytes32 r, bytes32 s);
     function sign(address signer, bytes32 digest) external pure returns (uint8 v, bytes32 r, bytes32 s);
+    function signedRead(bool newSignedRead) external;
     function skip(bool skipTest) external;
     function skip(bool skipTest, string calldata reason) external;
     function sleep(uint256 duration) external;
@@ -552,6 +553,7 @@ interface Vm {
     function trim(string calldata input) external pure returns (string memory output);
     function tryFfi(string[] calldata commandInput) external returns (FfiResult memory result);
     function txGasPrice(uint256 newGasPrice) external;
+    function txType(uint8 newTxType) external;
     function unixTime() external view returns (uint256 milliseconds);
     function warmSlot(address target, bytes32 slot) external;
     function warp(uint256 newTimestamp) external;

@@ -1,5 +1,5 @@
 use super::{
-    backend::mem::{BlockRequest, DatabaseRef, State},
+    backend::mem::{BlockRequest, DatabaseRef, SeismicClassification, State},
     sign::build_typed_transaction,
 };
 use crate::{
@@ -1072,8 +1072,14 @@ impl EthApi {
 
         if request.inner.inner.gas.is_none() {
             // estimate if not provided
-            if let Ok(gas) =
-                self.do_estimate_gas(request.clone(), None, EvmOverrides::default()).await
+            if let Ok(gas) = self
+                .do_estimate_gas(
+                    request.clone(),
+                    None,
+                    EvmOverrides::default(),
+                    SeismicClassification::Untrusted,
+                )
+                .await
             {
                 request.inner.inner.gas = Some(gas as u64);
             }
@@ -1101,8 +1107,14 @@ impl EthApi {
 
         if request.gas.is_none() {
             // estimate if not provided
-            if let Ok(gas) =
-                self.do_estimate_gas(request.clone(), None, EvmOverrides::default()).await
+            if let Ok(gas) = self
+                .do_estimate_gas(
+                    request.clone(),
+                    None,
+                    EvmOverrides::default(),
+                    SeismicClassification::Untrusted,
+                )
+                .await
             {
                 request.gas = Some(gas as u64);
             }
@@ -1362,7 +1374,8 @@ impl EthApi {
                 }
             }
             other => {
-                let request = Self::recover_signed_request(other)?;
+                // seismic_call re-derives the classification, so the marker is unused here.
+                let (request, _) = Self::recover_signed_request(other)?;
                 self.seismic_call(request, block_number, overrides).await
             }
         }
@@ -1440,6 +1453,7 @@ impl EthApi {
                     request.clone(),
                     FeeDetails::zero(),
                     block_env,
+                    SeismicClassification::Untrusted,
                 )?;
                 ensure_return_ok(exit, &out)?;
 
@@ -1468,7 +1482,7 @@ impl EthApi {
     ) -> Result<U256> {
         node_info!("eth_estimateGas");
 
-        let request = match request {
+        let (request, classification) = match request {
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 // See comment in eth_call above — same rationale.
                 tx.inner.from = None;
@@ -1478,7 +1492,7 @@ impl EthApi {
                 tx.inner.max_fee_per_gas = None;
                 tx.inner.max_priority_fee_per_gas = None;
                 tx.inner.max_fee_per_blob_gas = None;
-                WithOtherFields::new(tx)
+                (WithOtherFields::new(tx), SeismicClassification::Untrusted)
             }
             other => Self::recover_signed_request(other)?,
         };
@@ -1487,6 +1501,7 @@ impl EthApi {
             request,
             block_number.or_else(|| Some(BlockNumber::Pending.into())),
             overrides,
+            classification,
         )
         .await
         .map(U256::from)
@@ -2576,7 +2591,12 @@ impl EthApi {
                         // Estimate gas
                         if tx_req.gas.is_none()
                             && let Ok(gas) = self
-                                .do_estimate_gas(tx_req.clone(), None, EvmOverrides::default())
+                                .do_estimate_gas(
+                                    tx_req.clone(),
+                                    None,
+                                    EvmOverrides::default(),
+                                    SeismicClassification::Untrusted,
+                                )
                                 .await
                         {
                             tx_req.gas = Some(gas as u64);
@@ -3053,6 +3073,7 @@ impl EthApi {
             seismic_request.clone(),
             Some(BlockId::latest()),
             EvmOverrides::default(),
+            SeismicClassification::Untrusted,
         );
 
         let fees_fut = self.fee_history(
@@ -3156,7 +3177,7 @@ impl EthApi {
     /// WithOtherFields<TransactionRequest> with the authenticated sender set as `from`.
     fn recover_signed_request(
         request: SeismicCallRequest,
-    ) -> Result<WithOtherFields<TransactionRequest>> {
+    ) -> Result<(WithOtherFields<TransactionRequest>, SeismicClassification)> {
         let typed_tx = match request {
             SeismicCallRequest::TypedData(td) => {
                 TypedTransaction::decode_712(&td).map_err(|e| {
@@ -3180,29 +3201,35 @@ impl EthApi {
             }
         };
 
-        // Recover the sender — seismic txs use seismic-specific recovery,
-        // non-seismic txs use PendingTransaction for standard recovery.
-        let (tx, sender) = if let Some(signed_seismic_tx) = typed_tx.clone().seismic() {
-            let sender = signed_seismic_tx.recover_signer().map_err(|e| {
-                BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
-            })?;
-            let tx: TransactionRequest = signed_seismic_tx.tx().clone().into();
-            (tx, sender)
-        } else {
-            let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
-                BlockchainError::Message(
-                    "Failed to convert typed transaction to request".to_string(),
-                )
-            })?;
-            let pending = PendingTransaction::new(typed_tx).map_err(|e| {
-                BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
-            })?;
-            (tx, *pending.sender())
-        };
+        // Recover the sender — seismic txs use seismic-specific recovery, non-seismic use
+        // PendingTransaction for standard recovery.
+        let (tx, sender, classification) =
+            if let Some(signed_seismic_tx) = typed_tx.clone().seismic() {
+                let sender = signed_seismic_tx.recover_signer().map_err(|e| {
+                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+                })?;
+                if !signed_seismic_tx.tx().seismic_elements.signed_read {
+                    return Err(BlockchainError::Message(
+                        "signed call must set signed_read=true".into(),
+                    ));
+                }
+                let tx: TransactionRequest = signed_seismic_tx.tx().clone().into();
+                (tx, sender, SeismicClassification::TrustedSeismic)
+            } else {
+                let tx = TransactionRequest::try_from(typed_tx.clone()).map_err(|_| {
+                    BlockchainError::Message(
+                        "Failed to convert typed transaction to request".to_string(),
+                    )
+                })?;
+                let pending = PendingTransaction::new(typed_tx).map_err(|e| {
+                    BlockchainError::Message(format!("Failed to recover signer: {e:?}"))
+                })?;
+                (tx, *pending.sender(), SeismicClassification::Untrusted)
+            };
 
         let mut request = WithOtherFields::new(tx);
         request.inner.inner.from = Some(sender);
-        Ok(request)
+        Ok((request, classification))
     }
 
     async fn do_estimate_gas(
@@ -3210,6 +3237,7 @@ impl EthApi {
         request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
         overrides: EvmOverrides,
+        classification: SeismicClassification,
     ) -> Result<u128> {
         let block_request = self.block_request(block_number).await?;
         // check if the number predates the fork, if in fork mode
@@ -3220,6 +3248,14 @@ impl EthApi {
             if overrides.has_state() || overrides.has_block() {
                 return Err(BlockchainError::EvmOverrideError(
                     "not available on past forked blocks".to_string(),
+                ));
+            }
+            // The fork RPC gets only the recovered request, so it can't reproduce txtype 74 — fail
+            // explicitly rather than silently estimating a signed read as standard.
+            if matches!(classification, SeismicClassification::TrustedSeismic) {
+                return Err(BlockchainError::Message(
+                    "signed Seismic gas estimation is not supported for blocks predating the fork"
+                        .to_string(),
                 ));
             }
             return Ok(fork.estimate_gas(&request, Some(number.into())).await?);
