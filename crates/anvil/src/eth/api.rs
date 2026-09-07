@@ -1407,12 +1407,28 @@ impl EthApi {
     /// list.
     ///
     /// Handler for ETH RPC call: `eth_createAccessList`
+    ///
+    /// Same sanitization as `eth_call` / `eth_estimateGas`: unsigned requests have
+    /// `from` and gas/value fields cleared to prevent caller spoofing that could
+    /// leak private state. The gas re-check routes through
+    /// [`Backend::seismic_call_with_state`] so Seismic-typed revert/output data is
+    /// encrypted before it can reach the wire.
     pub async fn create_access_list(
         &self,
         mut request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
     ) -> Result<AccessListResult> {
         node_info!("eth_createAccessList");
+
+        // See comment in eth_call — same rationale for unsigned simulation paths.
+        request.inner.inner.from = None;
+        request.inner.inner.nonce = None;
+        request.inner.inner.value = None;
+        request.inner.inner.gas_price = None;
+        request.inner.inner.max_fee_per_gas = None;
+        request.inner.inner.max_priority_fee_per_gas = None;
+        request.inner.inner.max_fee_per_blob_gas = None;
+
         let block_request = self.block_request(block_number).await?;
         // check if the number predates the fork, if in fork mode
         if let BlockRequest::Number(number) = block_request
@@ -1435,7 +1451,7 @@ impl EthApi {
                 // execute again but with access list set
                 request.inner.inner.access_list = Some(access_list.clone());
 
-                let (exit, out, gas_used, _) = self.backend.call_with_state(
+                let (exit, out, gas_used, _) = self.backend.seismic_call_with_state(
                     &state,
                     request.clone(),
                     FeeDetails::zero(),
