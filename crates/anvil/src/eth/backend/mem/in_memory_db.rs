@@ -25,8 +25,13 @@ impl Db for MemDb {
         self.inner.insert_account_info(address, account)
     }
 
-    fn set_storage_at(&mut self, address: Address, slot: B256, val: B256) -> DatabaseResult<()> {
-        self.inner.insert_account_storage(address, slot.into(), val.into())
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: B256,
+        val: revm::primitives::FlaggedStorage,
+    ) -> DatabaseResult<()> {
+        self.inner.insert_account_storage(address, slot.into(), val)
     }
 
     fn insert_block_hash(&mut self, number: U256, hash: B256) {
@@ -148,6 +153,8 @@ mod tests {
     use revm::{bytecode::Bytecode, primitives::KECCAK_EMPTY};
     use std::collections::BTreeMap;
 
+    use alloy_primitives::FlaggedStorage;
+
     // verifies that all substantial aspects of a loaded account remain the same after an account
     // is dumped and reloaded
     #[test]
@@ -185,7 +192,10 @@ mod tests {
         assert_eq!(loaded_account.balance, U256::from(123456));
         assert_eq!(load_db.code_by_hash_ref(loaded_account.code_hash).unwrap(), contract_code);
         assert_eq!(loaded_account.nonce, 1234);
-        assert_eq!(load_db.storage_ref(test_addr, U256::from(1234567)).unwrap(), U256::from(1));
+        assert_eq!(
+            load_db.storage_ref(test_addr, U256::from(1234567)).unwrap(),
+            FlaggedStorage::from(U256::from(1))
+        );
     }
 
     // verifies that multiple accounts can be loaded at a time, and storage is merged within those
@@ -225,7 +235,7 @@ mod tests {
         );
 
         let mut new_storage = BTreeMap::default();
-        new_storage.insert(U256::from(1234568).into(), U256::from(5).into());
+        new_storage.insert(U256::from(1234568), U256::from(5).into());
 
         new_state.accounts.insert(
             test_addr,
@@ -233,7 +243,7 @@ mod tests {
                 balance: U256::from(100100),
                 code: contract_code.bytes()[..contract_code.len()].to_vec().into(),
                 nonce: 100,
-                storage: new_storage,
+                storage: new_storage.into(),
             },
         );
 
@@ -247,7 +257,13 @@ mod tests {
         assert_eq!(loaded_account.balance, U256::from(100100));
         assert_eq!(db.code_by_hash_ref(loaded_account.code_hash).unwrap(), contract_code);
         assert_eq!(loaded_account.nonce, 1234);
-        assert_eq!(db.storage_ref(test_addr, U256::from(1234567)).unwrap(), U256::from(1));
-        assert_eq!(db.storage_ref(test_addr, U256::from(1234568)).unwrap(), U256::from(5));
+        assert_eq!(
+            db.storage_ref(test_addr, U256::from(1234567)).unwrap(),
+            FlaggedStorage::from(U256::from(1))
+        );
+        assert_eq!(
+            db.storage_ref(test_addr, U256::from(1234568)).unwrap(),
+            FlaggedStorage::from(U256::from(5))
+        );
     }
 }

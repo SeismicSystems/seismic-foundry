@@ -7,13 +7,14 @@ use foundry_compilers::artifacts::{
     EvmVersion,
     remappings::{Remapping, RemappingError},
 };
-use revm::primitives::hardfork::SpecId;
 use serde::{Deserialize, Deserializer, Serializer, de::Error};
 use std::{
     io,
     path::{Path, PathBuf},
     str::FromStr,
 };
+
+use seismic_prelude::foundry::SpecId;
 
 // TODO: Why do these exist separately from `Config::load`?
 
@@ -283,7 +284,9 @@ impl FromStr for Numeric {
 }
 
 /// Returns the [SpecId] derived from [EvmVersion]
+#[allow(unused_variables)]
 pub fn evm_spec_id(evm_version: EvmVersion, odyssey: bool) -> SpecId {
+    /*
     if odyssey {
         return SpecId::OSAKA;
     }
@@ -303,4 +306,6 @@ pub fn evm_spec_id(evm_version: EvmVersion, odyssey: bool) -> SpecId {
         EvmVersion::Prague => SpecId::PRAGUE,
         EvmVersion::Osaka => SpecId::OSAKA,
     }
+    */
+    SpecId::MERCURY
 }

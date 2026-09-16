@@ -1,7 +1,7 @@
 //! terminal utils
 use foundry_compilers::{
     artifacts::remappings::Remapping,
-    report::{self, BasicStdoutReporter, Reporter},
+    report::{self, BasicStdoutReporter, Reporter, format_version_with_commit},
 };
 use foundry_config::find_project_root;
 use itertools::Itertools;
@@ -177,19 +177,18 @@ impl Reporter for SpinnerReporter {
         }
 
         self.send_msg(format!(
-            "Compiling {} files with {} {}.{}.{}",
+            "Compiling {} files with {} {}",
             dirty_files.len(),
             compiler_name,
-            version.major,
-            version.minor,
-            version.patch
+            format_version_with_commit(version),
         ));
     }
 
     fn on_compiler_success(&self, compiler_name: &str, version: &Version, duration: &Duration) {
         self.send_msg(format!(
-            "{} {}.{}.{} finished in {duration:.2?}",
-            compiler_name, version.major, version.minor, version.patch
+            "{} {} finished in {duration:.2?}",
+            compiler_name,
+            format_version_with_commit(version),
         ));
     }
 

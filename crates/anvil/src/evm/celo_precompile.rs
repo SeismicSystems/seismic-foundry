@@ -25,9 +25,11 @@ pub static PRECOMPILE_ID_CELO_TRANSFER: PrecompileId =
     PrecompileId::Custom(Cow::Borrowed("celo transfer"));
 
 /// Gas cost for Celo transfer precompile.
+#[allow(dead_code)]
 const CELO_TRANSFER_GAS_COST: u64 = 9000;
 
 /// Returns the Celo native transfer.
+#[allow(dead_code)]
 pub fn precompile() -> DynPrecompile {
     DynPrecompile::new_stateful(PRECOMPILE_ID_CELO_TRANSFER.clone(), celo_transfer_precompile)
 }

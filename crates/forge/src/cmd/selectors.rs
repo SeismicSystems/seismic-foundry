@@ -113,7 +113,9 @@ impl SelectorsSubcommands {
                 let project = build_args.project()?;
                 let output = if let Some(contract_info) = &contract {
                     let Some(contract_name) = contract_info.name() else {
-                        eyre::bail!("No contract name provided.")
+                        {
+                            eyre::bail!("No contract name provided.");
+                        }
                     };
 
                     let target_path = contract_info

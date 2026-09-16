@@ -186,6 +186,9 @@ impl<'a> ContractRunner<'a> {
 
         self.executor.deploy_create2_deployer()?;
 
+        self.executor.set_directory()?;
+        self.executor.set_intelligence()?;
+
         // Optionally call the `setUp` function
         if call_setup {
             trace!("calling setUp");

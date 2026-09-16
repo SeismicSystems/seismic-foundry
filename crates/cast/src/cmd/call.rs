@@ -5,6 +5,7 @@ use crate::{
     tx::{CastTxBuilder, SenderKind},
 };
 use alloy_ens::NameOrAddress;
+use alloy_network::{TransactionBuilder, eip2718::Encodable2718};
 use alloy_primitives::{Address, B256, Bytes, TxKind, U256, map::HashMap};
 use alloy_provider::Provider;
 use alloy_rpc_types::{
@@ -34,7 +35,10 @@ use foundry_evm::{
 use itertools::Either;
 use regex::Regex;
 use revm::context::TransactionType;
+use seismic_prelude::foundry::{EthereumWallet, InputDecryptionElements, SeismicProviderExt};
 use std::{str::FromStr, sync::LazyLock};
+
+use super::seismic_utils;
 
 // matches override pattern <address>:<slot>:<value>
 // e.g. 0x123:0x1:0x1234
@@ -118,6 +122,16 @@ pub struct CallArgs {
     /// Enable Odyssey features.
     #[arg(long, alias = "alphanet")]
     pub odyssey: bool,
+
+    /// Encrypt calldata via ECDH and route through `seismic_call`.
+    ///
+    /// --seismic <SK>: use this hex-encoded private key for encryption
+    ///
+    /// --seismic: generate a random ephemeral key
+    ///
+    /// (omit flag): perform a standard `eth_call`
+    #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
+    pub seismic: Option<Option<String>>,
 
     #[command(subcommand)]
     command: Option<CallSubcommands>,
@@ -214,6 +228,7 @@ impl CallArgs {
             labels,
             data,
             with_local_artifacts,
+            seismic,
             disable_labels,
             ..
         } = self;
@@ -223,7 +238,9 @@ impl CallArgs {
         }
 
         let provider = utils::get_provider(&config)?;
-        let sender = SenderKind::from_wallet_opts(eth.wallet).await?;
+        let is_seismic = seismic.is_some();
+
+        let sender = SenderKind::from_wallet_opts(eth.wallet.clone()).await?;
         let from = sender.address();
 
         let code = if let Some(CallSubcommands::Create {
@@ -243,14 +260,27 @@ impl CallArgs {
             None
         };
 
-        let (tx, func) = CastTxBuilder::new(&provider, tx, &config)
+        // For seismic calls, set a large gas limit to skip unsigned gas estimation.
+        // eth_call runs in simulation mode — gas isn't consumed.
+        if is_seismic && tx.gas_limit.is_none() {
+            tx.gas_limit = Some(U256::from(30_000_000));
+        }
+
+        let builder = CastTxBuilder::new(&provider, tx, &config)
             .await?
             .with_to(to)
             .await?
             .with_code_sig_and_args(code, sig, args)
-            .await?
-            .build_raw(sender)
             .await?;
+
+        // Seismic path uses build() to fill nonce/chainId/gas (gas_limit is pre-set
+        // above to skip unsigned estimation). Non-seismic uses build_raw() (upstream
+        // behavior: eth_call doesn't need gas/nonce).
+        let (mut tx, func) = if is_seismic {
+            builder.build(sender).await?
+        } else {
+            builder.build_raw(sender).await?
+        };
 
         if trace {
             if let Some(BlockId::Number(BlockNumberOrTag::Number(block_number))) = self.block {
@@ -295,16 +325,16 @@ impl CallArgs {
                 state_overrides,
             )?;
 
-            let value = tx.value.unwrap_or_default();
-            let input = tx.inner.input.into_input().unwrap_or_default();
-            let tx_kind = tx.inner.to.expect("set by builder");
+            let value = tx.inner.inner.value.unwrap_or_default();
+            let input = tx.inner.inner.input.into_input().unwrap_or_default();
+            let tx_kind = tx.inner.inner.to.expect("set by builder");
             let env_tx = &mut executor.env_mut().tx;
 
-            if let Some(tx_type) = tx.inner.transaction_type {
+            if let Some(tx_type) = tx.inner.inner.transaction_type {
                 env_tx.tx_type = tx_type;
             }
 
-            if let Some(access_list) = tx.inner.access_list {
+            if let Some(access_list) = tx.inner.inner.access_list {
                 env_tx.access_list = access_list;
 
                 if env_tx.tx_type == TransactionType::Legacy as u8 {
@@ -312,7 +342,7 @@ impl CallArgs {
                 }
             }
 
-            if let Some(auth) = tx.inner.authorization_list {
+            if let Some(auth) = tx.inner.inner.authorization_list {
                 env_tx.authorization_list = auth.into_iter().map(Either::Left).collect();
 
                 env_tx.tx_type = TransactionType::Eip7702 as u8;
@@ -346,12 +376,60 @@ impl CallArgs {
             return Ok(());
         }
 
-        let response = Cast::new(&provider)
-            .call(&tx, func.as_ref(), block, state_overrides, block_overrides)
-            .await?;
+        let contract_address = tx.to.and_then(|tx_kind| tx_kind.into_to());
+
+        let response = if is_seismic {
+            let signer = eth.wallet.signer().await?;
+
+            let encryption_sk = seismic_utils::get_or_generate_encryption_key(seismic.unwrap())?;
+            let (seismic_elements, _) =
+                seismic_utils::create_seismic_elements(&provider, &encryption_sk, true).await?;
+            let network_pubkey = provider.get_tee_pubkey().await?;
+            let original_input = tx.inner.input.input().unwrap_or_default().clone();
+
+            seismic_utils::prepare_seismic_fields(&mut tx, seismic_elements.clone());
+            seismic_utils::encrypt_tx_input(
+                &mut tx,
+                &original_input,
+                &network_pubkey,
+                &encryption_sk,
+                from,
+            )?;
+
+            // Save metadata for response decryption before build() consumes the tx
+            let metadata = tx
+                .metadata(from)
+                .map_err(|e| eyre::eyre!("Failed to create decryption metadata: {e}"))?;
+
+            let ethereum_wallet = EthereumWallet::from(signer);
+            let signed_envelope = tx.build(&ethereum_wallet).await?;
+            let encoded_tx = Bytes::from(signed_envelope.encoded_2718());
+
+            let encrypted_response: Bytes = provider
+                .client()
+                .request("eth_call", (encoded_tx,))
+                .await
+                .map_err(|e| eyre::eyre!("Seismic call failed: {e}"))?;
+
+            if encrypted_response.is_empty() {
+                // The node returns empty output unencrypted (server-side encrypt
+                // short-circuits empty plaintext), so there is nothing to decrypt.
+                String::from("0x")
+            } else {
+                let decrypted_response = seismic_elements
+                    .client_decrypt(&encrypted_response, &network_pubkey, &encryption_sk, &metadata)
+                    .map_err(|e| eyre::eyre!("Failed to decrypt response: {e}"))?;
+
+                alloy_primitives::hex::encode_prefixed(&decrypted_response)
+            }
+        } else {
+            Cast::new(&provider)
+                .call(&tx, func.as_ref(), block, state_overrides, block_overrides)
+                .await?
+        };
 
         if response == "0x"
-            && let Some(contract_address) = tx.to.and_then(|tx_kind| tx_kind.into_to())
+            && let Some(contract_address) = contract_address
         {
             let code = provider.get_code_at(contract_address).await?;
             if code.is_empty() {

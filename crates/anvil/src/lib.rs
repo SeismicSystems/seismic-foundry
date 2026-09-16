@@ -40,6 +40,8 @@ use tokio::{
     task::{JoinError, JoinHandle},
 };
 
+use alloy_op_evm as _;
+
 /// contains the background service that drives the node
 mod service;
 
@@ -199,7 +201,7 @@ pub async fn try_spawn(mut config: NodeConfig) -> Result<(EthApi, NodeHandle)> {
 
     let fee_history_cache = Arc::new(Mutex::new(Default::default()));
     let fee_history_service = FeeHistoryService::new(
-        match backend.spec_id() {
+        match backend.spec_id().into_eth_spec() {
             SpecId::OSAKA => BlobParams::osaka(),
             SpecId::PRAGUE => BlobParams::prague(),
             _ => BlobParams::cancun(),

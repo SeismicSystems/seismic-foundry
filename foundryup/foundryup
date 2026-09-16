@@ -3,19 +3,20 @@ set -eo pipefail
 
 # NOTE: if you make modifications to this script, please increment the version number.
 # WARNING: the SemVer pattern: major.minor.patch must be followed as we use it to determine if the script is up to date.
-FOUNDRYUP_INSTALLER_VERSION="1.3.0"
+# SEISMIC NOTE: until we stabilize, please do not bump major version to 1.
+FOUNDRYUP_INSTALLER_VERSION="0.1.0"
 
 BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
-FOUNDRY_DIR=${FOUNDRY_DIR:-"$BASE_DIR/.foundry"}
+FOUNDRY_DIR=${FOUNDRY_DIR:-"$BASE_DIR/.seismic"}
 FOUNDRY_VERSIONS_DIR="$FOUNDRY_DIR/versions"
 FOUNDRY_BIN_DIR="$FOUNDRY_DIR/bin"
 FOUNDRY_MAN_DIR="$FOUNDRY_DIR/share/man/man1"
-FOUNDRY_BIN_URL="https://raw.githubusercontent.com/foundry-rs/foundry/master/foundryup/foundryup"
-FOUNDRY_BIN_PATH="$FOUNDRY_BIN_DIR/foundryup"
+FOUNDRY_BIN_URL="https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/foundryup/foundryup"
+FOUNDRY_BIN_PATH="$FOUNDRY_BIN_DIR/sfoundryup"
 FOUNDRYUP_JOBS=""
 FOUNDRYUP_IGNORE_VERIFICATION=false
 
-BINS=(forge cast anvil chisel)
+BINS=(sforge scast sanvil)
 HASH_NAMES=()
 HASH_VALUES=()
 
@@ -101,15 +102,23 @@ main() {
     exit 0
   fi
 
-  FOUNDRYUP_REPO=${FOUNDRYUP_REPO:-foundry-rs/foundry}
+  FOUNDRYUP_REPO=${FOUNDRYUP_REPO:-SeismicSystems/seismic-foundry}
 
   # Install by downloading binaries
-  if [[ "$FOUNDRYUP_REPO" == "foundry-rs/foundry" && -z "$FOUNDRYUP_BRANCH" && -z "$FOUNDRYUP_COMMIT" ]]; then
+  if [[ "$FOUNDRYUP_REPO" == "SeismicSystems/seismic-foundry" && -z "$FOUNDRYUP_BRANCH" && -z "$FOUNDRYUP_COMMIT" ]]; then
     FOUNDRYUP_VERSION=${FOUNDRYUP_VERSION:-stable}
     FOUNDRYUP_TAG=$FOUNDRYUP_VERSION
 
     # Normalize versions (handle channels, versions without v prefix)
-    if [[ "$FOUNDRYUP_VERSION" =~ ^nightly ]]; then
+    if [[ "$FOUNDRYUP_VERSION" == "stable" ]]; then
+      # Resolve 'stable' to the latest non-prerelease GitHub release tag.
+      # The /releases/latest endpoint returns the most recent non-prerelease, non-draft release.
+      FOUNDRYUP_TAG=$(curl -fsSL "https://api.github.com/repos/$FOUNDRYUP_REPO/releases/latest" | grep '"tag_name"' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+      if [ -z "$FOUNDRYUP_TAG" ]; then
+        err "could not determine latest stable version. No stable release exists yet. Try 'sfoundryup -i nightly' instead."
+      fi
+      FOUNDRYUP_VERSION=$FOUNDRYUP_TAG
+    elif [[ "$FOUNDRYUP_VERSION" =~ ^nightly ]]; then
       FOUNDRYUP_VERSION="nightly"
     elif [[ "$FOUNDRYUP_VERSION" == [[:digit:]]* ]]; then
       # Add v prefix
@@ -117,19 +126,18 @@ main() {
       FOUNDRYUP_TAG="${FOUNDRYUP_VERSION}"
     fi
 
-    say "installing foundry (version ${FOUNDRYUP_VERSION}, tag ${FOUNDRYUP_TAG})"
+    say "installing sfoundry (version ${FOUNDRYUP_VERSION}, tag ${FOUNDRYUP_TAG})"
+
+    # Install ssolc before downloading sfoundry binaries
+    install_ssolc
 
     uname_s=$(uname -s)
     PLATFORM=$(tolower "${FOUNDRYUP_PLATFORM:-$uname_s}")
     EXT="tar.gz"
     case $PLATFORM in
-      linux|alpine) ;;
+      linux) ;;
       darwin|mac*)
         PLATFORM="darwin"
-        ;;
-      mingw*|win*)
-        EXT="zip"
-        PLATFORM="win32"
         ;;
       *)
         err "unsupported platform: $PLATFORM"
@@ -145,7 +153,7 @@ main() {
       else
         ARCHITECTURE="amd64" # Intel.
       fi
-    elif [ "${ARCHITECTURE}" = "arm64" ] ||[ "${ARCHITECTURE}" = "aarch64" ] ; then
+    elif [ "${ARCHITECTURE}" = "arm64" ] || [ "${ARCHITECTURE}" = "aarch64" ] ; then
       ARCHITECTURE="arm64" # Arm.
     else
       ARCHITECTURE="amd64" # Amd.
@@ -153,22 +161,22 @@ main() {
 
     # Compute the URL of the release tarball in the Foundry repository.
     RELEASE_URL="https://github.com/${FOUNDRYUP_REPO}/releases/download/${FOUNDRYUP_TAG}/"
-    ATTESTATION_URL="${RELEASE_URL}foundry_${FOUNDRYUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.attestation.txt"
-    BIN_ARCHIVE_URL="${RELEASE_URL}foundry_${FOUNDRYUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.$EXT"
-    MAN_TARBALL_URL="${RELEASE_URL}foundry_man_${FOUNDRYUP_VERSION}.tar.gz"
+    ATTESTATION_URL="${RELEASE_URL}sfoundry_${FOUNDRYUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.attestation.txt"
+    BIN_ARCHIVE_URL="${RELEASE_URL}sfoundry_${FOUNDRYUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.$EXT"
+    MAN_TARBALL_URL="${RELEASE_URL}sfoundry_man_${FOUNDRYUP_VERSION}.tar.gz"
 
     ensure mkdir -p "$FOUNDRY_VERSIONS_DIR"
 
     # If `--force` is set, skip the SHA verification.
     if [ "$FOUNDRYUP_IGNORE_VERIFICATION" = false ]; then
       # Check if the version is already installed by downloading the attestation file.
-      say "checking if forge, cast, anvil, and chisel for $FOUNDRYUP_TAG version are already installed"
+      say "checking if sforge, scast, and sanvil for $FOUNDRYUP_TAG version are already installed"
 
       # Create a temporary directory to store the attestation link and artifact.
       tmp_dir="$(mktemp -d 2>/dev/null || echo ".")"
       tmp="$tmp_dir/attestation.txt"
       ensure download "$ATTESTATION_URL" "$tmp"
-      
+
       # Read the first line of the attestation file to get the artifact link.
       # The first line should contain the link to the attestation artifact.
       attestation_artifact_link="$(head -n1 "$tmp" | tr -d '\r')"
@@ -253,21 +261,14 @@ main() {
     fi
 
     # Download and extract the binaries archive
-    say "downloading forge, cast, anvil, and chisel for $FOUNDRYUP_TAG version"
-    if [ "$PLATFORM" = "win32" ]; then
-      tmp="$(mktemp -d 2>/dev/null || echo ".")/foundry.zip"
-      ensure download "$BIN_ARCHIVE_URL" "$tmp"
-      ensure unzip "$tmp" -d "$FOUNDRY_VERSIONS_DIR/$FOUNDRYUP_TAG"
-      rm -f "$tmp"
-    else
-      tmp="$(mktemp -d 2>/dev/null || echo ".")/foundry.tar.gz"
-      ensure download "$BIN_ARCHIVE_URL" "$tmp"
-      # Make sure it's a valid tar archive.
-      ensure tar tf $tmp 1> /dev/null
-      ensure mkdir -p "$FOUNDRY_VERSIONS_DIR/$FOUNDRYUP_TAG"
-      ensure tar -C "$FOUNDRY_VERSIONS_DIR/$FOUNDRYUP_TAG" -xvf $tmp
-      rm -f "$tmp"
-    fi
+    say "downloading sforge, scast, and sanvil for $FOUNDRYUP_TAG version"
+    tmp="$(mktemp -d 2>/dev/null || echo ".")/sfoundry.tar.gz"
+    ensure download "$BIN_ARCHIVE_URL" "$tmp"
+    # Make sure it's a valid tar archive.
+    ensure tar tf "$tmp" 1> /dev/null
+    ensure mkdir -p "$FOUNDRY_VERSIONS_DIR/$FOUNDRYUP_TAG"
+    ensure tar -C "$FOUNDRY_VERSIONS_DIR/$FOUNDRYUP_TAG" -xvf "$tmp"
+    rm -f "$tmp"
 
     # Optionally download the manuals
     if check_cmd tar; then
@@ -279,7 +280,7 @@ main() {
     else
       say 'skipping manpage download: missing "tar"'
     fi
-    
+
     if [ "$FOUNDRYUP_IGNORE_VERIFICATION" = true ]; then
       say "skipped SHA verification for downloaded binaries due to --force flag"
     else
@@ -340,11 +341,11 @@ main() {
   # Install by cloning the repo with the provided branch/tag
   else
     need_cmd cargo
-    FOUNDRYUP_BRANCH=${FOUNDRYUP_BRANCH:-master}
+    FOUNDRYUP_BRANCH=${FOUNDRYUP_BRANCH:-seismic}
     REPO_PATH="$FOUNDRY_DIR/$FOUNDRYUP_REPO"
     AUTHOR="$(echo "$FOUNDRYUP_REPO" | cut -d'/' -f1 -)"
 
-    # If repo path does not exist, grab the author from the repo, make a directory in .foundry, cd to it and clone.
+    # If repo path does not exist, grab the author from the repo, make a directory in .seismic, cd to it and clone.
     if [ ! -d "$REPO_PATH" ]; then
       ensure mkdir -p "$FOUNDRY_DIR/$AUTHOR"
       cd "$FOUNDRY_DIR/$AUTHOR"
@@ -357,9 +358,9 @@ main() {
     ensure git checkout "origin/${FOUNDRYUP_BRANCH}"
 
     # Create custom version based on the install method, e.g.:
-    # - foundry-rs-commit-c22c4cc96b0535cd989ee94b79da1b19d236b8db
-    # - foundry-rs-pr-1
-    # - foundry-rs-branch-chore-bump-forge-std
+    # - SeismicSystems-commit-c22c4cc96b0535cd989ee94b79da1b19d236b8db
+    # - SeismicSystems-pr-1
+    # - SeismicSystems-branch-chore-bump-forge-std
     if [ -n "$FOUNDRYUP_COMMIT" ]; then
       # If set, checkout specific commit from branch
       ensure git checkout "$FOUNDRYUP_COMMIT"
@@ -376,7 +377,7 @@ main() {
 
     # Build the repo.
     ensure cargo build --bins "${CARGO_BUILD_ARGS[@]}"
-    # Create foundry custom version directory.
+    # Create sfoundry custom version directory.
     ensure mkdir -p "$FOUNDRY_VERSIONS_DIR/$FOUNDRYUP_VERSION"
     for bin in "${BINS[@]}"; do
       for try_path in target/release/$bin target/release/$bin.exe; do
@@ -400,22 +401,99 @@ main() {
   fi
 }
 
+install_ssolc() {
+  echo "Starting ssolc installation..."
+
+  # Detect OS and set installation paths
+  OS="$(uname -s)"
+  ARCH="$(uname -m)"
+
+  case "$OS" in
+    Linux*)
+      OS_TYPE="linux"
+      INSTALL_DIR="/usr/local/bin"
+      ;;
+    Darwin*)
+      OS_TYPE="macos"
+      INSTALL_DIR="/usr/local/bin"
+      ;;
+    *)
+      echo "Unsupported OS: $OS (only Linux and macOS are supported)"
+      exit 1
+      ;;
+  esac
+
+  case "$ARCH" in
+    x86_64)     ARCH_TYPE="x86_64" ;;
+    arm64|aarch64) ARCH_TYPE="arm64" ;;
+    *)
+      echo "Unsupported architecture: $ARCH"
+      exit 1
+      ;;
+  esac
+
+  # Set target info
+  TARGET_NAME="ssolc-${OS_TYPE}-${ARCH_TYPE}.tar.gz"
+  SSOLC_BIN="${INSTALL_DIR}/ssolc"
+
+  TEMP_DIR=$(mktemp -d)
+  trap 'rm -rf "$TEMP_DIR"' EXIT
+
+  # Download the release. The releases/latest/download/<asset> redirect
+  # resolves the latest release without the GitHub REST API, whose
+  # unauthenticated per-IP rate limit is routinely exhausted on shared CI
+  # runners (the API's JSON error body has no .assets, which used to
+  # surface here as "jq: Cannot iterate over null").
+  echo "Downloading $TARGET_NAME..."
+  DOWNLOAD_PATH="$TEMP_DIR/$TARGET_NAME"
+  DOWNLOAD_URL="https://github.com/SeismicSystems/seismic-solidity/releases/latest/download/$TARGET_NAME"
+  if ! curl -fL -o "$DOWNLOAD_PATH" "$DOWNLOAD_URL"; then
+    echo "Error: failed to download $TARGET_NAME from the latest seismic-solidity release."
+    exit 1
+  fi
+
+  # Extract and install
+  echo "Extracting archive..."
+  mkdir -p "$TEMP_DIR/extract"
+
+  if ! file "$DOWNLOAD_PATH" | grep -q 'gzip compressed data'; then
+    echo "Error: Invalid gzip archive"
+    exit 1
+  fi
+  tar -xzf "$DOWNLOAD_PATH" -C "$TEMP_DIR/extract"
+  BINARY_PATH="$TEMP_DIR/extract/solc/solc"
+
+  if [[ ! -f "$BINARY_PATH" ]]; then
+    echo "Error: Binary not found in extracted archive"
+    exit 1
+  fi
+
+  # Install the binary
+  echo "Installing binary to $SSOLC_BIN..."
+  mkdir -p "$(dirname "$SSOLC_BIN")"
+
+  sudo mv "$BINARY_PATH" "$SSOLC_BIN"
+  sudo chmod +x "$SSOLC_BIN"
+
+  echo "Installation complete! ssolc installed at $SSOLC_BIN"
+}
+
 usage() {
   cat 1>&2 <<EOF
-The installer for Foundry.
+The installer for Seismic Foundry.
 
-Update or revert to a specific Foundry version with ease.
+Update or revert to a specific Seismic Foundry version with ease.
 
 By default, the latest stable version is installed from built binaries.
 
 USAGE:
-    foundryup <OPTIONS>
+    sfoundryup <OPTIONS>
 
 OPTIONS:
     -h, --help      Print help information
-    -v, --version   Print the version of foundryup
-    -U, --update    Update foundryup to the latest version
-    -i, --install   Install a specific version from built binaries
+    -v, --version   Print the version of sfoundryup
+    -U, --update    Update sfoundryup to the latest version
+    -i, --install   Install a specific version from built binaries (e.g. nightly, v0.1.0)
     -l, --list      List versions installed from built binaries
     -u, --use       Use a specific installed version from built binaries
     -b, --branch    Build and install a specific branch
@@ -423,10 +501,10 @@ OPTIONS:
     -C, --commit    Build and install a specific commit
     -r, --repo      Build and install from a remote GitHub repo (uses default branch if no other options are set)
     -p, --path      Build and install a local repository
-    -j, --jobs      Number of CPUs to use for building Foundry (default: all CPUs)
+    -j, --jobs      Number of CPUs to use for building (default: all CPUs)
     -f, --force     Skip SHA verification for downloaded binaries (INSECURE - use with caution)
     --arch          Install a specific architecture (supports amd64 and arm64)
-    --platform      Install a specific platform (supports win32, linux, darwin and alpine)
+    --platform      Install a specific platform (supports linux and darwin)
 EOF
 }
 
@@ -436,7 +514,7 @@ version() {
 }
 
 update() {
-  say "updating foundryup..."
+  say "updating sfoundryup..."
 
   current_version="$FOUNDRYUP_INSTALLER_VERSION"
 
@@ -450,7 +528,7 @@ update() {
   # If the new version could not be determined, exit gracefully.
   # This prevents from upgrading to an empty or invalid version.
   if [ -z "$new_version" ]; then
-    warn "could not determine new foundryup version. Exiting."
+    warn "could not determine new sfoundryup version. Exiting."
     rm -f "$tmp_file"
     exit 0
   fi
@@ -458,16 +536,16 @@ update() {
   # If the new version is not greater than the current version, skip the update.
   # This is to prevent downgrades or unnecessary updates.
   if ! version_gt "$new_version" "$current_version"; then
-    say "foundryup is already up to date (installed: $current_version, remote: $new_version)."
+    say "sfoundryup is already up to date (installed: $current_version, remote: $new_version)."
     rm -f "$tmp_file"
     exit 0
   fi
 
-  # Overwrite existing foundryup
+  # Overwrite existing sfoundryup
   ensure mv "$tmp_file" "$FOUNDRY_BIN_PATH"
   ensure chmod +x "$FOUNDRY_BIN_PATH"
 
-  say "successfully updated foundryup: $current_version → $new_version"
+  say "successfully updated sfoundryup: $current_version → $new_version"
   exit 0
 }
 
@@ -524,7 +602,7 @@ EOF
 }
 
 say() {
-  printf "foundryup: %s\n" "$1"
+  printf "sfoundryup: %s\n" "$1"
 }
 
 warn() {
@@ -559,34 +637,35 @@ check_cmd() {
 }
 
 check_installer_up_to_date() {
-  say "checking if foundryup is up to date..."
+  say "checking if sfoundryup is up to date..."
 
   if check_cmd curl; then
-    remote_version=$(curl -fsSL "$FOUNDRY_BIN_URL" | grep -Eo 'FOUNDRYUP_INSTALLER_VERSION="[0-9]+\.[0-9]+\.[0-9]+"' | cut -d'"' -f2)
+    # The || true prevents set -e from killing the script when the URL doesn't exist or GitHub is down, allowing us to handle the error gracefully.
+    remote_version=$(curl -fsSL "$FOUNDRY_BIN_URL" 2>/dev/null | grep -Eo 'FOUNDRYUP_INSTALLER_VERSION="[0-9]+\.[0-9]+\.[0-9]+"' | cut -d'"' -f2) || true
   else
-    remote_version=$(wget -qO- "$FOUNDRY_BIN_URL" | grep -Eo 'FOUNDRYUP_INSTALLER_VERSION="[0-9]+\.[0-9]+\.[0-9]+"' | cut -d'"' -f2)
+    remote_version=$(wget -qO- "$FOUNDRY_BIN_URL" 2>/dev/null | grep -Eo 'FOUNDRYUP_INSTALLER_VERSION="[0-9]+\.[0-9]+\.[0-9]+"' | cut -d'"' -f2) || true
   fi
 
   if [ -z "$remote_version" ]; then
-    warn "Could not determine remote foundryup version. Skipping version check."
+    warn "Could not determine remote sfoundryup version. Skipping version check."
     return 0
   fi
 
   if version_gt "$remote_version" "$FOUNDRYUP_INSTALLER_VERSION"; then
     printf '
-Your installation of foundryup is out of date.
+Your installation of sfoundryup is out of date.
 
 Installed: %s → Latest: %s
 
 To update, run:
 
-  foundryup --update
+  sfoundryup --update
 
 Updating is highly recommended as it gives you access to the latest features and bug fixes.
 
 ' "$FOUNDRYUP_INSTALLER_VERSION" "$remote_version" >&2
   else
-    say "foundryup is up to date."
+    say "sfoundryup is up to date."
   fi
 }
 
@@ -658,25 +737,19 @@ download() {
   fi
 }
 
-# Banner prompt for Foundry
+# Banner prompt for Seismic Foundry
 banner() {
   printf '
 
-.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx
+ #####   #######   ######   #####   ##   ##   ######   #####            #######   #####   ### ###  ##  ###  ######   ######   ### ###
+###  ##  ### ###     ##    ###  ##  ### ###     ##    ### ###           ###  ##  ### ###  ### ###  ### ###  ### ###  ### ###  ### ###
+###      ###         ##    ###      #######     ##    ###               ###      ### ###  ### ###  #######  ### ###  ### ###  ### ###
+ #####   #####       ##     #####   #######     ##    ###       ######  #####    ### ###  ### ###  #######  ### ###  ######    #####
+     ##  ###         ##         ##  ### ###     ##    ###               ###      ### ###  ### ###  ### ###  ### ###  ### ##     ###
+###  ##  ### ###     ##    ###  ##  ### ###     ##    ### ###           ###      ### ###  ### ###  ### ###  ### ###  ### ###    ###
+ #####   #######   ######   #####   ### ###   ######   #####            ###       #####    #####   ### ###  ######   ### ###    ###
 
- ╔═╗ ╔═╗ ╦ ╦ ╔╗╔ ╔╦╗ ╦═╗ ╦ ╦         Portable and modular toolkit
- ╠╣  ║ ║ ║ ║ ║║║  ║║ ╠╦╝ ╚╦╝    for Ethereum Application Development
- ╚   ╚═╝ ╚═╝ ╝╚╝ ═╩╝ ╩╚═  ╩                 written in Rust.
-
-.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx
-
-Repo       : https://github.com/foundry-rs/foundry
-Book       : https://book.getfoundry.sh/
-Chat       : https://t.me/foundry_rs/
-Support    : https://t.me/foundry_support/
-Contribute : https://github.com/foundry-rs/foundry/blob/master/CONTRIBUTING.md
-
-.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx
+Repo       : https://github.com/SeismicSystems/seismic-foundry
 
 '
 }

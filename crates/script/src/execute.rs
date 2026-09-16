@@ -293,8 +293,9 @@ impl ExecutedState {
         // issues with eth_estimateGas and eth_sendTransaction requests.
         for tx in &mut txs {
             if let Some(req) = tx.transaction.as_unsigned_mut() {
-                req.input =
-                    TransactionInput::maybe_both(std::mem::take(&mut req.input).into_input());
+                req.inner.inner.input = TransactionInput::maybe_both(
+                    std::mem::take(&mut req.inner.inner.input).into_input(),
+                );
             }
         }
         let rpc_data = RpcData::from_transactions(&txs);
@@ -302,9 +303,11 @@ impl ExecutedState {
         if rpc_data.is_multi_chain() {
             sh_warn!("Multi chain deployment is still under development. Use with caution.")?;
             if !self.build_data.libraries.is_empty() {
-                eyre::bail!(
-                    "Multi chain deployment does not support library linking at the moment."
-                )
+                {
+                    eyre::bail!(
+                        "Multi chain deployment does not support library linking at the moment."
+                    );
+                }
             }
         }
         rpc_data.check_shanghai_support().await?;

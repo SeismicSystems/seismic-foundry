@@ -30,6 +30,7 @@ pub mod mapping_slots;
 mod preprocessor;
 pub mod provider;
 pub mod retry;
+pub mod seismic;
 pub mod selectors;
 pub mod serde_helpers;
 pub mod slot_identifier;

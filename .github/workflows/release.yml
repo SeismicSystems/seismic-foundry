@@ -3,22 +3,22 @@ name: release
 on:
   push:
     tags:
-      - "stable"
-      - "rc"
-      - "rc-*"
       - "v*.*.*"
   schedule:
-    - cron: "0 6 * * *"
+    # Weekly on Mondays at 11:00am UTC (6:00am EST)
+    - cron: "0 11 * * 1"
+  # manual trigger behaves like the cron job and creates a nightly pre-release.
   workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
   IS_NIGHTLY: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
   PROFILE: maxperf
-  STABLE_VERSION: "v1.2.3"
 
 jobs:
   prepare:
+    permissions:
+      contents: write
     name: Prepare release
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -56,22 +56,35 @@ jobs:
             const createTag = require('./.github/scripts/create-tag.js')
             await createTag({ github, context }, process.env.TAG_NAME)
 
+      # For versioned releases (v*.*.*), find the previous semver tag to compute changelog from.
+      # Unlike upstream which uses a hardcoded STABLE_VERSION env var, we resolve it dynamically
+      # so we don't have to remember to update it after each release.
+      - name: Find previous semver tag
+        if: ${{ env.IS_NIGHTLY != 'true' }}
+        id: prev_stable
+        run: |
+          # List all v*.*.* tags sorted by version, exclude the current one
+          PREV_TAG=$(git tag -l 'v*.*.*' --sort=-v:refname | grep -v "^${GITHUB_REF_NAME}$" | head -1)
+          echo "tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+
       - name: Build changelog
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v4
         with:
           configuration: "./.github/changelog.json"
-          fromTag: ${{ env.IS_NIGHTLY == 'true' && 'nightly' || env.STABLE_VERSION }}
+          fromTag: ${{ env.IS_NIGHTLY == 'true' && 'nightly' || steps.prev_stable.outputs.tag }}
           toTag: ${{ steps.release_info.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  release-docker:
-    name: Release Docker
-    needs: prepare
-    uses: ./.github/workflows/docker-publish.yml
-    with:
-      tag_name: ${{ needs.prepare.outputs.tag_name }}
+  # TODO(samlaf): turned this off because we only need binary releases to be used by sfoundryup and mise in the monorepo.
+  # We can turn this back on once we have a need for docker releases.
+  # release-docker:
+  #   name: Release Docker
+  #   needs: prepare
+  #   uses: ./.github/workflows/docker-publish.yml
+  #   with:
+  #     tag_name: ${{ needs.prepare.outputs.tag_name }}
 
   release:
     permissions:
@@ -90,29 +103,32 @@ jobs:
           # `target`: Rust build target triple
           # `platform` and `arch`: Used in tarball names
           # `svm`: target platform to use for the Solc binary: https://github.com/roynalnaruto/svm-rs/blob/84cbe0ac705becabdc13168bae28a45ad2299749/svm-builds/build.rs#L4-L24
-          - runner: Linux-22.04
+          - runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             svm_target_platform: linux-amd64
             platform: linux
             arch: amd64
-          - runner: Linux-22.04
-            target: x86_64-unknown-linux-musl
-            svm_target_platform: linux-amd64
-            platform: alpine
-            arch: amd64
-          - runner: Linux-22.04
-            target: aarch64-unknown-linux-gnu
-            svm_target_platform: linux-aarch64
-            platform: linux
-            arch: arm64
-          - runner: Linux-22.04
-            target: aarch64-unknown-linux-musl
-            svm_target_platform: linux-aarch64
-            platform: alpine
-            arch: arm64
-          # This is pinned to `macos-13-large` to support old SDK versions.
-          # If the runner is deprecated it should be pinned to the oldest available version of the runner.
-          - runner: macos-13-large
+          # Turning off musl since afaiu this is only needed when running inside Alpine Docker containers,
+          # which we don't even support atm.
+          # - runner: ubuntu-22.04
+          #   target: x86_64-unknown-linux-musl
+          #   svm_target_platform: linux-amd64
+          #   platform: alpine
+          #   arch: amd64
+          # Note(samlaf): turning off ubuntu arm runners for now since the build is oom'ing and crashing, despite having 16GiB of RAM.
+          # https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories
+          # Not sure why the arm builds take so much more memory, but anyways we don't need these builds for now until there's user demand.
+          # - runner: ubuntu-22.04-arm
+          #   target: aarch64-unknown-linux-gnu
+          #   svm_target_platform: linux-aarch64
+          #   platform: linux
+          #   arch: arm64
+          # - runner: ubuntu-22.04
+          #   target: aarch64-unknown-linux-musl
+          #   svm_target_platform: linux-aarch64
+          #   platform: alpine
+          #   arch: arm64
+          - runner: macos-14-large
             target: x86_64-apple-darwin
             svm_target_platform: macosx-amd64
             platform: darwin
@@ -122,11 +138,12 @@ jobs:
             svm_target_platform: macosx-aarch64
             platform: darwin
             arch: arm64
-          - runner: Windows
-            target: x86_64-pc-windows-msvc
-            svm_target_platform: windows-amd64
-            platform: win32
-            arch: amd64
+          # Turning off Windows for now since I don't think we have any usecase for it.
+          # - runner: windows-latest
+          #   target: x86_64-pc-windows-msvc
+          #   svm_target_platform: windows-amd64
+          #   platform: win32
+          #   arch: amd64
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
@@ -144,7 +161,7 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version)" >> $GITHUB_ENV
 
       - name: cross setup
-        if: matrix.target == 'x86_64-unknown-linux-musl' || matrix.target == 'aarch64-unknown-linux-musl' || matrix.target == 'aarch64-unknown-linux-gnu'
+        if: matrix.target == 'x86_64-unknown-linux-musl' || matrix.target == 'aarch64-unknown-linux-musl'
         run: |
           cargo install cross
 
@@ -168,13 +185,13 @@ jobs:
 
           [[ "$TARGET" == *windows* ]] && ext=".exe"
 
-          if [[ "$TARGET" == *-musl || "$TARGET" == "aarch64-unknown-linux-gnu" ]]; then
+          if [[ "$TARGET" == *-musl ]]; then
             cross build "${flags[@]}"
           else
             cargo build "${flags[@]}"
           fi
 
-          bins=(anvil cast chisel forge)
+          bins=(sanvil scast sforge)
           for name in "${bins[@]}"; do
             bin=$OUT_DIR/$name$ext
             echo ""
@@ -195,20 +212,15 @@ jobs:
         shell: bash
         run: |
           if [[ "$PLATFORM_NAME" == "linux" || "$PLATFORM_NAME" == "alpine" ]]; then
-            tar -czvf "foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR forge cast anvil chisel
-            echo "file_name=foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            tar -czvf "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR sforge scast sanvil
+            echo "file_name=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
           elif [ "$PLATFORM_NAME" == "darwin" ]; then
             # We need to use gtar here otherwise the archive is corrupt.
             # See: https://github.com/actions/virtual-environments/issues/2619
-            gtar -czvf "foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR forge cast anvil chisel
-            echo "file_name=foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
-          else
-            cd $OUT_DIR
-            7z a -tzip "foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" forge.exe cast.exe anvil.exe chisel.exe
-            mv "foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
-            echo "file_name=foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" >> $GITHUB_OUTPUT
+            gtar -czvf "sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C $OUT_DIR sforge scast sanvil
+            echo "file_name=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
           fi
-          echo "foundry_attestation=foundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.attestation.txt" >> $GITHUB_OUTPUT
+          echo "sfoundry_attestation=sfoundry_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.attestation.txt" >> $GITHUB_OUTPUT
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -226,30 +238,27 @@ jobs:
         shell: bash
         run: |
           sudo apt-get -y install help2man
-          help2man -N $OUT_DIR/forge > forge.1
-          help2man -N $OUT_DIR/cast > cast.1
-          help2man -N $OUT_DIR/anvil > anvil.1
-          help2man -N $OUT_DIR/chisel > chisel.1
-          gzip forge.1
-          gzip cast.1
-          gzip anvil.1
-          gzip chisel.1
-          tar -czvf "foundry_man_${VERSION_NAME}.tar.gz" forge.1.gz cast.1.gz anvil.1.gz chisel.1.gz
-          echo "foundry_man=foundry_man_${VERSION_NAME}.tar.gz" >> $GITHUB_OUTPUT
+          help2man -N $OUT_DIR/sforge > sforge.1
+          help2man -N $OUT_DIR/scast > scast.1
+          help2man -N $OUT_DIR/sanvil > sanvil.1
+          gzip sforge.1
+          gzip scast.1
+          gzip sanvil.1
+          tar -czvf "sfoundry_man_${VERSION_NAME}.tar.gz" sforge.1.gz scast.1.gz sanvil.1.gz
+          echo "sfoundry_man=sfoundry_man_${VERSION_NAME}.tar.gz" >> $GITHUB_OUTPUT
 
       - name: Binaries attestation
         id: attestation
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
-            ${{ env.anvil_bin_path }}
-            ${{ env.cast_bin_path }}
-            ${{ env.chisel_bin_path }}
-            ${{ env.forge_bin_path }}
+            ${{ env.sanvil_bin_path }}
+            ${{ env.scast_bin_path }}
+            ${{ env.sforge_bin_path }}
 
       - name: Record attestation URL
         run: |
-          echo "${{ steps.attestation.outputs.attestation-url }}" > ${{ steps.artifacts.outputs.foundry_attestation }}
+          echo "${{ steps.attestation.outputs.attestation-url }}" > ${{ steps.artifacts.outputs.sfoundry_attestation }}
 
       # Creates the release for this specific version
       - name: Create release
@@ -261,11 +270,11 @@ jobs:
           body: ${{ needs.prepare.outputs.changelog }}
           files: |
             ${{ steps.artifacts.outputs.file_name }}
-            ${{ steps.artifacts.outputs.foundry_attestation }}
-            ${{ steps.man.outputs.foundry_man }}
+            ${{ steps.artifacts.outputs.sfoundry_attestation }}
+            ${{ steps.man.outputs.sfoundry_man }}
 
       # If this is a nightly release, it also updates the release
-      # tagged `nightly` for compatibility with `foundryup`
+      # tagged `nightly` for compatibility with `sfoundryup`
       - name: Update nightly release
         if: ${{ env.IS_NIGHTLY == 'true' }}
         uses: softprops/action-gh-release@v2.2.2
@@ -273,13 +282,20 @@ jobs:
           name: "Nightly"
           tag_name: "nightly"
           prerelease: true
-          body: ${{ needs.prepare.outputs.changelog }}
+          body: |
+            _The release date shown may be stale. See [${{ needs.prepare.outputs.tag_name }}](https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.tag_name }}) for the exact build._
+
+            ${{ needs.prepare.outputs.changelog }}
           files: |
             ${{ steps.artifacts.outputs.file_name }}
-            ${{ steps.artifacts.outputs.foundry_attestation }}
-            ${{ steps.man.outputs.foundry_man }}
+            ${{ steps.artifacts.outputs.sfoundry_attestation }}
+            ${{ steps.man.outputs.sfoundry_man }}
 
   cleanup:
+    # contents:write is needed for move-tag.js to update the nightly tag
+    # and for prune-prereleases.js to delete old nightly releases/tags.
+    permissions:
+      contents: write
     name: Release cleanup
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -308,7 +324,8 @@ jobs:
   issue:
     name: Open an issue
     runs-on: ubuntu-latest
-    needs: [prepare, release-docker, release, cleanup]
+    # TODO(samlaf): add back release-docker step if we ever uncomment it above.
+    needs: [prepare, release, cleanup]
     if: failure()
     steps:
       - uses: actions/checkout@v5

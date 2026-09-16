@@ -1,6 +1,7 @@
 use super::ScriptResult;
 use crate::build::LinkedBuildData;
 use alloy_dyn_abi::JsonAbiExt;
+use alloy_json_abi::Function;
 use alloy_primitives::{Address, B256, TxKind, hex};
 use eyre::Result;
 use forge_script_sequence::TransactionWithMetadata;
@@ -67,6 +68,7 @@ impl ScriptTransactionBuilder {
 
                 if let Some(function) = function {
                     self.transaction.function = Some(function.signature());
+                    self.transaction.has_shielded_args = function_has_shielded_params(function);
 
                     let values = function.abi_decode_input(data).inspect_err(|_| {
                         error!(
@@ -127,6 +129,10 @@ impl ScriptTransactionBuilder {
         let constructor_args = &creation_code[bytecode.len()..];
 
         let Some(constructor) = info.abi.constructor() else { return Ok(()) };
+
+        // TODO: also encrypt calldata for CREATE (i.e., support seismic transactions for
+        // CREATE once we support it across all of our repos)
+
         let values = constructor.abi_decode_input(constructor_args).inspect_err(|_| {
                 error!(
                     contract=?self.transaction.contract_name,
@@ -178,5 +184,158 @@ impl ScriptTransactionBuilder {
 impl From<TransactionWithMetadata> for ScriptTransactionBuilder {
     fn from(transaction: TransactionWithMetadata) -> Self {
         Self { transaction }
+    }
+}
+
+/// Returns true if any of the function's input parameters contain shielded types.
+/// Recursively checks tuple components for struct parameters.
+fn function_has_shielded_params(function: &Function) -> bool {
+    function.inputs.iter().any(|param| abi_param_has_shielded(param))
+}
+
+/// Recursively checks if an ABI parameter (or any of its struct components) is shielded.
+fn abi_param_has_shielded(param: &alloy_json_abi::Param) -> bool {
+    if param.components.is_empty() {
+        param_is_shielded(&param.ty)
+    } else {
+        // Tuple/struct: check components recursively
+        param.components.iter().any(|c| abi_param_has_shielded(c))
+    }
+}
+
+/// Returns true if a Solidity type string represents a shielded type.
+/// Handles array types like `suint256[]` or `suint256[10]` by stripping the suffix.
+/// Covers all shielded types: suint*, sint*, saddress, sbool, sbytes*.
+pub fn param_is_shielded(ty: &str) -> bool {
+    // Strip array suffixes: "suint256[]" → "suint256", "suint256[10]" → "suint256"
+    let base = ty.split('[').next().unwrap_or(ty);
+    base.starts_with("suint")
+        || base.starts_with("sint")
+        || base.starts_with("sbytes")
+        || base == "saddress"
+        || base == "sbool"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_json_abi::Param;
+
+    #[test]
+    fn test_param_is_shielded_basic() {
+        assert!(param_is_shielded("suint256"));
+        assert!(param_is_shielded("suint8"));
+        assert!(param_is_shielded("sint128"));
+        assert!(param_is_shielded("saddress"));
+        assert!(param_is_shielded("sbool"));
+        assert!(param_is_shielded("sbytes32"));
+        assert!(param_is_shielded("sbytes1"));
+
+        assert!(!param_is_shielded("uint256"));
+        assert!(!param_is_shielded("address"));
+        assert!(!param_is_shielded("bool"));
+        assert!(!param_is_shielded("bytes32"));
+        assert!(!param_is_shielded("string"));
+    }
+
+    #[test]
+    fn test_param_is_shielded_sbytes_arrays() {
+        assert!(param_is_shielded("sbytes32[]"));
+        assert!(param_is_shielded("sbytes1[5]"));
+    }
+
+    #[test]
+    fn test_param_is_shielded_udvt() {
+        // UDVTs unwrap to their underlying type in the ABI.
+        // type ShieldedAmount is suint256 → ABI shows "suint256", not "ShieldedAmount"
+        assert!(param_is_shielded("suint256")); // UDVT unwrapped
+    }
+
+    #[test]
+    fn test_param_is_shielded_arrays() {
+        assert!(param_is_shielded("suint256[]"));
+        assert!(param_is_shielded("suint256[10]"));
+        assert!(param_is_shielded("sint128[]"));
+        assert!(param_is_shielded("saddress[]"));
+        assert!(param_is_shielded("sbool[5]"));
+
+        assert!(!param_is_shielded("uint256[]"));
+        assert!(!param_is_shielded("address[10]"));
+    }
+
+    fn make_param(ty: &str) -> Param {
+        Param { ty: ty.to_string(), name: String::new(), components: vec![], internal_type: None }
+    }
+
+    fn make_tuple_param(components: Vec<Param>) -> Param {
+        Param { ty: "tuple".to_string(), name: String::new(), components, internal_type: None }
+    }
+
+    #[test]
+    fn test_abi_param_has_shielded_simple() {
+        assert!(abi_param_has_shielded(&make_param("suint256")));
+        assert!(abi_param_has_shielded(&make_param("saddress")));
+        assert!(!abi_param_has_shielded(&make_param("uint256")));
+        assert!(!abi_param_has_shielded(&make_param("address")));
+    }
+
+    #[test]
+    fn test_abi_param_has_shielded_tuple() {
+        // Struct with one shielded field
+        let param = make_tuple_param(vec![make_param("address"), make_param("suint256")]);
+        assert!(abi_param_has_shielded(&param));
+
+        // Struct with no shielded fields
+        let param = make_tuple_param(vec![make_param("address"), make_param("uint256")]);
+        assert!(!abi_param_has_shielded(&param));
+    }
+
+    #[test]
+    fn test_abi_param_has_shielded_nested_tuple() {
+        // Nested struct: outer(inner(suint256))
+        let inner = make_tuple_param(vec![make_param("suint256")]);
+        let outer = make_tuple_param(vec![inner, make_param("uint256")]);
+        assert!(abi_param_has_shielded(&outer));
+
+        // Nested struct with no shielded fields
+        let inner = make_tuple_param(vec![make_param("uint256")]);
+        let outer = make_tuple_param(vec![inner, make_param("address")]);
+        assert!(!abi_param_has_shielded(&outer));
+    }
+
+    #[test]
+    fn test_function_has_shielded_params_with_struct() {
+        let function = Function {
+            name: "executeOrder".to_string(),
+            inputs: vec![make_tuple_param(vec![
+                make_param("address"),
+                make_param("suint256"),
+                make_param("uint256"),
+            ])],
+            outputs: vec![],
+            state_mutability: alloy_json_abi::StateMutability::NonPayable,
+        };
+        assert!(function_has_shielded_params(&function));
+    }
+
+    #[test]
+    fn test_function_has_shielded_params_mixed() {
+        // mint(address, suint256) — has shielded
+        let function = Function {
+            name: "mint".to_string(),
+            inputs: vec![make_param("address"), make_param("suint256")],
+            outputs: vec![],
+            state_mutability: alloy_json_abi::StateMutability::NonPayable,
+        };
+        assert!(function_has_shielded_params(&function));
+
+        // transfer(address, uint256) — no shielded
+        let function = Function {
+            name: "transfer".to_string(),
+            inputs: vec![make_param("address"), make_param("uint256")],
+            outputs: vec![],
+            state_mutability: alloy_json_abi::StateMutability::NonPayable,
+        };
+        assert!(!function_has_shielded_params(&function));
     }
 }

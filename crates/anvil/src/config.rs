@@ -12,13 +12,13 @@ use crate::{
         fees::{INITIAL_BASE_FEE, INITIAL_GAS_PRICE},
         pool::transactions::{PoolTransaction, TransactionOrder},
     },
-    hardfork::{ChainHardfork, ethereum_hardfork_from_block_tag, spec_id_from_ethereum_hardfork},
+    hardfork::{ChainHardfork, ethereum_hardfork_from_block_tag},
     mem::{self, in_memory_db::MemDb},
 };
 use alloy_chains::Chain;
 use alloy_consensus::BlockHeader;
 use alloy_genesis::Genesis;
-use alloy_network::{AnyNetwork, TransactionResponse};
+use alloy_network::TransactionResponse;
 use alloy_op_hardforks::OpHardfork;
 use alloy_primitives::{BlockNumber, TxHash, U256, hex, map::HashMap, utils::Unit};
 use alloy_provider::Provider;
@@ -39,17 +39,18 @@ use foundry_config::Config;
 use foundry_evm::{
     backend::{BlockchainDb, BlockchainDbMeta, SharedBackend},
     constants::DEFAULT_CREATE2_DEPLOYER,
+    seismic_constants::{AES_LIB, DIRECTORY, INTELLIGENCE},
     utils::{apply_chain_and_block_specific_env_changes, get_blob_base_fee_update_fraction},
 };
 use foundry_evm_core::AsEnvMut;
 use itertools::Itertools;
-use op_revm::OpTransaction;
+// use op_revm::OpTransaction;
 use parking_lot::RwLock;
 use rand_08::thread_rng;
 use revm::{
-    context::{BlockEnv, CfgEnv, TxEnv},
+    context::{BlockEnv, TxEnv},
     context_interface::block::BlobExcessGasAndPrice,
-    primitives::hardfork::SpecId,
+    primitives::hardfork::SpecId as RevmSpecId,
 };
 use serde_json::{Value, json};
 use std::{
@@ -67,6 +68,8 @@ use yansi::Paint;
 pub use foundry_common::version::SHORT_VERSION as VERSION_MESSAGE;
 use foundry_evm::traces::{CallTraceDecoderBuilder, identifier::SignaturesIdentifier};
 
+use seismic_prelude::foundry::{AnyNetwork, CfgEnv, OpTransaction, SpecId};
+
 /// Default port the rpc will open
 pub const NODE_PORT: u16 = 8545;
 /// Default chain id of the node
@@ -81,12 +84,14 @@ pub const DEFAULT_IPC_ENDPOINT: &str =
     if cfg!(unix) { "/tmp/anvil.ipc" } else { r"\\.\pipe\anvil.ipc" };
 
 const BANNER: &str = r"
-                             _   _
-                            (_) | |
-      __ _   _ __   __   __  _  | |
-     / _` | | '_ \  \ \ / / | | | |
-    | (_| | | | | |  \ V /  | | | |
-     \__,_| |_| |_|   \_/   |_| |_|
+
+░██████╗░█████╗░███╗░░██╗██╗░░░██╗██╗██╗░░░░░
+██╔════╝██╔══██╗████╗░██║██║░░░██║██║██║░░░░░
+╚█████╗░███████║██╔██╗██║╚██╗░██╔╝██║██║░░░░░
+░╚═══██╗██╔══██║██║╚████║░╚████╔╝░██║██║░░░░░
+██████╔╝██║░░██║██║░╚███║░░╚██╔╝░░██║███████╗
+╚═════╝░╚═╝░░╚═╝╚═╝░░╚══╝░░░╚═╝░░░╚═╝╚══════╝
+
 ";
 
 /// Configurations of the EVM node
@@ -190,6 +195,8 @@ pub struct NodeConfig {
     pub disable_pool_balance_checks: bool,
     /// Enable Optimism deposit transaction
     pub enable_optimism: bool,
+    /// Enable Seismic EVM Specs
+    pub enable_seismic: bool,
     /// Slots in an epoch
     pub slots_in_an_epoch: u64,
     /// The memory limit per EVM execution in bytes.
@@ -209,9 +216,13 @@ pub struct NodeConfig {
 impl NodeConfig {
     fn as_string(&self, fork: Option<&ClientFork>) -> String {
         let mut s: String = String::new();
-        let _ = write!(s, "\n{}", BANNER.green());
+        let _ = write!(s, "\n{}", BANNER.rgb(172, 103, 42));
         let _ = write!(s, "\n    {VERSION_MESSAGE}");
-        let _ = write!(s, "\n    {}", "https://github.com/foundry-rs/foundry".green());
+        let _ = write!(
+            s,
+            "\n    {}",
+            "https://github.com/SeismicSystems/seismic-foundry".rgb(172, 103, 42)
+        );
 
         let _ = write!(
             s,
@@ -286,11 +297,11 @@ Chain ID
 
 {}
 "#,
-                self.get_chain_id().green()
+                self.get_chain_id().rgb(172, 103, 42)
             );
         }
 
-        if (SpecId::from(self.get_hardfork()) as u8) < (SpecId::LONDON as u8) {
+        if (RevmSpecId::from(self.get_hardfork()) as u8) < (RevmSpecId::LONDON as u8) {
             let _ = write!(
                 s,
                 r#"
@@ -299,7 +310,7 @@ Gas Price
 
 {}
 "#,
-                self.get_gas_price().green()
+                self.get_gas_price().rgb(172, 103, 42)
             );
         } else {
             let _ = write!(
@@ -310,7 +321,7 @@ Base Fee
 
 {}
 "#,
-                self.get_base_fee().green()
+                self.get_base_fee().rgb(172, 103, 42)
             );
         }
 
@@ -335,7 +346,7 @@ Gas Limit
                     })
                 }
             }
-            .green()
+            .rgb(172, 103, 42)
         );
 
         let _ = write!(
@@ -346,7 +357,7 @@ Genesis Timestamp
 
 {}
 "#,
-            self.get_genesis_timestamp().green()
+            self.get_genesis_timestamp().rgb(172, 103, 42)
         );
 
         let _ = write!(
@@ -493,6 +504,7 @@ impl Default for NodeConfig {
             disable_default_create2_deployer: false,
             disable_pool_balance_checks: false,
             enable_optimism: false,
+            enable_seismic: false,
             slots_in_an_epoch: 32,
             memory_limit: None,
             precompile_factory: None,
@@ -549,6 +561,9 @@ impl NodeConfig {
         }
         if self.enable_optimism {
             return OpHardfork::default().into();
+        }
+        if self.enable_seismic {
+            return crate::hardfork::SeismicHardfork::default().into();
         }
         EthereumHardfork::default().into()
     }
@@ -1004,6 +1019,13 @@ impl NodeConfig {
         self
     }
 
+    /// Sets whether to enable seismic support
+    #[must_use]
+    pub fn with_seismic(mut self, enable_seismic: bool) -> Self {
+        self.enable_seismic = enable_seismic;
+        self
+    }
+
     /// Sets whether to disable the default create2 deployer
     #[must_use]
     pub fn with_disable_default_create2_deployer(mut self, yes: bool) -> Self {
@@ -1070,7 +1092,8 @@ impl NodeConfig {
         // configure the revm environment
 
         let mut cfg = CfgEnv::default();
-        cfg.spec = self.get_hardfork().into();
+        // cfg.spec = self.get_hardfork().into();
+        cfg.spec = SpecId::MERCURY;
 
         cfg.chain_id = self.get_chain_id();
         cfg.limit_contract_code_size = self.code_size_limit;
@@ -1174,6 +1197,16 @@ impl NodeConfig {
         )
         .await?;
 
+        backend
+            .set_directory(AES_LIB, DIRECTORY)
+            .await
+            .wrap_err("failed to create Directory contract")?;
+
+        backend
+            .set_intelligence(INTELLIGENCE)
+            .await
+            .wrap_err("failed to create Intelligence contract")?;
+
         // Writes the default create2 deployer to the backend,
         // if the option is not disabled and we are not forking.
         if !self.disable_default_create2_deployer && self.eth_rpc_url.is_none() {
@@ -1249,7 +1282,7 @@ impl NodeConfig {
                     let hardfork: EthereumHardfork =
                         ethereum_hardfork_from_block_tag(fork_block_number);
 
-                    env.evm_env.cfg_env.spec = spec_id_from_ethereum_hardfork(hardfork);
+                    env.evm_env.cfg_env.spec = SpecId::MERCURY;
                     self.hardfork = Some(ChainHardfork::Ethereum(hardfork));
                 }
                 Some(U256::from(chain_id))
@@ -1287,7 +1320,9 @@ latest block number: {latest_block}"
                 }
                 eyre::bail!("{message}");
             }
-            eyre::bail!("failed to get block for block number: {fork_block_number}")
+            {
+                eyre::bail!("failed to get block for block number: {fork_block_number}");
+            }
         };
 
         let gas_limit = self.fork_gas_limit(&block);
@@ -1477,10 +1512,11 @@ async fn derive_block_and_transactions(
                 .get_transaction_by_hash(transaction_hash.0.into())
                 .await?
                 .ok_or_else(|| eyre::eyre!("failed to get fork transaction by hash"))?;
-            let transaction_block_number = transaction.block_number.ok_or_else(|| {
+            let transaction_block_number = transaction.block_number().ok_or_else(|| {
                 eyre::eyre!("fork transaction is not mined yet (no block number)")
             })?;
 
+            // TODO: seismic provider
             // Get the block pertaining to the fork transaction
             let transaction_block = provider
                 .get_block_by_number(transaction_block_number.into())

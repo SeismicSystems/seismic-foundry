@@ -1,18 +1,20 @@
 use super::fork::environment;
 use crate::{
-    EvmEnv,
     constants::DEFAULT_CREATE2_DEPLOYER,
     fork::{CreateFork, configure_env},
 };
 use alloy_primitives::{Address, B256, U256};
-use alloy_provider::{Provider, network::AnyRpcBlock};
+use alloy_provider::Provider;
 use eyre::WrapErr;
 use foundry_common::{ALCHEMY_FREE_TIER_CUPS, provider::ProviderBuilder};
 use foundry_config::{Chain, Config, GasLimit};
-use revm::context::{BlockEnv, TxEnv};
+use revm::context::{BlockEnv, TxEnv as RevmTxEnv};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use url::Url;
+
+use crate::EvmEnv;
+use seismic_prelude::foundry::{AnyRpcBlock, TxEnv};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EvmOpts {
@@ -80,6 +82,10 @@ pub struct EvmOpts {
 
     /// The CREATE2 deployer's address.
     pub create2_deployer: Address,
+
+    /// Whether to allow scripts to run when encountering private storage slots.
+    #[serde(default)]
+    pub unsafe_private_storage: bool,
 }
 
 impl Default for EvmOpts {
@@ -105,6 +111,7 @@ impl Default for EvmOpts {
             enable_tx_gas_limit: false,
             odyssey: false,
             create2_deployer: DEFAULT_CREATE2_DEPLOYER,
+            unsafe_private_storage: false,
         }
     }
 }
@@ -173,12 +180,12 @@ impl EvmOpts {
                     ..Default::default()
                 },
             },
-            tx: TxEnv {
+            tx: TxEnv::new(RevmTxEnv {
                 gas_price: self.env.gas_price.unwrap_or_default().into(),
                 gas_limit: self.gas_limit(),
                 caller: self.sender,
                 ..Default::default()
-            },
+            }),
         }
     }
 

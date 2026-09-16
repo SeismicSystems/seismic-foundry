@@ -14,6 +14,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+seismic-prelude.workspace = true
+
 forge-verify.workspace = true
 foundry-cli.workspace = true
 foundry-config.workspace = true
@@ -54,6 +56,8 @@ alloy-dyn-abi.workspace = true
 alloy-primitives.workspace = true
 alloy-eips.workspace = true
 alloy-consensus.workspace = true
+rand.workspace = true
+secp256k1 = "0.30"
 
 [dev-dependencies]
 tempfile.workspace = true

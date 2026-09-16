@@ -47,6 +47,10 @@ pub struct GlobalArgs {
     /// Number of threads to use. Specifying 0 defaults to the number of logical cores.
     #[arg(global = true, long, short = 'j', visible_alias = "jobs")]
     threads: Option<usize>,
+
+    /// Print every JSON-RPC request and response to stderr.
+    #[arg(help_heading = "Display options", global = true, long)]
+    verbose_json_rpc: bool,
 }
 
 impl GlobalArgs {
@@ -54,6 +58,11 @@ impl GlobalArgs {
     pub fn init(&self) -> eyre::Result<()> {
         // Set the global shell.
         self.shell().set();
+
+        // Enable JSON-RPC request/response logging on the provider transport.
+        if self.verbose_json_rpc {
+            foundry_common::provider::json_rpc_logging::set_verbose_json_rpc(true);
+        }
 
         // Initialize the thread pool only if `threads` was requested to avoid unnecessary overhead.
         if self.threads.is_some() {

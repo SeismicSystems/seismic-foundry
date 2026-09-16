@@ -7,7 +7,7 @@ use std::{
 };
 
 use alloy_consensus::Header;
-use alloy_primitives::{Address, B256, Bytes, U256, keccak256, map::HashMap};
+use alloy_primitives::{Address, B256, Bytes, FixedBytes, U256, keccak256, map::HashMap};
 use alloy_rpc_types::BlockId;
 use anvil_core::eth::{
     block::Block,
@@ -23,13 +23,10 @@ use revm::{
     context::BlockEnv,
     context_interface::block::BlobExcessGasAndPrice,
     database::{CacheDB, DatabaseRef, DbAccount},
-    primitives::{KECCAK_EMPTY, eip4844::BLOB_BASE_FEE_UPDATE_FRACTION_PRAGUE},
+    primitives::{FlaggedStorage, KECCAK_EMPTY, eip4844::BLOB_BASE_FEE_UPDATE_FRACTION_PRAGUE},
     state::AccountInfo,
 };
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{Error as DeError, MapAccess, Visitor},
-};
+use serde::{Deserialize, Deserializer, Serialize, de::Error as DeError};
 use serde_json::Value;
 
 use crate::mem::storage::MinedTransaction;
@@ -130,7 +127,8 @@ pub trait Db:
     }
 
     /// Sets the storage value at the given slot for the address
-    fn set_storage_at(&mut self, address: Address, slot: B256, val: B256) -> DatabaseResult<()>;
+    #[rustfmt::skip]
+    fn set_storage_at(&mut self, address: Address, slot: B256, val: FlaggedStorage) -> DatabaseResult<()>;
 
     /// inserts a blockhash for the given number
     fn insert_block_hash(&mut self, number: U256, hash: B256);
@@ -171,7 +169,7 @@ pub trait Db:
             );
 
             for (k, v) in account.storage.into_iter() {
-                self.set_storage_at(addr, k, v)?;
+                self.set_storage_at(addr, k.into(), v)?;
             }
         }
         Ok(true)
@@ -203,8 +201,13 @@ impl<T: DatabaseRef<Error = DatabaseError> + Send + Sync + Clone + fmt::Debug> D
         self.insert_account_info(address, account)
     }
 
-    fn set_storage_at(&mut self, address: Address, slot: B256, val: B256) -> DatabaseResult<()> {
-        self.insert_account_storage(address, slot.into(), val.into())
+    fn set_storage_at(
+        &mut self,
+        address: Address,
+        slot: FixedBytes<32>,
+        val: FlaggedStorage,
+    ) -> DatabaseResult<()> {
+        self.insert_account_storage(address, slot.into(), val)
     }
 
     fn insert_block_hash(&mut self, number: U256, hash: B256) {
@@ -335,7 +338,7 @@ impl DatabaseRef for StateDb {
         self.0.code_by_hash_ref(code_hash)
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> DatabaseResult<U256> {
+    fn storage_ref(&self, address: Address, index: U256) -> DatabaseResult<FlaggedStorage> {
         self.0.storage_ref(address, index)
     }
 
@@ -526,38 +529,7 @@ pub struct SerializableAccountRecord {
     pub nonce: u64,
     pub balance: U256,
     pub code: Bytes,
-
-    #[serde(deserialize_with = "deserialize_btree")]
-    pub storage: BTreeMap<B256, B256>,
-}
-
-fn deserialize_btree<'de, D>(deserializer: D) -> Result<BTreeMap<B256, B256>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct BTreeVisitor;
-
-    impl<'de> Visitor<'de> for BTreeVisitor {
-        type Value = BTreeMap<B256, B256>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("a mapping of hex encoded storage slots to hex encoded state data")
-        }
-
-        fn visit_map<M>(self, mut mapping: M) -> Result<BTreeMap<B256, B256>, M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            let mut btree = BTreeMap::new();
-            while let Some((key, value)) = mapping.next_entry::<U256, U256>()? {
-                btree.insert(B256::from(key), B256::from(value));
-            }
-
-            Ok(btree)
-        }
-    }
-
-    deserializer.deserialize_map(BTreeVisitor)
+    pub storage: BTreeMap<U256, FlaggedStorage>,
 }
 
 /// Defines a backwards-compatible enum for transactions.

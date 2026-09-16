@@ -2,7 +2,6 @@ use crate::{
     StorageInfo,
     eth::{backend::notifications::NewBlockNotifications, error::to_rpc_result},
 };
-use alloy_network::AnyRpcTransaction;
 use alloy_primitives::{B256, TxHash};
 use alloy_rpc_types::{FilteredParams, Log, Transaction, pubsub::SubscriptionResult};
 use anvil_core::eth::{block::Block, subscription::SubscriptionId, transaction::TypedReceipt};
@@ -15,6 +14,8 @@ use std::{
     task::{Context, Poll},
 };
 use tokio::sync::mpsc::UnboundedReceiver;
+
+use seismic_prelude::foundry::AnyRpcTransaction;
 
 /// Listens for new blocks and matching logs emitted in that block
 #[derive(Debug)]
