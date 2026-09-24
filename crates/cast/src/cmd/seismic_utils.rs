@@ -104,16 +104,42 @@ pub fn encrypt_tx_input(
 
 pub use foundry_common::seismic::request_signed_gas_estimate;
 
-/// Sign the tx and send raw bytes to eth_estimateGas.
+/// Build a separately encrypted, call-only estimate from a plaintext write request.
+fn prepare_signed_gas_estimate(
+    tx: &WithOtherFields<TransactionRequest>,
+    block_gas_limit: u64,
+    network_pubkey: &PublicKey,
+    encryption_sk: &SecretKey,
+) -> Result<WithOtherFields<TransactionRequest>> {
+    let mut estimate = tx.clone();
+    let elements = estimate
+        .seismic_elements
+        .as_mut()
+        .ok_or_else(|| eyre::eyre!("Missing seismic elements for gas estimation"))?;
+    elements.signed_read = true;
+    // signed_read is authenticated metadata. Encrypt again with a fresh nonce:
+    // reusing the write's AES-GCM key/nonce with different AAD is unsafe.
+    elements.encryption_nonce = U96::random();
+    estimate.set_gas_limit(block_gas_limit);
+    let sender = tx.from.ok_or_else(|| eyre::eyre!("Missing sender for gas estimation"))?;
+    let input = tx.inner.input.input().unwrap_or_default();
+    encrypt_tx_input(&mut estimate, input, network_pubkey, encryption_sk, sender)?;
+    Ok(estimate)
+}
+
+/// Estimate a plaintext seismic write using a separate signed-read payload.
+/// Only the gas limit is updated; the caller must encrypt the write afterward.
 /// Falls back to `block_gas_limit` if estimation fails.
 pub async fn estimate_gas_signed<P: Provider<AnyNetwork>>(
     provider: &P,
     tx: &mut WithOtherFields<TransactionRequest>,
     wallet: &EthereumWallet,
     block_gas_limit: u64,
+    network_pubkey: &PublicKey,
+    encryption_sk: &SecretKey,
 ) -> Result<()> {
-    let mut tx_for_estimate = tx.clone();
-    tx_for_estimate.set_gas_limit(block_gas_limit);
+    let tx_for_estimate =
+        prepare_signed_gas_estimate(tx, block_gas_limit, network_pubkey, encryption_sk)?;
 
     match request_signed_gas_estimate(provider, &tx_for_estimate, wallet).await {
         Ok(gas_limit) => tx.set_gas_limit(gas_limit),
@@ -126,4 +152,140 @@ pub async fn estimate_gas_signed<P: Provider<AnyNetwork>>(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_primitives::{Address, B256, TxKind, U256};
+    use alloy_provider::ProviderBuilder;
+    use alloy_signer_local::PrivateKeySigner;
+    use alloy_transport::mock::Asserter;
+
+    const BLOCK_GAS_LIMIT: u64 = 30_000_000;
+
+    fn plaintext_write(sender: Address, input: Bytes) -> WithOtherFields<TransactionRequest> {
+        let mut tx = WithOtherFields::<TransactionRequest>::default();
+        tx.set_from(sender);
+        tx.set_chain_id(5124);
+        tx.set_nonce(7);
+        tx.set_to(Address::repeat_byte(0x22));
+        tx.set_value(U256::from(123));
+        tx.set_gas_price(1_000_000_000);
+        TransactionBuilder::set_input(&mut tx, input);
+        let encryption_sk = SecretKey::from_slice(&[1; 32]).unwrap();
+        prepare_seismic_fields(
+            &mut tx,
+            TxSeismicElements {
+                encryption_pubkey: PublicKey::from_secret_key(&Secp256k1::new(), &encryption_sk),
+                encryption_nonce: U96::from(42),
+                recent_block_hash: B256::repeat_byte(0x33),
+                expires_at_block: 100,
+                signed_read: false,
+                ..Default::default()
+            },
+        );
+        tx
+    }
+
+    #[test]
+    fn test_seismic_gas_estimate_separates_read_and_write_encryption() {
+        let encryption_sk = SecretKey::from_slice(&[1; 32]).unwrap();
+        let network_sk = SecretKey::from_slice(&[2; 32]).unwrap();
+        let network_pk = PublicKey::from_secret_key(&Secp256k1::new(), &network_sk);
+        let sender = Address::repeat_byte(0x11);
+
+        // Cover ordinary calls, contract creation, and empty-calldata transfers.
+        for to in [TxKind::Call(Address::repeat_byte(0x22)), TxKind::Create] {
+            for input in [Bytes::from_static(b"calldata"), Bytes::new()] {
+                let mut write = plaintext_write(sender, input.clone());
+                write.set_kind(to);
+                let original = write.clone();
+                let estimate = prepare_signed_gas_estimate(
+                    &write,
+                    BLOCK_GAS_LIMIT,
+                    &network_pk,
+                    &encryption_sk,
+                )
+                .unwrap();
+
+                assert_eq!(write, original);
+                assert_eq!(estimate.gas_limit(), Some(BLOCK_GAS_LIMIT));
+                let read_metadata = estimate.metadata(sender).unwrap();
+                let write_metadata = write.metadata(sender).unwrap();
+                assert!(read_metadata.seismic_elements.signed_read);
+                assert!(!write_metadata.seismic_elements.signed_read);
+                assert_ne!(
+                    read_metadata.seismic_elements.encryption_nonce,
+                    write_metadata.seismic_elements.encryption_nonce,
+                );
+                let mut expected_metadata = write_metadata.clone();
+                expected_metadata.seismic_elements.signed_read = true;
+                expected_metadata.seismic_elements.encryption_nonce =
+                    read_metadata.seismic_elements.encryption_nonce;
+                assert_eq!(read_metadata, expected_metadata);
+
+                let read_input = estimate.inner.input.input().unwrap();
+                assert_eq!(
+                    read_metadata.decrypt_request(&network_sk, read_input).unwrap(),
+                    input.as_ref(),
+                );
+
+                // This is the send path: only after estimation do we encrypt the write.
+                write.set_gas_limit(50_000);
+                encrypt_tx_input(&mut write, &input, &network_pk, &encryption_sk, sender).unwrap();
+                assert_eq!(write.metadata(sender).unwrap(), write_metadata);
+                let write_input = write.inner.input.input().unwrap();
+                assert_eq!(
+                    write_metadata.decrypt_request(&network_sk, write_input).unwrap(),
+                    input.as_ref(),
+                );
+                if !input.is_empty() {
+                    assert_ne!(read_input, write_input);
+                    // Merely flipping the flag after encryption must not authenticate.
+                    let mut wrong_metadata = read_metadata;
+                    wrong_metadata.seismic_elements.signed_read = false;
+                    assert!(wrong_metadata.decrypt_request(&network_sk, read_input).is_err());
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_seismic_gas_estimate_only_updates_write_gas() {
+        let encryption_sk = SecretKey::from_slice(&[1; 32]).unwrap();
+        let network_sk = SecretKey::from_slice(&[2; 32]).unwrap();
+        let network_pk = PublicKey::from_secret_key(&Secp256k1::new(), &network_sk);
+        let signer = PrivateKeySigner::random();
+        let sender = signer.address();
+        let wallet = EthereumWallet::from(signer);
+
+        for succeeds in [true, false] {
+            let asserter = Asserter::new();
+            if succeeds {
+                asserter.push_success(&U256::from(50_000));
+            } else {
+                asserter.push_failure_msg("estimation unavailable");
+            }
+            let provider = ProviderBuilder::<_, _, AnyNetwork>::default()
+                .connect_mocked_client(asserter.clone());
+            let mut tx = plaintext_write(sender, Bytes::from_static(b"calldata"));
+            let mut expected = tx.clone();
+            expected.set_gas_limit(if succeeds { 50_000 } else { BLOCK_GAS_LIMIT });
+
+            estimate_gas_signed(
+                &provider,
+                &mut tx,
+                &wallet,
+                BLOCK_GAS_LIMIT,
+                &network_pk,
+                &encryption_sk,
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(tx, expected);
+            assert!(asserter.read_q().is_empty(), "estimate must reach the RPC transport");
+        }
+    }
 }

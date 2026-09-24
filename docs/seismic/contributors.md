@@ -42,6 +42,8 @@ The following changes are made in order to support deployment and testing of shi
 ### 2.3 scast
 The following changes are made to support interacting with Seismic networks using `scast`:
 - **`scast send --seismic [ENCRYPTION_PRIVATE_KEY]`**: Adds client-side encryption for send transactions. When the `--seismic` flag is provided, `scast` encrypts the transaction input data before sending. An optional encryption private key can be provided; if omitted, a random key is generated. The encrypted transaction is sent as a Seismic transaction type (`TxSeismic`), with encryption parameters (public key, nonce, message version, block hash, expiry) bundled into `TxSeismicElements`.
+  - Without `--gas-limit`, gas estimation uses a separate signed simulation with `signedRead=true`. Its calldata is encrypted with a fresh encryption nonce because the read intent is part of the authenticated metadata. The broadcast transaction is encrypted separately with `signedRead=false`; simulation does not commit state changes.
+  - If estimation fails, `scast` warns and falls back to the latest block's gas limit. An explicit `--gas-limit` skips estimation.
 - **`scast call --encryption-private-key [KEY]`**: Adds client-side encryption/decryption for call (read) transactions. Call data is encrypted and sent via `seismic_call()` RPC, and the response is decrypted before being returned.
 - Both commands fetch the TEE public key from the node (via `get_tee_pubkey()` RPC) to perform secp256k1 key exchange for encryption.
 - EIP-1559 transactions are converted to legacy gas price format for Seismic compatibility.

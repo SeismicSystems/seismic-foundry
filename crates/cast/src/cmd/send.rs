@@ -175,6 +175,22 @@ impl SendTxArgs {
             let original_input = tx.inner.input.input().unwrap_or_default().clone();
 
             seismic_utils::prepare_seismic_fields(&mut tx, seismic_elements);
+
+            let wallet = EthereumWallet::from(signer);
+            if tx.inner.gas.is_none() {
+                seismic_utils::estimate_gas_signed(
+                    &provider,
+                    &mut tx,
+                    &wallet,
+                    block_gas_limit,
+                    &network_pubkey,
+                    &encryption_sk,
+                )
+                .await?;
+            }
+
+            // The estimate uses signed_read=true; encrypt the broadcast payload
+            // separately with its original signed_read=false metadata.
             seismic_utils::encrypt_tx_input(
                 &mut tx,
                 &original_input,
@@ -182,12 +198,6 @@ impl SendTxArgs {
                 &encryption_sk,
                 from,
             )?;
-
-            let wallet = EthereumWallet::from(signer);
-            if tx.inner.gas.is_none() {
-                seismic_utils::estimate_gas_signed(&provider, &mut tx, &wallet, block_gas_limit)
-                    .await?;
-            }
 
             let signed = tx
                 .build(&wallet)
