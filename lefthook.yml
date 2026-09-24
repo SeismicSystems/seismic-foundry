@@ -1,0 +1,12 @@
+pre-commit:
+  commands:
+    fmt:
+      run: cargo +nightly fmt --all
+      stage_fixed: true
+
+pre-push:
+  commands:
+    clippy:
+      run: cargo clippy --workspace --all-targets --all-features
+    typos:
+      run: typos

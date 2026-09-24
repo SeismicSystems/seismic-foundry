@@ -124,7 +124,9 @@ impl OpenChainClient {
 
     fn ensure_not_spurious(&self) -> eyre::Result<()> {
         if self.is_spurious() {
-            eyre::bail!("Spurious connection detected")
+            {
+                eyre::bail!("Spurious connection detected");
+            }
         }
         Ok(())
     }
@@ -173,7 +175,9 @@ impl OpenChainClient {
         let text = self.get_text(url).await?;
         let SignatureResponse { ok, result } = match serde_json::from_str(&text) {
             Ok(response) => response,
-            Err(err) => eyre::bail!("could not decode response: {err}: {text}"),
+            Err(err) => {
+                eyre::bail!("could not decode response: {err}: {text}");
+            }
         };
         if !ok {
             eyre::bail!("OpenChain returned an error: {text}");
@@ -211,10 +215,12 @@ impl OpenChainClient {
     pub async fn decode_calldata(&self, calldata: &str) -> eyre::Result<OpenChainSignatures> {
         let calldata = calldata.strip_prefix("0x").unwrap_or(calldata);
         if calldata.len() < 8 {
-            eyre::bail!(
-                "Calldata too short: expected at least 8 characters (excluding 0x prefix), got {}.",
-                calldata.len()
-            )
+            {
+                eyre::bail!(
+                    "Calldata too short: expected at least 8 characters (excluding 0x prefix), got {}.",
+                    calldata.len()
+                );
+            }
         }
 
         let mut sigs = self.decode_function_selector(calldata[..8].parse().unwrap()).await?;
@@ -265,7 +271,9 @@ impl OpenChainClient {
         let (_, data) = calldata.split_at(8);
 
         if !data.len().is_multiple_of(64) {
-            eyre::bail!("\nInvalid calldata size")
+            {
+                eyre::bail!("\nInvalid calldata size");
+            }
         }
 
         let row_length = data.len() / 64;

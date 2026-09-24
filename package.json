@@ -1,0 +1,10 @@
+{
+  "workspaces": [
+    "packages/**"
+  ],
+  "private": true,
+  "scripts": {
+    "viem:test": "bun run --cwd packages/client-tests test",
+    "forge:test": "bun run --cwd packages/sforge-tests test"
+  }
+}

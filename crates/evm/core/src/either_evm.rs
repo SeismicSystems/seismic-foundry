@@ -1,7 +1,6 @@
-use alloy_evm::{Database, EthEvm, Evm, EvmEnv, eth::EthEvmContext};
-use alloy_op_evm::OpEvm;
+use alloy_evm::{Database, Evm, EvmEnv};
 use alloy_primitives::{Address, Bytes};
-use op_revm::{OpContext, OpHaltReason, OpSpecId, OpTransaction, OpTransactionError};
+use op_revm::{OpSpecId, OpTransactionError};
 use revm::{
     DatabaseCommit, Inspector,
     context::{
@@ -10,8 +9,11 @@ use revm::{
     },
     handler::PrecompileProvider,
     interpreter::InterpreterResult,
-    primitives::hardfork::SpecId,
 };
+
+use crate::SeismicEvm;
+use revm::context::result::HaltReason;
+use seismic_prelude::foundry::{OpTransaction, SeismicContext, SpecId};
 
 /// Alias for result type returned by [`Evm::transact`] methods.
 type EitherEvmResult<DBError, HaltReason, TxError> =
@@ -38,43 +40,46 @@ pub enum EitherEvm<DB, I, P>
 where
     DB: Database,
 {
+    /*
     /// [`EthEvm`] implementation.
     Eth(EthEvm<DB, I, P>),
     /// [`OpEvm`] implementation.
     Op(OpEvm<DB, I, P>),
+    */
+    Seismic(SeismicEvm<DB, I, P>),
 }
 
 impl<DB, I, P> EitherEvm<DB, I, P>
 where
     DB: Database,
+    /*
     I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>>,
     P: PrecompileProvider<EthEvmContext<DB>, Output = InterpreterResult>
         + PrecompileProvider<OpContext<DB>, Output = InterpreterResult>,
+    */
+    I: Inspector<SeismicContext<DB>>,
+    P: PrecompileProvider<SeismicContext<DB>, Output = InterpreterResult>,
 {
+    #[allow(dead_code)]
     /// Converts the [`EthEvm::transact`] result to [`EitherEvmResult`].
     fn map_eth_result(
         &self,
         result: Result<ExecResultAndState<ExecutionResult>, EVMError<DB::Error>>,
-    ) -> EitherEvmResult<DB::Error, OpHaltReason, OpTransactionError> {
+    ) -> EitherEvmResult<DB::Error, HaltReason, OpTransactionError> {
         match result {
-            Ok(result) => Ok(ResultAndState {
-                result: result.result.map_haltreason(OpHaltReason::Base),
-                state: result.state,
-            }),
+            Ok(result) => Ok(ResultAndState { result: result.result, state: result.state }),
             Err(e) => Err(self.map_eth_err(e)),
         }
     }
 
+    #[allow(dead_code)]
     /// Converts the [`EthEvm::transact_commit`] result to [`EitherExecResult`].
     fn map_exec_result(
         &self,
         result: Result<ExecutionResult, EVMError<DB::Error>>,
-    ) -> EitherExecResult<DB::Error, OpHaltReason, OpTransactionError> {
+    ) -> EitherExecResult<DB::Error, HaltReason, OpTransactionError> {
         match result {
-            Ok(result) => {
-                // Map the halt reason
-                Ok(result.map_haltreason(OpHaltReason::Base))
-            }
+            Ok(result) => Ok(result),
             Err(e) => Err(self.map_eth_err(e)),
         }
     }
@@ -95,13 +100,17 @@ where
 impl<DB, I, P> Evm for EitherEvm<DB, I, P>
 where
     DB: Database,
+    /*
     I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>>,
     P: PrecompileProvider<EthEvmContext<DB>, Output = InterpreterResult>
         + PrecompileProvider<OpContext<DB>, Output = InterpreterResult>,
+    */
+    I: Inspector<SeismicContext<DB>>,
+    P: PrecompileProvider<SeismicContext<DB>, Output = InterpreterResult>,
 {
     type DB = DB;
-    type Error = EVMError<DB::Error, OpTransactionError>;
-    type HaltReason = OpHaltReason;
+    type Error = EVMError<DB::Error, revm::context::result::InvalidTransaction>;
+    type HaltReason = HaltReason;
     type Tx = OpTransaction<TxEnv>;
     type Inspector = I;
     type Precompiles = P;
@@ -109,36 +118,51 @@ where
 
     fn block(&self) -> &BlockEnv {
         match self {
+            Self::Seismic(evm) => evm.block(),
+            /*
             Self::Eth(evm) => evm.block(),
             Self::Op(evm) => evm.block(),
+            */
         }
     }
 
     fn chain_id(&self) -> u64 {
         match self {
+            /*
             Self::Eth(evm) => evm.chain_id(),
             Self::Op(evm) => evm.chain_id(),
+            */
+            Self::Seismic(evm) => evm.chain_id(),
         }
     }
 
     fn components(&self) -> (&Self::DB, &Self::Inspector, &Self::Precompiles) {
         match self {
+            Self::Seismic(evm) => evm.components(),
+            /*
             Self::Eth(evm) => evm.components(),
             Self::Op(evm) => evm.components(),
+            */
         }
     }
 
     fn components_mut(&mut self) -> (&mut Self::DB, &mut Self::Inspector, &mut Self::Precompiles) {
         match self {
+            Self::Seismic(evm) => evm.components_mut(),
+            /*
             Self::Eth(evm) => evm.components_mut(),
             Self::Op(evm) => evm.components_mut(),
+            */
         }
     }
 
     fn db_mut(&mut self) -> &mut Self::DB {
         match self {
+            Self::Seismic(evm) => evm.db_mut(),
+            /*
             Self::Eth(evm) => evm.db_mut(),
             Self::Op(evm) => evm.db_mut(),
+            */
         }
     }
 
@@ -147,8 +171,11 @@ where
         Self: Sized,
     {
         match self {
+            /*
             Self::Eth(evm) => evm.into_db(),
             Self::Op(evm) => evm.into_db(),
+            */
+            Self::Seismic(evm) => evm.into_db(),
         }
     }
 
@@ -157,60 +184,84 @@ where
         Self: Sized,
     {
         match self {
+            /*
             Self::Eth(evm) => evm.finish(),
             Self::Op(evm) => {
                 let (db, env) = evm.finish();
                 (db, map_env(env))
             }
+            */
+            Self::Seismic(evm) => evm.finish(),
         }
     }
 
     fn precompiles(&self) -> &Self::Precompiles {
         match self {
+            /*
             Self::Eth(evm) => evm.precompiles(),
             Self::Op(evm) => evm.precompiles(),
+            */
+            Self::Seismic(evm) => evm.precompiles(),
         }
     }
 
     fn precompiles_mut(&mut self) -> &mut Self::Precompiles {
         match self {
+            /*
             Self::Eth(evm) => evm.precompiles_mut(),
             Self::Op(evm) => evm.precompiles_mut(),
+            */
+            Self::Seismic(evm) => evm.precompiles_mut(),
         }
     }
 
     fn inspector(&self) -> &Self::Inspector {
         match self {
+            /*
             Self::Eth(evm) => evm.inspector(),
             Self::Op(evm) => evm.inspector(),
+            */
+            Self::Seismic(evm) => evm.inspector(),
         }
     }
 
     fn inspector_mut(&mut self) -> &mut Self::Inspector {
         match self {
+            /*
             Self::Eth(evm) => evm.inspector_mut(),
             Self::Op(evm) => evm.inspector_mut(),
+            */
+            Self::Seismic(evm) => evm.inspector_mut(),
         }
     }
 
     fn enable_inspector(&mut self) {
         match self {
+            /*
             Self::Eth(evm) => evm.enable_inspector(),
             Self::Op(evm) => evm.enable_inspector(),
+            */
+            Self::Seismic(evm) => evm.enable_inspector(),
         }
     }
 
     fn disable_inspector(&mut self) {
         match self {
+            /*
             Self::Eth(evm) => evm.disable_inspector(),
             Self::Op(evm) => evm.disable_inspector(),
+            */
+            Self::Seismic(evm) => evm.disable_inspector(),
         }
     }
 
     fn set_inspector_enabled(&mut self, enabled: bool) {
         match self {
+            /*
             Self::Eth(evm) => evm.set_inspector_enabled(enabled),
             Self::Op(evm) => evm.set_inspector_enabled(enabled),
+            */
+            Self::Seismic(evm) => evm.set_inspector_enabled(enabled),
         }
     }
 
@@ -219,8 +270,11 @@ where
         Self: Sized,
     {
         match self {
+            /*
             Self::Eth(evm) => evm.into_env(),
             Self::Op(evm) => map_env(evm.into_env()),
+            */
+            Self::Seismic(evm) => evm.into_env(),
         }
     }
 
@@ -229,11 +283,14 @@ where
         tx: impl alloy_evm::IntoTxEnv<Self::Tx>,
     ) -> Result<ResultAndState<Self::HaltReason>, Self::Error> {
         match self {
+            /*
             Self::Eth(evm) => {
                 let eth = evm.transact(tx.into_tx_env().base);
                 self.map_eth_result(eth)
             }
             Self::Op(evm) => evm.transact(tx),
+            */
+            Self::Seismic(evm) => evm.transact(tx),
         }
     }
 
@@ -245,11 +302,14 @@ where
         Self::DB: DatabaseCommit,
     {
         match self {
+            /*
             Self::Eth(evm) => {
                 let eth = evm.transact_commit(tx.into_tx_env().base);
                 self.map_exec_result(eth)
             }
             Self::Op(evm) => evm.transact_commit(tx),
+            */
+            Self::Seismic(evm) => evm.transact_commit(tx),
         }
     }
 
@@ -258,11 +318,14 @@ where
         tx: Self::Tx,
     ) -> Result<ResultAndState<Self::HaltReason>, Self::Error> {
         match self {
+            /*
             Self::Eth(evm) => {
                 let res = evm.transact_raw(tx.base);
                 self.map_eth_result(res)
             }
             Self::Op(evm) => evm.transact_raw(tx),
+            */
+            Self::Seismic(evm) => evm.transact_raw(tx),
         }
     }
 
@@ -273,15 +336,19 @@ where
         data: Bytes,
     ) -> Result<ResultAndState<Self::HaltReason>, Self::Error> {
         match self {
+            /*
             Self::Eth(evm) => {
                 let eth = evm.transact_system_call(caller, contract, data);
                 self.map_eth_result(eth)
             }
             Self::Op(evm) => evm.transact_system_call(caller, contract, data),
+            */
+            Self::Seismic(evm) => evm.transact_system_call(caller, contract, data),
         }
     }
 }
 
+#[allow(dead_code)]
 /// Maps [`EvmEnv<OpSpecId>`] to [`EvmEnv`].
 fn map_env(env: EvmEnv<OpSpecId>) -> EvmEnv {
     let eth_spec_id = env.spec_id().into_eth_spec();

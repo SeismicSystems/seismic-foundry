@@ -58,7 +58,9 @@ pub fn remove_contract(
         Did you mean `{suggestion}`?"#
             );
         }
-        eyre::bail!(err)
+        {
+            eyre::bail!(err);
+        }
     };
 
     let abi = contract
@@ -88,10 +90,12 @@ pub fn get_cached_entry_by_name(
         for artifact_name in entry.artifacts.keys() {
             if artifact_name == name {
                 if cached_entry.is_some() {
-                    eyre::bail!(
-                        "contract with duplicate name `{}`. please pass the path instead",
-                        name
-                    )
+                    {
+                        eyre::bail!(
+                            "contract with duplicate name `{}`. please pass the path instead",
+                            name
+                        );
+                    }
                 }
                 cached_entry = Some((abs_path.to_owned(), entry.to_owned()));
             } else {
@@ -112,7 +116,9 @@ pub fn get_cached_entry_by_name(
         Did you mean `{suggestion}`?"#
         );
     }
-    eyre::bail!(err)
+    {
+        eyre::bail!(err);
+    }
 }
 
 /// Returns error if constructor has arguments.
@@ -173,12 +179,11 @@ pub fn has_different_gas_calc(chain_id: u64) -> bool {
                     | NamedChain::AcalaMandalaTestnet
                     | NamedChain::AcalaTestnet
                     | NamedChain::Etherlink
-                    | NamedChain::EtherlinkTestnet
+                    | NamedChain::EtherlinkShadownet
                     | NamedChain::Karura
                     | NamedChain::KaruraTestnet
                     | NamedChain::Mantle
                     | NamedChain::MantleSepolia
-                    | NamedChain::MantleTestnet
                     | NamedChain::Moonbase
                     | NamedChain::Moonbeam
                     | NamedChain::MoonbeamDev
@@ -215,7 +220,9 @@ pub trait LoadConfig {
 
     /// Same as [`LoadConfig::load_config`] but does not emit warnings.
     fn load_config_no_warnings(&self) -> Result<Config, ExtractConfigError> {
-        self.load_config_unsanitized_no_warnings().map(Config::sanitized)
+        let config = self.load_config_unsanitized_no_warnings().map(Config::sanitized)?;
+        config.validate_seismic_settings().map_err(|e| ExtractConfigError::from_msg(e))?;
+        Ok(config)
     }
 
     /// Load [`Config`] but do not sanitize. See [`Config::sanitized`] for more information.
@@ -239,6 +246,8 @@ pub trait LoadConfig {
 
         let mut evm_opts = figment.extract::<EvmOpts>().map_err(ExtractConfigError::new)?;
         let config = Config::from_provider(figment)?.sanitized();
+
+        config.validate_seismic_settings()?;
 
         // update the fork url if it was an alias
         if let Some(fork_url) = config.get_rpc_url() {

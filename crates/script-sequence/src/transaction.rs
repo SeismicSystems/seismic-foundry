@@ -32,6 +32,19 @@ pub struct TransactionWithMetadata {
     pub transaction: TransactionMaybeSigned,
     pub additional_contracts: Vec<AdditionalContract>,
     pub is_fixed_gas_limit: bool,
+    /// Whether this transaction targets a function with shielded type parameters
+    /// (suint, sint, saddress, sbool). When true, broadcast should encrypt calldata
+    /// and send as TxSeismic (type 0x4a).
+    #[serde(default)]
+    pub has_shielded_args: bool,
+    /// Plaintext calldata stored before encryption, used by cache/ for --resume.
+    /// Skipped in broadcast JSON serialization so encrypted calldata is what's recorded.
+    #[serde(skip)]
+    pub plaintext_input: Option<Bytes>,
+    /// Plaintext arguments stored before redaction, used by cache/ for --resume.
+    /// Skipped in broadcast JSON so shielded values aren't exposed.
+    #[serde(skip)]
+    pub plaintext_arguments: Option<Vec<String>>,
 }
 
 fn default_string() -> Option<String> {
@@ -57,6 +70,9 @@ impl TransactionWithMetadata {
             function: Default::default(),
             arguments: Default::default(),
             is_fixed_gas_limit: Default::default(),
+            has_shielded_args: Default::default(),
+            plaintext_input: Default::default(),
+            plaintext_arguments: Default::default(),
             additional_contracts: Default::default(),
             rpc: Default::default(),
         }

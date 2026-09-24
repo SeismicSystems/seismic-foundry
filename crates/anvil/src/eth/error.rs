@@ -1,7 +1,7 @@
 //! Aggregated error type for this module
 
 use crate::eth::pool::transactions::PoolTransaction;
-use alloy_evm::overrides::StateOverrideError;
+use alloy_evm::overrides::OverrideError;
 use alloy_primitives::{B256, Bytes, SignatureError};
 use alloy_rpc_types::BlockNumberOrTag;
 use alloy_signer::Error as SignerError;
@@ -20,10 +20,14 @@ use revm::{
 use serde::Serialize;
 use tokio::time::Duration;
 
+use seismic_prelude::foundry::InputDecryptionElementsError;
+
 pub(crate) type Result<T> = std::result::Result<T, BlockchainError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BlockchainError {
+    #[error("{0}")]
+    FailedToDecryptCalldata(InputDecryptionElementsError),
     #[error(transparent)]
     Pool(#[from] PoolError),
     #[error("No signer available")]
@@ -182,17 +186,26 @@ impl From<WalletError> for BlockchainError {
     }
 }
 
-impl<E> From<StateOverrideError<E>> for BlockchainError
+impl<E> From<OverrideError<E>> for BlockchainError
 where
     E: Into<Self>,
 {
-    fn from(value: StateOverrideError<E>) -> Self {
+    fn from(value: OverrideError<E>) -> Self {
         match value {
-            StateOverrideError::InvalidBytecode(err) => Self::StateOverrideError(err.to_string()),
-            StateOverrideError::BothStateAndStateDiff(addr) => Self::StateOverrideError(format!(
+            OverrideError::InvalidBytecode(err) => Self::StateOverrideError(err.to_string()),
+            OverrideError::BothStateAndStateDiff(addr) => Self::StateOverrideError(format!(
                 "state and state_diff can't be used together for account {addr}",
             )),
-            StateOverrideError::Database(err) => err.into(),
+            OverrideError::Database(err) => err.into(),
+            OverrideError::CodeOverrideNotPermitted(addr) => {
+                Self::StateOverrideError(format!("code override not permitted for account {addr}"))
+            }
+            OverrideError::StorageOverrideNotPermitted(addr) => Self::StateOverrideError(format!(
+                "storage override not permitted for account {addr}"
+            )),
+            OverrideError::BlockOverrideNotPermitted => {
+                Self::StateOverrideError("block override not permitted".to_string())
+            }
         }
     }
 }
@@ -226,6 +239,12 @@ pub struct ErrDetail {
 /// An error due to invalid transaction
 #[derive(Debug, thiserror::Error)]
 pub enum InvalidTransactionError {
+    /// Thrown when a seismic transaction is invalid
+    #[error("Seismic decryption failed: {0}")]
+    SeismicDecryptionFailed(String),
+    /// Signed read was sent as a write transaction
+    #[error("Seismic tx was marked as signed read, but sent as a write")]
+    SignedReadMismatch,
     /// returned if the nonce of a transaction is lower than the one present in the local chain.
     #[error("nonce too low")]
     NonceTooLow,
@@ -345,7 +364,7 @@ impl From<InvalidTransaction> for InvalidTransactionError {
             InvalidTransaction::NonceTooHigh { .. } => Self::NonceTooHigh,
             InvalidTransaction::NonceTooLow { .. } => Self::NonceTooLow,
             InvalidTransaction::AccessListNotSupported => Self::AccessListNotSupported,
-            InvalidTransaction::BlobGasPriceGreaterThanMax => Self::BlobFeeCapTooLow,
+            InvalidTransaction::BlobGasPriceGreaterThanMax { .. } => Self::BlobFeeCapTooLow,
             InvalidTransaction::BlobVersionedHashesNotSupported => {
                 Self::BlobVersionedHashesNotSupported
             }
@@ -561,6 +580,9 @@ impl<T: Serialize> ToRpcResponseResult for Result<T> {
                 }
                 err @ BlockchainError::MissingRequiredFields => {
                     RpcError::invalid_params(err.to_string())
+                }
+                BlockchainError::FailedToDecryptCalldata(e) => {
+                    RpcError::invalid_params(e.to_string())
                 }
             }
             .into(),

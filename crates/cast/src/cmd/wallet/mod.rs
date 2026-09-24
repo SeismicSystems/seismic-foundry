@@ -476,7 +476,9 @@ impl WalletSubcommands {
 
                 let public_key = match wallet {
                     WalletSigner::Local(wallet) => wallet.public_key(),
-                    _ => eyre::bail!("Only local wallets are supported by this command"),
+                    _ => {
+                        eyre::bail!("Only local wallets are supported by this command");
+                    }
                 };
 
                 sh_println!("0x{}", hex::encode(public_key))?;

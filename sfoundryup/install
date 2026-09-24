@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Wrapper that fetches and runs the real install script from foundryup/install.
+# Only kept for backward compatibility with the old sfoundryup install path.
+curl -sSf -L https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/foundryup/install | bash

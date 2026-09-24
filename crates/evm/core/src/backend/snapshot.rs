@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct StateSnapshot {
     pub accounts: AddressHashMap<AccountInfo>,
-    pub storage: AddressHashMap<HashMap<U256, U256>>,
+    pub storage: AddressHashMap<HashMap<U256, revm::primitives::FlaggedStorage>>,
     pub block_hashes: HashMap<U256, B256>,
 }
 

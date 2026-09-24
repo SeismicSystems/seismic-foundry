@@ -7,7 +7,6 @@ use alloy_consensus::{Header, TxEnvelope};
 use alloy_dyn_abi::{DynSolType, DynSolValue, FunctionExt};
 use alloy_ens::NameOrAddress;
 use alloy_json_abi::Function;
-use alloy_network::{AnyNetwork, AnyRpcTransaction};
 use alloy_primitives::{
     Address, B256, I256, Keccak256, Selector, TxHash, TxKind, U64, U256, hex,
     utils::{ParseUnits, Unit, keccak256},
@@ -17,9 +16,7 @@ use alloy_provider::{
     network::eip2718::{Decodable2718, Encodable2718},
 };
 use alloy_rlp::Decodable;
-use alloy_rpc_types::{
-    BlockId, BlockNumberOrTag, BlockOverrides, Filter, TransactionRequest, state::StateOverride,
-};
+use alloy_rpc_types::{BlockId, BlockNumberOrTag, BlockOverrides, Filter, state::StateOverride};
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::sol;
 use base::{Base, NumberWithBase, ToBase};
@@ -37,7 +34,6 @@ use foundry_compilers::flatten::Flattener;
 use foundry_config::Chain;
 use foundry_evm_core::ic::decode_instructions;
 use futures::{FutureExt, StreamExt, future::Either};
-use op_alloy_consensus::OpTxEnvelope;
 use rayon::prelude::*;
 use std::{
     borrow::Cow,
@@ -52,6 +48,8 @@ use tokio::signal::ctrl_c;
 
 use foundry_common::abi::encode_function_args_packed;
 pub use foundry_evm::*;
+
+use seismic_prelude::foundry::{AnyNetwork, AnyRpcTransaction, AnyTxEnvelope, TransactionRequest};
 
 pub mod args;
 pub mod cmd;
@@ -172,7 +170,7 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
                     // ensure the address is a contract
                     if res.is_empty() {
                         // check that the recipient is a contract that can be called
-                        if let Some(TxKind::Call(addr)) = req.to {
+                        if let Some(TxKind::Call(addr)) = req.inner.inner.to {
                             if let Ok(code) = self
                                 .provider
                                 .get_code_at(addr)
@@ -180,9 +178,11 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
                                 .await
                                 && code.is_empty()
                             {
-                                eyre::bail!("contract {addr:?} does not have any code")
+                                {
+                                    eyre::bail!("contract {addr:?} does not have any code");
+                                }
                             }
-                        } else if Some(TxKind::Create) == req.to {
+                        } else if Some(TxKind::Create) == req.inner.inner.to {
                             eyre::bail!("tx req is a contract deployment");
                         } else {
                             eyre::bail!("recipient is None");
@@ -369,7 +369,9 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
             && field == "transactions"
             && !full
         {
-            eyre::bail!("use --full to view transactions")
+            {
+                eyre::bail!("use --full to view transactions");
+            }
         }
 
         let block = self
@@ -798,24 +800,24 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
                     eyre::eyre!("tx not found for sender {from} and nonce {:?}", nonce.to::<u64>())
                 })?
         } else {
-            eyre::bail!("tx hash or from address is required")
+            {
+                eyre::bail!("tx hash or from address is required");
+            }
         };
 
         Ok(if raw {
             // also consider opstack deposit transactions
-            let either_tx = tx.try_into_either::<OpTxEnvelope>()?;
+            let either_tx = tx.try_into_either::<AnyTxEnvelope>()?;
             let encoded = either_tx.encoded_2718();
             format!("0x{}", hex::encode(encoded))
         } else if let Some(field) = field {
-            get_pretty_tx_attr(&tx.inner, field.as_str())
+            get_pretty_tx_attr(&tx.inner(), field.as_str())
                 .ok_or_else(|| eyre::eyre!("invalid tx field: {}", field.to_string()))?
         } else if shell::is_json() {
             // to_value first to sort json object keys
             serde_json::to_value(&tx)?.to_string()
         } else if to_request {
-            serde_json::to_string_pretty(&TransactionRequest::from_recovered_transaction(
-                tx.into(),
-            ))?
+            serde_json::to_string_pretty(&tx.to_tx_request())?
         } else {
             tx.pretty()
         })
@@ -854,7 +856,9 @@ impl<P: Provider<AnyNetwork>> Cast<P> {
                     // if the async flag is provided, immediately exit if no tx is found, otherwise
                     // try to poll for it
                     if cast_async {
-                        eyre::bail!("tx not found: {:?}", tx_hash)
+                        {
+                            eyre::bail!("tx not found: {:?}", tx_hash);
+                        }
                     } else {
                         PendingTransactionBuilder::new(self.provider.root().clone(), tx_hash)
                             .with_required_confirmations(confs)
@@ -1809,7 +1813,9 @@ impl SimpleCast {
         let func = get_func(sig)?;
         match encode_function_args(&func, args) {
             Ok(res) => Ok(hex::encode_prefixed(&res[4..])),
-            Err(e) => eyre::bail!("Could not ABI encode the function and arguments: {e}"),
+            Err(e) => {
+                eyre::bail!("Could not ABI encode the function and arguments: {e}");
+            }
         }
     }
 
@@ -1839,7 +1845,9 @@ impl SimpleCast {
         let func = get_func(sig.as_str())?;
         let encoded = match encode_function_args_packed(&func, args) {
             Ok(res) => hex::encode(res),
-            Err(e) => eyre::bail!("Could not ABI encode the function and arguments: {e}"),
+            Err(e) => {
+                eyre::bail!("Could not ABI encode the function and arguments: {e}");
+            }
         };
         Ok(format!("0x{encoded}"))
     }
@@ -1916,8 +1924,14 @@ impl SimpleCast {
             | DynSolType::FixedArray(..)
             | DynSolType::Tuple(..)
             | DynSolType::CustomStruct { .. } => {
-                eyre::bail!("Type `{k_ty}` is not supported as a mapping key")
+                eyre::bail!("Type `{k_ty}` is not supported as a mapping key");
             }
+            DynSolType::Sbool
+            | DynSolType::Saddress
+            | DynSolType::Sint(_)
+            | DynSolType::Suint(_)
+            | DynSolType::FixedSbytes(_)
+            | DynSolType::Sbytes => hasher.update(k.as_word().unwrap()),
         }
 
         let p = DynSolType::Uint(256)
@@ -2104,7 +2118,9 @@ impl SimpleCast {
         let client = explorer_client(chain, etherscan_api_key, explorer_api_url, explorer_url)?;
         let metadata = client.contract_source_code(contract_address.parse()?).await?;
         let Some(metadata) = metadata.items.first() else {
-            eyre::bail!("Empty contract source code")
+            {
+                eyre::bail!("Empty contract source code");
+            }
         };
 
         let tmp = tempfile::tempdir()?;
@@ -2210,7 +2226,9 @@ impl SimpleCast {
 
         match result {
             Some((_nonce, selector, signature)) => Ok((selector, signature)),
-            None => eyre::bail!("No selector found"),
+            None => {
+                eyre::bail!("No selector found");
+            }
         }
     }
 

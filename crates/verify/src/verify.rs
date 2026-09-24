@@ -208,9 +208,11 @@ impl VerifyArgs {
         let config = self.load_config()?;
 
         if self.guess_constructor_args && config.get_rpc_url().is_none() {
-            eyre::bail!(
-                "You have to provide a valid RPC URL to use --guess-constructor-args feature"
-            )
+            {
+                eyre::bail!(
+                    "You have to provide a valid RPC URL to use --guess-constructor-args feature"
+                );
+            }
         }
 
         // If chain is not set, we try to get it from the RPC.
@@ -328,16 +330,20 @@ impl VerifyArgs {
                         "Ambiguous compiler versions found in cache: {}",
                         unique_versions.iter().join(", ")
                     );
-                    eyre::bail!(
-                        "Compiler version has to be set in `foundry.toml`. If the project was not deployed with foundry, specify the version through `--compiler-version` flag."
-                    )
+                    {
+                        eyre::bail!(
+                            "Compiler version has to be set in `foundry.toml`. If the project was not deployed with foundry, specify the version through `--compiler-version` flag."
+                        );
+                    }
                 }
 
                 unique_versions.into_iter().next().unwrap().to_owned()
             } else {
-                eyre::bail!(
-                    "If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml"
-                )
+                {
+                    eyre::bail!(
+                        "If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml"
+                    );
+                }
             };
 
             let settings = if let Some(profile) = &self.compilation_profile {
@@ -346,7 +352,9 @@ impl VerifyArgs {
                 } else if let Some(settings) = project.additional_settings.get(profile.as_str()) {
                     settings
                 } else {
-                    eyre::bail!("Unknown compilation profile: {}", profile)
+                    {
+                        eyre::bail!("Unknown compilation profile: {}", profile);
+                    }
                 }
             } else if let Some((cache, entry)) = cache
                 .as_ref()
@@ -381,10 +389,12 @@ impl VerifyArgs {
                         version
                     );
                 } else if profiles.len() > 1 {
-                    eyre::bail!(
-                        "Ambiguous compilation profiles found in cache: {}, please specify the profile through `--compilation-profile` flag",
-                        profiles.iter().join(", ")
-                    )
+                    {
+                        eyre::bail!(
+                            "Ambiguous compilation profiles found in cache: {}, please specify the profile through `--compilation-profile` flag",
+                            profiles.iter().join(", ")
+                        );
+                    }
                 }
 
                 let profile = profiles.into_iter().next().unwrap().to_owned();
@@ -392,9 +402,11 @@ impl VerifyArgs {
             } else if project.additional_settings.is_empty() {
                 &project.settings
             } else {
-                eyre::bail!(
-                    "If cache is disabled, compilation profile must be provided with `--compiler-version` option or set in foundry.toml"
-                )
+                {
+                    eyre::bail!(
+                        "If cache is disabled, compilation profile must be provided with `--compiler-version` option or set in foundry.toml"
+                    );
+                }
             };
 
             VerificationContext::new(
@@ -406,7 +418,9 @@ impl VerifyArgs {
             )
         } else {
             if config.get_rpc_url().is_none() {
-                eyre::bail!("You have to provide a contract name or a valid RPC URL")
+                {
+                    eyre::bail!("You have to provide a contract name or a valid RPC URL");
+                }
             }
             let provider = utils::get_provider(&config)?;
             let code = provider.get_code_at(self.address).await?;
@@ -417,10 +431,12 @@ impl VerifyArgs {
             );
 
             let Some((artifact_id, _)) = contracts.find_by_deployed_code_exact(&code) else {
-                eyre::bail!(format!(
-                    "Bytecode at {} does not match any local contracts",
-                    self.address
-                ))
+                {
+                    eyre::bail!(format!(
+                        "Bytecode at {} does not match any local contracts",
+                        self.address
+                    ));
+                }
             };
 
             let settings = project

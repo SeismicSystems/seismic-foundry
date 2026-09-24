@@ -18,9 +18,10 @@ workspace = true
 foundry-common.workspace = true
 foundry-compilers = { workspace = true, features = ["project-util"] }
 foundry-config.workspace = true
-
 alloy-primitives.workspace = true
-alloy-provider.workspace = true
+alloy-provider = { workspace = true, features = [
+    "reqwest",
+] }
 
 eyre.workspace = true
 fd-lock = "4.0"
