@@ -7,7 +7,7 @@ use crate::{
 };
 use alloy_consensus::{SignableTransaction, TxEip1559};
 use alloy_hardforks::EthereumHardfork;
-use alloy_network::{EthereumWallet, TransactionBuilder, TxSignerSync};
+use alloy_network::{TransactionBuilder, TxSignerSync};
 use alloy_primitives::{Address, Bytes, TxKind, U256, address, fixed_bytes, utils::Unit};
 use alloy_provider::{Provider, ext::TxPoolApi};
 use alloy_rpc_types::{
@@ -38,7 +38,10 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+use seismic_prelude::foundry::{EthereumWallet, tx_builder};
+
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "Mercury has EIP-1559; legacy gas price setting rejected"]
 async fn can_set_gas_price() {
     let (api, handle) =
         spawn(NodeConfig::test().with_hardfork(Some(EthereumHardfork::Berlin.into()))).await;
@@ -95,8 +98,8 @@ async fn can_impersonate_account() {
     let balance = api.balance(impersonate, None).await.unwrap();
     assert_eq!(balance, funding);
 
-    let tx = TransactionRequest::default().with_from(impersonate).with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(impersonate).with_to(to).with_value(val);
+    let tx = WithOtherFields::new(tx.into());
 
     let res = provider.send_transaction(tx.clone()).await;
     res.unwrap_err();
@@ -134,8 +137,8 @@ async fn can_auto_impersonate_account() {
     let balance = api.balance(impersonate, None).await.unwrap();
     assert_eq!(balance, funding);
 
-    let tx = TransactionRequest::default().with_from(impersonate).with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(impersonate).with_to(to).with_value(val);
+    let tx = WithOtherFields::new(tx.into());
 
     let res = provider.send_transaction(tx.clone()).await;
     res.unwrap_err();
@@ -175,8 +178,8 @@ async fn can_impersonate_contract() {
     // // fund the impersonated account
     api.anvil_set_balance(impersonate, U256::from(1e18 as u64)).await.unwrap();
 
-    let tx = TransactionRequest::default().with_from(impersonate).to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(impersonate).with_to(to).with_value(val);
+    let tx = WithOtherFields::new(tx.into());
 
     let res = provider.send_transaction(tx.clone()).await;
     res.unwrap_err();
@@ -201,6 +204,7 @@ async fn can_impersonate_contract() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_impersonate_gnosis_safe() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -245,8 +249,8 @@ async fn can_impersonate_multiple_accounts() {
     api.anvil_set_balance(impersonate0, funding).await.unwrap();
     api.anvil_set_balance(impersonate1, funding).await.unwrap();
 
-    let tx = TransactionRequest::default().with_from(impersonate0).to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(impersonate0).with_to(to).with_value(val);
+    let tx = WithOtherFields::new(tx.into());
 
     api.anvil_impersonate_account(impersonate0).await.unwrap();
     api.anvil_impersonate_account(impersonate1).await.unwrap();
@@ -415,6 +419,7 @@ async fn test_timestamp_interval() {
 
 // <https://github.com/foundry-rs/foundry/issues/2341>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_can_set_storage_bsc_fork() {
     let (api, handle) =
         spawn(NodeConfig::test().with_eth_rpc_url(Some("https://bsc-dataseed.binance.org/"))).await;
@@ -449,7 +454,7 @@ async fn can_get_node_info() {
 
     let block_number = provider.get_block_number().await.unwrap();
     let block = provider.get_block(BlockId::from(block_number)).await.unwrap().unwrap();
-    let hard_fork: &str = SpecId::PRAGUE.into();
+    let hard_fork: &str = SpecId::MERCURY.into();
 
     let expected_node_info = NodeInfo {
         current_block_number: 0_u64,
@@ -499,6 +504,7 @@ async fn can_get_metadata() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn can_get_metadata_on_fork() {
     let (api, handle) =
         spawn(NodeConfig::test().with_eth_rpc_url(Some("https://bsc-dataseed.binance.org/"))).await;
@@ -555,8 +561,8 @@ async fn test_get_transaction_receipt() {
     // send a EIP-1559 transaction
     let to = Address::random();
     let val = U256::from(1337);
-    let tx = TransactionRequest::default().with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_to(to).with_value(val);
+    let tx = WithOtherFields::new(tx.into());
 
     let receipt = provider.send_transaction(tx.clone()).await.unwrap().get_receipt().await.unwrap();
 
@@ -589,6 +595,7 @@ async fn test_set_chain_id() {
 
 // <https://github.com/foundry-rs/foundry/issues/6096>
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_revert_next_block_timestamp() {
     let (api, _handle) = spawn(fork_config()).await;
 
@@ -610,6 +617,7 @@ async fn test_fork_revert_next_block_timestamp() {
 // test that after a snapshot revert, the env block is reset
 // to its correct value (block number, etc.)
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_fork_revert_call_latest_block_timestamp() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();
@@ -652,8 +660,8 @@ async fn can_remove_pool_transactions() {
     let sender = Address::random();
     let to = Address::random();
     let val = U256::from(1337);
-    let tx = TransactionRequest::default().with_from(sender).with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(sender).with_to(to).with_value(val);
+    let tx = WithOtherFields::new(tx.into());
 
     provider.send_transaction(tx.with_from(from)).await.unwrap().register().await.unwrap();
 
@@ -681,14 +689,14 @@ async fn test_reorg() {
             .to(accounts[0].address())
             .value(U256::from(i))
             .from(accounts[1].address());
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         api.send_transaction(tx).await.unwrap();
 
         let tx = TransactionRequest::default()
             .to(accounts[1].address())
             .value(U256::from(i))
             .from(accounts[2].address());
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         api.send_transaction(tx).await.unwrap();
     }
 
@@ -699,7 +707,7 @@ async fn test_reorg() {
         let to = accounts[i + 1].address();
         for j in 0..5 {
             let tx = TransactionRequest::default().from(from).to(to).value(U256::from(j));
-            txs.push((TransactionData::JSON(tx), i as u64));
+            txs.push((TransactionData::JSON(tx.into()), i as u64));
         }
     }
 
@@ -727,7 +735,7 @@ async fn test_reorg() {
             .to(accounts[0].address())
             .value(U256::from(i))
             .from(accounts[1].address());
-        let tx = WithOtherFields::new(tx);
+        let tx = WithOtherFields::new(tx.into());
         api.send_transaction(tx).await.unwrap();
     }
 
@@ -790,7 +798,7 @@ async fn test_reorg() {
     let res = api
         .anvil_reorg(ReorgOptions {
             depth: 1,
-            tx_block_pairs: vec![(TransactionData::JSON(TransactionRequest::default()), 10)],
+            tx_block_pairs: vec![(TransactionData::JSON(TransactionRequest::default().into()), 10)],
         })
         .await;
     assert!(res.is_err());
@@ -1058,6 +1066,7 @@ async fn test_mine_first_block_with_interval() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_anvil_reset_non_fork() {
     let (api, handle) = spawn(NodeConfig::test()).await;
     let provider = handle.http_provider();
@@ -1078,8 +1087,8 @@ async fn test_anvil_reset_non_fork() {
     // Send a transaction
     let to = Address::random();
     let val = U256::from(1337);
-    let tx = TransactionRequest::default().with_from(init_accounts[0]).with_to(to).with_value(val);
-    let tx = WithOtherFields::new(tx);
+    let tx = tx_builder().with_from(init_accounts[0]).with_to(to).with_value(val);
+    let tx = WithOtherFields::new(tx.into());
 
     let _ = provider.send_transaction(tx).await.unwrap().get_receipt().await.unwrap();
 
@@ -1119,6 +1128,7 @@ async fn test_anvil_reset_non_fork() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires mainnet fork RPC"]
 async fn test_anvil_reset_fork_to_non_fork() {
     let (api, handle) = spawn(fork_config()).await;
     let provider = handle.http_provider();

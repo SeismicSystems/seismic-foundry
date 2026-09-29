@@ -12,7 +12,8 @@ pub mod executors;
 pub mod inspectors;
 
 pub use foundry_evm_core::{
-    Env, EnvMut, EvmEnv, InspectorExt, backend, constants, decode, fork, opts, utils,
+    Env, EnvMut, EvmEnv, InspectorExt, backend, constants, decode, fork, opts, seismic_constants,
+    utils,
 };
 pub use foundry_evm_coverage as coverage;
 pub use foundry_evm_fuzz as fuzz;

@@ -416,13 +416,15 @@ impl EtherscanVerificationProvider {
             .ok_or_eyre("Couldn't fetch transaction receipt from RPC")?;
 
         let maybe_creation_code = if receipt.contract_address == Some(args.address) {
-            transaction.inner.inner.input()
+            transaction.0.inner.input()
         } else if transaction.to() == Some(DEFAULT_CREATE2_DEPLOYER) {
-            &transaction.inner.inner.input()[32..]
+            &transaction.0.inner.input()[32..]
         } else {
-            eyre::bail!(
-                "Fetching of constructor arguments is not supported for contracts created by contracts"
-            )
+            {
+                eyre::bail!(
+                    "Fetching of constructor arguments is not supported for contracts created by contracts"
+                );
+            }
         };
 
         let output = context.project.compile_file(&context.target_path)?;
@@ -446,7 +448,9 @@ impl EtherscanVerificationProvider {
             sh_println!("Identified constructor arguments: {constructor_args}")?;
             Ok(constructor_args)
         } else {
-            eyre::bail!("Local bytecode doesn't match on-chain bytecode")
+            {
+                eyre::bail!("Local bytecode doesn't match on-chain bytecode");
+            }
         }
     }
 }

@@ -5,7 +5,10 @@ use alloy_provider::{Network, Provider, network::BlockResponse};
 use alloy_rpc_types::BlockNumberOrTag;
 use eyre::WrapErr;
 use foundry_common::NON_ARCHIVE_NODE_WARNING;
-use revm::context::{BlockEnv, CfgEnv, TxEnv};
+
+use revm::context::{BlockEnv, TxEnv as RevmTxEnv};
+
+use seismic_prelude::foundry::{CfgEnv, TxEnv};
 
 /// Initializes a REVM block environment based on a forked
 /// ethereum provider.
@@ -45,7 +48,9 @@ pub async fn environment<N: Network, P: Provider<N>>(
                  latest block number: {latest_block}"
             );
         }
-        eyre::bail!("failed to get block for block number: {block_number}")
+        {
+            eyre::bail!("failed to get block for block number: {block_number}");
+        }
     };
 
     let cfg = configure_env(
@@ -69,13 +74,13 @@ pub async fn environment<N: Network, P: Provider<N>>(
                 ..Default::default()
             },
         },
-        tx: TxEnv {
+        tx: TxEnv::new(RevmTxEnv {
             caller: origin,
             gas_price: gas_price.unwrap_or(fork_gas_price),
             chain_id: Some(override_chain_id.unwrap_or(rpc_chain_id)),
             gas_limit: block.header().gas_limit() as u64,
             ..Default::default()
-        },
+        }),
     };
 
     apply_chain_and_block_specific_env_changes::<N>(env.as_env_mut(), &block);

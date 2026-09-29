@@ -20,6 +20,7 @@ pub mod logs;
 pub mod mktx;
 pub mod rpc;
 pub mod run;
+pub mod seismic_utils;
 pub mod send;
 pub mod storage;
 pub mod txpool;

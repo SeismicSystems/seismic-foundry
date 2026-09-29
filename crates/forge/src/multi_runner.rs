@@ -29,7 +29,7 @@ use foundry_evm::{
 };
 use foundry_linking::{LinkOutput, Linker};
 use rayon::prelude::*;
-use revm::primitives::hardfork::SpecId;
+// use revm::primitives::hardfork::SpecId;
 use std::{
     borrow::Borrow,
     collections::BTreeMap,
@@ -44,6 +44,8 @@ pub struct TestContract {
     pub abi: JsonAbi,
     pub bytecode: Bytes,
 }
+
+use seismic_prelude::foundry::SpecId;
 
 pub type DeployableContracts = BTreeMap<ArtifactId, TestContract>;
 
@@ -176,7 +178,9 @@ impl MultiContractRunner {
         trace!("running all tests");
 
         // The DB backend that serves all the data.
-        let db = Backend::spawn(self.fork.take())?;
+        let mut db = Backend::spawn(self.fork.take())?;
+        // For tests, always allow private storage access
+        db.set_unsafe_private_storage(true);
 
         let find_timer = Instant::now();
         let contracts = self.matching_contracts(filter).collect::<Vec<_>>();
@@ -308,7 +312,6 @@ impl TestRunnerConfig {
     /// This is for example used to override the configuration with inline config.
     pub fn reconfigure_with(&mut self, config: Arc<Config>) {
         debug_assert!(!Arc::ptr_eq(&self.config, &config));
-
         self.spec_id = config.evm_spec_id();
         self.sender = config.sender;
         self.odyssey = config.odyssey;

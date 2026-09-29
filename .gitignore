@@ -1,3 +1,6 @@
+node_modules
+bun.lock
+
 .DS_STORE
 /target*
 out/
@@ -5,8 +8,9 @@ snapshots/
 out.json
 .idea
 .vscode
-.claude
-CLAUDE.md
+
+.claude/settings.json
+.claude/settings.local.json
 .env
 node_modules
 dist
@@ -17,5 +21,5 @@ _
 .vercel
 .vite
 .wrangler
-build
+/build
 *.zip

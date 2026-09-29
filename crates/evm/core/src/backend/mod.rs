@@ -11,9 +11,9 @@ use crate::{
 use alloy_consensus::Typed2718;
 use alloy_evm::Evm;
 use alloy_genesis::GenesisAccount;
-use alloy_network::{AnyRpcBlock, AnyTxEnvelope, TransactionResponse};
+use alloy_network::TransactionResponse;
 use alloy_primitives::{Address, B256, TxKind, U256, keccak256, uint};
-use alloy_rpc_types::{BlockNumberOrTag, Transaction, TransactionRequest};
+use alloy_rpc_types::{BlockNumberOrTag, Transaction};
 use eyre::Context;
 use foundry_common::{SYSTEM_TRANSACTION_TYPE, is_known_system_sender};
 pub use foundry_fork_db::{BlockchainDb, SharedBackend, cache::BlockchainDbMeta};
@@ -34,6 +34,8 @@ use std::{
     time::Instant,
 };
 
+use seismic_prelude::foundry::{AnyRpcBlock, AnyTxEnvelope};
+
 mod diagnostic;
 pub use diagnostic::RevertDiagnostic;
 
@@ -48,6 +50,8 @@ pub use in_memory_db::{EmptyDBWrapper, FoundryEvmInMemoryDB, MemDb};
 
 mod snapshot;
 pub use snapshot::{BackendStateSnapshot, RevertStateSnapshotAction, StateSnapshot};
+
+use seismic_prelude::foundry::TransactionRequest;
 
 // A `revm::Database` that is used in forking mode
 type ForkDB = CacheDB<SharedBackend>;
@@ -461,6 +465,8 @@ pub struct Backend {
     active_fork_ids: Option<(LocalForkId, ForkLookupIndex)>,
     /// holds additional Backend data
     inner: BackendInner,
+    /// Whether to allow scripts to run when encountering private storage slots.
+    unsafe_private_storage: bool,
 }
 
 impl Backend {
@@ -470,6 +476,11 @@ impl Backend {
     /// database.
     pub fn spawn(fork: Option<CreateFork>) -> eyre::Result<Self> {
         Self::new(MultiFork::spawn(), fork)
+    }
+
+    /// Sets whether to allow accessing private storage slots.
+    pub fn set_unsafe_private_storage(&mut self, allow: bool) {
+        self.unsafe_private_storage = allow;
     }
 
     /// Creates a new instance of `Backend`
@@ -486,12 +497,16 @@ impl Backend {
             ..Default::default()
         };
 
+        let unsafe_private_storage =
+            fork.as_ref().map(|fork| fork.evm_opts.unsafe_private_storage).unwrap_or(false);
+
         let mut backend = Self {
             forks,
             mem_db: CacheDB::new(Default::default()),
             fork_init_journaled_state: inner.new_journaled_state(),
             active_fork_ids: None,
             inner,
+            unsafe_private_storage,
         };
 
         if let Some(fork) = fork {
@@ -517,8 +532,10 @@ impl Backend {
         id: &ForkId,
         fork: Fork,
         journaled_state: JournaledState,
+        unsafe_private_storage: bool,
     ) -> eyre::Result<Self> {
         let mut backend = Self::spawn(None)?;
+        backend.unsafe_private_storage = unsafe_private_storage;
         let fork_ids = backend.inner.insert_new_fork(id.clone(), fork.db, journaled_state);
         backend.inner.launched_with_fork = Some((id.clone(), fork_ids.0, fork_ids.1));
         backend.active_fork_ids = Some(fork_ids);
@@ -533,6 +550,7 @@ impl Backend {
             fork_init_journaled_state: self.inner.new_journaled_state(),
             active_fork_ids: None,
             inner: Default::default(),
+            unsafe_private_storage: self.unsafe_private_storage,
         }
     }
 
@@ -549,7 +567,7 @@ impl Backend {
         &mut self,
         address: Address,
         slot: U256,
-        value: U256,
+        value: revm::primitives::FlaggedStorage,
     ) -> Result<(), DatabaseError> {
         if let Some(db) = self.active_fork_db_mut() {
             db.insert_account_storage(address, slot, value)
@@ -565,7 +583,7 @@ impl Backend {
     pub fn replace_account_storage(
         &mut self,
         address: Address,
-        storage: Map<U256, U256>,
+        storage: Map<U256, revm::primitives::FlaggedStorage>,
     ) -> Result<(), DatabaseError> {
         if let Some(db) = self.active_fork_db_mut() {
             db.replace_account_storage(address, storage)
@@ -744,17 +762,17 @@ impl Backend {
     ///
     /// We need to track these mainly to prevent issues when switching between different evms
     pub(crate) fn initialize(&mut self, env: &Env) {
-        self.set_caller(env.tx.caller);
-        self.set_spec_id(env.evm_env.cfg_env.spec);
+        self.set_caller(env.tx.base.caller);
+        self.set_spec_id(env.evm_env.cfg_env.spec.into());
 
-        let test_contract = match env.tx.kind {
+        let test_contract = match env.tx.base.kind {
             TxKind::Call(to) => to,
             TxKind::Create => {
                 let nonce = self
-                    .basic_ref(env.tx.caller)
+                    .basic_ref(env.tx.base.caller)
                     .map(|b| b.unwrap_or_default().nonce)
                     .unwrap_or_default();
-                env.tx.caller.create(nonce)
+                env.tx.base.caller.create(nonce)
             }
         };
         self.set_test_contract(test_contract);
@@ -847,7 +865,7 @@ impl Backend {
         let tx = fork.db.db.get_transaction(transaction)?;
 
         // get the block number we need to fork
-        if let Some(tx_block) = tx.block_number {
+        if let Some(tx_block) = tx.0.inner().block_number {
             let block = fork.db.db.get_full_block(tx_block)?;
 
             // we need to subtract 1 here because we want the state before the transaction
@@ -894,18 +912,19 @@ impl Backend {
 
             if tx.tx_hash() == tx_hash {
                 // found the target transaction
-                return Ok(Some(tx.inner.clone()));
+                return Ok(Some(tx.inner().clone()));
             }
             trace!(tx=?tx.tx_hash(), "committing transaction");
 
             commit_transaction(
-                &tx.inner,
+                &tx.0.inner(),
                 &mut env.as_env_mut(),
                 journaled_state,
                 fork,
                 &fork_id,
                 &persistent_accounts,
                 &mut NoOpInspector,
+                self.unsafe_private_storage,
             )?;
         }
 
@@ -961,7 +980,7 @@ impl DatabaseExt for Backend {
                     // there might be the case where the snapshot was created during `setUp` with
                     // another caller, so we need to ensure the caller account is present in the
                     // journaled state and database
-                    let caller = current.tx.caller;
+                    let caller = current.tx.base.caller;
                     journaled_state.state.entry(caller).or_insert_with(|| {
                         let caller_account = current_state
                             .state
@@ -1069,8 +1088,8 @@ impl DatabaseExt for Backend {
         if let Some(active) = self.active_fork_mut() {
             active.journaled_state = active_journaled_state.clone();
 
-            let caller = env.tx.caller;
-            let caller_account = active.journaled_state.state.get(&env.tx.caller).cloned();
+            let caller = env.tx.base.caller;
+            let caller_account = active.journaled_state.state.get(&env.tx.base.caller).cloned();
             let target_fork = self.inner.get_fork_mut(idx);
 
             // depth 0 will be the default value when the fork was created
@@ -1135,11 +1154,11 @@ impl DatabaseExt for Backend {
             // another edge case where a fork is created and selected during setup with not
             // necessarily the same caller as for the test, however we must always
             // ensure that fork's state contains the current sender
-            let caller = env.tx.caller;
+            let caller = env.tx.base.caller;
             fork.journaled_state.state.entry(caller).or_insert_with(|| {
                 let caller_account = active_journaled_state
                     .state
-                    .get(&env.tx.caller)
+                    .get(&env.tx.base.caller)
                     .map(|acc| acc.info.clone())
                     .unwrap_or_default();
 
@@ -1293,13 +1312,14 @@ impl DatabaseExt for Backend {
 
         let fork = self.inner.get_fork_by_id_mut(id)?;
         commit_transaction(
-            &tx.inner,
+            &tx.0.inner(),
             &mut env.as_env_mut(),
             journaled_state,
             fork,
             &fork_id,
             &persistent_accounts,
             inspector,
+            self.unsafe_private_storage,
         )
     }
 
@@ -1343,9 +1363,17 @@ impl DatabaseExt for Backend {
             if self.inner.issued_local_fork_ids.contains_key(&id) {
                 return Ok(id);
             }
-            eyre::bail!("Requested fork `{}` does not exit", id)
+            {
+                eyre::bail!("Requested fork `{}` does not exit", id);
+            }
         }
-        if let Some(id) = self.active_fork_id() { Ok(id) } else { eyre::bail!("No fork active") }
+        if let Some(id) = self.active_fork_id() {
+            Ok(id)
+        } else {
+            {
+                eyre::bail!("No fork active");
+            }
+        }
     }
 
     fn ensure_fork_id(&self, id: LocalForkId) -> eyre::Result<&ForkId> {
@@ -1446,7 +1474,7 @@ impl DatabaseExt for Backend {
                                 .get(&slot)
                                 .map(|s| s.present_value)
                                 .unwrap_or_default(),
-                            U256::from_be_bytes(value.0),
+                            U256::from_be_bytes(value.0).into(),
                             0,
                         ),
                     )
@@ -1519,11 +1547,21 @@ impl DatabaseRef for Backend {
         }
     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
-        if let Some(db) = self.active_fork_db() {
-            DatabaseRef::storage_ref(db, address, index)
+    fn storage_ref(
+        &self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
+        let result = if let Some(db) = self.active_fork_db() {
+            DatabaseRef::storage_ref(db, address, index)?
         } else {
-            Ok(DatabaseRef::storage_ref(&self.mem_db, address, index)?)
+            DatabaseRef::storage_ref(&self.mem_db, address, index)?
+        };
+
+        if result.is_private && !self.unsafe_private_storage {
+            Err(DatabaseError::PrivateStorage(address, index))
+        } else {
+            Ok(result)
         }
     }
 
@@ -1564,7 +1602,11 @@ impl Database for Backend {
         }
     }
 
-    fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
+    fn storage(
+        &mut self,
+        address: Address,
+        index: U256,
+    ) -> Result<revm::primitives::FlaggedStorage, Self::Error> {
         if let Some(db) = self.active_fork_db_mut() {
             Ok(Database::storage(db, address, index)?)
         } else {
@@ -1862,7 +1904,7 @@ impl Default for BackendInner {
 pub(crate) fn update_current_env_with_fork_env(current: &mut EnvMut<'_>, fork: Env) {
     *current.block = fork.evm_env.block_env;
     *current.cfg = fork.evm_env.cfg_env;
-    current.tx.chain_id = fork.tx.chain_id;
+    current.tx.base.chain_id = fork.tx.base.chain_id;
 }
 
 /// Clones the data of the given `accounts` from the `active` database into the `fork_db`
@@ -1956,7 +1998,7 @@ fn update_env_block(env: &mut EnvMut<'_>, block: &AnyRpcBlock) {
     if let Some(excess_blob_gas) = block.header.excess_blob_gas {
         env.block.blob_excess_gas_and_price = Some(BlobExcessGasAndPrice::new(
             excess_blob_gas,
-            get_blob_base_fee_update_fraction_by_spec_id(env.cfg.spec),
+            get_blob_base_fee_update_fraction_by_spec_id(env.cfg.spec.into_eth_spec()),
         ));
     }
 }
@@ -1971,6 +2013,7 @@ fn commit_transaction(
     fork_id: &ForkId,
     persistent_accounts: &HashSet<Address>,
     inspector: &mut dyn InspectorExt,
+    unsafe_private_storage: bool,
 ) -> eyre::Result<()> {
     configure_tx_env(env, tx);
 
@@ -1979,7 +2022,8 @@ fn commit_transaction(
         let fork = fork.clone();
         let journaled_state = journaled_state.clone();
         let depth = journaled_state.depth;
-        let mut db = Backend::new_with_fork(fork_id, fork, journaled_state)?;
+        let mut db =
+            Backend::new_with_fork(fork_id, fork, journaled_state, unsafe_private_storage)?;
 
         let mut evm = crate::evm::new_evm_with_inspector(&mut db as _, env.to_owned(), inspector);
         // Adjust inner EVM depth to ensure that inspectors receive accurate data.
@@ -2031,7 +2075,7 @@ fn apply_state_changeset(
 #[cfg(test)]
 mod tests {
     use crate::{backend::Backend, fork::CreateFork, opts::EvmOpts};
-    use alloy_primitives::{Address, U256};
+    use alloy_primitives::{Address, FlaggedStorage, U256, address};
     use alloy_provider::Provider;
     use foundry_common::provider::get_http_provider;
     use foundry_config::{Config, NamedChain};
@@ -2090,5 +2134,44 @@ mod tests {
         assert!(db.accounts().read().contains_key(&address));
         assert!(db.storage().read().contains_key(&address));
         assert_eq!(db.storage().read().get(&address).unwrap().len(), num_slots as usize);
+    }
+
+    #[test]
+    fn test_private_storage_blocked_without_flag() {
+        let mut backend = Backend::spawn(None).unwrap();
+
+        let test_addr: Address = address!("0x1234567890123456789012345678901234567890");
+
+        let private_storage = FlaggedStorage { value: U256::from(42), is_private: true };
+
+        backend.insert_account_storage(test_addr, U256::ZERO, private_storage).unwrap();
+
+        let result = backend.storage_ref(test_addr, U256::ZERO);
+        assert!(result.is_err(), "Should fail when reading private storage without flag");
+
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, foundry_fork_db::DatabaseError::PrivateStorage(_, _)),
+            "Should be PrivateStorage error"
+        );
+    }
+
+    #[test]
+    fn test_private_storage_allowed_with_flag() {
+        let mut backend = Backend::spawn(None).unwrap();
+        backend.unsafe_private_storage = true;
+
+        let test_addr: Address = address!("0x1234567890123456789012345678901234567890");
+
+        let private_storage = FlaggedStorage { value: U256::from(42), is_private: true };
+
+        backend.insert_account_storage(test_addr, U256::ZERO, private_storage).unwrap();
+
+        let result = backend.storage_ref(test_addr, U256::ZERO);
+        assert!(result.is_ok(), "Should succeed when reading private storage with flag");
+
+        let storage = result.unwrap();
+        assert_eq!(storage.value, U256::from(42));
+        assert!(storage.is_private);
     }
 }

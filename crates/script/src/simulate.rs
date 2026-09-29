@@ -202,7 +202,9 @@ impl PreSimulationState {
         }
 
         if abort {
-            eyre::bail!("Simulated execution failed.")
+            {
+                eyre::bail!("Simulated execution failed.");
+            }
         }
 
         Ok(final_txs)
@@ -297,7 +299,7 @@ impl FilledTransactionsState {
                     // only estimate gas for unsigned transactions
                     if let Some(tx) = tx.as_unsigned_mut() {
                         trace!("estimating with different gas calculation");
-                        let gas = tx.gas.expect("gas is set by simulation.");
+                        let gas = tx.inner.inner.gas.expect("gas is set by simulation.");
 
                         // We are trying to show the user an estimation of the total gas usage.
                         //

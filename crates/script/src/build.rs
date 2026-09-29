@@ -217,9 +217,11 @@ impl PreprocessedState {
                 let target_name = target.name.split('.').next().unwrap();
                 let id_name = id.name.split('.').next().unwrap();
                 if target_name != id_name {
-                    eyre::bail!(
-                        "Multiple contracts in the target path. Please specify the contract name with `--tc ContractName`"
-                    )
+                    {
+                        eyre::bail!(
+                            "Multiple contracts in the target path. Please specify the contract name with `--tc ContractName`"
+                        );
+                    }
                 }
             }
             target_id = Some(id);

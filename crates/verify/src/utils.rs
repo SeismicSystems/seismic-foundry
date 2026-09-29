@@ -1,7 +1,7 @@
 use crate::{bytecode::VerifyBytecodeArgs, types::VerificationType};
 use alloy_dyn_abi::DynSolValue;
 use alloy_primitives::{Address, Bytes, TxKind, U256};
-use alloy_provider::{Provider, network::AnyRpcBlock};
+use alloy_provider::Provider;
 use alloy_rpc_types::BlockId;
 use clap::ValueEnum;
 use eyre::{OptionExt, Result};
@@ -21,10 +21,12 @@ use foundry_evm::{
     traces::TraceMode,
 };
 use reqwest::Url;
-use revm::{bytecode::Bytecode, database::Database, primitives::hardfork::SpecId};
+use revm::{bytecode::Bytecode, database::Database};
 use semver::{BuildMetadata, Version};
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
+
+use seismic_prelude::foundry::{AnyRpcBlock, SpecId};
 
 /// Enum to represent the type of bytecode being verified
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, ValueEnum)]
@@ -107,7 +109,9 @@ pub fn build_using_cache(
         let version = etherscan_settings.compiler_version.to_owned();
         // Ignores vyper
         if version.starts_with("vyper:") {
-            eyre::bail!("Vyper contracts are not supported")
+            {
+                eyre::bail!("Vyper contracts are not supported");
+            }
         }
         // Parse etherscan version string
         let version = version.split('+').next().unwrap_or("").trim_start_matches('v').to_string();
@@ -135,7 +139,9 @@ pub fn build_using_cache(
         }
     }
 
-    eyre::bail!("couldn't find cached artifact for contract {}", args.contract.name)
+    {
+        eyre::bail!("couldn't find cached artifact for contract {}", args.contract.name);
+    }
 }
 
 pub fn print_result(
@@ -256,7 +262,9 @@ pub fn maybe_predeploy_contract(
             maybe_predeploy = true;
             Ok((None, maybe_predeploy))
         }
-        Err(e) => eyre::bail!("Error fetching creation data from verifier-url: {:?}", e),
+        Err(e) => {
+            eyre::bail!("Error fetching creation data from verifier-url: {:?}", e);
+        }
     }
 }
 

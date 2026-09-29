@@ -423,7 +423,9 @@ pub(super) fn parse_json_array(array: &[Value], ty: &DynSolType) -> Result<DynSo
                 array.iter().map(|e| parse_json_as(e, inner)).collect::<Result<Vec<_>>>()?;
             Ok(DynSolValue::FixedArray(values))
         }
-        _ => bail!("expected {ty}, found array"),
+        _ => {
+            bail!("expected {ty}, found array");
+        }
     }
 }
 
@@ -434,7 +436,11 @@ pub(super) fn parse_json_map(map: &Map<String, Value>, ty: &DynSolType) -> Resul
 
     let mut values = Vec::with_capacity(fields.len());
     for (field, ty) in fields.iter().zip(types.iter()) {
-        let Some(value) = map.get(field) else { bail!("field {field:?} not found in JSON object") };
+        let Some(value) = map.get(field) else {
+            {
+                bail!("field {field:?} not found in JSON object");
+            }
+        };
         values.push(parse_json_as(value, ty)?);
     }
 
@@ -638,7 +644,9 @@ pub(super) fn resolve_type(type_description: &str) -> Result<DynSolType> {
         return Ok(resolver.resolve(main_type)?);
     };
 
-    bail!("type description should be a valid Solidity type or a EIP712 `encodeType` string")
+    {
+        bail!("type description should be a valid Solidity type or a EIP712 `encodeType` string");
+    }
 }
 
 /// Upserts a value into a JSON object based on a dot-separated key.
