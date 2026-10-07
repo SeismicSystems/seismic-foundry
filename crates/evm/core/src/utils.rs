@@ -138,7 +138,15 @@ pub fn configure_tx_req_env(
 ) -> eyre::Result<()> {
     // If no transaction type is provided, we need to infer it from the other fields.
     let tx_type = tx.transaction_type.unwrap_or_else(|| tx.minimal_tx_type() as u8);
+    tx.gas_payment.validate().map_err(|_| eyre::eyre!("invalid gas payment selector"))?;
+    if tx_type != seismic_prelude::foundry::SEISMIC_TX_TYPE_ID
+        && tx.gas_payment != Default::default()
+    {
+        eyre::bail!("Explicit gas payment requires a Seismic transaction");
+    }
     env.tx.tx_type = tx_type;
+    env.tx.gas_payment = alloy_evm::tx::gas_payment_to_env(tx.gas_payment);
+    env.tx.signed_read = tx.seismic_elements.as_ref().is_some_and(|elements| elements.signed_read);
 
     let SeismicTransactionRequest {
         inner:
@@ -161,6 +169,7 @@ pub fn configure_tx_req_env(
                 sidecar: _,
             },
         seismic_elements: _,
+        gas_payment: _,
     } = *tx;
 
     // If no `to` field then set create kind: https://eips.ethereum.org/EIPS/eip-2470#deployment-transaction

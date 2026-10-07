@@ -388,7 +388,14 @@ impl From<InvalidTransaction> for InvalidTransactionError {
             | InvalidTransaction::EmptyAuthorizationList
             | InvalidTransaction::Eip7873NotSupported
             | InvalidTransaction::Eip7873MissingTarget
-            | InvalidTransaction::MissingChainId => Self::Revm(err),
+            | InvalidTransaction::MissingChainId
+            | InvalidTransaction::InvalidGasPaymentSelector
+            | InvalidTransaction::GasTokenRegistryTooLarge
+            | InvalidTransaction::GasTokenNotRegistered(_)
+            | InvalidTransaction::GasTokenInactive(_)
+            | InvalidTransaction::UnsupportedGasTokenMode { .. }
+            | InvalidTransaction::UnsupportedGasTokenDecimals { .. }
+            | InvalidTransaction::GasTokenBalanceModeMismatch { .. } => Self::Revm(err),
         }
     }
 }

@@ -27,6 +27,8 @@ use std::{
 };
 
 use alloy_eips::{Decodable2718, Encodable2718, eip2718::Eip2718Error};
+use alloy_evm::tx::gas_payment_to_env;
+use seismic_alloy_consensus::GasPayment;
 use seismic_prelude::foundry::{
     AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, Decodable712, Eip712Result,
     OpTransaction, RpcTransaction, SEISMIC_TX_TYPE_ID, TransactionReceipt, TransactionRequest,
@@ -77,9 +79,16 @@ pub fn transaction_request_to_typed(
                         ..
                     },
                 seismic_elements,
+                gas_payment,
             },
         other,
     } = tx;
+
+    if gas_payment.validate().is_err()
+        || (transaction_type != Some(SEISMIC_TX_TYPE_ID) && gas_payment != GasPayment::Auto)
+    {
+        return None;
+    }
 
     // Special case: OP-stack deposit tx
     if transaction_type == Some(0x7E) || has_optimism_fields(&other) {
@@ -104,6 +113,7 @@ pub fn transaction_request_to_typed(
                     nonce: nonce.unwrap_or_default(),
                     gas_price: gas_price.unwrap_or_default(),
                     gas_limit: gas.unwrap_or_default() as u64,
+                    gas_payment,
                     to: to.unwrap_or_default(),
                     value: value.unwrap_or_default(),
                     chain_id: chain_id.unwrap_or_default(),
@@ -671,6 +681,7 @@ impl PendingTransaction {
                     input,
                     seismic_elements,
                     authorization_list,
+                    gas_payment,
                 } = &tx.tx();
 
                 let tx_io_sk = seismic_crypto::well_known_tx_io_keypair().secret_key();
@@ -698,6 +709,8 @@ impl PendingTransaction {
                         .collect(),
                     ..Default::default()
                 })
+                .with_gas_payment(gas_payment_to_env(*gas_payment))
+                .with_signed_read(seismic_elements.signed_read)
             }
         }
     }
@@ -730,6 +743,10 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
             value.recover().map_err(|_| ConversionError::Custom("InvalidSignature".to_string()))?;
         let essentials = value.essentials();
         let tx_type = value.r#type();
+        let gas_payment = match &value {
+            TypedTransaction::Seismic(tx) => tx.tx().gas_payment,
+            _ => GasPayment::Auto,
+        };
 
         Ok(Self {
             inner: AlloyTransactionRequest {
@@ -748,6 +765,7 @@ impl TryFrom<TypedTransaction> for TransactionRequest {
                 ..Default::default()
             },
             seismic_elements: value.seismic_elements(),
+            gas_payment,
         })
     }
 }
@@ -1989,11 +2007,67 @@ mod tests {
     }
 
     #[test]
+    fn gas_payment_request_and_execution_roundtrip() {
+        for payment in
+            [GasPayment::Auto, GasPayment::Native, GasPayment::Token(Address::repeat_byte(0x22))]
+        {
+            let request = TransactionRequest {
+                inner: AlloyTransactionRequest {
+                    transaction_type: Some(SEISMIC_TX_TYPE_ID),
+                    gas: Some(50_000),
+                    to: Some(TxKind::Call(Address::repeat_byte(0x33))),
+                    ..Default::default()
+                },
+                seismic_elements: Some(TxSeismicElements {
+                    encryption_pubkey: well_known_tx_io_keypair().public_key(),
+                    signed_read: true,
+                    ..Default::default()
+                }),
+                gas_payment: payment,
+            };
+            let Some(TypedTransactionRequest::Seismic(tx)) =
+                transaction_request_to_typed(WithOtherFields::new(request))
+            else {
+                panic!("expected Seismic request")
+            };
+            assert_eq!(tx.gas_payment, payment);
+            let signature = alloy_consensus::crypto::secp256k1::sign_message(
+                b256!("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"),
+                tx.signature_hash(),
+            )
+            .unwrap();
+            let signed = TypedTransaction::Seismic(tx.into_signed(signature));
+            let env = PendingTransaction::new(signed.clone()).unwrap().to_revm_tx_env();
+            assert_eq!(env.gas_payment, gas_payment_to_env(payment));
+            assert!(env.signed_read);
+            let restored = TransactionRequest::try_from(signed).unwrap();
+            assert_eq!(restored.gas_payment, payment);
+            assert!(restored.seismic_elements.unwrap().signed_read);
+        }
+    }
+
+    #[test]
+    fn gas_payment_rejects_transparent_and_invalid_requests() {
+        for payment in [
+            GasPayment::Native,
+            GasPayment::Token(Address::repeat_byte(0x22)),
+            GasPayment::Token(Address::ZERO),
+        ] {
+            let request = TransactionRequest { gas_payment: payment, ..Default::default() };
+            assert!(transaction_request_to_typed(WithOtherFields::new(request)).is_none());
+        }
+        let request = TransactionRequest::default();
+        assert_eq!(request.gas_payment, GasPayment::Auto);
+        assert!(transaction_request_to_typed(WithOtherFields::new(request)).is_some());
+    }
+
+    #[test]
     fn test_seismic_tx_encoding() {
         // mirrors values in seismic-viem-tests/testSeismicTxEncoding
         let _decrypted_input = Bytes::from_str("0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875").unwrap();
         let encrypted_input = Bytes::from_str("0xbf645e68de8096b62950fac2d5bceb71ab1a085aed2e973a8b4f961ca77209f99116130edecd27c39fc62e1b3c05ff42d9e4382f987fc55c2011f8e4f2e66204e17174e9d2756bb20f4cdfe48bd5d237").unwrap();
         let orig_decoded_tx = TxSeismic {
+            gas_payment: GasPayment::Auto,
             chain_id: 31337u64,
             nonce: 2,
             gas_price: 1000000000,
@@ -2015,15 +2089,12 @@ mod tests {
             authorization_list: vec![],
         };
 
-        // Signature comes from seismic-viem-tests/testSeismicTxEncoding
-        let r =
-            U256::from_str("0xea4deb5d93eb2566b7d0ea5209f8bc9fd810ad1eff29bf59424de14c5910ab23")
-                .unwrap();
-        let s =
-            U256::from_str("0x1daa9ada5f7448d737dee3096add2cd9447c2f55c13b7f8ca6ec37105548bf0c")
-                .unwrap();
-
-        let signature = Signature::new(r, s, false);
+        // The mandatory selector changes the signing hash; sign the current layout.
+        let signature = alloy_consensus::crypto::secp256k1::sign_message(
+            b256!("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"),
+            orig_decoded_tx.signature_hash(),
+        )
+        .unwrap();
         let signed_tx: Signed<TxSeismic> = orig_decoded_tx.into_signed(signature);
 
         let signer = signed_tx.recover_signer().unwrap();
@@ -2047,6 +2118,7 @@ mod tests {
     /// so a dummy signature exercises the path we care about.
     fn encoded_seismic_tx(signed_read: bool, to: TxKind) -> Vec<u8> {
         let tx = TxSeismic {
+            gas_payment: GasPayment::Auto,
             chain_id: 31337u64,
             nonce: 0,
             gas_price: 1,

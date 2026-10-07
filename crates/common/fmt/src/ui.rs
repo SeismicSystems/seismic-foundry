@@ -510,22 +510,63 @@ type                 {}
     }
 }
 
+impl UIfmt for seismic_alloy_consensus::GasPayment {
+    fn pretty(&self) -> String {
+        match self {
+            Self::Auto => "auto".to_string(),
+            Self::Native => "native".to_string(),
+            Self::Token(token) => format!("token:{}", token.pretty()),
+        }
+    }
+}
+
 impl UIfmt for alloy_consensus::Signed<seismic_prelude::foundry::TxSeismic> {
     fn pretty(&self) -> String {
-        let (tx_seismic, signature, hash) = self.clone().into_parts();
-        let legacy_tx = tx_seismic.to_legacy_tx();
-        let legacy_signed = alloy_consensus::Signed::new_unchecked(legacy_tx, signature, hash);
-        let legacy_envelope = TxEnvelope::Legacy(legacy_signed);
-        let legacy_pretty = legacy_envelope.pretty();
-        let seismic_elements_pretty = format!(
-            "encryptionNonce: {}
-            encryptionPubkey: {}
-            messageVersion: {}",
-            tx_seismic.seismic_elements.encryption_pubkey,
-            tx_seismic.seismic_elements.encryption_nonce,
-            tx_seismic.seismic_elements.message_version
-        );
-        format!("{legacy_pretty}\n{seismic_elements_pretty}")
+        let tx = self.tx();
+        let elements = &tx.seismic_elements;
+        format!(
+            "
+chainId              {}
+gas                  {}
+gasPrice             {}
+gasPayment           {}
+hash                 {}
+input                {}
+nonce                {}
+r                    {}
+s                    {}
+to                   {}
+type                 {}
+yParity              {}
+value                {}
+encryptionNonce      {}
+encryptionPubkey     {}
+messageVersion       {}
+recentBlockHash      {}
+expiresAtBlock       {}
+signedRead           {}
+authorizationList    {}",
+            tx.chain_id.pretty(),
+            tx.gas_limit.pretty(),
+            tx.gas_price.pretty(),
+            tx.gas_payment.pretty(),
+            self.hash().pretty(),
+            tx.input.pretty(),
+            tx.nonce.pretty(),
+            FixedBytes::from(self.signature().r()).pretty(),
+            FixedBytes::from(self.signature().s()).pretty(),
+            tx.to().pretty(),
+            seismic_prelude::foundry::SEISMIC_TX_TYPE_ID,
+            u64::from(self.signature().v()).pretty(),
+            tx.value.pretty(),
+            elements.encryption_nonce,
+            elements.encryption_pubkey,
+            elements.message_version,
+            elements.recent_block_hash.pretty(),
+            elements.expires_at_block.pretty(),
+            elements.signed_read,
+            tx.authorization_list.pretty(),
+        )
     }
 }
 
@@ -850,6 +891,7 @@ pub fn get_pretty_tx_attr(transaction: &Transaction<AnyTxEnvelope>, attr: &str) 
             TxEnvelope::Eip7702(tx) => Some(tx.signature()),
             TxEnvelope::Legacy(tx) => Some(tx.signature()),
         },
+        AnyTxEnvelope::Seismic(tx) => Some(tx.signature()),
         _ => None,
     };
     match attr {
@@ -858,6 +900,10 @@ pub fn get_pretty_tx_attr(transaction: &Transaction<AnyTxEnvelope>, attr: &str) 
         "from" => Some(transaction.inner.signer().pretty()),
         "gas" => Some(transaction.gas_limit().pretty()),
         "gasPrice" | "gas_price" => Some(Transaction::gas_price(transaction).pretty()),
+        "gasPayment" | "gas_payment" => match transaction.inner.inner() {
+            AnyTxEnvelope::Seismic(tx) => Some(tx.tx().gas_payment.pretty()),
+            _ => None,
+        },
         "hash" => Some(alloy_network::TransactionResponse::tx_hash(transaction).pretty()),
         "input" => Some(transaction.input().pretty()),
         "nonce" => Some(transaction.nonce().to_string()),
@@ -1350,6 +1396,53 @@ value                0".to_string();
             .pretty(),
             "0x0000000000000000000000000000000000000000000000000000000000000064",
         );
+    }
+
+    #[test]
+    fn gas_payment_pretty_seismic_transaction() {
+        use alloy_consensus::{SignableTransaction, TxLegacy, transaction::Recovered};
+        use alloy_primitives::Signature;
+        use seismic_alloy_consensus::GasPayment;
+        use seismic_prelude::foundry::TxSeismic;
+
+        for (payment, expected) in [
+            (GasPayment::Auto, "auto"),
+            (GasPayment::Native, "native"),
+            (
+                GasPayment::Token(Address::repeat_byte(0x22)),
+                "token:0x2222222222222222222222222222222222222222",
+            ),
+        ] {
+            let signed = TxSeismic { gas_payment: payment, ..Default::default() }
+                .into_signed(Signature::new(U256::from(1), U256::from(1), false));
+            let pretty = signed.pretty();
+            assert!(pretty.contains(&format!("gasPayment           {expected}")));
+            assert!(pretty.contains("type                 74"));
+            assert!(pretty.contains("signedRead           false"));
+            let response = Transaction::from_transaction(
+                Recovered::new_unchecked(AnyTxEnvelope::Seismic(signed), Address::ZERO),
+                Default::default(),
+            );
+            for attr in ["gasPayment", "gas_payment"] {
+                assert_eq!(get_pretty_tx_attr(&response, attr).as_deref(), Some(expected));
+            }
+            assert!(get_pretty_tx_attr(&response, "r").is_some());
+            assert!(get_pretty_tx_attr(&response, "s").is_some());
+        }
+        let standard = Transaction::from_transaction(
+            Recovered::new_unchecked(
+                AnyTxEnvelope::Ethereum(TxEnvelope::Legacy(
+                    TxLegacy::default().into_signed(Signature::new(
+                        U256::from(1),
+                        U256::from(1),
+                        false,
+                    )),
+                )),
+                Address::ZERO,
+            ),
+            Default::default(),
+        );
+        assert_eq!(get_pretty_tx_attr(&standard, "gasPayment"), None);
     }
 
     #[test]

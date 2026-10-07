@@ -133,6 +133,9 @@ pub struct CallArgs {
     #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
     pub seismic: Option<Option<String>>,
 
+    #[command(flatten)]
+    gas_payment: seismic_utils::GasPaymentArgs,
+
     #[command(subcommand)]
     command: Option<CallSubcommands>,
 
@@ -229,6 +232,7 @@ impl CallArgs {
             data,
             with_local_artifacts,
             seismic,
+            gas_payment,
             disable_labels,
             ..
         } = self;
@@ -237,8 +241,10 @@ impl CallArgs {
             sig = Some(data);
         }
 
-        let provider = utils::get_provider(&config)?;
         let is_seismic = seismic.is_some();
+        // --trace follows the local, unencrypted execution path below.
+        let gas_payment = gas_payment.resolve(is_seismic && !trace)?;
+        let provider = utils::get_provider(&config)?;
 
         let sender = SenderKind::from_wallet_opts(eth.wallet.clone()).await?;
         let from = sender.address();
@@ -387,6 +393,7 @@ impl CallArgs {
             let network_pubkey = provider.get_tee_pubkey().await?;
             let original_input = tx.inner.input.input().unwrap_or_default().clone();
 
+            tx.gas_payment = gas_payment;
             seismic_utils::prepare_seismic_fields(&mut tx, seismic_elements.clone());
             seismic_utils::encrypt_tx_input(
                 &mut tx,

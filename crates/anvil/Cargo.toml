@@ -34,6 +34,7 @@ foundry-evm.workspace = true
 foundry-evm-core.workspace = true
 # alloy
 alloy-evm = { workspace = true, features = ["call-util"] }
+alloy-seismic-evm.workspace = true
 alloy-op-evm.workspace = true
 alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-consensus = { workspace = true, features = ["k256", "kzg"] }
@@ -94,6 +95,7 @@ thiserror.workspace = true
 yansi.workspace = true
 tempfile.workspace = true
 itertools.workspace = true
+rand.workspace = true
 rand_08.workspace = true
 eyre.workspace = true
 
@@ -122,7 +124,6 @@ alloy-transport-ws.workspace = true
 alloy-json-rpc.workspace = true
 alloy-provider = { workspace = true, features = ["txpool-api", "reqwest"] }
 alloy-pubsub.workspace = true
-rand.workspace = true
 foundry-test-utils.workspace = true
 tokio = { workspace = true, features = ["full"] }
 url = "2.5"

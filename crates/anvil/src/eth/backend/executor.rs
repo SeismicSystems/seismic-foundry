@@ -494,6 +494,11 @@ where
     I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>> + Inspector<SeismicContext<DB>>,
 {
     let spec = env.evm_env.cfg_env.spec;
+    // Keep sanvil's well-known tx-io key and per-EVM random RNG material.
+    let purpose_keys = alloy_seismic_evm::PurposeKeys {
+        tx_io: seismic_crypto::well_known_tx_io_keypair(),
+        rng_ikm: rand::random(),
+    };
     let eth_context = SeismicContext {
         journaled_state: {
             let mut journal = Journal::new(db);
@@ -506,8 +511,9 @@ where
         // See: https://github.com/SeismicSystems/seismic-revm/issues/199
         tx: SeismicTransaction::new(env.tx.base.clone())
             .with_tx_hash(env.tx.tx_hash)
-            .with_signed_read(env.tx.signed_read),
-        chain: SeismicChain::with_random_rng_key(),
+            .with_signed_read(env.tx.signed_read)
+            .with_gas_payment(env.tx.gas_payment),
+        chain: SeismicChain::with_live_rng_key(purpose_keys.rng_ikm),
         local: LocalContext::default(),
         error: Ok(()),
     };
@@ -519,7 +525,11 @@ where
         SeismicInstructions::default(),
         eth_precompiles,
     );
-    EitherEvm::Seismic(SeismicEvm::new(eth_evm, true))
+    EitherEvm::Seismic(SeismicEvm::new(
+        eth_evm,
+        true,
+        Arc::new(alloy_seismic_evm::keyring::PurposeKeyring::single_epoch(purpose_keys)),
+    ))
     /*
     if env.is_optimism {
         let op_cfg = env.evm_env.cfg_env.clone().with_spec(op_revm::OpSpecId::ISTHMUS);

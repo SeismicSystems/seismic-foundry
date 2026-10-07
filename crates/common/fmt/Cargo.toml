@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 seismic-prelude.workspace = true
+seismic-alloy-consensus.workspace = true
 
 alloy-primitives.workspace = true
 alloy-dyn-abi = { workspace = true, features = ["eip712", "seismic"] }

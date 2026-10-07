@@ -3,7 +3,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-use alloy_consensus::{Header, TxEnvelope};
+use alloy_consensus::Header;
 use alloy_dyn_abi::{DynSolType, DynSolValue, FunctionExt};
 use alloy_ens::NameOrAddress;
 use alloy_json_abi::Function;
@@ -49,7 +49,9 @@ use tokio::signal::ctrl_c;
 use foundry_common::abi::encode_function_args_packed;
 pub use foundry_evm::*;
 
-use seismic_prelude::foundry::{AnyNetwork, AnyRpcTransaction, AnyTxEnvelope, TransactionRequest};
+use seismic_prelude::foundry::{
+    AnyNetwork, AnyRpcTransaction, AnyTxEnvelope, TransactionRequest, TxEnvelope,
+};
 
 pub mod args;
 pub mod cmd;
@@ -2327,6 +2329,48 @@ fn explorer_client(
 mod tests {
     use super::{DynSolValue, SimpleCast as Cast, serialize_value_as_json};
     use alloy_primitives::hex;
+
+    #[test]
+    fn gas_payment_shared_raw_transaction_vectors() {
+        use super::SimpleCast;
+        use alloy_consensus::SignableTransaction;
+        use alloy_eips::Encodable2718;
+        use alloy_primitives::B256;
+        use seismic_prelude::foundry::TxEnvelope;
+
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../testdata/gas-payment.json")).unwrap();
+        let signer = fixture["privateKey"]
+            .as_str()
+            .unwrap()
+            .parse::<alloy_signer_local::PrivateKeySigner>()
+            .unwrap()
+            .address();
+        let vectors = fixture["vectors"].as_array().unwrap();
+        assert_eq!(vectors.len(), 36);
+        for vector in vectors {
+            let raw = vector["signed"].as_str().unwrap();
+            if vector["tx"]["signedRead"].as_bool().unwrap() {
+                assert!(SimpleCast::decode_raw_transaction(raw).is_err());
+                continue;
+            }
+            let envelope = SimpleCast::decode_raw_transaction(raw).unwrap();
+            assert_eq!(hex::encode_prefixed(envelope.encoded_2718()), raw);
+            let TxEnvelope::Seismic(tx) = envelope else { panic!("expected Seismic") };
+            assert_eq!(
+                serde_json::to_value(tx.tx().gas_payment).unwrap(),
+                vector["tx"]["gasPayment"]
+            );
+            assert_eq!(*tx.hash(), vector["txHash"].as_str().unwrap().parse::<B256>().unwrap());
+            assert_eq!(
+                tx.tx().signature_hash(),
+                vector["signingHash"].as_str().unwrap().parse::<B256>().unwrap()
+            );
+            assert_eq!(tx.recover_signer().unwrap(), signer);
+        }
+        // Unknown envelopes must not become accepted just to support Seismic.
+        assert!(SimpleCast::decode_raw_transaction("0x7fc0").is_err());
+    }
 
     #[test]
     fn simple_selector() {

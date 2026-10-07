@@ -1747,6 +1747,7 @@ impl Backend {
                         .. // Rest of the gas fees related fields are taken from `fee_details`
                     },
                     seismic_elements: _,
+                    gas_payment,
                 },
             other: _,
         } = request;
@@ -1817,7 +1818,9 @@ impl Backend {
             ..Default::default()
         };
         base.set_signed_authorization(authorization_list.unwrap_or_default());
-        env.tx = OpTransaction { base, ..Default::default() }.with_signed_read(signed_read);
+        env.tx = OpTransaction { base, ..Default::default() }
+            .with_signed_read(signed_read)
+            .with_gas_payment(alloy_evm::tx::gas_payment_to_env(gas_payment));
 
         if let Some(nonce) = nonce {
             env.tx.base.nonce = nonce;

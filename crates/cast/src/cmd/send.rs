@@ -50,6 +50,9 @@ pub struct SendTxArgs {
     #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
     pub seismic: Option<Option<String>>,
 
+    #[command(flatten)]
+    gas_payment: seismic_utils::GasPaymentArgs,
+
     #[command(subcommand)]
     command: Option<SendTxSubcommands>,
 
@@ -110,7 +113,9 @@ impl SendTxArgs {
             path,
             timeout,
             seismic,
+            gas_payment,
         } = self;
+        let gas_payment = gas_payment.resolve(seismic.is_some())?;
 
         let blob_data = if let Some(path) = path { Some(std::fs::read(path)?) } else { None };
 
@@ -174,6 +179,7 @@ impl SendTxArgs {
             let network_pubkey = provider.get_tee_pubkey().await?;
             let original_input = tx.inner.input.input().unwrap_or_default().clone();
 
+            tx.gas_payment = gas_payment;
             seismic_utils::prepare_seismic_fields(&mut tx, seismic_elements);
 
             let wallet = EthereumWallet::from(signer);
