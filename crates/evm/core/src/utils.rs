@@ -137,6 +137,9 @@ pub fn configure_tx_req_env(
     impersonated_from: Option<Address>,
 ) -> eyre::Result<()> {
     // If no transaction type is provided, we need to infer it from the other fields.
+    // `minimal_tx_type` is upstream Alloy's and never infers the Seismic type: callers that
+    // want Seismic semantics (and therefore an explicit gas payment) must set
+    // `transaction_type = SEISMIC_TX_TYPE_ID` themselves, as scast does.
     let tx_type = tx.transaction_type.unwrap_or_else(|| tx.minimal_tx_type() as u8);
     tx.gas_payment.validate().map_err(|_| eyre::eyre!("invalid gas payment selector"))?;
     if tx_type != seismic_prelude::foundry::SEISMIC_TX_TYPE_ID

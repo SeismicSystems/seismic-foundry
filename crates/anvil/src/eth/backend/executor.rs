@@ -494,7 +494,10 @@ where
     I: Inspector<EthEvmContext<DB>> + Inspector<OpContext<DB>> + Inspector<SeismicContext<DB>>,
 {
     let spec = env.evm_env.cfg_env.spec;
-    // Keep sanvil's well-known tx-io key and per-EVM random RNG material.
+    // Keep sanvil's well-known tx-io key and per-EVM random RNG material (matching the old
+    // `with_random_rng_key`). The keyring is authoritative: `SeismicEvm` overwrites the
+    // chain's RNG key with the selected epoch's `rng_ikm` on first use, so the chain below
+    // must be seeded from the same `PurposeKeys` or the precompile would silently diverge.
     let purpose_keys = alloy_seismic_evm::PurposeKeys {
         tx_io: seismic_crypto::well_known_tx_io_keypair(),
         rng_ikm: rand::random(),
