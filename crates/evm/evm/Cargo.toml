@@ -14,6 +14,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+seismic-prelude.workspace = true
+
 foundry-cheatcodes.workspace = true
 foundry-common.workspace = true
 foundry-compilers.workspace = true

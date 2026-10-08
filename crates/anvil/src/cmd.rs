@@ -219,6 +219,8 @@ impl NodeArgs {
             Some(hf) => {
                 if self.evm.optimism {
                     Some(OpHardfork::from_str(hf)?.into())
+                } else if self.evm.seismic {
+                    Some(crate::hardfork::SeismicHardfork::from_str(hf)?.into())
                 } else {
                     Some(EthereumHardfork::from_str(hf)?.into())
                 }
@@ -227,6 +229,7 @@ impl NodeArgs {
         };
 
         Ok(NodeConfig::default()
+            .with_seismic(self.evm.seismic)
             .with_gas_limit(self.evm.gas_limit)
             .disable_block_gas_limit(self.evm.disable_block_gas_limit)
             .with_gas_price(self.evm.gas_price)
@@ -589,6 +592,10 @@ pub struct AnvilEvmArgs {
     /// Run an Optimism chain
     #[arg(long, visible_alias = "optimism")]
     pub optimism: bool,
+
+    /// Run a Seismic chain
+    #[arg(long, visible_alias = "seismic")]
+    pub seismic: bool,
 
     /// Disable the default create2 deployer
     #[arg(long, visible_alias = "no-create2")]

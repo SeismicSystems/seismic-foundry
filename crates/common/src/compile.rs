@@ -217,7 +217,9 @@ impl ProjectCompiler {
         })?;
 
         if bail && output.has_compiler_errors() {
-            eyre::bail!("{output}")
+            {
+                eyre::bail!("{output}");
+            }
         }
 
         if !quiet {

@@ -79,7 +79,9 @@ impl Cheatcode for bound_0Call {
     fn apply(&self, state: &mut Cheatcodes) -> Result {
         let Self { current, min, max } = *self;
         let Some(mutated) = U256::bound(current, min, max, state.test_runner()) else {
-            bail!("cannot bound {current} in [{min}, {max}] range")
+            {
+                bail!("cannot bound {current} in [{min}, {max}] range");
+            }
         };
         Ok(mutated.abi_encode())
     }
@@ -89,7 +91,9 @@ impl Cheatcode for bound_1Call {
     fn apply(&self, state: &mut Cheatcodes) -> Result {
         let Self { current, min, max } = *self;
         let Some(mutated) = I256::bound(current, min, max, state.test_runner()) else {
-            bail!("cannot bound {current} in [{min}, {max}] range")
+            {
+                bail!("cannot bound {current} in [{min}, {max}] range");
+            }
         };
         Ok(mutated.abi_encode())
     }
@@ -224,7 +228,9 @@ impl Cheatcode for interceptInitcodeCall {
         if !state.intercept_next_create_call {
             state.intercept_next_create_call = true;
         } else {
-            bail!("vm.interceptInitcode() has already been called")
+            {
+                bail!("vm.interceptInitcode() has already been called");
+            }
         }
         Ok(Default::default())
     }

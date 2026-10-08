@@ -27,7 +27,7 @@ impl ChiselSession {
             foundry_test_utils::util::initialize(project.root());
         }
 
-        let bin = env!("CARGO_BIN_EXE_chisel");
+        let bin = env!("CARGO_BIN_EXE_schisel");
         let mut command = std::process::Command::new(bin);
 
         // TODO: TTY works but logs become unreadable.

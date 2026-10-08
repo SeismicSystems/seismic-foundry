@@ -1,6 +1,7 @@
 use alloy_primitives::Bytes;
-use alloy_rpc_types::TransactionRequest;
 use serde::Deserialize;
+
+use seismic_prelude::foundry::TransactionRequest;
 
 /// Represents the options used in `anvil_reorg`
 #[derive(Debug, Clone, Deserialize)]

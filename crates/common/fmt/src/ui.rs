@@ -1,12 +1,7 @@
 //! Helper trait and functions to format Ethereum types.
 
-use alloy_consensus::{
-    Eip658Value, Receipt, ReceiptWithBloom, Transaction as TxTrait, TxEnvelope, TxType, Typed2718,
-};
-use alloy_network::{
-    AnyHeader, AnyReceiptEnvelope, AnyRpcBlock, AnyRpcTransaction, AnyTransactionReceipt,
-    AnyTxEnvelope, ReceiptResponse,
-};
+use alloy_consensus::{Eip658Value, Transaction as TxTrait, TxEnvelope, TxType, Typed2718};
+use alloy_network::{AnyHeader, ReceiptResponse};
 use alloy_primitives::{Address, Bloom, Bytes, FixedBytes, I256, U8, U64, U256, Uint, hex};
 use alloy_rpc_types::{
     AccessListItem, Block, BlockTransactions, Header, Log, Transaction, TransactionReceipt,
@@ -14,6 +9,10 @@ use alloy_rpc_types::{
 use alloy_serde::{OtherFields, WithOtherFields};
 use revm::context_interface::transaction::SignedAuthorization;
 use serde::Deserialize;
+
+use seismic_prelude::foundry::{
+    AnyRpcBlock, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope,
+};
 
 /// length of the name column for pretty formatting `{:>20}{value}`
 const NAME_COLUMN_LEN: usize = 20usize;
@@ -172,20 +171,18 @@ impl UIfmt for AnyTransactionReceipt {
                     gas_used,
                     contract_address,
                     effective_gas_price,
-                    inner:
-                        AnyReceiptEnvelope {
-                            r#type: transaction_type,
-                            inner:
-                                ReceiptWithBloom {
-                                    receipt: Receipt { status, cumulative_gas_used, logs },
-                                    logs_bloom,
-                                },
-                        },
+                    inner,
                     blob_gas_price,
                     blob_gas_used,
                 },
             other,
         } = self;
+
+        let cumulative_gas_used = inner.cumulative_gas_used();
+        let logs = inner.logs();
+        let logs_bloom = inner.logs_bloom();
+        let status = inner.status();
+        let transaction_type = inner.tx_type();
 
         let mut pretty = format!(
             "
@@ -508,9 +505,71 @@ type                 {}
                     tx.inner.fields.pretty(),
                 )
             }
+            Self::Seismic(tx) => tx.pretty(),
         }
     }
 }
+
+impl UIfmt for seismic_alloy_consensus::GasPayment {
+    fn pretty(&self) -> String {
+        match self {
+            Self::Auto => "auto".to_string(),
+            Self::Native => "native".to_string(),
+            Self::Token(token) => format!("token:{}", token.pretty()),
+        }
+    }
+}
+
+impl UIfmt for alloy_consensus::Signed<seismic_prelude::foundry::TxSeismic> {
+    fn pretty(&self) -> String {
+        let tx = self.tx();
+        let elements = &tx.seismic_elements;
+        format!(
+            "
+chainId              {}
+gas                  {}
+gasPrice             {}
+gasPayment           {}
+hash                 {}
+input                {}
+nonce                {}
+r                    {}
+s                    {}
+to                   {}
+type                 {}
+yParity              {}
+value                {}
+encryptionNonce      {}
+encryptionPubkey     {}
+messageVersion       {}
+recentBlockHash      {}
+expiresAtBlock       {}
+signedRead           {}
+authorizationList    {}",
+            tx.chain_id.pretty(),
+            tx.gas_limit.pretty(),
+            tx.gas_price.pretty(),
+            tx.gas_payment.pretty(),
+            self.hash().pretty(),
+            tx.input.pretty(),
+            tx.nonce.pretty(),
+            FixedBytes::from(self.signature().r()).pretty(),
+            FixedBytes::from(self.signature().s()).pretty(),
+            tx.to().pretty(),
+            seismic_prelude::foundry::SEISMIC_TX_TYPE_ID,
+            u64::from(self.signature().v()).pretty(),
+            tx.value.pretty(),
+            elements.encryption_nonce,
+            elements.encryption_pubkey,
+            elements.message_version,
+            elements.recent_block_hash.pretty(),
+            elements.expires_at_block.pretty(),
+            elements.signed_read,
+            tx.authorization_list.pretty(),
+        )
+    }
+}
+
 impl UIfmt for Transaction {
     fn pretty(&self) -> String {
         match &self.inner.inner() {
@@ -832,6 +891,7 @@ pub fn get_pretty_tx_attr(transaction: &Transaction<AnyTxEnvelope>, attr: &str) 
             TxEnvelope::Eip7702(tx) => Some(tx.signature()),
             TxEnvelope::Legacy(tx) => Some(tx.signature()),
         },
+        AnyTxEnvelope::Seismic(tx) => Some(tx.signature()),
         _ => None,
     };
     match attr {
@@ -840,6 +900,10 @@ pub fn get_pretty_tx_attr(transaction: &Transaction<AnyTxEnvelope>, attr: &str) 
         "from" => Some(transaction.inner.signer().pretty()),
         "gas" => Some(transaction.gas_limit().pretty()),
         "gasPrice" | "gas_price" => Some(Transaction::gas_price(transaction).pretty()),
+        "gasPayment" | "gas_payment" => match transaction.inner.inner() {
+            AnyTxEnvelope::Seismic(tx) => Some(tx.tx().gas_payment.pretty()),
+            _ => None,
+        },
         "hash" => Some(alloy_network::TransactionResponse::tx_hash(transaction).pretty()),
         "input" => Some(transaction.input().pretty()),
         "nonce" => Some(transaction.nonce().to_string()),
@@ -1332,6 +1396,53 @@ value                0".to_string();
             .pretty(),
             "0x0000000000000000000000000000000000000000000000000000000000000064",
         );
+    }
+
+    #[test]
+    fn gas_payment_pretty_seismic_transaction() {
+        use alloy_consensus::{SignableTransaction, TxLegacy, transaction::Recovered};
+        use alloy_primitives::Signature;
+        use seismic_alloy_consensus::GasPayment;
+        use seismic_prelude::foundry::TxSeismic;
+
+        for (payment, expected) in [
+            (GasPayment::Auto, "auto"),
+            (GasPayment::Native, "native"),
+            (
+                GasPayment::Token(Address::repeat_byte(0x22)),
+                "token:0x2222222222222222222222222222222222222222",
+            ),
+        ] {
+            let signed = TxSeismic { gas_payment: payment, ..Default::default() }
+                .into_signed(Signature::new(U256::from(1), U256::from(1), false));
+            let pretty = signed.pretty();
+            assert!(pretty.contains(&format!("gasPayment           {expected}")));
+            assert!(pretty.contains("type                 74"));
+            assert!(pretty.contains("signedRead           false"));
+            let response = Transaction::from_transaction(
+                Recovered::new_unchecked(AnyTxEnvelope::Seismic(signed), Address::ZERO),
+                Default::default(),
+            );
+            for attr in ["gasPayment", "gas_payment"] {
+                assert_eq!(get_pretty_tx_attr(&response, attr).as_deref(), Some(expected));
+            }
+            assert!(get_pretty_tx_attr(&response, "r").is_some());
+            assert!(get_pretty_tx_attr(&response, "s").is_some());
+        }
+        let standard = Transaction::from_transaction(
+            Recovered::new_unchecked(
+                AnyTxEnvelope::Ethereum(TxEnvelope::Legacy(
+                    TxLegacy::default().into_signed(Signature::new(
+                        U256::from(1),
+                        U256::from(1),
+                        false,
+                    )),
+                )),
+                Address::ZERO,
+            ),
+            Default::default(),
+        );
+        assert_eq!(get_pretty_tx_attr(&standard, "gasPayment"), None);
     }
 
     #[test]

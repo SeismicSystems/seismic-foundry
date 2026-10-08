@@ -4,10 +4,7 @@ use crate::eth::{
     macros::node_info,
 };
 use alloy_consensus::Transaction as TransactionTrait;
-use alloy_network::{
-    AnyHeader, AnyRpcBlock, AnyRpcHeader, AnyRpcTransaction, AnyTxEnvelope, BlockResponse,
-    TransactionResponse,
-};
+use alloy_network::{AnyHeader, AnyRpcHeader, BlockResponse, TransactionResponse};
 use alloy_primitives::{Address, B256, Bytes, U256};
 use alloy_rpc_types::{
     Block, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions,
@@ -20,6 +17,9 @@ use alloy_rpc_types::{
     },
 };
 use futures::future::join_all;
+
+use seismic_prelude::foundry::{AnyRpcBlock, AnyRpcTransaction, AnyTxEnvelope};
+
 use itertools::Itertools;
 
 impl EthApi {

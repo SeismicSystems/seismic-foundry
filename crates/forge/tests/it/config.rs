@@ -11,8 +11,12 @@ use foundry_evm::{
 use foundry_test_utils::{Filter, init_tracing};
 use futures::future::join_all;
 use itertools::Itertools;
+/*
 use revm::primitives::hardfork::SpecId;
+*/
 use std::collections::BTreeMap;
+
+use seismic_prelude::foundry::SpecId;
 
 /// How to execute a test run.
 pub struct TestConfig {
@@ -84,14 +88,16 @@ impl TestConfig {
                     .await
                     .into_iter()
                     .collect::<Vec<String>>();
-                    eyre::bail!(
-                        "Test {} did not {} as expected.\nReason: {:?}\nLogs:\n{}\n\nTraces:\n{}",
-                        test_name,
-                        outcome,
-                        result.reason,
-                        logs.join("\n"),
-                        decoded_traces.into_iter().format("\n"),
-                    )
+                    {
+                        eyre::bail!(
+                            "Test {} did not {} as expected.\nReason: {:?}\nLogs:\n{}\n\nTraces:\n{}",
+                            test_name,
+                            outcome,
+                            result.reason,
+                            logs.join("\n"),
+                            decoded_traces.into_iter().format("\n"),
+                        );
+                    }
                 }
             }
         }

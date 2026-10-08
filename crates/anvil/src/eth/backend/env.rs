@@ -1,14 +1,17 @@
-use alloy_evm::EvmEnv;
+use alloy_evm::EvmEnv as AlloyEvmEnv;
 use foundry_evm::EnvMut;
 use foundry_evm_core::AsEnvMut;
-use op_revm::OpTransaction;
-use revm::context::{BlockEnv, CfgEnv, TxEnv};
+use revm::context::{BlockEnv, TxEnv};
+
+use seismic_prelude::foundry::{CfgEnv, OpTransaction, SpecId};
+type EvmEnv = AlloyEvmEnv<SpecId>;
 
 /// Helper container type for [`EvmEnv`] and [`OpTransaction<TxEnd>`].
 #[derive(Clone, Debug, Default)]
 pub struct Env {
     pub evm_env: EvmEnv,
     pub tx: OpTransaction<TxEnv>,
+    pub is_seismic: bool,
     pub is_optimism: bool,
     pub is_celo: bool,
 }
@@ -22,7 +25,13 @@ impl Env {
         is_optimism: bool,
         is_celo: bool,
     ) -> Self {
-        Self { evm_env: EvmEnv { cfg_env: cfg, block_env: block }, tx, is_optimism, is_celo }
+        Self {
+            evm_env: EvmEnv { cfg_env: cfg, block_env: block },
+            tx,
+            is_seismic: true,
+            is_optimism,
+            is_celo,
+        }
     }
 }
 
@@ -31,7 +40,7 @@ impl AsEnvMut for Env {
         EnvMut {
             block: &mut self.evm_env.block_env,
             cfg: &mut self.evm_env.cfg_env,
-            tx: &mut self.tx.base,
+            tx: &mut self.tx,
         }
     }
 }

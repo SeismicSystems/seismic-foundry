@@ -18,7 +18,6 @@ static RUN_SELECTOR: [u8; 4] = [0xc0, 0x40, 0x62, 0x26];
 ///
 /// Based off of foundry's forge cli runner for scripting.
 /// See: [runner](cli::cmd::forge::script::runner.rs)
-#[derive(Debug)]
 pub struct ChiselRunner {
     /// The Executor
     pub executor: Executor,

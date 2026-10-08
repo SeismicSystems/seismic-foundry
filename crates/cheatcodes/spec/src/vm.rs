@@ -531,6 +531,16 @@ interface Vm {
     #[cheatcode(group = Evm, safety = Unsafe)]
     function txGasPrice(uint256 newGasPrice) external;
 
+    /// Sets the EIP-2718 transaction type for subsequent calls, so `txtype()` /
+    /// `TxUtils.isSeismicTx()` can be exercised in tests (e.g. `74` for a Seismic tx).
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function txType(uint8 newTxType) external;
+
+    /// Sets the raw `signed_read` flag for subsequent calls. `TxUtils.isSignedRead()` only returns
+    /// true when this is paired with a Seismic tx type, so also call `vm.txType(0x4A)`.
+    #[cheatcode(group = Evm, safety = Unsafe)]
+    function signedRead(bool newSignedRead) external;
+
     /// Sets `block.timestamp`.
     #[cheatcode(group = Evm, safety = Unsafe)]
     function warp(uint256 newTimestamp) external;

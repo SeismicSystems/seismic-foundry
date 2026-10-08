@@ -1,5 +1,7 @@
+use super::seismic_utils;
 use crate::tx::{CastTxBuilder, SenderKind};
 use alloy_ens::NameOrAddress;
+use alloy_network::TransactionBuilder;
 use alloy_primitives::U256;
 use alloy_provider::Provider;
 use alloy_rpc_types::BlockId;
@@ -9,6 +11,7 @@ use foundry_cli::{
     opts::{EthereumOpts, TransactionOpts},
     utils::{self, LoadConfig, parse_ether_value},
 };
+use seismic_prelude::foundry::{EthereumWallet, SeismicProviderExt};
 use std::str::FromStr;
 
 /// CLI arguments for `cast estimate`.
@@ -36,6 +39,18 @@ pub struct EstimateArgs {
     /// If not specified the amount of gas will be estimated.
     #[arg(long)]
     cost: bool,
+
+    /// Encrypt calldata and estimate via a signed read (raw signed tx bytes).
+    ///
+    /// --seismic <SK>: use this hex-encoded private key for encryption
+    ///
+    /// --seismic: generate a random ephemeral key
+    ///
+    /// (omit flag): perform a standard `eth_estimateGas`
+    ///
+    /// The seismic path estimates against the latest block; `--block` is ignored.
+    #[arg(long, value_name = "ENCRYPTION_PRIVATE_KEY")]
+    pub seismic: Option<Option<String>>,
 
     #[command(subcommand)]
     command: Option<EstimateSubcommands>,
@@ -74,11 +89,14 @@ pub enum EstimateSubcommands {
 
 impl EstimateArgs {
     pub async fn run(self) -> Result<()> {
-        let Self { to, mut sig, mut args, mut tx, block, cost, eth, command } = self;
+        let Self { to, mut sig, mut args, mut tx, block, cost, eth, command, seismic } = self;
 
         let config = eth.load_config()?;
         let provider = utils::get_provider(&config)?;
-        let sender = SenderKind::from_wallet_opts(eth.wallet).await?;
+        let is_seismic = seismic.is_some();
+
+        let sender = SenderKind::from_wallet_opts(eth.wallet.clone()).await?;
+        let from = sender.address();
 
         let code = if let Some(EstimateSubcommands::Create {
             code,
@@ -97,16 +115,56 @@ impl EstimateArgs {
             None
         };
 
-        let (tx, _) = CastTxBuilder::new(&provider, tx, &config)
+        // For seismic estimates, pre-set a gas limit to skip unsigned gas estimation
+        // in build() — it would run against plaintext calldata. The real (signed)
+        // estimate replaces it below.
+        let user_gas_limit = tx.gas_limit;
+        if is_seismic && tx.gas_limit.is_none() {
+            tx.gas_limit = Some(U256::from(30_000_000));
+        }
+
+        let builder = CastTxBuilder::new(&provider, tx, &config)
             .await?
             .with_to(to)
             .await?
             .with_code_sig_and_args(code, sig, args)
-            .await?
-            .build_raw(sender)
             .await?;
 
-        let gas = provider.estimate_gas(tx).block(block.unwrap_or_default()).await?;
+        let gas = if is_seismic {
+            let signer = eth.wallet.signer().await?;
+
+            // Seismic path uses build() to fill nonce/chainId (needed for signing and
+            // the encryption AAD). Non-seismic uses build_raw() (upstream behavior:
+            // eth_estimateGas doesn't need gas/nonce).
+            let (mut tx, _) = builder.build(sender).await?;
+
+            let encryption_sk = seismic_utils::get_or_generate_encryption_key(seismic.unwrap())?;
+            let (seismic_elements, block_gas_limit) =
+                seismic_utils::create_seismic_elements(&provider, &encryption_sk, true).await?;
+            let network_pubkey = provider.get_tee_pubkey().await?;
+            let original_input = tx.inner.input.input().unwrap_or_default().clone();
+
+            seismic_utils::prepare_seismic_fields(&mut tx, seismic_elements);
+            seismic_utils::encrypt_tx_input(
+                &mut tx,
+                &original_input,
+                &network_pubkey,
+                &encryption_sk,
+                from,
+            )?;
+
+            // Signed reads require a fully formed tx: sign with the block gas limit
+            // unless the user provided one.
+            if user_gas_limit.is_none() {
+                tx.set_gas_limit(block_gas_limit);
+            }
+
+            let wallet = EthereumWallet::from(signer);
+            seismic_utils::request_signed_gas_estimate(&provider, &tx, &wallet).await?
+        } else {
+            let (tx, _) = builder.build_raw(sender).await?;
+            provider.estimate_gas(tx).block(block.unwrap_or_default()).await?
+        };
         if cost {
             let gas_price_wei = provider.get_gas_price().await?;
             let cost = gas_price_wei * gas as u128;

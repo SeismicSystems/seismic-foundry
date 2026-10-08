@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use crate::cmd::{
     bind::BindArgs, bind_json, build::BuildArgs, cache::CacheArgs, clone::CloneArgs,
     compiler::CompilerArgs, config, coverage, create::CreateArgs, doc::DocArgs, eip712, flatten,
@@ -15,7 +16,7 @@ use std::path::PathBuf;
 /// Build, test, fuzz, debug and deploy Solidity contracts.
 #[derive(Parser)]
 #[command(
-    name = "forge",
+    name = "sforge",
     version = SHORT_VERSION,
     long_version = LONG_VERSION,
     after_help = "Find more information in the book: https://getfoundry.sh/forge/overview",
@@ -132,10 +133,10 @@ pub enum ForgeSubcommand {
     /// Format Solidity source files.
     Fmt(FmtArgs),
 
-    /// Lint Solidity source files
-    #[command(visible_alias = "l")]
-    Lint(LintArgs),
-
+    // TODO: Make seismic-solar parse seismic solidity
+    // /// Lint Solidity source files
+    // #[command(visible_alias = "l")]
+    // Lint(LintArgs),
     /// Get specialized information about a smart contract.
     #[command(visible_alias = "in")]
     Inspect(inspect::InspectArgs),

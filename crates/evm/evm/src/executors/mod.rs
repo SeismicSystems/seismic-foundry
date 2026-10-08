@@ -27,20 +27,23 @@ use foundry_evm_core::{
         DEFAULT_CREATE2_DEPLOYER_CODE, DEFAULT_CREATE2_DEPLOYER_DEPLOYER,
     },
     decode::{RevertDecoder, SkipReason},
+    seismic_constants::{
+        AES_LIB, AES_LIB_RUNTIME_CODE, DIRECTORY, DIRECTORY_RUNTIME_CODE, INTELLIGENCE,
+        INTELLIGENCE_RUNTIME_CODE,
+    },
     utils::StateChangeset,
 };
 use foundry_evm_coverage::HitMaps;
 use foundry_evm_traces::{SparsedTraceArena, TraceMode};
 use revm::{
     bytecode::Bytecode,
-    context::{BlockEnv, TxEnv},
+    context::{BlockEnv, TxEnv as RevmTxEnv},
     context_interface::{
         result::{ExecutionResult, Output, ResultAndState},
         transaction::SignedAuthorization,
     },
     database::{DatabaseCommit, DatabaseRef},
     interpreter::{InstructionResult, return_ok},
-    primitives::hardfork::SpecId,
 };
 use std::{
     borrow::Cow,
@@ -50,6 +53,9 @@ use std::{
     },
     time::{Duration, Instant},
 };
+
+use alloy_primitives::FlaggedStorage;
+use seismic_prelude::foundry::SpecId;
 
 mod builder;
 pub use builder::ExecutorBuilder;
@@ -88,7 +94,7 @@ sol! {
 /// - `deploy`: a special case of `transact`, specialized for persisting the state of a contract
 ///   deployment
 /// - `setup`: a special case of `transact`, used to set up the environment for a test
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Executor {
     /// The underlying `revm::Database` that contains the EVM storage.
     // Note: We do not store an EVM here, since we are really
@@ -238,6 +244,22 @@ impl Executor {
         Ok(())
     }
 
+    /// Creates the Directory contract, along with its AES lib dependency.
+    pub fn set_directory(&mut self) -> eyre::Result<()> {
+        self.set_code(AES_LIB, Bytecode::new_raw(Bytes::from_static(AES_LIB_RUNTIME_CODE)))?;
+        self.set_code(DIRECTORY, Bytecode::new_raw(Bytes::from_static(DIRECTORY_RUNTIME_CODE)))?;
+        Ok(())
+    }
+
+    /// Creates the Intelligence contract.
+    pub fn set_intelligence(&mut self) -> eyre::Result<()> {
+        self.set_code(
+            INTELLIGENCE,
+            Bytecode::new_raw(Bytes::from_static(INTELLIGENCE_RUNTIME_CODE)),
+        )?;
+        Ok(())
+    }
+
     /// Set the balance of an account.
     pub fn set_balance(&mut self, address: Address, amount: U256) -> BackendResult<()> {
         trace!(?address, ?amount, "setting account balance");
@@ -279,7 +301,7 @@ impl Executor {
     pub fn set_storage(
         &mut self,
         address: Address,
-        storage: HashMap<U256, U256>,
+        storage: HashMap<U256, FlaggedStorage>,
     ) -> BackendResult<()> {
         self.backend_mut().replace_account_storage(address, storage)?;
         Ok(())
@@ -290,7 +312,7 @@ impl Executor {
         &mut self,
         address: Address,
         slot: U256,
-        value: U256,
+        value: FlaggedStorage,
     ) -> BackendResult<()> {
         self.backend_mut().insert_account_storage(address, slot, value)?;
         Ok(())
@@ -714,7 +736,7 @@ impl Executor {
                     ..self.env().evm_env.block_env.clone()
                 },
             },
-            tx: TxEnv {
+            tx: RevmTxEnv {
                 caller,
                 kind,
                 data,
@@ -724,8 +746,9 @@ impl Executor {
                 gas_priority_fee: None,
                 gas_limit: self.gas_limit,
                 chain_id: Some(self.env().evm_env.cfg_env.chain_id),
-                ..self.env().tx.clone()
-            },
+                ..self.env().tx.base.clone()
+            }
+            .into(),
         }
     }
 
@@ -1052,7 +1075,7 @@ fn convert_executed_result(
         }
     };
     let gas = revm::interpreter::gas::calculate_initial_tx_gas(
-        env.evm_env.cfg_env.spec,
+        env.evm_env.cfg_env.spec.into(),
         &env.tx.data,
         env.tx.kind.is_create(),
         env.tx.access_list.len().try_into()?,
@@ -1158,5 +1181,88 @@ impl FailFast {
     /// Whether a failure has been recorded and test should stop.
     pub fn should_stop(&self) -> bool {
         self.inner.as_ref().map(|flag| flag.load(Ordering::Relaxed)).unwrap_or(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_primitives::B256;
+
+    /// Tests that the RNG precompile produces different output across separate transactions
+    /// when executed through the foundry-evm Executor (no anvil required).
+    ///
+    /// Deploys a minimal contract that calls the RNG precompile (0x64) and stores the
+    /// 32-byte result in storage slot 0. Three separate `transact_raw` calls should each
+    /// produce a different RNG value because each transaction should have a unique tx_hash
+    /// used as the RNG seed.
+    #[test]
+    fn test_rng_precompile_different_per_tx() {
+        let backend = Backend::spawn(None).unwrap();
+        let mut env = Env::default_with_spec_id(SpecId::MERCURY);
+        env.evm_env.cfg_env.disable_nonce_check = true;
+        let mut executor =
+            ExecutorBuilder::new().spec_id(SpecId::MERCURY).gas_limit(u64::MAX).build(env, backend);
+
+        let caller = Address::repeat_byte(0x01);
+        executor.set_balance(caller, U256::MAX).unwrap();
+
+        // Minimal contract that calls the RNG precompile (0x64), requesting 32
+        // random bytes, stores the result in slot 0, and returns it.
+        //
+        // Solidity equivalent:
+        //   fallback() external {
+        //       (bool ok, bytes memory result) = address(0x64).staticcall(hex"00000020");
+        //       assembly { sstore(0, mload(add(result, 32))) }
+        //       assembly { return(0, 32) }
+        //   }
+        //
+        // The deploy prefix (first 12 bytes) CODECOPYs the runtime to memory
+        // and RETURNs it.
+        let deploy_code = alloy_primitives::hex::decode(
+            // deploy prefix (12 bytes) + runtime (32 bytes)
+            "6020600c60003960206000f36300000020600052602060006004601c60645afa5060005160005560206000f3",
+        )
+        .unwrap();
+
+        let deploy_result =
+            executor.deploy(caller, Bytes::from(deploy_code), U256::ZERO, None).unwrap();
+        let contract = deploy_result.address;
+
+        // Call the contract 3 times, each with a unique tx_hash to simulate
+        // distinct transactions. Without setting tx_hash, it defaults to
+        // B256::ZERO and the RNG precompile produces identical output.
+        let mut rng_values = Vec::new();
+        for i in 0..3 {
+            let mut env =
+                executor.build_test_env(caller, TxKind::Call(contract), Bytes::new(), U256::ZERO);
+            env.tx.tx_hash = B256::random();
+            let result = executor.transact_with_env(env).unwrap();
+            assert!(
+                !result.reverted,
+                "RNG call {i} should not revert: exit={:?} result={}",
+                result.exit_reason,
+                alloy_primitives::hex::encode(&result.result)
+            );
+            assert_eq!(result.result.len(), 32, "should return 32 bytes");
+            rng_values.push(result.result.clone());
+        }
+
+        // All three RNG values should be non-zero and distinct
+        for (i, val) in rng_values.iter().enumerate() {
+            assert_ne!(val.as_ref(), &[0u8; 32], "RNG output {i} should not be zero");
+        }
+        assert_ne!(
+            rng_values[0], rng_values[1],
+            "RNG outputs 0 and 1 should differ (tx_hash not propagated?)"
+        );
+        assert_ne!(
+            rng_values[1], rng_values[2],
+            "RNG outputs 1 and 2 should differ (tx_hash not propagated?)"
+        );
+        assert_ne!(
+            rng_values[0], rng_values[2],
+            "RNG outputs 0 and 2 should differ (tx_hash not propagated?)"
+        );
     }
 }
