@@ -44,9 +44,40 @@ The following changes are made to support interacting with Seismic networks usin
 - **`scast send --seismic [ENCRYPTION_PRIVATE_KEY]`**: Adds client-side encryption for send transactions. When the `--seismic` flag is provided, `scast` encrypts the transaction input data before sending. An optional encryption private key can be provided; if omitted, a random key is generated. The encrypted transaction is sent as a Seismic transaction type (`TxSeismic`), with encryption parameters (public key, nonce, message version, block hash, expiry) bundled into `TxSeismicElements`.
   - Without `--gas-limit`, gas estimation uses a separate signed simulation with `signedRead=true`. Its calldata is encrypted with a fresh encryption nonce because the read intent is part of the authenticated metadata. The broadcast transaction is encrypted separately with `signedRead=false`; simulation does not commit state changes.
   - If estimation fails, `scast` warns and falls back to the latest block's gas limit. An explicit `--gas-limit` skips estimation.
-- **`scast call --encryption-private-key [KEY]`**: Adds client-side encryption/decryption for call (read) transactions. Call data is encrypted and sent via `seismic_call()` RPC, and the response is decrypted before being returned.
+- **`scast call --seismic [ENCRYPTION_PRIVATE_KEY]`**: Adds client-side encryption/decryption for signed call (read) transactions. Call data is encrypted and sent through the provider's `seismic_call()` helper, and the response is decrypted before being returned.
 - Both commands fetch the TEE public key from the node (via `get_tee_pubkey()` RPC) to perform secp256k1 key exchange for encryption.
 - EIP-1559 transactions are converted to legacy gas price format for Seismic compatibility.
+
+#### Gas payment
+
+Encrypted `scast send --seismic` and `scast call --seismic` accept
+`--gas-payment auto|native|token:ADDRESS`. Omission resolves to Auto before signing.
+Native and Token are explicit choices without fallback; the token address must be
+nonzero and eligible under the target network's gas-token registry. Auto delegates
+selection to the network and does not identify the fee asset ultimately used.
+
+```bash
+scast send "$CONTRACT" 'setNumber(uint256)' 42 --seismic \
+  --gas-payment "token:$GAS_TOKEN" --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
+scast call "$CONTRACT" 'number()(uint256)' --seismic \
+  --gas-payment native --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
+```
+
+The selector belongs to the signed transaction, not encryption elements or AAD.
+Signed gas estimation preserves the write's selector while using separate read
+metadata and encryption. Explicit Native/Token is rejected on ordinary Ethereum
+routes and the local `call --trace` path; it is never silently dropped. Explicit
+gas limits are preserved.
+
+Type `0x4a` uses only the new mandatory wire format: the nested gas-payment selector
+appears immediately after gas limit. Old signed bytes are not upgraded or accepted
+as a legacy Seismic format. `scast decode-transaction` recognizes this format using
+the Seismic prelude's envelope; its concrete Rust return type differs from upstream
+Alloy's Ethereum envelope. The strict decoder still rejects signed-read bytes and
+unknown transaction types. Decoding exposes public metadata, not plaintext calldata.
+Transaction display and `scast tx HASH gasPayment` expose the signed preference.
+
+This tooling migration does not claim full `sanvil` token-gas execution parity.
 
 ---
 

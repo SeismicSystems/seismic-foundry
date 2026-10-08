@@ -872,6 +872,7 @@ impl Cheatcodes {
                             ..Default::default()
                         },
                         seismic_elements: None,
+                        gas_payment: Default::default(),
                     };
 
                     let active_delegations = std::mem::take(&mut self.active_delegations);
@@ -1632,6 +1633,7 @@ impl Inspector<EthEvmContext<&mut dyn DatabaseExt>> for Cheatcodes {
                             ..Default::default()
                         },
                         seismic_elements: None,
+                        gas_payment: Default::default(),
                     }
                     .into(),
                 });

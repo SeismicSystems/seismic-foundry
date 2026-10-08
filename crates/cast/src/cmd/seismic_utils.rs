@@ -2,17 +2,56 @@
 
 use alloy_consensus::BlockHeader;
 use alloy_network::TransactionBuilder;
-use alloy_primitives::{Bytes, aliases::U96};
+use alloy_primitives::{Address, Bytes, aliases::U96};
 use alloy_provider::Provider;
 use alloy_rpc_types::BlockNumberOrTag;
 use alloy_serde::WithOtherFields;
+use clap::Args;
 use eyre::Result;
 use rand::RngCore;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use seismic_alloy_consensus::GasPayment;
 use seismic_prelude::foundry::{
     AnyNetwork, EthereumWallet, InputDecryptionElements, TransactionRequest, TxSeismicElements,
 };
 use std::str::FromStr;
+
+/// Public payment selection shared by encrypted sends and calls.
+#[derive(Clone, Debug, Default, Args)]
+pub struct GasPaymentArgs {
+    /// Signed fee preference: auto, native, or token:<nonzero token address>.
+    /// Explicit Native/Token requires an encrypted --seismic transaction.
+    #[arg(long, value_name = "auto|native|token:ADDRESS", value_parser = parse_gas_payment)]
+    pub gas_payment: Option<GasPayment>,
+}
+
+impl GasPaymentArgs {
+    /// Resolve omission before signing, without changing transparent routing.
+    pub fn resolve(&self, seismic: bool) -> Result<GasPayment> {
+        let payment = self.gas_payment.unwrap_or_default();
+        if !seismic && payment != GasPayment::Auto {
+            eyre::bail!("Explicit gas payment requires an encrypted --seismic transaction");
+        }
+        Ok(payment)
+    }
+}
+
+fn parse_gas_payment(value: &str) -> Result<GasPayment, String> {
+    match value {
+        "auto" => Ok(GasPayment::Auto),
+        "native" => Ok(GasPayment::Native),
+        _ => {
+            let token = value
+                .strip_prefix("token:")
+                .ok_or_else(|| "Expected auto, native, or token:<address>".to_string())?
+                .parse::<Address>()
+                .map_err(|_| "Invalid gas token address".to_string())?;
+            let payment = GasPayment::Token(token);
+            payment.validate().map_err(|_| "Gas token address must be nonzero".to_string())?;
+            Ok(payment)
+        }
+    }
+}
 
 /// Fetch the latest block and create seismic elements with a real block hash.
 /// Returns both the elements and the block gas limit (to avoid a duplicate RPC
@@ -157,12 +196,89 @@ pub async fn estimate_gas_signed<P: Provider<AnyNetwork>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{Address, B256, TxKind, U256};
+    use alloy_primitives::{B256, TxKind, U256};
     use alloy_provider::ProviderBuilder;
     use alloy_signer_local::PrivateKeySigner;
     use alloy_transport::mock::Asserter;
 
     const BLOCK_GAS_LIMIT: u64 = 30_000_000;
+
+    #[test]
+    fn gas_payment_cli_parsing_and_routing() {
+        use crate::cmd::{call::CallArgs, send::SendTxArgs};
+        use clap::Parser;
+
+        for (value, expected) in [
+            ("auto", GasPayment::Auto),
+            ("native", GasPayment::Native),
+            (
+                "token:0x2222222222222222222222222222222222222222",
+                GasPayment::Token(Address::repeat_byte(0x22)),
+            ),
+        ] {
+            assert_eq!(parse_gas_payment(value).unwrap(), expected);
+            assert!(
+                SendTxArgs::try_parse_from(["send", "--seismic", "--gas-payment", value]).is_ok()
+            );
+            assert!(
+                CallArgs::try_parse_from(["call", "--seismic", "--gas-payment", value]).is_ok()
+            );
+            let args = GasPaymentArgs { gas_payment: Some(expected) };
+            assert_eq!(args.resolve(true).unwrap(), expected);
+            assert_eq!(args.resolve(false).is_ok(), expected == GasPayment::Auto);
+        }
+        assert_eq!(GasPaymentArgs::default().resolve(true).unwrap(), GasPayment::Auto);
+        assert_eq!(GasPaymentArgs::default().resolve(false).unwrap(), GasPayment::Auto);
+
+        for invalid in [
+            "",
+            "Native",
+            "token",
+            "token:0x1234",
+            "token:not-an-address",
+            "token:0x0000000000000000000000000000000000000000",
+        ] {
+            assert!(parse_gas_payment(invalid).is_err(), "accepted {invalid}");
+            assert!(SendTxArgs::try_parse_from(["send", "--gas-payment", invalid]).is_err());
+            assert!(CallArgs::try_parse_from(["call", "--gas-payment", invalid]).is_err());
+        }
+    }
+
+    #[test]
+    fn gas_payment_survives_estimation_without_changing_aad() {
+        let encryption_sk = SecretKey::from_slice(&[1; 32]).unwrap();
+        let network_sk = SecretKey::from_slice(&[2; 32]).unwrap();
+        let network_pk = PublicKey::from_secret_key(&Secp256k1::new(), &network_sk);
+        let sender = Address::repeat_byte(0x11);
+        let input = Bytes::from_static(b"calldata");
+        let original = plaintext_write(sender, input.clone());
+        let mut ciphertext = None;
+
+        for payment in
+            [GasPayment::Auto, GasPayment::Native, GasPayment::Token(Address::repeat_byte(0x22))]
+        {
+            let mut write = original.clone();
+            write.gas_payment = payment;
+            assert_eq!(write.metadata(sender).unwrap(), original.metadata(sender).unwrap());
+            let estimate =
+                prepare_signed_gas_estimate(&write, BLOCK_GAS_LIMIT, &network_pk, &encryption_sk)
+                    .unwrap();
+            assert_eq!(estimate.gas_payment, payment);
+            assert_eq!(write.gas_payment, payment);
+            assert!(estimate.seismic_elements.as_ref().unwrap().signed_read);
+            assert!(!write.seismic_elements.as_ref().unwrap().signed_read);
+            write.set_gas_limit(50_000);
+            encrypt_tx_input(&mut write, &input, &network_pk, &encryption_sk, sender).unwrap();
+            assert_eq!(write.gas_payment, payment);
+            assert_eq!(write.gas_limit(), Some(50_000));
+            let encrypted = write.inner.input.input().unwrap().clone();
+            if let Some(expected) = &ciphertext {
+                assert_eq!(&encrypted, expected, "payment choice must not change AAD");
+            } else {
+                ciphertext = Some(encrypted);
+            }
+        }
+    }
 
     fn plaintext_write(sender: Address, input: Bytes) -> WithOtherFields<TransactionRequest> {
         let mut tx = WithOtherFields::<TransactionRequest>::default();

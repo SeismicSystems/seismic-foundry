@@ -126,6 +126,7 @@ pub async fn get_unsigned_seismic_tx_request(
             ..Default::default()
         },
         seismic_elements: Some(seismic_elements),
+        gas_payment: Default::default(),
     }
 }
 
@@ -175,6 +176,7 @@ pub async fn get_signed_seismic_tx_typed_data(
             ..Default::default()
         },
         seismic_elements: Some(seismic_elements),
+        gas_payment: Default::default(),
     };
 
     let signed = sign_tx(signer.clone(), tx).await;
@@ -442,6 +444,7 @@ async fn test_payable_call_and_estimate_gas_require_signed_request() {
             ..Default::default()
         },
         seismic_elements: None,
+        gas_payment: Default::default(),
     };
 
     let unsigned_call_err = api
@@ -471,6 +474,7 @@ async fn test_payable_call_and_estimate_gas_require_signed_request() {
             ..Default::default()
         },
         seismic_elements: None,
+        gas_payment: Default::default(),
     };
 
     let signed_call = sign_tx(signer.clone(), signed_request).await;
@@ -971,6 +975,7 @@ async fn test_txtype_signed_estimate_classifies_seismic() {
             ..Default::default()
         },
         seismic_elements: None,
+        gas_payment: Default::default(),
     };
     let plain_res =
         api.estimate_gas(WithOtherFields::new(plain).into(), None, EvmOverrides::default()).await;
@@ -1173,6 +1178,7 @@ async fn test_seismic_signed_read_flag() {
             ..Default::default()
         },
         seismic_elements: None,
+        gas_payment: Default::default(),
     };
     let plain_res = api
         .call(

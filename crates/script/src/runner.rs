@@ -82,6 +82,7 @@ impl ScriptRunner {
                             ..Default::default()
                         },
                         seismic_elements: None,
+                        gas_payment: Default::default(),
                     }
                     .into(),
                 })
@@ -120,6 +121,7 @@ impl ScriptRunner {
                                 ..Default::default()
                             },
                             seismic_elements: None,
+                            gas_payment: Default::default(),
                         }
                         .into(),
                     });
