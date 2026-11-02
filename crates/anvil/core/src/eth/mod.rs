@@ -173,7 +173,7 @@ pub enum EthRequest {
     EthSimulateV1(SimulatePayload, #[serde(default)] Option<BlockId>),
 
     #[serde(rename = "eth_createAccessList")]
-    EthCreateAccessList(WithOtherFields<TransactionRequest>, #[serde(default)] Option<BlockId>),
+    EthCreateAccessList(SeismicCallRequest, #[serde(default)] Option<BlockId>),
 
     #[serde(rename = "eth_estimateGas")]
     EthEstimateGas(

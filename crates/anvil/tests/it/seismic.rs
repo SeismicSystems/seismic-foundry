@@ -384,8 +384,9 @@ async fn test_seismic_transaction_rpc() {
 /// Regression test for privacy-preserving unsigned call sanitization.
 ///
 /// A transparent payable call depends on authenticated `from`/`value`
-/// semantics. Unsigned `eth_call` and `eth_estimateGas` requests are sanitized
-/// on Seismic, so they should fail against a contract that gates on `msg.value`.
+/// semantics. Unsigned `eth_call`, `eth_estimateGas` and `eth_createAccessList`
+/// requests are sanitized on Seismic, so they should fail against a contract that
+/// gates on `msg.value`.
 /// The same request should succeed when submitted as signed raw transaction
 /// bytes, because the node can recover the real sender and preserve the
 /// original call context.
@@ -455,11 +456,24 @@ async fn test_payable_call_and_estimate_gas_require_signed_request() {
     assert!(!unsigned_call_err_str.is_empty(), "expected unsigned eth_call to fail");
 
     let unsigned_err = api
-        .estimate_gas(WithOtherFields::new(unsigned_request).into(), None, EvmOverrides::default())
+        .estimate_gas(
+            WithOtherFields::new(unsigned_request.clone()).into(),
+            None,
+            EvmOverrides::default(),
+        )
         .await
         .unwrap_err();
     let err_str = unsigned_err.to_string();
     assert!(!err_str.is_empty(), "expected unsigned estimate_gas to fail");
+
+    let unsigned_access_list_err = api
+        .create_access_list(SeismicCallRequest::TransactionRequest(unsigned_request), None)
+        .await
+        .unwrap_err();
+    assert!(
+        !unsigned_access_list_err.to_string().is_empty(),
+        "expected unsigned create_access_list to fail"
+    );
 
     let signed_request = TransactionRequest {
         inner: AlloyTransactionRequest {
@@ -497,6 +511,15 @@ async fn test_payable_call_and_estimate_gas_require_signed_request() {
         .await
         .unwrap();
     assert!(signed_gas_estimate > U256::ZERO);
+
+    let signed_access_list = api
+        .create_access_list(
+            SeismicCallRequest::Bytes(Bytes::from(signed_call.encoded_2718())),
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(signed_access_list.gas_used > U256::ZERO);
 }
 
 /// Tests that the RNG precompile produces different output for different transactions.
