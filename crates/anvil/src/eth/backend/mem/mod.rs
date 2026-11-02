@@ -2359,13 +2359,13 @@ impl Backend {
         request: WithOtherFields<TransactionRequest>,
         fee_details: FeeDetails,
         block_env: BlockEnv,
+        classification: SeismicClassification,
     ) -> Result<(InstructionResult, Option<Output>, u64, AccessList), BlockchainError> {
         let mut inspector =
             AccessListInspector::new(request.inner.inner.access_list.clone().unwrap_or_default());
 
         Self::check_calldata_decryption(&request)?;
-        let env =
-            self.build_call_env(request, fee_details, block_env, SeismicClassification::Untrusted);
+        let env = self.build_call_env(request, fee_details, block_env, classification);
         let mut evm = self.new_evm_with_inspector_ref(state, &env, &mut inspector);
         let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
         let (exit_reason, gas_used, out) = match result {

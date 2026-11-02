@@ -1344,13 +1344,7 @@ impl EthApi {
                 // When these are None, build_call_env sets disable_nonce_check and
                 // disable_balance_check, bypassing those checks.
                 // TODO(samlaf): maybe move this into a sanitize_from() or so in seismic-alloy.
-                tx.inner.from = None;
-                tx.inner.nonce = None;
-                tx.inner.value = None;
-                tx.inner.gas_price = None;
-                tx.inner.max_fee_per_gas = None;
-                tx.inner.max_priority_fee_per_gas = None;
-                tx.inner.max_fee_per_blob_gas = None;
+                Self::sanitize_unsigned_request(&mut tx);
 
                 match self.seismic_call(WithOtherFields::new(tx), block_number, overrides).await {
                     Ok(bytes) => Ok(bytes),
@@ -1420,18 +1414,36 @@ impl EthApi {
     /// list.
     ///
     /// Handler for ETH RPC call: `eth_createAccessList`
+    ///
+    /// Same sanitization as `eth_call`: unsigned requests have `from` and gas/value fields
+    /// cleared, so the access list can't be used to read private state as another account.
+    /// Signed requests (TypedData/Bytes) authenticate the sender cryptographically.
     pub async fn create_access_list(
         &self,
-        mut request: WithOtherFields<TransactionRequest>,
+        request: SeismicCallRequest,
         block_number: Option<BlockId>,
     ) -> Result<AccessListResult> {
         node_info!("eth_createAccessList");
+        let (mut request, classification) = match request {
+            SeismicCallRequest::TransactionRequest(mut tx) => {
+                Self::sanitize_unsigned_request(&mut tx);
+                (WithOtherFields::new(tx), SeismicClassification::Untrusted)
+            }
+            other => Self::recover_signed_request(other)?,
+        };
         let block_request = self.block_request(block_number).await?;
         // check if the number predates the fork, if in fork mode
         if let BlockRequest::Number(number) = block_request
             && let Some(fork) = self.get_fork()
             && fork.predates_fork(number)
         {
+            // The fork RPC gets only the recovered request, so it can't reproduce txtype 74.
+            if matches!(classification, SeismicClassification::TrustedSeismic) {
+                return Err(BlockchainError::Message(
+                    "signed Seismic access lists are not supported for blocks predating the fork"
+                        .to_string(),
+                ));
+            }
             return Ok(fork.create_access_list(&request, Some(number.into())).await?);
         }
 
@@ -1442,6 +1454,7 @@ impl EthApi {
                     request.clone(),
                     FeeDetails::zero(),
                     block_env.clone(),
+                    classification,
                 )?;
                 ensure_return_ok(exit, &out)?;
 
@@ -1453,7 +1466,7 @@ impl EthApi {
                     request.clone(),
                     FeeDetails::zero(),
                     block_env,
-                    SeismicClassification::Untrusted,
+                    classification,
                 )?;
                 ensure_return_ok(exit, &out)?;
 
@@ -1485,13 +1498,7 @@ impl EthApi {
         let (request, classification) = match request {
             SeismicCallRequest::TransactionRequest(mut tx) => {
                 // See comment in eth_call above — same rationale.
-                tx.inner.from = None;
-                tx.inner.nonce = None;
-                tx.inner.value = None;
-                tx.inner.gas_price = None;
-                tx.inner.max_fee_per_gas = None;
-                tx.inner.max_priority_fee_per_gas = None;
-                tx.inner.max_fee_per_blob_gas = None;
+                Self::sanitize_unsigned_request(&mut tx);
                 (WithOtherFields::new(tx), SeismicClassification::Untrusted)
             }
             other => Self::recover_signed_request(other)?,
@@ -2212,8 +2219,9 @@ impl EthApi {
         let tx = tx_builder().with_to(token_address).with_input(calldata.clone()).into();
 
         // first collect all the slots that are used by the function call
-        let access_list_result =
-            self.create_access_list(WithOtherFields::new(tx.clone()), None).await?;
+        let access_list_result = self
+            .create_access_list(SeismicCallRequest::TransactionRequest(tx.clone()), None)
+            .await?;
         let access_list = access_list_result.access_list;
 
         // iterate over all the accessed slots and try to find the one that contains the
@@ -3171,6 +3179,21 @@ impl EthApi {
         .await?;
 
         Ok(blocks_to_mine)
+    }
+
+    /// Clears `from` and the nonce, value and fee fields of an unsigned call request.
+    ///
+    /// Without a signature the caller can't be authenticated, so the request runs as the zero
+    /// address. The zero address has nonce 0 and balance 0, so the other fields are cleared to let
+    /// `build_call_env` skip the nonce and balance checks.
+    fn sanitize_unsigned_request(tx: &mut TransactionRequest) {
+        tx.inner.from = None;
+        tx.inner.nonce = None;
+        tx.inner.value = None;
+        tx.inner.gas_price = None;
+        tx.inner.max_fee_per_gas = None;
+        tx.inner.max_priority_fee_per_gas = None;
+        tx.inner.max_fee_per_blob_gas = None;
     }
 
     /// Decode a signed SeismicCallRequest (TypedData or Bytes) into a
